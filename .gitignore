@@ -89,3 +89,6 @@ ENV/
 .ropeproject
 
 ui/*.py
+
+# vim backup files
+*.swp

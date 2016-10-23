@@ -6,7 +6,33 @@ from PyQt4.QtCore import *
 from ui.mainwindow import *
 from gitview import *
 
+import os
 import sys
+import subprocess
+
+
+def getRepoDirectory(directory):
+    """simply check whether directory is git repository,
+       if it is, return the top directory path
+    """
+    oldDir = os.getcwd()
+    try:
+        os.chdir(directory)
+    except FileNotFoundError:
+        return None
+
+    process = subprocess.Popen(["git", "rev-parse", "--show-toplevel"],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+
+    realDir = process.communicate()[0]
+
+    os.chdir(oldDir)
+
+    if process.returncode is not 0:
+        return None
+
+    return realDir.decode("utf-8").replace("\n", "")
 
 
 class MainWindow(QMainWindow):
@@ -25,6 +51,48 @@ class MainWindow(QMainWindow):
     def __setupSignals(self):
         self.ui.acQuit.triggered.connect(QCoreApplication.instance().quit)
 
+        self.ui.btnRepoBrowse.clicked.connect(self.__onBtnRepoBrowseClicked)
+        self.ui.btnFileSelect.clicked.connect(self.__onBtnFileSelectClicked)
+
+        self.ui.leRepo.textChanged.connect(self.__onRepoChanged)
+
+    def __onBtnRepoBrowseClicked(self, checked):
+        repoDir = QFileDialog.getExistingDirectory(self,
+                                                   self.tr(
+                                                       "Choose repository directory"),
+                                                   "",
+                                                   QFileDialog.ShowDirsOnly)
+        if not repoDir:
+            return
+
+        repoDir = getRepoDirectory(repoDir)
+        if not repoDir:
+            QMessageBox.critical(self, self.windowTitle(),
+                                 self.tr("The directory you choosen is not a git repository!"))
+            return
+
+        self.ui.leRepo.setText(repoDir)
+
+    def __onBtnFileSelectClicked(self, checked):
+        file = QFileDialog.getOpenFileName(self,
+                                           self.windowTitle(),
+                                           self.ui.leRepo.text())
+        print(file)
+
+    def __onRepoChanged(self, repoDir):
+        if not getRepoDirectory(repoDir):
+            self.ui.statusbar.showMessage(
+                self.tr("'{0}' is not a git repository".format(repoDir)),
+                5000)  # 5 seconds
+            # let gitview clear the old branches
+            repoDir = None
+        else:
+            # change working directory to repoDir
+            os.chdir(repoDir)
+
+        self.ui.gitViewA.setRepo(repoDir)
+        self.ui.gitViewB.setRepo(repoDir)
+
 
 if __name__ == "__main__":
 
@@ -32,10 +100,10 @@ if __name__ == "__main__":
 
     window = MainWindow()
     window.setGeometry(QStyle.alignedRect(
-        Qt.LeftToRight,Qt.AlignCenter,
+        Qt.LeftToRight, Qt.AlignCenter,
         window.size(),
         app.desktop().availableGeometry()))
 
-    window.show()
+    window.showMaximized()
 
     app.exec()

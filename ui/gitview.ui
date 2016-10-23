@@ -40,7 +40,7 @@
    <item>
     <widget class="QSplitter" name="splitter">
      <property name="frameShape">
-      <enum>QFrame::StyledPanel</enum>
+      <enum>QFrame::NoFrame</enum>
      </property>
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -58,7 +58,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit"/>
+          <widget class="QLineEdit" name="leSha1"/>
          </item>
          <item>
           <widget class="QPushButton" name="btnFind">
@@ -84,7 +84,7 @@
  <customwidgets>
   <customwidget>
    <class>LogView</class>
-   <extends>QWidget</extends>
+   <extends>QListView</extends>
    <header>logview.h</header>
    <container>1</container>
   </customwidget>
