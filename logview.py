@@ -28,12 +28,7 @@ class LogListModel(QAbstractListModel):
 
         commit = self.items[index.row()]
         if role == Qt.DisplayRole:
-            return commit.subject
-        elif role == Qt.ToolTipRole:
-            return '{0} ("{1}", {2} <{3}>, {4})'.format(
-                commit.sha1, commit.subject,
-                commit.author, commit.email,
-                commit.date)
+            return commit.comments.split("\n")[0]  # TODO: improve
         elif role == Qt.UserRole:
             return commit
         return None
@@ -60,10 +55,8 @@ class LogListModel(QAbstractListModel):
         self.beginInsertRows(parent, offset, offset + limit)
 
         for i in range(limit):
-            parts = self.source[offset + i].split("\x01")
-            commit = Commit(parts[0], parts[1],
-                            parts[2], parts[3],
-                            parts[4], parts[5].split(" "))
+            commit = Commit()
+            commit.parseRawString(self.source[offset + i])
             self.items.append(commit)
 
         self.endInsertRows()

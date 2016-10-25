@@ -78,8 +78,10 @@ class GitView(QWidget):
         if index.isValid():
             commit = index.data(Qt.UserRole)
             self.ui.leSha1.setText(commit.sha1)
+            self.ui.diffView.showCommit(commit)
         else:
             self.ui.leSha1.clear()
+            self.ui.diffView.clear()
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
