@@ -1,6 +1,7 @@
 # --*- coding: utf-8 -*-
 
 from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 from collections import namedtuple
 
 from common import *
@@ -15,8 +16,9 @@ ItemAuthor = 0
 ItemParent = 1
 ItemBranch = 2
 ItemComments = 3
-ItemInfo = 4
-ItemDiff = 5
+ItemFile = 4
+ItemFileInfo = 5
+ItemDiff = 6
 
 # diff line content
 LineItem = namedtuple("LineItem", ["type", "content"])
@@ -48,9 +50,31 @@ class DiffView(QWidget):
         sizes = [width * 2 / 3, width * 1 / 3]
         splitter.setSizes(sizes)
 
-    def __addToTreeWidget(self, string):
+        self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
+        self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
+
+    def __onTreeItemChanged(self, current, previous):
+        if current:
+            row = current.data(0, Qt.UserRole)
+            self.viewer.scrollToRow(row)
+
+    def __onFileRowChanged(self, row):
+        for i in range(self.treeWidget.topLevelItemCount()):
+            item = self.treeWidget.topLevelItem(i)
+            n = item.data(0, Qt.UserRole)
+            if n == row:
+                self.treeWidget.blockSignals(True)
+                self.treeWidget.setCurrentItem(item)
+                self.treeWidget.blockSignals(False)
+                break
+
+    def __addToTreeWidget(self, string, row):
+        """specify the @row number of the file in the viewer"""
         item = QTreeWidgetItem([string])
+        item.setData(0, Qt.UserRole, row)
         self.treeWidget.addTopLevelItem(item)
+        if row == 0:
+            self.treeWidget.setCurrentItem(item)
 
     def __commitToLineItems(self, commit):
         items = []
@@ -83,6 +107,7 @@ class DiffView(QWidget):
 
         return items
 
+    # TODO: shall we cache the commit?
     def showCommit(self, commit):
         self.clear()
 
@@ -94,7 +119,7 @@ class DiffView(QWidget):
                                         commit.sha1])
         lines = data.split(b'\n')
 
-        self.__addToTreeWidget(self.tr("Comments"))
+        self.__addToTreeWidget(self.tr("Comments"), 0)
 
         lineItems = []
         lineItems.extend(self.__commitToLineItems(commit))
@@ -116,13 +141,14 @@ class DiffView(QWidget):
                     fileA = match.group(2).decode(diff_encoding)
                     fileB = match.group(3).decode(diff_encoding)
 
-                self.__addToTreeWidget(fileA)
+                row = len(lineItems)
+                self.__addToTreeWidget(fileA, row)
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
-                    lineItems.append(LineItem(ItemInfo, fileB))
-                    self.__addToTreeWidget(fileB)
+                    lineItems.append(LineItem(ItemFile, fileB))
+                    self.__addToTreeWidget(fileB, row)
                 else:
-                    lineItems.append(LineItem(ItemInfo, fileA))
+                    lineItems.append(LineItem(ItemFile, fileA))
 
                 isDiffContent = False
 
@@ -138,7 +164,7 @@ class DiffView(QWidget):
             elif line.startswith(b"--- ") or line.startswith(b"+++ "):
                 continue
             else:
-                itemType = ItemInfo
+                itemType = ItemFileInfo
 
             # TODO: improve
             for encoding in encodings:
@@ -154,8 +180,8 @@ class DiffView(QWidget):
     def clear(self):
         self.treeWidget.clear()
 
-
 class PatchViewer(QAbstractScrollArea):
+    fileRowChanged = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
@@ -164,8 +190,6 @@ class PatchViewer(QAbstractScrollArea):
         self.lineSpace = 5  # space between each line
         # total height of a line
         self.lineHeight = self.fontMetrics().height() + self.lineSpace
-        # char width in English
-        self.charWidth = self.fontMetrics().width('W')
         # max line width in current viewport
         self.maxWidth = 0
 
@@ -175,8 +199,28 @@ class PatchViewer(QAbstractScrollArea):
     def setData(self, items):
         self.lineItems = items
 
+        hScrollBar = self.horizontalScrollBar()
+        vScrollBar = self.verticalScrollBar()
+        hScrollBar.blockSignals(True)
+        vScrollBar.blockSignals(True)
+
+        hScrollBar.setValue(0)
+        vScrollBar.setValue(0)
+
+        hScrollBar.blockSignals(False)
+        vScrollBar.blockSignals(False)
+
         self.__adjust()
         self.viewport().update()
+
+    def scrollToRow(self, row):
+        vScrollBar = self.verticalScrollBar()
+        if vScrollBar.value() != row:
+            vScrollBar.blockSignals(True)
+            vScrollBar.setValue(row)
+            vScrollBar.blockSignals(False)
+            self.__updateHScrollBar()
+            self.viewport().update()
 
     def mouseMoveEvent(self, event):
         pass
@@ -197,9 +241,7 @@ class PatchViewer(QAbstractScrollArea):
         linesPerPage = min(self.__totalLines(), linesPerPage)
         startLine = self.verticalScrollBar().value()
 
-        metrics = QFontMetrics(painter.font())
-        # TODO: offsetX
-        offsetX = self.horizontalScrollBar().value() * self.charWidth
+        offsetX = self.horizontalScrollBar().value()
         offsetY = self.verticalScrollBar().value() * self.lineHeight
         x = 0
         y = self.lineHeight
@@ -247,6 +289,7 @@ class PatchViewer(QAbstractScrollArea):
         self.maxWidth = 0
         metrics = QFontMetrics(self.font())
         for i in range(offsetY, maxY):
+            # TODO: cache the width
             width = metrics.width(self.lineItems[i].content)
             self.maxWidth = width if width > self.maxWidth else self.maxWidth
 
@@ -259,3 +302,13 @@ class PatchViewer(QAbstractScrollArea):
         hScrollBar.blockSignals(True)
         self.__updateHScrollBar()
         hScrollBar.blockSignals(False)
+
+        # TODO: improve
+        for i in range(value, -1, -1):
+            item = self.lineItems[i]
+            if item.type == ItemFile:
+                self.fileRowChanged.emit(i)
+                break
+            elif item.type == ItemParent or item.type == ItemAuthor:
+                self.fileRowChanged.emit(0)
+                break
