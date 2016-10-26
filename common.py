@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-short_log_fmt = "%H%x01%B%x01%an <%ae>%x01%ad%x01%cn <%ce>%x01%cd%x01%P"
+short_log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 
 
 class Commit():
