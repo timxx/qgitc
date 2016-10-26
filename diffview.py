@@ -100,7 +100,8 @@ class DiffView(QWidget):
 
         comments = commit.comments.split('\n')
         for comment in comments:
-            item = LineItem(ItemComments, "    " + comment)
+            content = comment if not comment else "    " + comment
+            item = LineItem(ItemComments, content)
             items.append(item)
 
         items.append(LineItem(ItemComments, ""))
@@ -163,6 +164,8 @@ class DiffView(QWidget):
                 itemType = ItemDiff
             elif line.startswith(b"--- ") or line.startswith(b"+++ "):
                 continue
+            elif not line:  # ignore the empty info line
+                continue
             else:
                 itemType = ItemFileInfo
 
@@ -179,6 +182,7 @@ class DiffView(QWidget):
 
     def clear(self):
         self.treeWidget.clear()
+
 
 class PatchViewer(QAbstractScrollArea):
     fileRowChanged = pyqtSignal(int)
@@ -242,15 +246,65 @@ class PatchViewer(QAbstractScrollArea):
         startLine = self.verticalScrollBar().value()
 
         offsetX = self.horizontalScrollBar().value()
-        offsetY = self.verticalScrollBar().value() * self.lineHeight
-        x = 0
+        x = 0 - offsetX
         y = self.lineHeight
 
-        # TODO: highlight, selection and many many...
+        # TODO:  selection and many many...
         for i in range(0, linesPerPage):
             item = self.lineItems[i + startLine]
-            painter.drawText(x - offsetX, y, item.content)
+
+            if self.__drawInfo(painter, item, x, y):
+                pass
+            elif self.__drawDiff(painter, item, x, y):
+                pass
+            else:
+                painter.drawText(x, y, item.content)
+
             y += self.lineHeight
+
+    def __drawInfo(self, painter, item, x, y):
+        if item.type != ItemFile and item.type != ItemFileInfo:
+            return False
+
+        painter.save()
+        # first fill background
+        painter.fillRect(0,
+                         y - self.lineHeight / 2 - self.lineSpace,  # top
+                         self.viewport().width(),
+                         self.lineHeight,
+                         QBrush(QColor(170, 170, 170)))
+
+        # now the text
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(x, y, item.content)
+
+        painter.restore()
+
+        return True
+
+    def __drawDiff(self, painter, item, x, y):
+        if item.type != ItemDiff:
+            return False
+
+        painter.save()
+
+        pen = painter.pen()
+        if item.content.startswith("@@ ") or  \
+                item.content.startswith("\ No newline "):
+            pen.setColor(QColor(0, 0, 255))
+        elif item.content.startswith("+"):
+            pen.setColor(QColor(0, 168, 0))
+        elif item.content.startswith("-"):
+            pen.setColor(QColor(255, 0, 0))
+
+        painter.setPen(pen)
+        painter.drawText(x, y, item.content)
+
+        painter.restore()
+
+        return True
 
     def __linesPerPage(self):
         return int(self.viewport().height() / self.lineHeight)
@@ -283,7 +337,7 @@ class PatchViewer(QAbstractScrollArea):
         linesPerPage = self.__linesPerPage()
         totalLines = self.__totalLines()
 
-        offsetY = vScrollBar.value() * self.lineHeight
+        offsetY = vScrollBar.value()
         maxY = min(totalLines, offsetY + linesPerPage)
 
         self.maxWidth = 0
@@ -298,10 +352,7 @@ class PatchViewer(QAbstractScrollArea):
             hScrollBar.setPageStep(self.viewport().width())
 
     def __onVScollBarValueChanged(self, value):
-        hScrollBar = self.horizontalScrollBar()
-        hScrollBar.blockSignals(True)
         self.__updateHScrollBar()
-        hScrollBar.blockSignals(False)
 
         # TODO: improve
         for i in range(value, -1, -1):
