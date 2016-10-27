@@ -28,6 +28,7 @@ class GitView(QWidget):
     def __updateBranches(self):
         self.ui.cbBranch.clear()
         self.ui.logView.clear()
+        self.ui.diffView.clear()
         self.ui.leSha1.clear()
 
         if not self.repo:

@@ -182,6 +182,7 @@ class DiffView(QWidget):
 
     def clear(self):
         self.treeWidget.clear()
+        self.viewer.setData(None)
 
 
 class PatchViewer(QAbstractScrollArea):
