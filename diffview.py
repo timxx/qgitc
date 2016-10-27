@@ -195,14 +195,23 @@ class PatchViewer(QAbstractScrollArea):
         self.lineSpace = 5  # space between each line
         # total height of a line
         self.lineHeight = self.fontMetrics().height() + self.lineSpace
-        # max line width in current viewport
-        self.maxWidth = 0
+
+        # font for comments, file info, diff
+        self.fonts = [None, None, None]
+
+        # width of LineItem.content
+        self.itemWidths = {}
+
+        # FIXME: show scrollbar always to prevent dead loop
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
         self.verticalScrollBar().valueChanged.connect(
             self.__onVScollBarValueChanged)
 
     def setData(self, items):
         self.lineItems = items
+        self.itemWidths.clear()
 
         hScrollBar = self.horizontalScrollBar()
         vScrollBar = self.verticalScrollBar()
@@ -254,7 +263,9 @@ class PatchViewer(QAbstractScrollArea):
         for i in range(0, linesPerPage):
             item = self.lineItems[i + startLine]
 
-            if self.__drawInfo(painter, item, x, y):
+            if self.__drawComments(painter, item, x, y):
+                pass
+            elif self.__drawInfo(painter, item, x, y):
                 pass
             elif self.__drawDiff(painter, item, x, y):
                 pass
@@ -262,6 +273,41 @@ class PatchViewer(QAbstractScrollArea):
                 painter.drawText(x, y, item.content)
 
             y += self.lineHeight
+
+    def commentsFont(self):
+        if not self.fonts[0]:
+            self.fonts[0] = self.font()
+        return self.fonts[0]
+
+    def fileInfoFont(self):
+        if not self.fonts[1]:
+            self.fonts[1] = self.font()
+            self.fonts[1].setBold(True)
+        return self.fonts[1]
+
+    def diffFont(self):
+        if not self.fonts[2]:
+            self.fonts[2] = self.font()
+        return self.fonts[2]
+
+    def itemFont(self, itemType):
+        if itemType >= ItemAuthor and itemType <= ItemComments:
+            return self.commentsFont()
+        elif itemType >= ItemFile and itemType <= ItemFileInfo:
+            return self.fileInfoFont()
+        else:
+            return self.diffFont()
+
+    def __drawComments(self, painter, item, x, y):
+        if not (item.type >= ItemAuthor and item.type <= ItemComments):
+            return False
+
+        painter.save()
+        painter.setFont(self.commentsFont())
+        painter.drawText(x, y, item.content)
+        painter.restore()
+
+        return True
 
     def __drawInfo(self, painter, item, x, y):
         if item.type != ItemFile and item.type != ItemFileInfo:
@@ -276,9 +322,7 @@ class PatchViewer(QAbstractScrollArea):
                          QBrush(QColor(170, 170, 170)))
 
         # now the text
-        font = painter.font()
-        font.setBold(True)
-        painter.setFont(font)
+        painter.setFont(self.fileInfoFont())
         painter.drawText(x, y, item.content)
 
         painter.restore()
@@ -301,6 +345,7 @@ class PatchViewer(QAbstractScrollArea):
             pen.setColor(QColor(255, 0, 0))
 
         painter.setPen(pen)
+        painter.setFont(self.diffFont())
         painter.drawText(x, y, item.content)
 
         painter.restore()
@@ -335,25 +380,35 @@ class PatchViewer(QAbstractScrollArea):
         hScrollBar = self.horizontalScrollBar()
         vScrollBar = self.verticalScrollBar()
 
+        if not self.lineItems:
+            hScrollBar.setRange(0, 0)
+            return
+
         linesPerPage = self.__linesPerPage()
         totalLines = self.__totalLines()
 
         offsetY = vScrollBar.value()
         maxY = min(totalLines, offsetY + linesPerPage)
 
-        self.maxWidth = 0
-        metrics = QFontMetrics(self.font())
+        maxWidth = 0
         for i in range(offsetY, maxY):
-            # TODO: cache the width
-            width = metrics.width(self.lineItems[i].content)
-            self.maxWidth = width if width > self.maxWidth else self.maxWidth
+            if i in self.itemWidths:
+                width = self.itemWidths[i]
+            else:
+                item = self.lineItems[i]
+                fm = QFontMetrics(self.itemFont(item.type))
+                width = fm.width(item.content)
+                self.itemWidths[i] = width
+            maxWidth = max(maxWidth, width)
 
-        if self.maxWidth > 0:
-            hScrollBar.setRange(0, self.maxWidth - self.viewport().width())
-            hScrollBar.setPageStep(self.viewport().width())
+        hScrollBar.setRange(0, maxWidth - self.viewport().width())
+        hScrollBar.setPageStep(self.viewport().width())
 
     def __onVScollBarValueChanged(self, value):
         self.__updateHScrollBar()
+
+        if not self.lineItems:
+            return
 
         # TODO: improve
         for i in range(value, -1, -1):
