@@ -24,6 +24,9 @@ ItemDiff = 6
 LineItem = namedtuple("LineItem", ["type", "content"])
 
 diff_re = re.compile(b"^diff --(git a/(.*) b/(.*)|cc (.*))")
+diff_begin_re = re.compile("^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
+diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
+
 diff_encoding = "utf-8"
 
 
@@ -34,6 +37,7 @@ class DiffView(QWidget):
 
         self.viewer = PatchViewer(self)
         self.treeWidget = QTreeWidget(self)
+        self.filterPath = None
 
         splitter = QSplitter(self)
         splitter.addWidget(self.viewer)
@@ -112,12 +116,16 @@ class DiffView(QWidget):
     def showCommit(self, commit):
         self.clear()
 
-        data = subprocess.check_output(["git", "diff-tree",
-                                        "-r", "-p", "--textconv",
-                                        "--submodule", "-C",
-                                        "--cc", "--no-commit-id",
-                                        "-U3", "--root",
-                                        commit.sha1])
+        args = ["git", "diff-tree",
+                "-r", "-p", "--textconv",
+                "--submodule", "-C",
+                "--cc", "--no-commit-id",
+                "-U3", "--root",
+                commit.sha1]
+        if self.filterPath:
+            args.append(self.filterPath)
+
+        data = subprocess.check_output(args)
         lines = data.split(b'\n')
 
         self.__addToTreeWidget(self.tr("Comments"), 0)
@@ -159,7 +167,7 @@ class DiffView(QWidget):
 
             if isDiffContent:
                 itemType = ItemDiff
-            elif line.startswith(b"@@ "):
+            elif diff_begin_bre.search(line):
                 isDiffContent = True
                 itemType = ItemDiff
             elif line.startswith(b"--- ") or line.startswith(b"+++ "):
@@ -183,6 +191,10 @@ class DiffView(QWidget):
     def clear(self):
         self.treeWidget.clear()
         self.viewer.setData(None)
+
+    def setFilterPath(self, path):
+        # no need update
+        self.filterPath = path
 
 
 class PatchViewer(QAbstractScrollArea):
@@ -336,12 +348,12 @@ class PatchViewer(QAbstractScrollArea):
         painter.save()
 
         pen = painter.pen()
-        if item.content.startswith("@@ ") or  \
+        if diff_begin_re.search(item.content) or \
                 item.content.startswith("\ No newline "):
             pen.setColor(QColor(0, 0, 255))
-        elif item.content.startswith("+"):
+        elif item.content.lstrip().startswith("+"):
             pen.setColor(QColor(0, 168, 0))
-        elif item.content.startswith("-"):
+        elif item.content.lstrip().startswith("-"):
             pen.setColor(QColor(255, 0, 0))
 
         painter.setPen(pen)

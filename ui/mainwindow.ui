@@ -33,18 +33,22 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Repo:</string>
+          <string>Repositories:</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="leFile"/>
-       </item>
        <item row="1" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>File:</string>
-         </property>
+        <widget class="QComboBox" name="cbPatternType">
+         <item>
+          <property name="text">
+           <string>File Path</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Commit Pattern</string>
+          </property>
+         </item>
         </widget>
        </item>
        <item row="0" column="1">
@@ -56,6 +60,9 @@
           <string>&amp;Browse...</string>
          </property>
         </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lePattern"/>
        </item>
        <item row="1" column="2">
         <widget class="QPushButton" name="btnFileSelect">
@@ -78,7 +85,9 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="GitView" name="gitViewA" native="true"/>
+      <widget class="GitView" name="gitViewA" native="true">
+       <zorder>gridFrame</zorder>
+      </widget>
       <widget class="GitView" name="gitViewB" native="true"/>
      </widget>
     </item>
@@ -131,7 +140,8 @@
  <tabstops>
   <tabstop>leRepo</tabstop>
   <tabstop>btnRepoBrowse</tabstop>
-  <tabstop>leFile</tabstop>
+  <tabstop>cbPatternType</tabstop>
+  <tabstop>lePattern</tabstop>
   <tabstop>btnFileSelect</tabstop>
  </tabstops>
  <resources/>

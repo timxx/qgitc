@@ -5,34 +5,10 @@ from PyQt4.QtCore import *
 
 from ui.mainwindow import *
 from gitview import *
+from common import *
 
 import os
 import sys
-import subprocess
-
-
-def getRepoDirectory(directory):
-    """simply check whether directory is git repository,
-       if it is, return the top directory path
-    """
-    oldDir = os.getcwd()
-    try:
-        os.chdir(directory)
-    except FileNotFoundError:
-        return None
-
-    process = subprocess.Popen(["git", "rev-parse", "--show-toplevel"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-
-    realDir = process.communicate()[0]
-
-    os.chdir(oldDir)
-
-    if process.returncode is not 0:
-        return None
-
-    return realDir.decode("utf-8").replace("\n", "")
 
 
 class MainWindow(QMainWindow):
@@ -55,6 +31,10 @@ class MainWindow(QMainWindow):
         self.ui.btnFileSelect.clicked.connect(self.__onBtnFileSelectClicked)
 
         self.ui.leRepo.textChanged.connect(self.__onRepoChanged)
+        self.ui.cbPatternType.currentIndexChanged.connect(
+            self.__onPatternTypeChanged)
+        self.ui.lePattern.textChanged.connect(
+            self.__onPatternChanged)
 
     def __onBtnRepoBrowseClicked(self, checked):
         repoDir = QFileDialog.getExistingDirectory(self,
@@ -74,10 +54,12 @@ class MainWindow(QMainWindow):
         self.ui.leRepo.setText(repoDir)
 
     def __onBtnFileSelectClicked(self, checked):
-        file = QFileDialog.getOpenFileName(self,
+        path = QFileDialog.getOpenFileName(self,
                                            self.windowTitle(),
                                            self.ui.leRepo.text())
-        print(file)
+        if path:
+            path = path.replace(self.ui.leRepo.text(), "")
+            self.ui.lePattern.setText(path.lstrip("/"))
 
     def __onRepoChanged(self, repoDir):
         if not getRepoDirectory(repoDir):
@@ -92,6 +74,21 @@ class MainWindow(QMainWindow):
 
         self.ui.gitViewA.setRepo(repoDir)
         self.ui.gitViewB.setRepo(repoDir)
+
+    def __onPatternTypeChanged(self, index):
+        self.ui.btnFileSelect.setEnabled(index == 0)
+        pattern = self.ui.lePattern.text().strip()
+        self.__onPatternChanged(pattern)
+
+    def __onPatternChanged(self, pattern):
+        # TODO: improve performance
+        index = self.ui.cbPatternType.currentIndex()
+        if index == 0:
+            self.ui.gitViewA.filterPath(pattern)
+            self.ui.gitViewB.filterPath(pattern)
+        else:
+            self.ui.gitViewA.filterCommit(pattern)
+            self.ui.gitViewB.filterCommit(pattern)
 
 
 if __name__ == "__main__":

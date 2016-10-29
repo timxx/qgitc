@@ -17,6 +17,7 @@ class GitView(QWidget):
         self.ui = Ui_GitView()
         self.ui.setupUi(self)
         self.repo = None
+        self.pattern = None
 
         height = self.ui.splitter.sizeHint().height()
         sizes = [height * 1 / 4, height * 3 / 4]
@@ -34,11 +35,6 @@ class GitView(QWidget):
         if not self.repo:
             return
 
-        data = subprocess.check_output(["git", "symbolic-ref", "HEAD"])
-        data = data.decode("utf-8").replace("\n", "")
-        index = data.rfind('/')
-        curBranch = data[index + 1:]
-
         data = subprocess.check_output(["git", "branch", "-a"])
         data = data.decode("utf-8")
         branches = data.split('\n')
@@ -49,11 +45,14 @@ class GitView(QWidget):
         for branch in branches:
             branch = branch.strip()
             if branch.startswith("remotes/origin/"):
-                branch = branch.replace("remotes/origin/", "")
-                if not branch.startswith("HEAD"):
+                if not branch.startswith("remotes/origin/HEAD"):
                     self.ui.cbBranch.addItem(branch)
-                    if curBranchIdx == -1 and branch == curBranch:
-                        curBranchIdx = self.ui.cbBranch.count() - 1
+            elif branch:
+                if branch.startswith("*"):
+                    self.ui.cbBranch.addItem(branch.replace("*", "").strip())
+                    curBranchIdx = self.ui.cbBranch.count() - 1
+                else:
+                    self.ui.cbBranch.addItem(branch.strip())
 
         if curBranchIdx != -1:
             self.ui.cbBranch.setCurrentIndex(curBranchIdx)
@@ -66,14 +65,24 @@ class GitView(QWidget):
         if index == -1 or self.ui.cbBranch.count() == 0:
             return
 
-        # TODO: get that branch's log
-        data = subprocess.check_output(["git", "log",
-                                        "--pretty=format:{0}".format(
-                                            short_log_fmt),
-                                        "-z", "--boundary"])
-        commits = data.decode("utf-8").split("\0")
+        self.ui.logView.clear()
+        self.ui.diffView.clear()
 
-        self.ui.logView.setLogs(commits)
+        curBranch = self.ui.cbBranch.currentText()
+        args = ["git", "log", "-z",
+                "--pretty=format:{0}".format(log_fmt),
+                curBranch]
+        if self.pattern:
+            args.append(self.pattern)
+
+        process = subprocess.Popen(args,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        data = process.communicate()[0]
+
+        if process.returncode is 0 and data:
+            commits = data.decode("utf-8").split("\0")
+            self.ui.logView.setLogs(commits)
 
     def __onCommitChanged(self, index):
         if index.isValid():
@@ -84,6 +93,12 @@ class GitView(QWidget):
             self.ui.leSha1.clear()
             self.ui.diffView.clear()
 
+    def __filterLog(self, pattern):
+        if pattern != self.pattern:
+            self.pattern = pattern
+            index = self.ui.cbBranch.currentIndex()
+            self.__onBranchChanged(index)
+
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
 
@@ -91,3 +106,21 @@ class GitView(QWidget):
         if self.repo != repo:
             self.repo = repo
             self.__updateBranches()
+
+    def filterPath(self, path):
+        if not path:
+            newPattern = None
+        else:
+            newPattern = path
+
+        self.ui.diffView.setFilterPath(path)
+        self.__filterLog(newPattern)
+
+    def filterCommit(self, pattern):
+        if not pattern:
+            newPattern = None
+        else:
+            newPattern = "--grep={0}".format(pattern)
+
+        self.ui.diffView.setFilterPath(None)
+        self.__filterLog(newPattern)

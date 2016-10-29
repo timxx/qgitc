@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import subprocess
+import os
 
-short_log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
+
+log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 
 
 class Commit():
@@ -35,3 +38,27 @@ class Commit():
         self.commiter = parts[4]
         self.commiterDate = parts[5]
         self.parents = parts[6].split(" ")
+
+
+def getRepoDirectory(directory):
+    """simply check whether directory is git repository,
+       if it is, return the top directory path
+    """
+    oldDir = os.getcwd()
+    try:
+        os.chdir(directory)
+    except FileNotFoundError:
+        return None
+
+    process = subprocess.Popen(["git", "rev-parse", "--show-toplevel"],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+
+    realDir = process.communicate()[0]
+
+    os.chdir(oldDir)
+
+    if process.returncode is not 0:
+        return None
+
+    return realDir.decode("utf-8").replace("\n", "")
