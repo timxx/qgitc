@@ -77,6 +77,30 @@ class LogListModel(QAbstractListModel):
         if self.source:
             self.fetchMore(QModelIndex())
 
+    # TODO: improve performance
+    def findCommitIndex(self, sha1):
+        i = -1
+        index = QModelIndex()
+
+        # find in loaded items
+        for item in self.items:
+            i += 1
+            if item.sha1.startswith(sha1):
+                index = self.index(i, 0)
+                break
+
+        # load the rest and find it
+        while not index.isValid() and self.source:
+            self.fetchMore(QModelIndex())
+            new_items_count = len(self.items) - i - 1
+            for j in range(new_items_count):
+                commit = self.items[i + j]
+                if commit.sha1.startswith(sha1):
+                    index = self.index(i + j, 0)
+                    break
+
+        return index
+
 
 class LogView(QListView):
 
@@ -96,3 +120,18 @@ class LogView(QListView):
 
     def clear(self):
         self.model().setSource(None)
+
+    def switchToCommit(self, sha1):
+        # ignore if sha1 same as current's
+        index = self.currentIndex()
+        if index.isValid():
+            commit = self.model().data(index, Qt.UserRole)
+            if commit and commit.sha1.startswith(sha1):
+                return True
+
+        index = self.model().findCommitIndex(sha1)
+        if index.isValid():
+            self.setCurrentIndex(index)
+            self.clicked.emit(index)
+
+        return index.isValid()

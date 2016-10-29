@@ -10,6 +10,8 @@ import subprocess
 
 
 class GitView(QWidget):
+    reqCommit = pyqtSignal()
+    reqFind = pyqtSignal()
 
     def __init__(self, parent=None):
         super(GitView, self).__init__(parent)
@@ -25,6 +27,13 @@ class GitView(QWidget):
 
         self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
         self.ui.logView.clicked.connect(self.__onCommitChanged)
+        self.ui.btnFind.clicked.connect(self.__onBtnFindClicked)
+
+        self.reqCommit.connect(self.__onReqCommit)
+        self.reqFind.connect(self.__onBtnFindClicked)
+
+        self.ui.leSha1.installEventFilter(self)
+        self.ui.leFindWhat.installEventFilter(self)
 
     def __updateBranches(self):
         self.ui.cbBranch.clear()
@@ -93,6 +102,17 @@ class GitView(QWidget):
             self.ui.leSha1.clear()
             self.ui.diffView.clear()
 
+    def __onBtnFindClicked(self, checked):
+        pass
+
+    def __onReqCommit(self):
+        sha1 = self.ui.leSha1.text().strip()
+        if sha1:
+            ok = self.ui.logView.switchToCommit(sha1)
+            if not ok:
+                self.window().showMessage(
+                    self.tr("Revision '{0}' is not known".format(sha1)))
+
     def __filterLog(self, pattern):
         if pattern != self.pattern:
             self.pattern = pattern
@@ -124,3 +144,12 @@ class GitView(QWidget):
 
         self.ui.diffView.setFilterPath(None)
         self.__filterLog(newPattern)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyRelease and event.key() == Qt.Key_Return:
+            if obj == self.ui.leSha1:
+                self.reqCommit.emit()
+            elif obj == self.ui.leFindWhat:
+                self.reqFind.emit()
+
+        return super(GitView, self).eventFilter(obj, event)

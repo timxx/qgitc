@@ -90,6 +90,9 @@ class MainWindow(QMainWindow):
             self.ui.gitViewA.filterCommit(pattern)
             self.ui.gitViewB.filterCommit(pattern)
 
+    def showMessage(self, msg, timeout=5000):
+        self.ui.statusbar.showMessage(msg, timeout)
+
 
 if __name__ == "__main__":
 
