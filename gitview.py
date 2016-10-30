@@ -26,7 +26,7 @@ class GitView(QWidget):
         self.ui.splitter.setSizes(sizes)
 
         self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
-        self.ui.logView.clicked.connect(self.__onCommitChanged)
+        self.ui.logView.selectionModel().currentChanged.connect(self.__onCommitChanged)
         self.ui.btnFind.clicked.connect(self.__onBtnFindClicked)
 
         self.reqCommit.connect(self.__onReqCommit)
@@ -93,9 +93,9 @@ class GitView(QWidget):
             commits = data.decode("utf-8").split("\0")
             self.ui.logView.setLogs(commits)
 
-    def __onCommitChanged(self, index):
-        if index.isValid():
-            commit = index.data(Qt.UserRole)
+    def __onCommitChanged(self, current, previous):
+        if current.isValid():
+            commit = current.data(Qt.UserRole)
             self.ui.leSha1.setText(commit.sha1)
             self.ui.diffView.showCommit(commit)
         else:
