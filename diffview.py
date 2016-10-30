@@ -49,6 +49,8 @@ class DiffView(QWidget):
         self.treeWidget.setColumnCount(1)
         self.treeWidget.setHeaderHidden(True)
         self.treeWidget.setRootIsDecorated(False)
+        self.treeWidget.header().setStretchLastSection(False)
+        self.treeWidget.header().setResizeMode(QHeaderView.ResizeToContents)
 
         width = self.sizeHint().width()
         sizes = [width * 2 / 3, width * 1 / 3]
