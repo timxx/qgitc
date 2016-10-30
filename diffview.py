@@ -38,6 +38,13 @@ class DiffView(QWidget):
         self.viewer = PatchViewer(self)
         self.treeWidget = QTreeWidget(self)
         self.filterPath = None
+        self.twMenu = QMenu()
+        self.commit = None
+
+        self.twMenu.addAction(self.tr("External &diff"),
+                              self.__onExternalDiff)
+        self.twMenu.addAction(self.tr("&Copy path"),
+                              self.__onCopyPath)
 
         splitter = QSplitter(self)
         splitter.addWidget(self.viewer)
@@ -59,6 +66,8 @@ class DiffView(QWidget):
         self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
 
+        self.treeWidget.installEventFilter(self)
+
     def __onTreeItemChanged(self, current, previous):
         if current:
             row = current.data(0, Qt.UserRole)
@@ -73,6 +82,23 @@ class DiffView(QWidget):
                 self.treeWidget.setCurrentItem(item)
                 self.treeWidget.blockSignals(False)
                 break
+
+    def __onExternalDiff(self):
+        item = self.treeWidget.currentItem()
+        if not item:
+            return
+        if not self.commit:
+            return
+        filePath = item.text(0)
+        externalDiff(self.commit, filePath)
+
+    def __onCopyPath(self):
+        item = self.treeWidget.currentItem()
+        if not item:
+            return
+
+        clipboard = QApplication.clipboard()
+        clipboard.setText(item.text(0))
 
     def __addToTreeWidget(self, string, row):
         """specify the @row number of the file in the viewer"""
@@ -117,6 +143,7 @@ class DiffView(QWidget):
     # TODO: shall we cache the commit?
     def showCommit(self, commit):
         self.clear()
+        self.commit = commit
 
         args = ["git", "diff-tree",
                 "-r", "-p", "--textconv",
@@ -197,6 +224,27 @@ class DiffView(QWidget):
     def setFilterPath(self, path):
         # no need update
         self.filterPath = path
+
+    def eventFilter(self, obj, event):
+        if obj != self.treeWidget:
+            return False
+
+        if event.type() != QEvent.ContextMenu:
+            return False
+
+        item = self.treeWidget.currentItem()
+        if not item:
+            return False
+
+        if self.treeWidget.topLevelItemCount() < 2:
+            return False
+
+        if item == self.treeWidget.topLevelItem(0):
+            return False
+
+        self.twMenu.exec(event.globalPos())
+
+        return False
 
 
 class PatchViewer(QAbstractScrollArea):

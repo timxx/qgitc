@@ -110,6 +110,16 @@ class LogView(QListView):
         model = LogListModel(self)
         self.setModel(model)
 
+        self.sha1Color = "#FF0000"
+        self.subjectColor = "#0000FF"
+
+        self.menu = QMenu()
+        self.menu.addAction(self.tr("&Copy commit summary"),
+                            self.__onCopyCommitSummary)
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.showContextMenu)
+
     def setLogs(self, commits):
         model = self.model()
         model.setSource(commits)
@@ -135,3 +145,45 @@ class LogView(QListView):
             self.clicked.emit(index)
 
         return index.isValid()
+
+    def showContextMenu(self, pos):
+        if self.currentIndex().isValid():
+            globalPos = self.mapToGlobal(pos)
+            self.menu.exec(globalPos)
+
+    def __onCopyCommitSummary(self):
+        index = self.currentIndex()
+        if not index.isValid():
+            return
+        commit = self.model().data(index, Qt.UserRole)
+        if not commit:
+            return
+
+        commit = getCommitSummary(commit.sha1)
+
+        clipboard = QApplication.clipboard()
+
+        htmlText = '<html>\n'
+        htmlText += '<body>\n'
+        htmlText += '<p style="font-size:10pt">'
+        htmlText += self.__htmlColorText(self.sha1Color, commit["sha1"])
+        htmlText += ' ("'
+        htmlText += self.__htmlColorText(self.subjectColor, commit["subject"])
+        htmlText += '", '
+        htmlText += commit["date"]
+        htmlText += ')</p>\n'
+        htmlText += '</body>\n'
+        htmlText += '</html>\n'
+
+        mimeData = QMimeData()
+        mimeData.setHtml(htmlText)
+        mimeData.setText('{0} ("{1}"), {2}'.format(
+            commit["sha1"],
+            commit["subject"],
+            commit["date"]))
+
+        clipboard.setMimeData(mimeData)
+
+    def __htmlColorText(self, color, text):
+        return '<font color="{0}">{1}</font>'.format(
+            color, htmlEscape(text))
