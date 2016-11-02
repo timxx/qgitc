@@ -91,12 +91,12 @@ class LogListModel(QAbstractListModel):
 
         # load the rest and find it
         while not index.isValid() and self.source:
+            offset = len(self.items)
             self.fetchMore(QModelIndex())
-            new_items_count = len(self.items) - i - 1
-            for j in range(new_items_count):
-                commit = self.items[i + j]
+            for j in range(offset, len(self.items)):
+                commit = self.items[j]
                 if commit.sha1.startswith(sha1):
-                    index = self.index(i + j, 0)
+                    index = self.index(j, 0)
                     break
 
         return index

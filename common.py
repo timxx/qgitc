@@ -2,6 +2,9 @@
 
 import subprocess
 import os
+import cProfile
+import pstats
+import io
 
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
@@ -45,6 +48,20 @@ class Commit():
         self.commiter = parts[4]
         self.commiterDate = parts[5]
         self.parents = parts[6].split(" ")
+
+
+class MyProfile():
+
+    def __init__(self):
+        self.pr = cProfile.Profile()
+        self.pr.enable()
+
+    def __del__(self):
+        self.pr.disable()
+        s = io.StringIO()
+        ps = pstats.Stats(self.pr, stream=s).sort_stats("cumulative")
+        ps.print_stats()
+        print(s.getvalue())
 
 
 def getRepoDirectory(directory):
