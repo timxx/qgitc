@@ -84,7 +84,7 @@
  <customwidgets>
   <customwidget>
    <class>LogView</class>
-   <extends>QListView</extends>
+   <extends>QAbstractScrollArea</extends>
    <header>logview.h</header>
    <container>1</container>
   </customwidget>

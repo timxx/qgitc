@@ -6,109 +6,73 @@ from PyQt4.QtCore import *
 from common import *
 
 
-class LogListModel(QAbstractListModel):
+class CommitFetcher():
 
-    def __init__(self, parent=None):
-        super(LogListModel, self).__init__(parent)
-
+    def __init__(self):
         self.items = []
         self.source = None
+        self.loadedCount = 0
 
-    def rowCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self.items)
+    def __len__(self):
+        return self.count()
 
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
+    def __getitem__(self, index):
+        return self.data(index)
 
-        if index.row() >= len(self.items):
-            return None
+    def __ensureCommit(self, index):
+        if not self.source or self.items[index]:
+            return
 
-        commit = self.items[index.row()]
-        if role == Qt.DisplayRole:
-            return commit.comments.split("\n")[0]  # TODO: improve
-        elif role == Qt.UserRole:
-            return commit
-        return None
+        commit = Commit()
+        commit.parseRawString(self.source[index])
+        self.items[index] = commit
+        self.loadedCount += 1
 
-    def flags(self, index):
-        if not index.isValid():
-            return Qt.NoItemFlags
-
-        if index.row() < len(self.items):
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        return Qt.NoItemFlags
-
-    def canFetchMore(self, parent):
-        if not self.source:
-            return False
-
-        return len(self.items) < len(self.source)
-
-    def fetchMore(self, parent):
-        offset = len(self.items)
-        total = len(self.source)
-        limit = min(total - offset, 50)
-
-        self.beginInsertRows(parent, offset, offset + limit)
-
-        for i in range(limit):
-            commit = Commit()
-            commit.parseRawString(self.source[offset + i])
-            self.items.append(commit)
-
-        self.endInsertRows()
-        # free the source
-        if len(self.items) == total:
+        # no need the source
+        if self.loadedCount == len(self.source):
             self.source = None
 
-    def refreshModel(self):
-        self.beginResetModel()
-        self.endResetModel()
+    def count(self):
+        return len(self.items)
+
+    def data(self, index):
+        if index < 0 or index >= self.count():
+            return None
+
+        self.__ensureCommit(index)
+        return self.items[index]
 
     def setSource(self, source):
         self.source = source
         self.items.clear()
+        self.loadedCount = 0
+        if source:
+            self.items = [None for i in range(len(source))]
 
-        self.refreshModel()
-
-        if self.source:
-            self.fetchMore(QModelIndex())
-
-    # TODO: improve performance
     def findCommitIndex(self, sha1):
-        i = -1
-        index = QModelIndex()
+        index = -1
 
-        # find in loaded items
-        for item in self.items:
-            i += 1
+        for i in range(len(self.items)):
+            self.__ensureCommit(i)
+            item = self.items[i]
             if item.sha1.startswith(sha1):
-                index = self.index(i, 0)
+                index = i
                 break
-
-        # load the rest and find it
-        while not index.isValid() and self.source:
-            offset = len(self.items)
-            self.fetchMore(QModelIndex())
-            for j in range(offset, len(self.items)):
-                commit = self.items[j]
-                if commit.sha1.startswith(sha1):
-                    index = self.index(j, 0)
-                    break
 
         return index
 
 
-class LogView(QListView):
+class LogView(QAbstractScrollArea):
+    currentIndexChanged = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
 
-        model = LogListModel(self)
-        self.setModel(model)
+        self.data = CommitFetcher()
+        self.curIdx = -1
+
+        self.lineSpace = 5
+        self.lineHeight = self.fontMetrics().height() + self.lineSpace
 
         self.sha1Color = "#FF0000"
         self.subjectColor = "#0000FF"
@@ -120,42 +84,70 @@ class LogView(QListView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
 
+        # never show the horizontalScrollBar
+        # since we can view the long content in diff view
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
     def setLogs(self, commits):
-        model = self.model()
-        model.setSource(commits)
-        index = model.index(0, 0)
-        if index.isValid():
-            self.setCurrentIndex(index)
-            self.clicked.emit(index)
+        self.data.setSource(commits)
+        if self.data:
+            self.setCurrentIndex(0)
+
+        self.updateGeometries()
+        self.viewport().update()
 
     def clear(self):
-        self.model().setSource(None)
+        self.data.setSource(None)
+        self.curIdx = -1
+        self.viewport().update()
+        self.currentIndexChanged.emit(self.curIdx)
+
+    def getCommit(self, index):
+        return self.data[index]
+
+    def currentIndex(self):
+        return self.curIdx
+
+    def ensureVisible(self):
+        if self.curIdx == -1:
+            return
+
+        startLine = self.verticalScrollBar().value()
+        endLine = startLine + self.__linesPerPage()
+
+        if self.curIdx < startLine or self.curIdx > endLine:
+            self.verticalScrollBar().setValue(self.curIdx)
+
+    def setCurrentIndex(self, index):
+        if index >= 0 and index < len(self.data):
+            self.curIdx = index
+            self.ensureVisible()
+            self.viewport().update()
+            self.currentIndexChanged.emit(index)
 
     def switchToCommit(self, sha1):
         # ignore if sha1 same as current's
-        index = self.currentIndex()
-        if index.isValid():
-            commit = self.model().data(index, Qt.UserRole)
+        if self.curIdx != -1 and self.curIdx < len(self.data):
+            commit = self.data[self.curIdx]
             if commit and commit.sha1.startswith(sha1):
+                self.ensureVisible()
                 return True
 
-        index = self.model().findCommitIndex(sha1)
-        if index.isValid():
+        index = self.data.findCommitIndex(sha1)
+        if index != -1:
             self.setCurrentIndex(index)
-            self.clicked.emit(index)
 
-        return index.isValid()
+        return index != -1
 
     def showContextMenu(self, pos):
-        if self.currentIndex().isValid():
+        if self.curIdx != -1:
             globalPos = self.mapToGlobal(pos)
             self.menu.exec(globalPos)
 
     def __onCopyCommitSummary(self):
-        index = self.currentIndex()
-        if not index.isValid():
+        if self.curIdx == -1:
             return
-        commit = self.model().data(index, Qt.UserRole)
+        commit = self.data[self.curIdx]
         if not commit:
             return
 
@@ -187,3 +179,70 @@ class LogView(QListView):
     def __htmlColorText(self, color, text):
         return '<font color="{0}">{1}</font>'.format(
             color, htmlEscape(text))
+
+    def __linesPerPage(self):
+        return int(self.viewport().height() / self.lineHeight)
+
+    def updateGeometries(self):
+        hScrollBar = self.horizontalScrollBar()
+        vScrollBar = self.verticalScrollBar()
+
+        if not self.data:
+            hScrollBar.setRange(0, 0)
+            vScrollBar.setRange(0, 0)
+            return
+
+        linesPerPage = self.__linesPerPage()
+        totalLines = len(self.data)
+
+        vScrollBar.setRange(0, totalLines - linesPerPage)
+        vScrollBar.setPageStep(linesPerPage)
+
+    def resizeEvent(self, event):
+        super(LogView, self).resizeEvent(event)
+
+        self.updateGeometries()
+
+    def paintEvent(self, event):
+        if not self.data:
+            return
+
+        painter = QPainter(self.viewport())
+
+        startLine = self.verticalScrollBar().value()
+        endLine = startLine + self.__linesPerPage() + 1
+        endLine = min(len(self.data), endLine)
+
+        offsetX = self.horizontalScrollBar().value()
+        x = 5 - offsetX
+        y = 3
+
+        palette = self.palette()
+
+        for i in range(startLine, endLine):
+            commit = self.data[i]
+            content = commit.comments.split('\n')[0]
+
+            rect = QRect(x, y, self.viewport().width(), self.lineHeight)
+
+            if i == self.curIdx:
+                painter.fillRect(rect, palette.highlight())
+                painter.setPen(palette.color(QPalette.HighlightedText))
+            else:
+                painter.setPen(palette.color(QPalette.WindowText))
+
+            # don't know why style.drawControl not works :(
+            painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, content)
+
+            y += self.lineHeight
+
+    def mousePressEvent(self, event):
+        if not self.data:
+            return
+
+        y = event.pos().y()
+        index = int(y / self.lineHeight)
+        index += self.verticalScrollBar().value()
+
+        if index < len(self.data):
+            self.setCurrentIndex(index)

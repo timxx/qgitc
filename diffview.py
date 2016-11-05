@@ -313,17 +313,17 @@ class PatchViewer(QAbstractScrollArea):
 
         painter = QPainter(self.viewport())
 
-        linesPerPage = self.__linesPerPage()
-        linesPerPage = min(self.__totalLines(), linesPerPage)
         startLine = self.verticalScrollBar().value()
+        endLine = startLine + self.__linesPerPage() + 1
+        endLine = min(len(self.lineItems), endLine)
 
         offsetX = self.horizontalScrollBar().value()
         x = 0 - offsetX
         y = self.lineHeight
 
         # TODO:  selection and many many...
-        for i in range(0, linesPerPage):
-            item = self.lineItems[i + startLine]
+        for i in range(startLine, endLine):
+            item = self.lineItems[i]
 
             if self.__drawComments(painter, item, x, y):
                 pass
