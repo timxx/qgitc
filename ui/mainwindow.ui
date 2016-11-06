@@ -62,7 +62,11 @@
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLineEdit" name="lePattern"/>
+        <widget class="QLineEdit" name="lePattern">
+         <property name="placeholderText">
+          <string>Type keyword here and press Enter to filter</string>
+         </property>
+        </widget>
        </item>
        <item row="1" column="2">
         <widget class="QPushButton" name="btnFileSelect">
@@ -85,9 +89,7 @@
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="GitView" name="gitViewA" native="true">
-       <zorder>gridFrame</zorder>
-      </widget>
+      <widget class="GitView" name="gitViewA" native="true"/>
       <widget class="GitView" name="gitViewB" native="true"/>
      </widget>
     </item>
