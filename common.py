@@ -91,7 +91,7 @@ def getRepoDirectory(directory):
 
 
 def getCommitSummary(sha1):
-    fmt = "%h%x01%s%x01%ad"
+    fmt = "%h%x01%s%x01%ad%x01%an%x01%ae"
     args = ["git", "show", "-s",
             "--pretty=format:{0}".format(fmt),
             "--date=short",
@@ -112,7 +112,9 @@ def getCommitSummary(sha1):
 
     return {"sha1": parts[0],
             "subject": parts[1],
-            "date": parts[2]}
+            "date": parts[2],
+            "author": parts[3],
+            "email": parts[4]}
 
 
 def htmlEscape(text):

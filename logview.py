@@ -5,6 +5,8 @@ from PyQt4.QtCore import *
 
 from common import *
 
+import re
+
 
 class CommitFetcher():
 
@@ -74,8 +76,10 @@ class LogView(QAbstractScrollArea):
         self.lineSpace = 5
         self.lineHeight = self.fontMetrics().height() + self.lineSpace
 
-        self.sha1Color = "#FF0000"
-        self.subjectColor = "#0000FF"
+        self.color = "#FF0000"
+        self.sha1Url = None
+        self.bugUrl = None
+        self.bugRe = None
 
         self.menu = QMenu()
         self.menu.addAction(self.tr("&Copy commit summary"),
@@ -87,6 +91,18 @@ class LogView(QAbstractScrollArea):
         # never show the horizontalScrollBar
         # since we can view the long content in diff view
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def setColor(self, color):
+        self.color = color
+
+    def setSha1Url(self, url):
+        self.sha1Url = url
+
+    def setBugUrl(self, url):
+        self.bugUrl = url
+
+    def setBugPattern(self, pattern):
+        self.bugRe = re.compile(pattern)
 
     def setLogs(self, commits):
         self.data.setSource(commits)
@@ -157,28 +173,44 @@ class LogView(QAbstractScrollArea):
 
         htmlText = '<html>\n'
         htmlText += '<body>\n'
-        htmlText += '<p style="font-size:10pt">'
-        htmlText += self.__htmlColorText(self.sha1Color, commit["sha1"])
+        htmlText += '<div>\n'
+        htmlText += '<p style="margin:0pt">\n'
+        htmlText += '<span style="font-size:10pt;color:{0}">'.format(
+            self.color)
+        htmlText += self.__sha1Url(commit["sha1"])
         htmlText += ' ("'
-        htmlText += self.__htmlColorText(self.subjectColor, commit["subject"])
-        htmlText += '", '
-        htmlText += commit["date"]
-        htmlText += ')</p>\n'
+        htmlText += self.__filterBug(commit["subject"])
+        htmlText += '", ' + self.__mailTo(commit["author"], commit["email"])
+        htmlText += ', ' + commit["date"]
+        htmlText += ')</span>'
+        htmlText += '</p>\n'
         htmlText += '</body>\n'
         htmlText += '</html>\n'
 
         mimeData = QMimeData()
         mimeData.setHtml(htmlText)
-        mimeData.setText('{0} ("{1}"), {2}'.format(
+        mimeData.setText('{0} ("{1}"), {2}, {3}'.format(
             commit["sha1"],
             commit["subject"],
+            commit["author"],
             commit["date"]))
 
         clipboard.setMimeData(mimeData)
 
-    def __htmlColorText(self, color, text):
-        return '<font color="{0}">{1}</font>'.format(
-            color, htmlEscape(text))
+    def __sha1Url(self, sha1):
+        if not self.sha1Url:
+            return sha1
+
+        return '<a href="{0}{1}">{1}</a>'.format(self.sha1Url, sha1)
+
+    def __filterBug(self, subject):
+        if not self.bugUrl or not self.bugRe:
+            return subject
+
+        return self.bugRe.sub('<a href="{0}\\1">\\1</a>'.format(self.bugUrl), subject)
+
+    def __mailTo(self, author, email):
+        return '<a href="mailto:{0}">{1}</a>'.format(email, author)
 
     def __linesPerPage(self):
         return int(self.viewport().height() / self.lineHeight)
