@@ -29,6 +29,22 @@ diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
 
 diff_encoding = "utf-8"
 
+def fixedFont(pointSize):
+    """return a fixed font if available"""
+    font = QFont("monospace", pointSize)
+
+    font.setStyleHint(QFont.TypeWriter)
+    if QFontInfo(font).fixedPitch():
+        return font
+
+    font.setStyleHint(QFont.Monospace)
+    if QFontInfo(font).fixedPitch():
+        return font
+
+    # for Windows
+    font.setFamily("Courier")
+    return font
+
 
 class DiffView(QWidget):
 
@@ -319,20 +335,25 @@ class PatchViewer(QAbstractScrollArea):
 
         offsetX = self.horizontalScrollBar().value()
         x = 0 - offsetX
-        y = self.lineHeight
+        y = 0
 
         # TODO:  selection and many many...
         for i in range(startLine, endLine):
             item = self.lineItems[i]
 
-            if self.__drawComments(painter, item, x, y):
+            rect = QRect(x, y,
+                         self.viewport().width() - x,
+                         self.lineHeight)
+            flags = Qt.AlignLeft | Qt.AlignVCenter
+
+            if self.__drawComments(painter, item, rect, flags):
                 pass
-            elif self.__drawInfo(painter, item, x, y):
+            elif self.__drawInfo(painter, item, rect, flags):
                 pass
-            elif self.__drawDiff(painter, item, x, y):
+            elif self.__drawDiff(painter, item, rect, flags):
                 pass
             else:
-                painter.drawText(x, y, item.content)
+                painter.drawText(rect, flags, item.content)
 
             y += self.lineHeight
 
@@ -349,7 +370,7 @@ class PatchViewer(QAbstractScrollArea):
 
     def diffFont(self):
         if not self.fonts[2]:
-            self.fonts[2] = self.font()
+            self.fonts[2] = fixedFont(self.font().pointSize())
         return self.fonts[2]
 
     def itemFont(self, itemType):
@@ -360,38 +381,34 @@ class PatchViewer(QAbstractScrollArea):
         else:
             return self.diffFont()
 
-    def __drawComments(self, painter, item, x, y):
+    def __drawComments(self, painter, item, rect, flags):
         if not (item.type >= ItemAuthor and item.type <= ItemComments):
             return False
 
         painter.save()
         painter.setFont(self.commentsFont())
-        painter.drawText(x, y, item.content)
+        painter.drawText(rect, flags, item.content)
         painter.restore()
 
         return True
 
-    def __drawInfo(self, painter, item, x, y):
+    def __drawInfo(self, painter, item, rect, flags):
         if item.type != ItemFile and item.type != ItemFileInfo:
             return False
 
         painter.save()
         # first fill background
-        painter.fillRect(0,
-                         y - self.lineHeight / 2 - self.lineSpace,  # top
-                         self.viewport().width(),
-                         self.lineHeight,
-                         QBrush(QColor(170, 170, 170)))
+        painter.fillRect(rect, QBrush(QColor(170, 170, 170)))
 
         # now the text
         painter.setFont(self.fileInfoFont())
-        painter.drawText(x, y, item.content)
+        painter.drawText(rect, flags, item.content)
 
         painter.restore()
 
         return True
 
-    def __drawDiff(self, painter, item, x, y):
+    def __drawDiff(self, painter, item, rect, flags):
         if item.type != ItemDiff:
             return False
 
@@ -408,7 +425,7 @@ class PatchViewer(QAbstractScrollArea):
 
         painter.setPen(pen)
         painter.setFont(self.diffFont())
-        painter.drawText(x, y, item.content)
+        painter.drawText(rect, flags, item.content)
 
         painter.restore()
 
