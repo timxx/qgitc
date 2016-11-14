@@ -204,13 +204,14 @@ class LogView(QAbstractScrollArea):
         return '<a href="{0}{1}">{1}</a>'.format(self.sha1Url, sha1)
 
     def __filterBug(self, subject):
+        text = htmlEscape(subject)
         if not self.bugUrl or not self.bugRe:
-            return subject
+            return text
 
-        return self.bugRe.sub('<a href="{0}\\1">\\1</a>'.format(self.bugUrl), subject)
+        return self.bugRe.sub('<a href="{0}\\1">\\1</a>'.format(self.bugUrl), text)
 
     def __mailTo(self, author, email):
-        return '<a href="mailto:{0}">{1}</a>'.format(email, author)
+        return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))
 
     def __linesPerPage(self):
         return int(self.viewport().height() / self.lineHeight)
