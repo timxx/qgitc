@@ -6,6 +6,8 @@ from PyQt4.QtCore import *
 from ui.mainwindow import *
 from gitview import *
 from common import *
+from preferences import *
+from settings import *
 
 import os
 import sys
@@ -29,6 +31,9 @@ class MainWindow(QMainWindow):
 
     def __setupSignals(self):
         self.ui.acQuit.triggered.connect(QCoreApplication.instance().quit)
+
+        self.ui.acPreferences.triggered.connect(
+            self.__onAcPreferencesTriggered)
 
         self.ui.btnRepoBrowse.clicked.connect(self.__onBtnRepoBrowseClicked)
         self.ui.btnFileSelect.clicked.connect(self.__onBtnFileSelectClicked)
@@ -81,6 +86,14 @@ class MainWindow(QMainWindow):
         pattern = self.ui.lePattern.text().strip()
         self.filterPattern(pattern)
 
+    def __onAcPreferencesTriggered(self):
+        settings = QApplication.instance().settings()
+        preferences = Preferences(settings, self)
+        if preferences.exec() == QDialog.Accepted:
+            preferences.save()
+            self.ui.gitViewA.updateSettings()
+            self.ui.gitViewB.updateSettings()
+
     def filterPattern(self, pattern):
         index = self.ui.cbPatternType.currentIndex()
         if index == 0:
@@ -112,6 +125,17 @@ class MainWindow(QMainWindow):
             self.__onPatternTypeChanged(0)
 
 
+class Application(QApplication):
+
+    def __init__(self, argv):
+        super(Application, self).__init__(argv)
+
+        self._settings = Settings(self)
+
+    def settings(self):
+        return self._settings
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -129,7 +153,7 @@ if __name__ == "__main__":
     if args.repo:
         repoDir = getRepoDirectory(args.repo)
 
-    app = QApplication(sys.argv)
+    app = Application(sys.argv)
 
     window = MainWindow()
     window.setGeometry(QStyle.alignedRect(

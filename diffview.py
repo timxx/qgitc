@@ -29,22 +29,6 @@ diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
 
 diff_encoding = "utf-8"
 
-def fixedFont(pointSize):
-    """return a fixed font if available"""
-    font = QFont("monospace", pointSize)
-
-    font.setStyleHint(QFont.TypeWriter)
-    if QFontInfo(font).fixedPitch():
-        return font
-
-    font.setStyleHint(QFont.Monospace)
-    if QFontInfo(font).fixedPitch():
-        return font
-
-    # for Windows
-    font.setFamily("Courier")
-    return font
-
 
 class DiffView(QWidget):
 
@@ -241,6 +225,9 @@ class DiffView(QWidget):
         # no need update
         self.filterPath = path
 
+    def updateFont(self):
+        self.viewer.resetFont()
+
     def eventFilter(self, obj, event):
         if obj != self.treeWidget:
             return False
@@ -271,11 +258,7 @@ class PatchViewer(QAbstractScrollArea):
 
         self.lineItems = []
         self.lineSpace = 5  # space between each line
-        # total height of a line
-        self.lineHeight = self.fontMetrics().height() + self.lineSpace
-
-        # font for comments, file info, diff
-        self.fonts = [None, None, None]
+        self.resetFont()
 
         # width of LineItem.content
         self.itemWidths = {}
@@ -286,6 +269,17 @@ class PatchViewer(QAbstractScrollArea):
 
         self.verticalScrollBar().valueChanged.connect(
             self.__onVScollBarValueChanged)
+
+    def resetFont(self):
+        # font for comments, file info, diff
+        self.fonts = [None, None, None]
+
+        settings = QApplication.instance().settings()
+        fm = QFontMetrics(settings.diffViewFont())
+        # total height of a line
+        self.lineHeight = fm.height() + self.lineSpace
+
+        self.__adjust()
 
     def setData(self, items):
         self.lineItems = items
@@ -359,18 +353,21 @@ class PatchViewer(QAbstractScrollArea):
 
     def commentsFont(self):
         if not self.fonts[0]:
-            self.fonts[0] = self.font()
+            settings = QApplication.instance().settings()
+            self.fonts[0] = settings.diffViewFont()
         return self.fonts[0]
 
     def fileInfoFont(self):
         if not self.fonts[1]:
-            self.fonts[1] = self.font()
+            settings = QApplication.instance().settings()
+            self.fonts[1] = settings.diffViewFont()
             self.fonts[1].setBold(True)
         return self.fonts[1]
 
     def diffFont(self):
         if not self.fonts[2]:
-            self.fonts[2] = fixedFont(self.font().pointSize())
+            settings = QApplication.instance().settings()
+            self.fonts[2] = settings.diffViewFont()
         return self.fonts[2]
 
     def itemFont(self, itemType):

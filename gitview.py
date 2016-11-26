@@ -145,6 +145,10 @@ class GitView(QWidget):
         self.ui.diffView.setFilterPath(None)
         self.__filterLog(newPattern)
 
+    def updateSettings(self):
+        self.ui.logView.updateFont()
+        self.ui.diffView.updateFont()
+
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyRelease and event.key() == Qt.Key_Return:
             if obj == self.ui.leSha1:

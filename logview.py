@@ -74,7 +74,6 @@ class LogView(QAbstractScrollArea):
         self.curIdx = -1
 
         self.lineSpace = 5
-        self.lineHeight = self.fontMetrics().height() + self.lineSpace
 
         self.color = "#FF0000"
         self.sha1Url = None
@@ -91,6 +90,8 @@ class LogView(QAbstractScrollArea):
         # never show the horizontalScrollBar
         # since we can view the long content in diff view
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.updateFont()
 
     def setColor(self, color):
         self.color = color
@@ -159,6 +160,14 @@ class LogView(QAbstractScrollArea):
         if self.curIdx != -1:
             globalPos = self.mapToGlobal(pos)
             self.menu.exec(globalPos)
+
+    def updateFont(self):
+        settings = QApplication.instance().settings()
+        self.font = settings.logViewFont()
+
+        self.lineHeight = QFontMetrics(self.font).height() + self.lineSpace
+
+        self.updateGeometries()
 
     def __onCopyCommitSummary(self):
         if self.curIdx == -1:
@@ -264,6 +273,7 @@ class LogView(QAbstractScrollArea):
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
+            painter.setFont(self.font)
             # don't know why style.drawControl not works :(
             painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, content)
 

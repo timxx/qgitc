@@ -71,7 +71,7 @@
        <item row="1" column="2">
         <widget class="QPushButton" name="btnFileSelect">
          <property name="text">
-          <string>&amp;Select...</string>
+          <string>&amp;Choose...</string>
          </property>
         </widget>
        </item>
@@ -116,7 +116,14 @@
     </property>
     <addaction name="action_About"/>
    </widget>
+   <widget class="QMenu" name="menu_Settings">
+    <property name="title">
+     <string>&amp;Settings</string>
+    </property>
+    <addaction name="acPreferences"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menu_Settings"/>
    <addaction name="menu_Help"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -128,6 +135,11 @@
   <action name="action_About">
    <property name="text">
     <string>&amp;About gitc</string>
+   </property>
+  </action>
+  <action name="acPreferences">
+   <property name="text">
+    <string>&amp;Preferences...</string>
    </property>
   </action>
  </widget>
