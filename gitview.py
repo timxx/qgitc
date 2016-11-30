@@ -20,6 +20,7 @@ class GitView(QWidget):
         self.ui.setupUi(self)
         self.repo = None
         self.pattern = None
+        self.branchA = True
 
         height = self.ui.splitter.sizeHint().height()
         sizes = [height * 1 / 4, height * 3 / 4]
@@ -122,6 +123,10 @@ class GitView(QWidget):
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
 
+    def setBranchB(self):
+        self.branchA = False
+        self.ui.logView.setBranchB()
+
     def setRepo(self, repo):
         if self.repo != repo:
             self.repo = repo
@@ -146,8 +151,8 @@ class GitView(QWidget):
         self.__filterLog(newPattern)
 
     def updateSettings(self):
-        self.ui.logView.updateFont()
-        self.ui.diffView.updateFont()
+        self.ui.logView.updateSettings()
+        self.ui.diffView.updateSettings()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyRelease and event.key() == Qt.Key_Return:

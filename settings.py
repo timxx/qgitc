@@ -45,3 +45,33 @@ class Settings(QSettings):
 
     def setDiffViewFont(self, font):
         self.setValue("dvFont", font)
+
+    def commitColorA(self):
+        return self.value("colorA", QColor(255, 0, 0))
+
+    def setCommitColorA(self, color):
+        self.setValue("colorA", color)
+
+    def commitColorB(self):
+        return self.value("colorB", QColor(112, 48, 160))
+
+    def setCommitColorB(self, color):
+        self.setValue("colorB", color)
+
+    def commitUrl(self):
+        return self.value("commitUrl", "")
+
+    def setCommitUrl(self, url):
+        self.setValue("commitUrl", url)
+
+    def bugUrl(self):
+        return self.value("bugUrl", "")
+
+    def setBugUrl(self, url):
+        self.setValue("bugUrl", url)
+
+    def bugPattern(self):
+        return self.value("bugPattern", "")
+
+    def setBugPattern(self, pattern):
+        self.setValue("bugPattern", pattern)

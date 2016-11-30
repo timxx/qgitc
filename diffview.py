@@ -225,7 +225,7 @@ class DiffView(QWidget):
         # no need update
         self.filterPath = path
 
-    def updateFont(self):
+    def updateSettings(self):
         self.viewer.resetFont()
 
     def eventFilter(self, obj, event):

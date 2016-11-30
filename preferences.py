@@ -29,6 +29,13 @@ class Preferences(QDialog):
         self.ui.cbFamilyDiff.setCurrentFont(font)
         self.ui.cbFamilyDiff.currentFontChanged.emit(font)
 
+        self.ui.colorA.setColor(self.settings.commitColorA())
+        self.ui.colorB.setColor(self.settings.commitColorB())
+
+        self.ui.leCommitUrl.setText(self.settings.commitUrl())
+        self.ui.leBugUrl.setText(self.settings.bugUrl())
+        self.ui.leBugPattern.setText(self.settings.bugPattern())
+
     def __updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
@@ -72,3 +79,18 @@ class Preferences(QDialog):
                      int(self.ui.cbSizeDiff.currentText()))
 
         self.settings.setDiffViewFont(font)
+
+        color = self.ui.colorA.getColor()
+        self.settings.setCommitColorA(color)
+
+        color = self.ui.colorB.getColor()
+        self.settings.setCommitColorB(color)
+
+        value = self.ui.leCommitUrl.text().strip()
+        self.settings.setCommitUrl(value)
+
+        value = self.ui.leBugUrl.text().strip()
+        self.settings.setBugUrl(value)
+
+        value = self.ui.leBugPattern.text().strip()
+        self.settings.setBugPattern(value)

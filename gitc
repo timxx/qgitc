@@ -24,6 +24,7 @@ class MainWindow(QMainWindow):
 
         self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
         self.ui.gitViewB.setBranchDesc(self.tr("Branch B:"))
+        self.ui.gitViewB.setBranchB()
 
         self.__setupSignals()
 

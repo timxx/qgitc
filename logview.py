@@ -72,6 +72,7 @@ class LogView(QAbstractScrollArea):
 
         self.data = CommitFetcher()
         self.curIdx = -1
+        self.branchA = True
 
         self.lineSpace = 5
 
@@ -91,7 +92,12 @@ class LogView(QAbstractScrollArea):
         # since we can view the long content in diff view
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.updateFont()
+        self.updateSettings()
+
+    def setBranchB(self):
+        self.branchA = False
+        settings = QApplication.instance().settings()
+        self.setColor(settings.commitColorB().name())
 
     def setColor(self, color):
         self.color = color
@@ -161,11 +167,19 @@ class LogView(QAbstractScrollArea):
             globalPos = self.mapToGlobal(pos)
             self.menu.exec(globalPos)
 
-    def updateFont(self):
+    def updateSettings(self):
         settings = QApplication.instance().settings()
         self.font = settings.logViewFont()
 
         self.lineHeight = QFontMetrics(self.font).height() + self.lineSpace
+
+        if self.branchA:
+            self.setColor(settings.commitColorA().name())
+        else:
+            self.setColor(settings.commitColorB().name())
+        self.setSha1Url(settings.commitUrl())
+        self.setBugUrl(settings.bugUrl())
+        self.setBugPattern(settings.bugPattern())
 
         self.updateGeometries()
 

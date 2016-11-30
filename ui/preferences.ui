@@ -120,12 +120,15 @@
          </property>
          <layout class="QGridLayout" name="gridLayout">
           <item row="1" column="1">
-           <widget class="QWidget" name="widget" native="true">
+           <widget class="ColorWidget" name="colorB" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::StrongFocus</enum>
             </property>
            </widget>
           </item>
@@ -144,12 +147,15 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QWidget" name="widget_2" native="true">
+           <widget class="ColorWidget" name="colorA" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::StrongFocus</enum>
             </property>
            </widget>
           </item>
@@ -220,12 +226,22 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ColorWidget</class>
+   <extends>QWidget</extends>
+   <header>colorwidget.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
   <tabstop>cbFamilyLog</tabstop>
   <tabstop>cbSizeLog</tabstop>
   <tabstop>cbFamilyDiff</tabstop>
   <tabstop>cbSizeDiff</tabstop>
+  <tabstop>colorA</tabstop>
+  <tabstop>colorB</tabstop>
   <tabstop>leCommitUrl</tabstop>
   <tabstop>leBugUrl</tabstop>
   <tabstop>leBugPattern</tabstop>
