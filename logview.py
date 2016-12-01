@@ -195,18 +195,23 @@ class LogView(QAbstractScrollArea):
         clipboard = QApplication.clipboard()
 
         htmlText = '<html>\n'
+        htmlText += '<head>\n'
+        htmlText += '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>\n'
+        htmlText += '</head>\n'
         htmlText += '<body>\n'
         htmlText += '<div>\n'
         htmlText += '<p style="margin:0pt">\n'
         htmlText += '<span style="font-size:10pt;color:{0}">'.format(
             self.color)
         htmlText += self.__sha1Url(commit["sha1"])
-        htmlText += ' ("'
+        htmlText += ' (&quot;'
         htmlText += self.__filterBug(commit["subject"])
-        htmlText += '", ' + self.__mailTo(commit["author"], commit["email"])
+        htmlText += '&quot;, ' + \
+            self.__mailTo(commit["author"], commit["email"])
         htmlText += ', ' + commit["date"]
         htmlText += ')</span>'
         htmlText += '</p>\n'
+        htmlText += '</div>\n'
         htmlText += '</body>\n'
         htmlText += '</html>\n'
 
