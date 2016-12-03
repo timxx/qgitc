@@ -209,7 +209,11 @@ class DiffView(QWidget):
             # TODO: improve
             for encoding in encodings:
                 try:
-                    line = line.decode(encoding).rstrip('\r')
+                    line = line.decode(encoding)
+                    if itemType != ItemDiff:
+                        line = line.rstrip('\r')
+                    else:
+                        line = line.replace('\r', '^M')
                     break
                 except UnicodeDecodeError:
                     pass
@@ -260,6 +264,8 @@ class PatchViewer(QAbstractScrollArea):
         self.lineSpace = 5  # space between each line
         self.resetFont()
 
+        self.showWhiteSpace = True
+
         # width of LineItem.content
         self.itemWidths = {}
 
@@ -278,6 +284,8 @@ class PatchViewer(QAbstractScrollArea):
         fm = QFontMetrics(settings.diffViewFont())
         # total height of a line
         self.lineHeight = fm.height() + self.lineSpace
+
+        self.tabstopWidth = fm.width(' ') * 4
 
         self.__adjust()
 
@@ -411,6 +419,43 @@ class PatchViewer(QAbstractScrollArea):
 
         painter.save()
 
+        textOption = QTextOption()
+        textOption.setTabStop(self.tabstopWidth)
+        textOption.setWrapMode(QTextOption.NoWrap)
+        if self.showWhiteSpace:
+            textOption.setFlags(QTextOption.ShowTabsAndSpaces)
+
+        textLayout = QTextLayout(item.content, self.diffFont())
+        textLayout.setTextOption(textOption)
+
+        formats = []
+
+        if self.showWhiteSpace:
+            # for the tab arrow
+            formatRange = QTextLayout.FormatRange()
+            formatRange.start = 0
+            formatRange.length = len(textLayout.text())
+            formats.append(formatRange)
+
+        # format for \r
+        if textLayout.text().endswith("^M"):
+            fmtCRRg = QTextLayout.FormatRange()
+            fmtCRRg.start = len(textLayout.text()) - 2
+            fmtCRRg.length = 2
+            fmt = QTextCharFormat()
+            fmt.setForeground(QBrush(Qt.white))
+            fmt.setBackground(QBrush(Qt.black))
+            fmtCRRg.format = fmt
+            formats.append(fmtCRRg)
+
+        textLayout.setAdditionalFormats(formats)
+
+        textLayout.beginLayout()
+
+        line = textLayout.createLine()
+
+        textLayout.endLayout()
+
         pen = painter.pen()
         if diff_begin_re.search(item.content) or \
                 item.content.startswith("\ No newline "):
@@ -421,8 +466,7 @@ class PatchViewer(QAbstractScrollArea):
             pen.setColor(QColor(255, 0, 0))
 
         painter.setPen(pen)
-        painter.setFont(self.diffFont())
-        painter.drawText(rect, flags, item.content)
+        textLayout.draw(painter, QPointF(rect.topLeft()))
 
         painter.restore()
 
