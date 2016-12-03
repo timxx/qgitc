@@ -70,11 +70,15 @@ class LogView(QAbstractScrollArea):
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
 
+        self.setFocusPolicy(Qt.StrongFocus)
+
         self.data = CommitFetcher()
         self.curIdx = -1
         self.branchA = True
 
         self.lineSpace = 5
+        self.marginX = 3
+        self.marginY = 3
 
         self.color = "#FF0000"
         self.sha1Url = None
@@ -242,7 +246,30 @@ class LogView(QAbstractScrollArea):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))
 
     def __linesPerPage(self):
-        return int(self.viewport().height() / self.lineHeight)
+        h = self.viewport().height() - self.marginY
+        return int(h / self.lineHeight)
+
+    def __itemRect(self, index):
+        """@index the index of data"""
+
+        # the row number in viewport
+        row = (index - self.verticalScrollBar().value())
+
+        offsetX = self.horizontalScrollBar().value()
+        x = self.marginX - offsetX
+        y = self.marginY + row * self.lineHeight
+        w = self.viewport().width() - x - self.marginX
+        h = self.lineHeight
+
+        rect = QRect(x, y, w, h)
+
+        return rect
+
+    def invalidateItem(self, index):
+        rect = self.__itemRect(index)
+        # update if visible in the viewport
+        if rect.y() >= 0:
+            self.viewport().update(rect)
 
     def updateGeometries(self):
         hScrollBar = self.horizontalScrollBar()
@@ -274,29 +301,27 @@ class LogView(QAbstractScrollArea):
         endLine = startLine + self.__linesPerPage() + 1
         endLine = min(len(self.data), endLine)
 
-        offsetX = self.horizontalScrollBar().value()
-        x = 5 - offsetX
-        y = 3
-
         palette = self.palette()
 
         for i in range(startLine, endLine):
             commit = self.data[i]
             content = commit.comments.split('\n')[0]
 
-            rect = QRect(x, y, self.viewport().width(), self.lineHeight)
+            rect = self.__itemRect(i)
 
             if i == self.curIdx:
                 painter.fillRect(rect, palette.highlight())
+                if self.hasFocus():
+                    painter.setPen(QPen(Qt.DotLine))
+                    painter.drawRect(rect.adjusted(0, 0, -1, -1))
                 painter.setPen(palette.color(QPalette.HighlightedText))
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
             painter.setFont(self.font)
             # don't know why style.drawControl not works :(
-            painter.drawText(rect, Qt.AlignLeft | Qt.AlignVCenter, content)
-
-            y += self.lineHeight
+            painter.drawText(rect.adjusted(2, 0, 0, 0),
+                             Qt.AlignLeft | Qt.AlignVCenter, content)
 
     def mousePressEvent(self, event):
         if not self.data:
@@ -308,3 +333,34 @@ class LogView(QAbstractScrollArea):
 
         if index < len(self.data):
             self.setCurrentIndex(index)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Up:
+            if self.curIdx > 0:
+                startLine = self.verticalScrollBar().value()
+                self.curIdx -= 1
+                if self.curIdx >= startLine:
+                    self.invalidateItem(self.curIdx + 1)
+                    self.invalidateItem(self.curIdx)
+                else:
+                    self.verticalScrollBar().setValue(self.curIdx)
+
+                self.currentIndexChanged.emit(self.curIdx)
+        elif event.key() == Qt.Key_Down:
+            if self.curIdx + 1 < len(self.data):
+                endLine = self.verticalScrollBar().value() + self.__linesPerPage()
+                self.curIdx += 1
+                if self.curIdx < endLine:
+                    self.invalidateItem(self.curIdx - 1)
+                    self.invalidateItem(self.curIdx)
+                else:
+                    v = self.verticalScrollBar().value()
+                    self.verticalScrollBar().setValue(v + 1)
+
+                self.currentIndexChanged.emit(self.curIdx)
+
+    def focusInEvent(self, event):
+        self.invalidateItem(self.curIdx)
+
+    def focusOutEvent(self, event):
+        self.invalidateItem(self.curIdx)

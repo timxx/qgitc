@@ -45,7 +45,11 @@
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <widget class="LogView" name="logView"/>
+     <widget class="LogView" name="logView" native="true">
+      <property name="focusPolicy">
+       <enum>Qt::StrongFocus</enum>
+      </property>
+     </widget>
      <widget class="QWidget" name="verticalLayoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
@@ -83,18 +87,25 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>LogView</class>
-   <extends>QAbstractScrollArea</extends>
-   <header>logview.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>DiffView</class>
    <extends>QWidget</extends>
    <header>diffview.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>LogView</class>
+   <extends>QWidget</extends>
+   <header>logview.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>cbBranch</tabstop>
+  <tabstop>logView</tabstop>
+  <tabstop>leSha1</tabstop>
+  <tabstop>btnFind</tabstop>
+  <tabstop>leFindWhat</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
