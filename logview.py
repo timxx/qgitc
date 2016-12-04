@@ -86,6 +86,7 @@ class LogView(QAbstractScrollArea):
         self.bugRe = None
 
         self.authorRe = re.compile("(.*) <.*>$")
+        self.foundItems = []
 
         self.menu = QMenu()
         self.menu.addAction(self.tr("&Copy commit summary"),
@@ -128,6 +129,7 @@ class LogView(QAbstractScrollArea):
     def clear(self):
         self.data.setSource(None)
         self.curIdx = -1
+        self.foundItems.clear()
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
 
@@ -144,7 +146,7 @@ class LogView(QAbstractScrollArea):
         startLine = self.verticalScrollBar().value()
         endLine = startLine + self.__linesPerPage()
 
-        if self.curIdx < startLine or self.curIdx > endLine:
+        if self.curIdx < startLine or self.curIdx >= endLine:
             self.verticalScrollBar().setValue(self.curIdx)
 
     def setCurrentIndex(self, index):
@@ -267,6 +269,31 @@ class LogView(QAbstractScrollArea):
 
         return rect
 
+    def __commitCompare(self, commit, regexp):
+        if regexp.search(commit.comments):
+            return True
+
+        if regexp.search(commit.author):
+            return True
+
+        if regexp.search(commit.commiter):
+            return True
+
+        if regexp.search(commit.sha1):
+            return True
+
+        if regexp.search(commit.authorDate):
+            return True
+
+        if regexp.search(commit.commiterDate):
+            return True
+
+        for p in commit.parents:
+            if regexp.search(p):
+                return True
+
+        return False
+
     def invalidateItem(self, index):
         rect = self.__itemRect(index)
         # update if visible in the viewport
@@ -287,6 +314,35 @@ class LogView(QAbstractScrollArea):
 
         vScrollBar.setRange(0, totalLines - linesPerPage)
         vScrollBar.setPageStep(linesPerPage)
+
+    def findCommit(self, beginCommit, findWhat, findType):
+        self.foundItems.clear()
+
+        # clear the state only
+        if not findWhat:
+            self.viewport().update()
+            return None
+
+        commitContains = self.__commitCompare
+
+        pattern = findWhat
+        # not regexp, escape the special chars
+        if findType != 2:
+            specal_chars = "\\^$.*|?+()[]{}"
+            pattern = "".join(
+                "\\" + c if c in specal_chars else c for c in findWhat)
+
+        flags = re.IGNORECASE if findType == 1 else 0
+        regexp = re.compile(pattern, flags)
+
+        for i in range(beginCommit, len(self.data)):
+            commit = self.data[i]
+            if commitContains(commit, regexp):
+                self.foundItems.append(i)
+
+        self.viewport().update()
+
+        return self.foundItems
 
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)
@@ -344,6 +400,13 @@ class LogView(QAbstractScrollArea):
                 painter.setPen(palette.color(QPalette.HighlightedText))
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
+
+            # bold the founded item
+            # TODO: also highlight the keyword
+            if i in self.foundItems:
+                font = painter.font()
+                font.setBold(True)
+                painter.setFont(font)
 
             painter.drawText(rect.adjusted(2, 0, 0, 0), flags, content)
             painter.restore()

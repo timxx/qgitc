@@ -232,6 +232,9 @@ class DiffView(QWidget):
     def updateSettings(self):
         self.viewer.resetFont()
 
+    def findCommit(self, beginCommit, findWhat, findType, findInPaths):
+        return None
+
     def eventFilter(self, obj, event):
         if obj != self.treeWidget:
             return False

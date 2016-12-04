@@ -22,16 +22,20 @@ class GitView(QWidget):
         self.pattern = None
         self.branchA = True
 
+        self.__clearFindState()
+
         height = self.ui.splitter.sizeHint().height()
         sizes = [height * 1 / 4, height * 3 / 4]
         self.ui.splitter.setSizes(sizes)
 
         self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
-        self.ui.btnFind.clicked.connect(self.__onBtnFindClicked)
 
         self.reqCommit.connect(self.__onReqCommit)
-        self.reqFind.connect(self.__onBtnFindClicked)
+        self.reqFind.connect(self.__doFindCommit)
+
+        self.ui.tbPrev.clicked.connect(self.__onPreFindCommit)
+        self.ui.tbNext.clicked.connect(self.__onNextFindCommit)
 
         self.ui.leSha1.installEventFilter(self)
         self.ui.leFindWhat.installEventFilter(self)
@@ -71,12 +75,19 @@ class GitView(QWidget):
         branchIdx = self.ui.cbBranch.currentIndex()
         self.__onBranchChanged(branchIdx)
 
+    def __clearFindState(self):
+        self.foundItems = None
+        self.curFindItem = -1
+        self.ui.tbPrev.setEnabled(False)
+        self.ui.tbNext.setEnabled(False)
+
     def __onBranchChanged(self, index):
         if index == -1 or self.ui.cbBranch.count() == 0:
             return
 
         self.ui.logView.clear()
         self.ui.diffView.clear()
+        self.__clearFindState()
 
         curBranch = self.ui.cbBranch.currentText()
         args = ["git", "log", "-z",
@@ -103,8 +114,29 @@ class GitView(QWidget):
             self.ui.leSha1.clear()
             self.ui.diffView.clear()
 
-    def __onBtnFindClicked(self, checked):
-        pass
+    def __doFindCommit(self):
+        findWhat = self.ui.leFindWhat.text().strip()
+        findField = self.ui.cbFindWhat.currentIndex()
+        findType = self.ui.cbFindType.currentIndex()
+
+        self.__clearFindState()
+
+        # find commit in logview
+        if findField == 0:
+            self.ui.diffView.findCommit(0, None, findType, False)
+            self.foundItems = self.ui.logView.findCommit(0, findWhat, findType)
+        else:
+            self.foundItems = self.ui.logView.findCommit(0, None, findType)
+            self.foundItems = self.ui.diffView.findCommit(
+                0, findWhat, findType, findField == 1)
+
+        if self.foundItems:
+            self.curFindItem = 0
+            self.ui.logView.setCurrentIndex(self.foundItems[0])
+            self.ui.tbNext.setEnabled(len(self.foundItems) > 1)
+        elif findWhat:
+            self.window().showMessage(
+                self.tr("Not found '{0}'".format(findWhat)))
 
     def __onReqCommit(self):
         sha1 = self.ui.leSha1.text().strip()
@@ -113,6 +145,30 @@ class GitView(QWidget):
             if not ok:
                 self.window().showMessage(
                     self.tr("Revision '{0}' is not known".format(sha1)))
+
+    def __onPreFindCommit(self, checked=False):
+        # should not happen
+        if self.curFindItem == 0:
+            return
+
+        self.curFindItem -= 1
+        index = self.foundItems[self.curFindItem]
+        self.ui.logView.setCurrentIndex(index)
+
+        self.ui.tbPrev.setEnabled(self.curFindItem != 0)
+        self.ui.tbNext.setEnabled(True)
+
+    def __onNextFindCommit(self, checked=False):
+        # should not happen
+        if self.curFindItem + 1 >= len(self.foundItems):
+            return
+
+        self.curFindItem += 1
+        index = self.foundItems[self.curFindItem]
+        self.ui.logView.setCurrentIndex(index)
+
+        self.ui.tbPrev.setEnabled(True)
+        self.ui.tbNext.setEnabled(self.curFindItem + 1 != len(self.foundItems))
 
     def __filterLog(self, pattern):
         if pattern != self.pattern:
