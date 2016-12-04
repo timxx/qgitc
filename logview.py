@@ -85,6 +85,8 @@ class LogView(QAbstractScrollArea):
         self.bugUrl = None
         self.bugRe = None
 
+        self.authorRe = re.compile("(.*) <.*>$")
+
         self.menu = QMenu()
         self.menu.addAction(self.tr("&Copy commit summary"),
                             self.__onCopyCommitSummary)
@@ -306,9 +308,34 @@ class LogView(QAbstractScrollArea):
         for i in range(startLine, endLine):
             commit = self.data[i]
             content = commit.comments.split('\n')[0]
+            author = self.authorRe.sub("\\1", commit.author)
+            date = commit.authorDate.split(' ')[0]
 
             rect = self.__itemRect(i)
 
+            painter.setFont(self.font)
+
+            flags = Qt.AlignLeft | Qt.AlignVCenter
+            rect.adjust(2, 0, 0, 0)
+
+            # autor
+            boundingRect = painter.boundingRect(rect, flags, author)
+            painter.fillRect(boundingRect, QColor(255, 221, 170))
+            painter.drawRect(boundingRect.adjusted(-1, -1, 0, 0))
+            painter.drawText(rect, flags, author)
+            rect.moveLeft(boundingRect.right() + 2)
+            rect.setWidth(rect.width() - boundingRect.width() - 2)
+
+            # date
+            boundingRect = painter.boundingRect(rect, flags, date)
+            painter.fillRect(boundingRect, QColor(140, 208, 80))
+            painter.drawRect(boundingRect.adjusted(-1, -1, 0, 0))
+            painter.drawText(rect, flags, date)
+            rect.moveLeft(boundingRect.right() + 6)
+            rect.setWidth(rect.width() - boundingRect.width() - 6)
+
+            # subject
+            painter.save()
             if i == self.curIdx:
                 painter.fillRect(rect, palette.highlight())
                 if self.hasFocus():
@@ -318,10 +345,8 @@ class LogView(QAbstractScrollArea):
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
-            painter.setFont(self.font)
-            # don't know why style.drawControl not works :(
-            painter.drawText(rect.adjusted(2, 0, 0, 0),
-                             Qt.AlignLeft | Qt.AlignVCenter, content)
+            painter.drawText(rect.adjusted(2, 0, 0, 0), flags, content)
+            painter.restore()
 
     def mousePressEvent(self, event):
         if not self.data:
