@@ -21,6 +21,12 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.progressBarA = QProgressBar()
+        self.progressBarB = QProgressBar()
+        self.ui.statusbar.addWidget(self.progressBarA, 1)
+        self.ui.statusbar.addWidget(self.progressBarB, 1)
+        self.progressBarA.setVisible(False)
+        self.progressBarB.setVisible(False)
 
         self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
         self.ui.gitViewB.setBranchDesc(self.tr("Branch B:"))
@@ -106,6 +112,19 @@ class MainWindow(QMainWindow):
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
+
+    def showProgress(self, maximum, isBranchA):
+        progressBar = self.progressBarA if isBranchA else self.progressBarB
+        progressBar.setRange(0, maximum)
+        progressBar.setVisible(True)
+
+    def hideProgress(self, isBranchA):
+        progressBar = self.progressBarA if isBranchA else self.progressBarB
+        progressBar.setVisible(False)
+
+    def updateProgress(self, value, isBranchA):
+        progressBar = self.progressBarA if isBranchA else self.progressBarB
+        progressBar.setValue(value)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress and event.key() == Qt.Key_Return:

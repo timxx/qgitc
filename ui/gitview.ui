@@ -111,7 +111,7 @@
              </item>
              <item>
               <property name="text">
-               <string>adding/removing strings</string>
+               <string>changing lines matching</string>
               </property>
              </item>
             </widget>
@@ -145,7 +145,7 @@
            <item>
             <widget class="QToolButton" name="tbPrev">
              <property name="toolTip">
-              <string>Goto previous founded commit</string>
+              <string>Find previous</string>
              </property>
              <property name="text">
               <string>↑</string>
@@ -155,7 +155,7 @@
            <item>
             <widget class="QToolButton" name="tbNext">
              <property name="toolTip">
-              <string>Goto next founded commit</string>
+              <string>Find next</string>
              </property>
              <property name="text">
               <string>↓</string>

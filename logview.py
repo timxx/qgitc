@@ -64,8 +64,137 @@ class CommitFetcher():
         return index
 
 
+class FindThread(QThread):
+    findFinished = pyqtSignal(int)
+    findProgress = pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        super(FindThread, self).__init__(parent)
+
+        self.mutex = QMutex()
+
+        pattern = b'diff --(git a/.* b/.*|cc .*)\n'
+        pattern += b'|index [a-z0-9]{7,}..[a-z0-9]{7,}( [0-7]{6})?\n'
+        pattern += b'|@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}'
+        pattern += b'|\-\-\- (a/.*|/dev/null)\n'
+        pattern += b'|\+\+\+ (b/.*|/dev/null)\n'
+        pattern += b'|(new|deleted) file mode [0-7]{6}\n'
+        pattern += b'|Binary files.* and .* differ\n'
+        pattern += b'|\\ No newline at end of file'
+        self.diffRe = re.compile(pattern)
+
+        self.initData(None, 0, None, None, 0)
+
+    def __findCommitInHeader(self, commit):
+        if self.regexp.search(commit.comments):
+            return True
+
+        if self.regexp.search(commit.author):
+            return True
+
+        if self.regexp.search(commit.commiter):
+            return True
+
+        if self.regexp.search(commit.sha1):
+            return True
+
+        if self.regexp.search(commit.authorDate):
+            return True
+
+        if self.regexp.search(commit.commiterDate):
+            return True
+
+        for p in commit.parents:
+            if self.regexp.search(p):
+                return True
+
+        return False
+
+    def __findCommitInPath(self, commit):
+        paths = getCommitFiles(commit.sha1)
+        if self.regexp.search(paths):
+            return True
+        return False
+
+    def __findCommitInDiff(self, commit):
+        # TODO: improve performance
+        diff = getCommitRawDiff(commit.sha1)
+        # remove useless lines
+        diff = self.diffRe.sub(b'', diff)
+
+        # different file might have different encoding
+        # so split the diff data into lines
+        lastEncoding = None
+        lines = diff.split(b'\n')
+        for line in lines:
+            line, lastEncoding = decodeDiffData(line, lastEncoding)
+            if line and self.regexp.search(line):
+                return True
+        return False
+
+    def __isInterruptionRequested(self):
+        interruptionReguested = False
+        self.mutex.lock()
+        interruptionReguested = self.interruptionReguested
+        self.mutex.unlock()
+        return interruptionReguested
+
+    def initData(self, commits, beginCommit, regexp, findRange, findField):
+        self.commits = commits
+        self.beginCommit = beginCommit
+        self.regexp = regexp
+        self.findRange = findRange
+        self.findField = findField
+        self.interruptionReguested = False
+
+    def requestInterruption(self):
+        if not self.isRunning():
+            return
+        self.mutex.lock()
+        self.interruptionReguested = True
+        self.mutex.unlock()
+
+    def isInterruptionRequested(self):
+        if not self.isRunning():
+            return False
+        return self.__isInterruptionRequested()
+
+    def run(self):
+        findInCommit = self.__findCommitInDiff
+        if self.findField == 0:
+            findInCommit = self.__findCommitInHeader
+        elif self.findField == 1:
+            findInCommit = self.__findCommitInPath
+
+        result = -1
+        total = abs(self.findRange.stop - self.findRange.start)
+        progress = 0
+        percentage = -1
+        # profile = MyProfile()
+        for i in self.findRange:
+            if self.__isInterruptionRequested():
+                result = -2
+                break
+
+            progress += 1
+            new_percentage = int(progress * 100 / total)
+            # avoid too many updates on main thread
+            if percentage != new_percentage:
+                percentage = new_percentage
+                self.findProgress.emit(percentage)
+
+            if findInCommit(self.commits[i]):
+                result = i
+                break
+
+        # profile = None
+        self.findFinished.emit(result)
+
+
 class LogView(QAbstractScrollArea):
     currentIndexChanged = pyqtSignal(int)
+    findFinished = pyqtSignal(int)
+    findProgress = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
@@ -86,7 +215,10 @@ class LogView(QAbstractScrollArea):
         self.bugRe = None
 
         self.authorRe = re.compile("(.*) <.*>$")
-        self.foundItems = []
+
+        self.findThread = FindThread(self)
+        self.findThread.findFinished.connect(self.findFinished)
+        self.findThread.findProgress.connect(self.findProgress)
 
         self.menu = QMenu()
         self.menu.addAction(self.tr("&Copy commit summary"),
@@ -100,6 +232,9 @@ class LogView(QAbstractScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.updateSettings()
+
+    def __del__(self):
+        self.cancelFindCommit()
 
     def setBranchB(self):
         self.branchA = False
@@ -129,12 +264,15 @@ class LogView(QAbstractScrollArea):
     def clear(self):
         self.data.setSource(None)
         self.curIdx = -1
-        self.foundItems.clear()
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
+        self.cancelFindCommit()
 
     def getCommit(self, index):
         return self.data[index]
+
+    def getCount(self):
+        return len(self.data)
 
     def currentIndex(self):
         return self.curIdx
@@ -269,31 +407,6 @@ class LogView(QAbstractScrollArea):
 
         return rect
 
-    def __commitCompare(self, commit, regexp):
-        if regexp.search(commit.comments):
-            return True
-
-        if regexp.search(commit.author):
-            return True
-
-        if regexp.search(commit.commiter):
-            return True
-
-        if regexp.search(commit.sha1):
-            return True
-
-        if regexp.search(commit.authorDate):
-            return True
-
-        if regexp.search(commit.commiterDate):
-            return True
-
-        for p in commit.parents:
-            if regexp.search(p):
-                return True
-
-        return False
-
     def invalidateItem(self, index):
         rect = self.__itemRect(index)
         # update if visible in the viewport
@@ -315,15 +428,12 @@ class LogView(QAbstractScrollArea):
         vScrollBar.setRange(0, totalLines - linesPerPage)
         vScrollBar.setPageStep(linesPerPage)
 
-    def findCommit(self, beginCommit, findWhat, findType):
-        self.foundItems.clear()
+    def findCommitAsync(self, beginCommit, findWhat, findField, findType, findNext=True):
+        # cancel the previous one
+        self.cancelFindCommit()
 
-        # clear the state only
         if not findWhat:
-            self.viewport().update()
-            return None
-
-        commitContains = self.__commitCompare
+            return False
 
         pattern = findWhat
         # not regexp, escape the special chars
@@ -335,14 +445,21 @@ class LogView(QAbstractScrollArea):
         flags = re.IGNORECASE if findType == 1 else 0
         regexp = re.compile(pattern, flags)
 
-        for i in range(beginCommit, len(self.data)):
-            commit = self.data[i]
-            if commitContains(commit, regexp):
-                self.foundItems.append(i)
+        findRange = range(beginCommit, len(self.data)
+                          ) if findNext else range(beginCommit, -1, -1)
 
-        self.viewport().update()
+        self.findThread.initData(
+            self.data, beginCommit, regexp, findRange, findField)
+        self.findThread.start()
 
-        return self.foundItems
+        return True
+
+    def cancelFindCommit(self):
+        if self.findThread.isRunning():
+            self.findThread.requestInterruption()
+            self.findThread.wait()
+            return True
+        return False
 
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)
@@ -400,13 +517,6 @@ class LogView(QAbstractScrollArea):
                 painter.setPen(palette.color(QPalette.HighlightedText))
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
-
-            # bold the founded item
-            # TODO: also highlight the keyword
-            if i in self.foundItems:
-                font = painter.font()
-                font.setBold(True)
-                painter.setFont(font)
 
             painter.drawText(rect.adjusted(2, 0, 0, 0), flags, content)
             painter.restore()

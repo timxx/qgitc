@@ -145,16 +145,7 @@ class DiffView(QWidget):
         self.clear()
         self.commit = commit
 
-        args = ["git", "diff-tree",
-                "-r", "-p", "--textconv",
-                "--submodule", "-C",
-                "--cc", "--no-commit-id",
-                "-U3", "--root",
-                commit.sha1]
-        if self.filterPath:
-            args.append(self.filterPath)
-
-        data = subprocess.check_output(args)
+        data = getCommitRawDiff(commit.sha1, self.filterPath)
         lines = data.split(b'\n')
 
         self.__addToTreeWidget(self.tr("Comments"), 0)
@@ -163,10 +154,7 @@ class DiffView(QWidget):
         lineItems.extend(self.__commitToLineItems(commit))
 
         isDiffContent = False
-
-        encodings = ["gb18030", "utf16"]
-        if not diff_encoding in encodings:
-            encodings.insert(0, diff_encoding)
+        lastEncoding = None
 
         for line in lines:
             match = diff_re.search(line)
@@ -206,17 +194,11 @@ class DiffView(QWidget):
             else:
                 itemType = ItemFileInfo
 
-            # TODO: improve
-            for encoding in encodings:
-                try:
-                    line = line.decode(encoding)
-                    if itemType != ItemDiff:
-                        line = line.rstrip('\r')
-                    else:
-                        line = line.replace('\r', '^M')
-                    break
-                except UnicodeDecodeError:
-                    pass
+            line, lastEncoding = decodeDiffData(line, lastEncoding)
+            if itemType != ItemDiff:
+                line = line.rstrip('\r')
+            else:
+                line = line.replace('\r', '^M')
             lineItems.append(LineItem(itemType, line))
 
         self.viewer.setData(lineItems)
@@ -231,9 +213,6 @@ class DiffView(QWidget):
 
     def updateSettings(self):
         self.viewer.resetFont()
-
-    def findCommit(self, beginCommit, findWhat, findType, findInPaths):
-        return None
 
     def eventFilter(self, obj, event):
         if obj != self.treeWidget:

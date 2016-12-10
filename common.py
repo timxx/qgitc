@@ -117,6 +117,40 @@ def getCommitSummary(sha1):
             "email": parts[4]}
 
 
+def getCommitFiles(sha1):
+    args = ["git", "diff-tree", "--no-commit-id",
+            "--name-only", "--root", "-r", "-z",
+            "--submodule", sha1]
+    process = subprocess.Popen(args,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    data = process.communicate()[0]
+    if process.returncode is not 0:
+        return None
+
+    return data.decode("utf-8")
+
+
+def getCommitRawDiff(sha1, filePath=None):
+    args = ["git", "diff-tree",
+            "-r", "-p", "--textconv",
+            "--submodule", "-C",
+            "--cc", "--no-commit-id",
+            "-U3", "--root",
+            sha1]
+    if filePath:
+        args.append(filePath)
+
+    process = subprocess.Popen(args,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    data = process.communicate()[0]
+    if process.returncode is not 0:
+        return None
+
+    return data
+
+
 def htmlEscape(text):
     return "".join(html_escape_table.get(c, c) for c in text)
 
@@ -130,3 +164,19 @@ def externalDiff(commit, path=None):
     prcoess = subprocess.Popen(args,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)
+
+
+def decodeDiffData(data, preferEncoding="utf-8"):
+    encodings = ["utf-8", "gb18030", "utf16"]
+    if preferEncoding:
+        encodings.remove(preferEncoding)
+        encodings.insert(0, preferEncoding)
+    line = None
+    for e in encodings:
+        try:
+            line = data.decode(e)
+            break
+        except UnicodeDecodeError:
+            pass
+
+    return line, e
