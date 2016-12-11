@@ -7,6 +7,7 @@ from ui.gitview import *
 from common import *
 
 import subprocess
+import re
 
 
 class GitView(QWidget):
@@ -21,7 +22,9 @@ class GitView(QWidget):
         self.repo = None
         self.pattern = None
         self.branchA = True
+        self.findPattern = None
         self.findNext = True
+        self.findField = FindField.Comments
 
         height = self.ui.splitter.sizeHint().height()
         sizes = [height * 1 / 4, height * 3 / 4]
@@ -33,7 +36,7 @@ class GitView(QWidget):
         self.ui.logView.findProgress.connect(self.__onFindProgress)
 
         self.reqCommit.connect(self.__onReqCommit)
-        self.reqFind.connect(self.__doFindCommit)
+        self.reqFind.connect(self.__onNextFindCommit)
 
         self.ui.tbPrev.clicked.connect(self.__onPreFindCommit)
         self.ui.tbNext.clicked.connect(self.__onNextFindCommit)
@@ -112,12 +115,29 @@ class GitView(QWidget):
 
     def __doFindCommit(self, beginCommit=0, findNext=True):
         findWhat = self.ui.leFindWhat.text().strip()
-        findField = self.ui.cbFindWhat.currentIndex()
+        self.findField = self.ui.cbFindWhat.currentIndex()
         findType = self.ui.cbFindType.currentIndex()
         self.findNext = findNext
 
+        if not findWhat:
+            self.ui.logView.highlightKeyword(None)
+            self.ui.diffView.highlightKeyword(None)
+            return
+
+        pattern = findWhat
+        # not regexp, escape the special chars
+        if findType != 2:
+            specal_chars = "\\^$.*|?+()[]{}"
+            pattern = "".join(
+                "\\" + c if c in specal_chars else c for c in findWhat)
+
+        flags = re.IGNORECASE if findType == 1 else 0
+        self.findPattern = re.compile(pattern, flags)
+        findRange = range(beginCommit, self.ui.logView.getCount()
+                          ) if findNext else range(beginCommit, -1, -1)
+
         findStarted = self.ui.logView.findCommitAsync(
-            beginCommit, findWhat, findField, findType, findNext)
+            self.findPattern, findRange, self.findField)
 
         if findStarted:
             self.window().showProgress(100, self.branchA)
@@ -142,6 +162,14 @@ class GitView(QWidget):
     def __onFindFinished(self, result):
         self.window().hideProgress(self.branchA)
         self.unsetCursor()
+
+        pattern = self.findPattern
+        if self.findField == FindField.Comments:  # comments
+            self.ui.logView.highlightKeyword(pattern)
+        else:
+            self.ui.logView.highlightKeyword(None)
+        self.ui.diffView.highlightKeyword(pattern, self.findField)
+
         if result >= 0:
             self.ui.logView.setCurrentIndex(result)
         elif result == -1:

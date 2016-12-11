@@ -30,6 +30,60 @@ diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
 diff_encoding = "utf-8"
 
 
+class TreeItemDelegate(QItemDelegate):
+
+    def __init__(self, parent=None):
+        super(TreeItemDelegate, self).__init__(parent)
+        self.pattern = None
+
+    def paint(self, painter, option, index):
+        text = index.data()
+
+        itemSelected = option.state & QStyle.State_Selected
+        self.drawBackground(painter, option, index)
+        self.drawFocus(painter, option, option.rect)
+
+        textLayout = QTextLayout(text, option.font)
+        textOption = QTextOption()
+        textOption.setWrapMode(QTextOption.NoWrap)
+
+        textLayout.setTextOption(textOption)
+
+        formats = []
+        if index.row() != 0 and self.pattern:
+            matchs = self.pattern.finditer(text)
+            fmt = QTextCharFormat()
+            if itemSelected:
+                fmt.setForeground(QBrush(Qt.yellow))
+            else:
+                fmt.setBackground(QBrush(Qt.yellow))
+            for m in matchs:
+                rg = QTextLayout.FormatRange()
+                rg.start = m.start()
+                rg.length = m.end() - rg.start
+                rg.format = fmt
+                formats.append(rg)
+
+        textLayout.setAdditionalFormats(formats)
+
+        textLayout.beginLayout()
+        line = textLayout.createLine()
+        line.setPosition(QPointF(0, 0))
+        textLayout.endLayout()
+
+        painter.save()
+        if itemSelected:
+            painter.setPen(option.palette.color(QPalette.HighlightedText))
+        else:
+            painter.setPen(option.palette.color(QPalette.WindowText))
+
+        textLayout.draw(painter, QPointF(option.rect.topLeft()))
+        painter.restore()
+
+    def setHighlightPattern(self, pattern):
+        self.pattern = pattern
+
+
 class DiffView(QWidget):
 
     def __init__(self, parent=None):
@@ -58,6 +112,9 @@ class DiffView(QWidget):
         self.treeWidget.setRootIsDecorated(False)
         self.treeWidget.header().setStretchLastSection(False)
         self.treeWidget.header().setResizeMode(QHeaderView.ResizeToContents)
+
+        self.itemDelegate = TreeItemDelegate(self)
+        self.treeWidget.setItemDelegate(self.itemDelegate)
 
         width = self.sizeHint().width()
         sizes = [width * 2 / 3, width * 1 / 3]
@@ -214,6 +271,14 @@ class DiffView(QWidget):
     def updateSettings(self):
         self.viewer.resetFont()
 
+    def highlightKeyword(self, pattern, field=FindField.Comments):
+        self.viewer.highlightKeyword(pattern, field)
+        if field == FindField.Paths:
+            self.itemDelegate.setHighlightPattern(pattern)
+        else:
+            self.itemDelegate.setHighlightPattern(None)
+        self.treeWidget.viewport().update()
+
     def eventFilter(self, obj, event):
         if obj != self.treeWidget:
             return False
@@ -247,6 +312,8 @@ class PatchViewer(QAbstractScrollArea):
         self.resetFont()
 
         self.showWhiteSpace = True
+        self.highlightPattern = None
+        self.highlightField = FindField.Comments
 
         # width of LineItem.content
         self.itemWidths = {}
@@ -297,6 +364,11 @@ class PatchViewer(QAbstractScrollArea):
             vScrollBar.blockSignals(False)
             self.__updateHScrollBar()
             self.viewport().update()
+
+    def highlightKeyword(self, pattern, field):
+        self.highlightPattern = pattern
+        self.highlightField = field
+        self.viewport().update()
 
     def mouseMoveEvent(self, event):
         pass
@@ -368,13 +440,45 @@ class PatchViewer(QAbstractScrollArea):
         else:
             return self.diffFont()
 
+    def __highlightFormatRange(self, text):
+        formats = []
+        if self.highlightPattern:
+            matchs = self.highlightPattern.finditer(text)
+            for m in matchs:
+                rg = QTextLayout.FormatRange()
+                rg.start = m.start()
+                rg.length = m.end() - rg.start
+                fmt = QTextCharFormat()
+                fmt.setBackground(QBrush(Qt.yellow))
+                rg.format = fmt
+                formats.append(rg)
+        return formats
+
     def __drawComments(self, painter, item, rect, flags):
         if not (item.type >= ItemAuthor and item.type <= ItemComments):
             return False
 
         painter.save()
         painter.setFont(self.commentsFont())
-        painter.drawText(rect, flags, item.content)
+
+        textLayout = QTextLayout(item.content, self.commentsFont())
+
+        textOption = QTextOption()
+        textOption.setWrapMode(QTextOption.NoWrap)
+
+        textLayout.setTextOption(textOption)
+
+        if self.highlightField == FindField.Comments:
+            formats = self.__highlightFormatRange(item.content)
+            textLayout.setAdditionalFormats(formats)
+
+        textLayout.beginLayout()
+        line = textLayout.createLine()
+        line.setPosition(QPointF(0, 0))
+        textLayout.endLayout()
+
+        textLayout.draw(painter, QPointF(rect.topLeft()))
+
         painter.restore()
 
         return True
@@ -430,6 +534,8 @@ class PatchViewer(QAbstractScrollArea):
             fmtCRRg.format = fmt
             formats.append(fmtCRRg)
 
+        if self.highlightField == FindField.Diffs:
+            formats.extend(self.__highlightFormatRange(item.content))
         textLayout.setAdditionalFormats(formats)
 
         textLayout.beginLayout()

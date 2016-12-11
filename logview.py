@@ -83,7 +83,7 @@ class FindThread(QThread):
         pattern += b'|\\ No newline at end of file'
         self.diffRe = re.compile(pattern)
 
-        self.initData(None, 0, None, None, 0)
+        self.initData(None, None, None, 0)
 
     def __findCommitInHeader(self, commit):
         if self.regexp.search(commit.comments):
@@ -139,10 +139,9 @@ class FindThread(QThread):
         self.mutex.unlock()
         return interruptionReguested
 
-    def initData(self, commits, beginCommit, regexp, findRange, findField):
+    def initData(self, commits, findPattern, findRange, findField):
         self.commits = commits
-        self.beginCommit = beginCommit
-        self.regexp = regexp
+        self.regexp = findPattern
         self.findRange = findRange
         self.findField = findField
         self.interruptionReguested = False
@@ -161,9 +160,9 @@ class FindThread(QThread):
 
     def run(self):
         findInCommit = self.__findCommitInDiff
-        if self.findField == 0:
+        if self.findField == FindField.Comments:
             findInCommit = self.__findCommitInHeader
-        elif self.findField == 1:
+        elif self.findField == FindField.Paths:
             findInCommit = self.__findCommitInPath
 
         result = -1
@@ -219,6 +218,8 @@ class LogView(QAbstractScrollArea):
         self.findThread = FindThread(self)
         self.findThread.findFinished.connect(self.findFinished)
         self.findThread.findProgress.connect(self.findProgress)
+
+        self.highlightPattern = None
 
         self.menu = QMenu()
         self.menu.addAction(self.tr("&Copy commit summary"),
@@ -428,28 +429,15 @@ class LogView(QAbstractScrollArea):
         vScrollBar.setRange(0, totalLines - linesPerPage)
         vScrollBar.setPageStep(linesPerPage)
 
-    def findCommitAsync(self, beginCommit, findWhat, findField, findType, findNext=True):
+    def findCommitAsync(self, findPattern, findRange, findField):
         # cancel the previous one
         self.cancelFindCommit()
 
-        if not findWhat:
+        if not findPattern:
             return False
 
-        pattern = findWhat
-        # not regexp, escape the special chars
-        if findType != 2:
-            specal_chars = "\\^$.*|?+()[]{}"
-            pattern = "".join(
-                "\\" + c if c in specal_chars else c for c in findWhat)
-
-        flags = re.IGNORECASE if findType == 1 else 0
-        regexp = re.compile(pattern, flags)
-
-        findRange = range(beginCommit, len(self.data)
-                          ) if findNext else range(beginCommit, -1, -1)
-
         self.findThread.initData(
-            self.data, beginCommit, regexp, findRange, findField)
+            self.data, findPattern, findRange, findField)
         self.findThread.start()
 
         return True
@@ -460,6 +448,10 @@ class LogView(QAbstractScrollArea):
             self.findThread.wait()
             return True
         return False
+
+    def highlightKeyword(self, pattern):
+        self.highlightPattern = pattern
+        self.viewport().update()
 
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)
@@ -518,7 +510,43 @@ class LogView(QAbstractScrollArea):
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
-            painter.drawText(rect.adjusted(2, 0, 0, 0), flags, content)
+            textLayout = QTextLayout(content, self.font)
+
+            textOption = QTextOption()
+            textOption.setWrapMode(QTextOption.NoWrap)
+            textOption.setAlignment(flags)
+
+            textLayout.setTextOption(textOption)
+
+            formats = []
+            if self.highlightPattern:
+                matchs = self.highlightPattern.finditer(content)
+                fmt = QTextCharFormat()
+                if i == self.curIdx:
+                    fmt.setForeground(QBrush(Qt.yellow))
+                else:
+                    fmt.setBackground(QBrush(Qt.yellow))
+                for m in matchs:
+                    rg = QTextLayout.FormatRange()
+                    rg.start = m.start()
+                    rg.length = m.end() - rg.start
+                    rg.format = fmt
+                    formats.append(rg)
+
+            textLayout.setAdditionalFormats(formats)
+
+            textLayout.beginLayout()
+            line = textLayout.createLine()
+            line.setPosition(QPointF(0, 0))
+            textLayout.endLayout()
+
+            # setAlignment doesn't works at all!
+            # we have to vcenter by self LoL
+            rect = rect.adjusted(2, 0, 0, 0)
+            offsetY = (rect.height() - painter.fontMetrics().lineSpacing()) / 2
+            pos = QPointF(rect.left(), rect.top() + offsetY)
+            textLayout.draw(painter, pos)
+
             painter.restore()
 
     def mousePressEvent(self, event):

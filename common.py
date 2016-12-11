@@ -64,6 +64,13 @@ class MyProfile():
         print(s.getvalue())
 
 
+class FindField():
+
+    Comments = 0
+    Paths = 1
+    Diffs = 2
+
+
 def getRepoDirectory(directory):
     """simply check whether directory is git repository,
        if it is, return the top directory path
