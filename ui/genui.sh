@@ -2,13 +2,23 @@
 
 UIC_BIN=pyuic4
 
-if ! which ${UIC_BIN} &> /dev/null ; then
+if [[ "$OS" =~ Windows* ]] ; then
+    IFS=":" read -r -a _PATHS <<< $PATH
+    for p in "${_PATHS[@]}" ; do
+        if [[ "$p" == */Lib/site-packages/PyQt4 ]] ; then
+            UIC_BIN="python ${p}/uic/pyuic.py"
+            break
+        fi
+    done
+else
+    if ! which ${UIC_BIN} &> /dev/null ; then
     UIC_BIN=pyuic
-fi
+    fi
 
-if ! which ${UIC_BIN} &> /dev/null ; then
-    echo "Missing pyuic4, please setup the env or install it"
-    exit -1
+    if ! which ${UIC_BIN} &> /dev/null ; then
+        echo "Missing pyuic4, please setup the env or install it"
+        exit -1
+    fi
 fi
 
 cd "$( dirname "${BASH_SOURCE[0]}" )"
