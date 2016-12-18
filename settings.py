@@ -9,12 +9,14 @@ def fixedFont(pointSize):
     font = QFont("monospace", pointSize)
 
     font.setStyleHint(QFont.TypeWriter)
-    if QFontInfo(font).fixedPitch():
-        return font
+    fontInfo = QFontInfo(font)
+    if fontInfo.fixedPitch():
+        return QFont(fontInfo.family(), pointSize)
 
     font.setStyleHint(QFont.Monospace)
-    if QFontInfo(font).fixedPitch():
-        return font
+    fontInfo = QFontInfo(font)
+    if fontInfo.fixedPitch():
+        return QFont(fontInfo.family(), pointSize)
 
     # for Windows
     font.setFamily("Courier")

@@ -187,3 +187,10 @@ def decodeDiffData(data, preferEncoding="utf-8"):
             pass
 
     return line, e
+
+
+def normalizeRegex(string):
+    specal_chars = "\\^$.*|?+()[]{}"
+    new_string = "".join(
+        "\\" + c if c in specal_chars else c for c in string)
+    return new_string

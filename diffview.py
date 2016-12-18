@@ -301,6 +301,60 @@ class DiffView(QWidget):
         return False
 
 
+class Selection():
+
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self._beginLine = -1
+        self._beginPos = -1
+        self._endLine = -1
+        self._endPos = -1
+
+    def hasSelection(self):
+        return self._beginLine != -1 and self._endLine != -1
+
+    def within(self, line):
+        if not self.hasSelection():
+            return False
+
+        if line >= self.beginLine() and line <= self.endLine():
+            return True
+
+        return False
+
+    def beginLine(self):
+        return min(self._beginLine, self._endLine)
+
+    def endLine(self):
+        return max(self._beginLine, self._endLine)
+
+    def beginPos(self):
+        if self._beginLine == self._endLine:
+            return min(self._beginPos, self._endPos)
+        elif self._beginLine < self._endLine:
+            return self._beginPos
+        else:
+            return self._endPos
+
+    def endPos(self):
+        if self._beginLine == self._endLine:
+            return max(self._beginPos, self._endPos)
+        elif self._beginLine < self._endLine:
+            return self._endPos
+        else:
+            return self._beginPos
+
+    def begin(self, line, pos):
+        self._beginLine = line
+        self._beginPos = pos
+
+    def end(self, line, pos):
+        self._endLine = line
+        self._endPos = pos
+
+
 class PatchViewer(QAbstractScrollArea):
     fileRowChanged = pyqtSignal(int)
 
@@ -308,15 +362,30 @@ class PatchViewer(QAbstractScrollArea):
         super(PatchViewer, self).__init__(parent)
 
         self.lineItems = []
-        self.lineSpace = 5  # space between each line
         self.resetFont()
 
         self.showWhiteSpace = True
         self.highlightPattern = None
         self.highlightField = FindField.Comments
+        self.wordPattern = None
 
         # width of LineItem.content
         self.itemWidths = {}
+
+        self.selection = Selection()
+        self.tripleClickTimer = QElapsedTimer()
+
+        self.menu = QMenu()
+        action = self.menu.addAction(self.tr("&Copy"), self.__onCopy)
+        action.setIcon(QIcon.fromTheme("edit-copy"))
+        action.setShortcuts(QKeySequence.Copy)
+
+        self.menu.addAction(self.tr("Copy All"), self.__onCopyAll)
+        self.menu.addSeparator()
+
+        action = self.menu.addAction(self.tr("Select All"), self.__onSelectAll)
+        action.setIcon(QIcon.fromTheme("edit-select-all"))
+        action.setShortcuts(QKeySequence.SelectAll)
 
         # FIXME: show scrollbar always to prevent dead loop
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -325,6 +394,8 @@ class PatchViewer(QAbstractScrollArea):
         self.verticalScrollBar().valueChanged.connect(
             self.__onVScollBarValueChanged)
 
+        self.viewport().setCursor(Qt.IBeamCursor)
+
     def resetFont(self):
         # font for comments, file info, diff
         self.fonts = [None, None, None]
@@ -332,7 +403,7 @@ class PatchViewer(QAbstractScrollArea):
         settings = QApplication.instance().settings()
         fm = QFontMetrics(settings.diffViewFont())
         # total height of a line
-        self.lineHeight = fm.height() + self.lineSpace
+        self.lineHeight = fm.height()
 
         self.tabstopWidth = fm.width(' ') * 4
 
@@ -341,6 +412,7 @@ class PatchViewer(QAbstractScrollArea):
     def setData(self, items):
         self.lineItems = items
         self.itemWidths.clear()
+        self.selection.clear()
 
         hScrollBar = self.horizontalScrollBar()
         vScrollBar = self.verticalScrollBar()
@@ -371,10 +443,84 @@ class PatchViewer(QAbstractScrollArea):
         self.viewport().update()
 
     def mouseMoveEvent(self, event):
-        pass
+        if not (event.buttons() & Qt.LeftButton):
+            return
+
+        self.__updateSelection()
+        line, index = self.__posToContentIndex(event.pos())
+        if line == -1 or index == -1:
+            return
+        self.selection.end(line, index)
+        self.__updateSelection()
 
     def mousePressEvent(self, event):
-        pass
+        if event.button() != Qt.LeftButton:
+            return
+
+        timeout = QApplication.doubleClickInterval()
+        # triple click
+        isTripleClick = False
+        if self.tripleClickTimer.isValid():
+            isTripleClick = not self.tripleClickTimer.hasExpired(timeout)
+            self.tripleClickTimer.invalidate()
+
+        self.__updateSelection()
+        self.wordPattern = None
+        line, index = self.__posToContentIndex(event.pos(), not isTripleClick)
+        if line == -1:
+            return
+
+        if isTripleClick:
+            self.selection.begin(line, 0)
+            self.selection.end(line, len(self.lineItems[line].content))
+            self.__updateSelection()
+        elif index != -1:
+            self.selection.begin(line, index)
+            self.selection.end(-1, -1)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+
+        self.tripleClickTimer.restart()
+
+        self.__updateSelection()
+        self.selection.clear()
+
+        line, index = self.__posToContentIndex(event.pos())
+        # find the word
+        content = self.lineItems[line].content
+        begin = index
+        end = index
+
+        for i in range(index - 1, -1, -1):
+            if self.__isLetter(content[i]):
+                begin = i
+                continue
+            break
+
+        for i in range(index + 1, len(content)):
+            if self.__isLetter(content[i]):
+                end = i
+                continue
+            break
+
+        word = content[begin:end + 1]
+        if word:
+            word = normalizeRegex(word)
+            self.wordPattern = re.compile(word)
+        else:
+            self.wordPattern = None
+        self.viewport().update()
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.Copy):
+            self.__doCopy()
+        elif event.matches(QKeySequence.SelectAll):
+            self.__onSelectAll()
+
+    def contextMenuEvent(self, event):
+        self.menu.exec(event.globalPos())
 
     def resizeEvent(self, event):
         self.__adjust()
@@ -389,29 +535,43 @@ class PatchViewer(QAbstractScrollArea):
         endLine = startLine + self.__linesPerPage() + 1
         endLine = min(len(self.lineItems), endLine)
 
-        offsetX = self.horizontalScrollBar().value()
-        x = 0 - offsetX
-        y = 0
-
-        # TODO:  selection and many many...
         for i in range(startLine, endLine):
             item = self.lineItems[i]
+            rect = self.__lineRect(i)
 
-            rect = QRect(x, y,
-                         self.viewport().width() - x,
-                         self.lineHeight)
-            flags = Qt.AlignLeft | Qt.AlignVCenter
+            painter.save()
 
-            if self.__drawComments(painter, item, rect, flags):
-                pass
-            elif self.__drawInfo(painter, item, rect, flags):
-                pass
-            elif self.__drawDiff(painter, item, rect, flags):
-                pass
-            else:
-                painter.drawText(rect, flags, item.content)
+            textLayout = QTextLayout(item.content, self.itemFont(item.type))
+            formats = []
 
-            y += self.lineHeight
+            # selection
+            selectionRg = self.__selectionFormatRange(i)
+            if selectionRg:
+                formats.append(selectionRg)
+
+            formats.extend(self.__wordFormatRange(item.content))
+
+            textOption = QTextOption()
+            textOption.setWrapMode(QTextOption.NoWrap)
+
+            if self.__initCommentsLayout(item, textLayout, textOption, formats):
+                pass
+            elif self.__initInfoLayout(item, textLayout, textOption, formats):
+                self.__drawInfo(painter, item, rect)
+            elif self.__initDiffLayout(item, textLayout, textOption, formats):
+                pass
+
+            textLayout.setTextOption(textOption)
+            textLayout.setAdditionalFormats(formats)
+
+            textLayout.beginLayout()
+            textLine = textLayout.createLine()
+            textLine.setPosition(QPointF(0, 0))
+            textLayout.endLayout()
+
+            textLayout.draw(painter, QPointF(rect.topLeft()))
+
+            painter.restore()
 
     def commentsFont(self):
         if not self.fonts[0]:
@@ -454,73 +614,88 @@ class PatchViewer(QAbstractScrollArea):
                 formats.append(rg)
         return formats
 
-    def __drawComments(self, painter, item, rect, flags):
+    def __wordFormatRange(self, text):
+        if not self.wordPattern:
+            return []
+
+        formats = []
+        fmt = QTextCharFormat()
+        fmt.setTextOutline(QPen(QColor(68, 29, 98)))
+        matches = self.wordPattern.finditer(text)
+        for m in matches:
+            rg = QTextLayout.FormatRange()
+            rg.start = m.start()
+            rg.length = m.end() - rg.start
+            rg.format = fmt
+            formats.append(rg)
+
+        return formats
+
+    def __selectionFormatRange(self, lineIndex):
+        if not self.selection.within(lineIndex):
+            return None
+
+        start = 0
+        end = len(self.lineItems[lineIndex].content)
+
+        if self.selection.beginLine() == lineIndex:
+            start = self.selection.beginPos()
+        if self.selection.endLine() == lineIndex:
+            end = self.selection.endPos()
+
+        fmt = QTextCharFormat()
+        fmt.setBackground(self.palette().highlight())
+
+        fmtRg = QTextLayout.FormatRange()
+        fmtRg.start = start
+        fmtRg.length = end - start + 1
+        fmtRg.format = fmt
+
+        return fmtRg
+
+    def __initCommentsLayout(self, item, textLayout, textOption, formats):
         if not (item.type >= ItemAuthor and item.type <= ItemComments):
             return False
 
-        painter.save()
-        painter.setFont(self.commentsFont())
-
-        textLayout = QTextLayout(item.content, self.commentsFont())
-
-        textOption = QTextOption()
-        textOption.setWrapMode(QTextOption.NoWrap)
-
-        textLayout.setTextOption(textOption)
-
         if self.highlightField == FindField.Comments:
-            formats = self.__highlightFormatRange(item.content)
-            textLayout.setAdditionalFormats(formats)
-
-        textLayout.beginLayout()
-        line = textLayout.createLine()
-        line.setPosition(QPointF(0, 0))
-        textLayout.endLayout()
-
-        textLayout.draw(painter, QPointF(rect.topLeft()))
-
-        painter.restore()
+            formats.extend(self.__highlightFormatRange(item.content))
 
         return True
 
-    def __drawInfo(self, painter, item, rect, flags):
+    def __initInfoLayout(self, item, textLayout, textOption, formats):
         if item.type != ItemFile and item.type != ItemFileInfo:
             return False
 
-        painter.save()
-        # first fill background
-        painter.fillRect(rect, QBrush(QColor(170, 170, 170)))
-
-        # now the text
-        painter.setFont(self.fileInfoFont())
-        painter.drawText(rect, flags, item.content)
-
-        painter.restore()
-
         return True
 
-    def __drawDiff(self, painter, item, rect, flags):
+    def __drawInfo(self, painter, item, rect):
+        painter.fillRect(rect, QBrush(QColor(170, 170, 170)))
+
+    def __initDiffLayout(self, item, textLayout, textOption, formats):
         if item.type != ItemDiff:
             return False
 
-        painter.save()
-
-        textOption = QTextOption()
-        textOption.setTabStop(self.tabstopWidth)
-        textOption.setWrapMode(QTextOption.NoWrap)
         if self.showWhiteSpace:
+            textOption.setTabStop(self.tabstopWidth)
             textOption.setFlags(QTextOption.ShowTabsAndSpaces)
 
-        textLayout = QTextLayout(item.content, self.diffFont())
-        textLayout.setTextOption(textOption)
+        color = QColor()
+        if diff_begin_re.search(item.content) or \
+                item.content.startswith("\ No newline "):
+            color = QColor(0, 0, 255)
+        elif item.content.lstrip().startswith("+"):
+            color = QColor(0, 168, 0)
+        elif item.content.lstrip().startswith("-"):
+            color = QColor(255, 0, 0)
 
-        formats = []
-
-        if self.showWhiteSpace:
-            # for the tab arrow
+        if color.isValid() or self.showWhiteSpace:
             formatRange = QTextLayout.FormatRange()
             formatRange.start = 0
             formatRange.length = len(textLayout.text())
+            if color.isValid():
+                fmt = QTextCharFormat()
+                fmt.setForeground(QBrush(color))
+                formatRange.format = fmt
             formats.append(formatRange)
 
         # format for \r
@@ -536,27 +711,6 @@ class PatchViewer(QAbstractScrollArea):
 
         if self.highlightField == FindField.Diffs:
             formats.extend(self.__highlightFormatRange(item.content))
-        textLayout.setAdditionalFormats(formats)
-
-        textLayout.beginLayout()
-
-        line = textLayout.createLine()
-
-        textLayout.endLayout()
-
-        pen = painter.pen()
-        if diff_begin_re.search(item.content) or \
-                item.content.startswith("\ No newline "):
-            pen.setColor(QColor(0, 0, 255))
-        elif item.content.lstrip().startswith("+"):
-            pen.setColor(QColor(0, 168, 0))
-        elif item.content.lstrip().startswith("-"):
-            pen.setColor(QColor(255, 0, 0))
-
-        painter.setPen(pen)
-        textLayout.draw(painter, QPointF(rect.topLeft()))
-
-        painter.restore()
 
         return True
 
@@ -627,3 +781,141 @@ class PatchViewer(QAbstractScrollArea):
             elif item.type == ItemParent or item.type == ItemAuthor:
                 self.fileRowChanged.emit(0)
                 break
+
+    def __onCopy(self):
+        self.__doCopy()
+
+    def __onCopyAll(self):
+        self.__doCopy(False)
+
+    def __onSelectAll(self):
+        if not self.lineItems:
+            return
+
+        self.wordPattern = None
+        self.selection.begin(0, 0)
+        lastLine = len(self.lineItems) - 1
+        self.selection.end(lastLine, len(self.lineItems[lastLine]))
+        self.__updateSelection()
+
+    def __makeContent(self, item, begin=None, end=None):
+        if item.type == ItemDiff:
+            return item.content[begin:end].rstrip("^M")
+        return item.content[begin:end]
+
+    def __doCopy(self, selectionOnly=True):
+        if selectionOnly and not self.selection.hasSelection:
+            return
+
+        if selectionOnly:
+            beginLine = self.selection.beginLine()
+            beginPos = self.selection.beginPos()
+            endLine = self.selection.endLine()
+            endPos = self.selection.endPos()
+        else:
+            beginLine = 0
+            beginPos = 0
+            endLine = len(self.lineItems) - 1
+            endPos = len(self.lineItems[endLine - 1]) - 1
+
+        content = ""
+        # only one line
+        if beginLine == endLine:
+            item = self.lineItems[beginLine]
+            content = self.__makeContent(item, beginPos, endPos + 1)
+        else:
+            # first line
+            content = self.__makeContent(
+                self.lineItems[beginLine], beginPos, None)
+            beginLine += 1
+
+            # middle lines
+            for i in range(beginLine, endLine):
+                content += "\n" + self.__makeContent(self.lineItems[i])
+
+            # last line
+            content += "\n" + \
+                self.__makeContent(self.lineItems[endLine], 0, endPos + 1)
+
+        clipboard = QApplication.clipboard()
+        mimeData = QMimeData()
+        mimeData.setText(content)
+
+        # TODO: html format support
+        clipboard.setMimeData(mimeData)
+
+    def __posToContentIndex(self, pos, calCharIndex=True):
+        if not self.lineItems:
+            return -1, -1
+
+        lineIndex = int(pos.y() / self.lineHeight)
+        lineIndex += self.verticalScrollBar().value()
+
+        if lineIndex >= len(self.lineItems):
+            lineIndex = len(self.lineItems) - 1
+
+        if not calCharIndex:
+            return lineIndex, -1
+
+        x = pos.x() + self.horizontalScrollBar().value()
+
+        item = self.lineItems[lineIndex]
+        font = self.itemFont(item.type)
+        fm = QFontMetrics(font)
+
+        charIndex = -1
+        # FIXME: fixed pitch not means all chars are the same width
+        if QFontInfo(font).fixedPitch():
+            charIndex = int(x / fm.width('A'))
+        else:
+            # TODO: calc char index
+            charIndex = int(x / fm.width('A'))
+
+        if not item.content:
+            charIndex = 0
+        elif charIndex >= len(item.content):
+            charIndex = len(item.content) - 1
+
+        return lineIndex, charIndex
+
+    def __lineRect(self, index):
+        # the row number in viewport
+        row = (index - self.verticalScrollBar().value())
+
+        offsetX = self.horizontalScrollBar().value()
+        x = 0 - offsetX
+        y = 0 + row * self.lineHeight
+        w = self.viewport().width() - x
+        h = self.lineHeight
+
+        return QRect(x, y, w, h)
+
+    def __updateSelection(self):
+        if self.wordPattern:
+            self.viewport().update()
+            return
+
+        if not self.selection.hasSelection():
+            return
+
+        begin = self.selection.beginLine()
+        end = self.selection.endLine()
+        rect = self.__lineRect(begin)
+        rect.setWidth(self.viewport().width())
+        # the rect may not actually the one draws, so add some extra spaces
+        rect.setHeight(self.lineHeight * (end - begin + 1) +
+                       self.lineHeight / 3)
+
+        self.viewport().update(rect)
+
+    def __isLetter(self, char):
+        if char.isalpha():
+            return True
+
+        if char == '_':
+            return True
+
+        if char.isdigit():
+            return True
+
+        return False
