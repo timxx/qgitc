@@ -413,6 +413,7 @@ class PatchViewer(QAbstractScrollArea):
         self.lineItems = items
         self.itemWidths.clear()
         self.selection.clear()
+        self.wordPattern = None
 
         hScrollBar = self.horizontalScrollBar()
         vScrollBar = self.verticalScrollBar()
@@ -508,7 +509,7 @@ class PatchViewer(QAbstractScrollArea):
         word = content[begin:end + 1]
         if word:
             word = normalizeRegex(word)
-            self.wordPattern = re.compile(word)
+            self.wordPattern = re.compile('\\b' + word + '\\b')
         else:
             self.wordPattern = None
         self.viewport().update()
