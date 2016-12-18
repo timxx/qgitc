@@ -16,21 +16,28 @@ import argparse
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, logMode=False, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self.logMode = logMode
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.progressBarA = QProgressBar()
-        self.progressBarB = QProgressBar()
-        self.ui.statusbar.addWidget(self.progressBarA, 1)
-        self.ui.statusbar.addWidget(self.progressBarB, 1)
-        self.progressBarA.setVisible(False)
-        self.progressBarB.setVisible(False)
 
-        self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
-        self.ui.gitViewB.setBranchDesc(self.tr("Branch B:"))
-        self.ui.gitViewB.setBranchB()
+        self.progressBarA = QProgressBar()
+        self.ui.statusbar.addWidget(self.progressBarA, 1)
+        self.progressBarA.setVisible(False)
+
+        if not self.logMode:
+            self.progressBarB = QProgressBar()
+            self.ui.statusbar.addWidget(self.progressBarB, 1)
+            self.progressBarB.setVisible(False)
+
+        if not self.logMode:
+            self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
+            self.ui.gitViewB.setBranchDesc(self.tr("Branch B:"))
+            self.ui.gitViewB.setBranchB()
+        else:
+            self.ui.gitViewB.setVisible(False)
 
         self.__setupSignals()
 
@@ -86,7 +93,8 @@ class MainWindow(QMainWindow):
             os.chdir(repoDir)
 
         self.ui.gitViewA.setRepo(repoDir)
-        self.ui.gitViewB.setRepo(repoDir)
+        if not self.logMode:
+            self.ui.gitViewB.setRepo(repoDir)
 
     def __onPatternTypeChanged(self, index):
         self.ui.btnFileSelect.setEnabled(index == 0)
@@ -99,16 +107,19 @@ class MainWindow(QMainWindow):
         if preferences.exec() == QDialog.Accepted:
             preferences.save()
             self.ui.gitViewA.updateSettings()
-            self.ui.gitViewB.updateSettings()
+            if not self.logMode:
+                self.ui.gitViewB.updateSettings()
 
     def filterPattern(self, pattern):
         index = self.ui.cbPatternType.currentIndex()
         if index == 0:
             self.ui.gitViewA.filterPath(pattern)
-            self.ui.gitViewB.filterPath(pattern)
+            if not self.logMode:
+                self.ui.gitViewB.filterPath(pattern)
         else:
             self.ui.gitViewA.filterCommit(pattern)
-            self.ui.gitViewB.filterCommit(pattern)
+            if not self.logMode:
+                self.ui.gitViewB.filterCommit(pattern)
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
@@ -164,6 +175,8 @@ if __name__ == "__main__":
                         help="Init repositories directory, default to current working dir if it is.")
     parser.add_argument("-f", "--file",
                         help="Filter file")
+    parser.add_argument("-l", "--log-mode", action="store_true",
+                        help="Show log only")
 
     args = parser.parse_args()
 
@@ -175,7 +188,7 @@ if __name__ == "__main__":
 
     app = Application(sys.argv)
 
-    window = MainWindow()
+    window = MainWindow(args.log_mode)
     window.setGeometry(QStyle.alignedRect(
         Qt.LeftToRight, Qt.AlignCenter,
         window.size(),
