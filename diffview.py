@@ -395,6 +395,7 @@ class PatchViewer(QAbstractScrollArea):
             self.__onVScollBarValueChanged)
 
         self.viewport().setCursor(Qt.IBeamCursor)
+        self.viewport().setMouseTracking(True)
 
     def resetFont(self):
         # font for comments, file info, diff
@@ -444,6 +445,9 @@ class PatchViewer(QAbstractScrollArea):
         self.viewport().update()
 
     def mouseMoveEvent(self, event):
+        if self.tripleClickTimer.isValid():
+            self.tripleClickTimer.invalidate()
+
         if not (event.buttons() & Qt.LeftButton):
             return
 
@@ -489,6 +493,9 @@ class PatchViewer(QAbstractScrollArea):
         self.selection.clear()
 
         line, index = self.__posToContentIndex(event.pos())
+        if line == -1 or index == -1:
+            return
+
         # find the word
         content = self.lineItems[line].content
         begin = index
@@ -510,8 +517,11 @@ class PatchViewer(QAbstractScrollArea):
         if word:
             word = normalizeRegex(word)
             self.wordPattern = re.compile('\\b' + word + '\\b')
+            self.selection.begin(line, begin)
+            self.selection.end(line, end)
         else:
             self.wordPattern = None
+
         self.viewport().update()
 
     def keyPressEvent(self, event):
@@ -644,7 +654,10 @@ class PatchViewer(QAbstractScrollArea):
             end = self.selection.endPos()
 
         fmt = QTextCharFormat()
-        fmt.setBackground(self.palette().highlight())
+        if self.hasFocus():
+            fmt.setBackground(QBrush(QColor(173, 214, 255)))
+        else:
+            fmt.setBackground(QBrush(QColor(229, 235, 241)))
 
         fmtRg = QTextLayout.FormatRange()
         fmtRg.start = start
@@ -680,7 +693,7 @@ class PatchViewer(QAbstractScrollArea):
                 item.content.startswith("\ No newline "):
             color = QColor(0, 0, 255)
         elif item.content.lstrip().startswith("+"):
-            color = QColor(0, 168, 0)
+            color = QColor(0, 128, 0)
         elif item.content.lstrip().startswith("-"):
             color = QColor(255, 0, 0)
 
