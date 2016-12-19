@@ -552,14 +552,13 @@ class PatchViewer(QAbstractScrollArea):
 
             formats.extend(self.__wordFormatRange(item.content))
 
-            textOption = QTextOption()
-            textOption.setWrapMode(QTextOption.NoWrap)
+            textOption = self.__textOption(item)
 
-            if self.__initCommentsLayout(item, textLayout, textOption, formats):
+            if self.__initCommentsLayout(item, textLayout, formats):
                 pass
-            elif self.__initInfoLayout(item, textLayout, textOption, formats):
+            elif self.__initInfoLayout(item, textLayout, formats):
                 self.__drawInfo(painter, item, rect)
-            elif self.__initDiffLayout(item, textLayout, textOption, formats):
+            elif self.__initDiffLayout(item, textLayout, formats):
                 pass
 
             textLayout.setTextOption(textOption)
@@ -654,7 +653,7 @@ class PatchViewer(QAbstractScrollArea):
 
         return fmtRg
 
-    def __initCommentsLayout(self, item, textLayout, textOption, formats):
+    def __initCommentsLayout(self, item, textLayout, formats):
         if not (item.type >= ItemAuthor and item.type <= ItemComments):
             return False
 
@@ -663,7 +662,7 @@ class PatchViewer(QAbstractScrollArea):
 
         return True
 
-    def __initInfoLayout(self, item, textLayout, textOption, formats):
+    def __initInfoLayout(self, item, textLayout, formats):
         if item.type != ItemFile and item.type != ItemFileInfo:
             return False
 
@@ -672,13 +671,9 @@ class PatchViewer(QAbstractScrollArea):
     def __drawInfo(self, painter, item, rect):
         painter.fillRect(rect, QBrush(QColor(170, 170, 170)))
 
-    def __initDiffLayout(self, item, textLayout, textOption, formats):
+    def __initDiffLayout(self, item, textLayout, formats):
         if item.type != ItemDiff:
             return False
-
-        if self.showWhiteSpace:
-            textOption.setTabStop(self.tabstopWidth)
-            textOption.setFlags(QTextOption.ShowTabsAndSpaces)
 
         color = QColor()
         if diff_begin_re.search(item.content) or \
@@ -861,21 +856,26 @@ class PatchViewer(QAbstractScrollArea):
         x = pos.x() + self.horizontalScrollBar().value()
 
         item = self.lineItems[lineIndex]
+        if len(item.content) < 2:
+            return lineIndex, 0
+
         font = self.itemFont(item.type)
-        fm = QFontMetrics(font)
 
-        charIndex = -1
-        # FIXME: fixed pitch not means all chars are the same width
-        if QFontInfo(font).fixedPitch():
-            charIndex = int(x / fm.width('A'))
-        else:
-            # TODO: calc char index
-            charIndex = int(x / fm.width('A'))
+        textLayout = QTextLayout()
+        textLayout.setFont(font)
+        textLayout.setTextOption(self.__textOption(item))
 
-        if not item.content:
-            charIndex = 0
-        elif charIndex >= len(item.content):
-            charIndex = len(item.content) - 1
+        # TODO: improve performance, calc like binary search?
+        charIndex = len(item.content) - 1
+        for i in range(0, len(item.content)):
+            textLayout.setText(item.content[0:i + 1])
+            textLayout.beginLayout()
+            line = textLayout.createLine()
+            textLayout.endLayout()
+            width = int(textLayout.boundingRect().width())
+            if width > x:
+                charIndex = i
+                break
 
         return lineIndex, charIndex
 
@@ -920,3 +920,13 @@ class PatchViewer(QAbstractScrollArea):
             return True
 
         return False
+
+    def __textOption(self, item):
+        textOption = QTextOption()
+        textOption.setWrapMode(QTextOption.NoWrap)
+
+        if item.type == ItemDiff and self.showWhiteSpace:
+            textOption.setTabStop(self.tabstopWidth)
+            textOption.setFlags(QTextOption.ShowTabsAndSpaces)
+
+        return textOption
