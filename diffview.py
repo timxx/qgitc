@@ -254,8 +254,6 @@ class DiffView(QWidget):
             line, lastEncoding = decodeDiffData(line, lastEncoding)
             if itemType != ItemDiff:
                 line = line.rstrip('\r')
-            else:
-                line = line.replace('\r', '^M')
             lineItems.append(LineItem(itemType, line))
 
         self.viewer.setData(lineItems)
@@ -364,7 +362,6 @@ class PatchViewer(QAbstractScrollArea):
         self.lineItems = []
         self.resetFont()
 
-        self.showWhiteSpace = True
         self.highlightPattern = None
         self.highlightField = FindField.Comments
         self.wordPattern = None
@@ -406,7 +403,9 @@ class PatchViewer(QAbstractScrollArea):
         # total height of a line
         self.lineHeight = fm.height()
 
-        self.tabstopWidth = fm.width(' ') * 4
+        self.showWhiteSpace = settings.showWhitespace()
+        tabSize = settings.tabSize()
+        self.tabstopWidth = fm.width(' ') * tabSize
 
         self.__adjust()
 
@@ -477,7 +476,7 @@ class PatchViewer(QAbstractScrollArea):
 
         if isTripleClick:
             self.selection.begin(line, 0)
-            self.selection.end(line, len(self.lineItems[line].content))
+            self.selection.end(line, len(self.__getItem(line).content))
             self.__updateSelection()
         elif index != -1:
             self.selection.begin(line, index)
@@ -497,7 +496,7 @@ class PatchViewer(QAbstractScrollArea):
             return
 
         # find the word
-        content = self.lineItems[line].content
+        content = self.__getItem(line).content
         begin = index
         end = index
 
@@ -547,7 +546,7 @@ class PatchViewer(QAbstractScrollArea):
         endLine = min(len(self.lineItems), endLine)
 
         for i in range(startLine, endLine):
-            item = self.lineItems[i]
+            item = self.__getItem(i)
             rect = self.__lineRect(i)
 
             painter.save()
@@ -646,7 +645,7 @@ class PatchViewer(QAbstractScrollArea):
             return None
 
         start = 0
-        end = len(self.lineItems[lineIndex].content)
+        end = len(self.__getItem(lineIndex).content)
 
         if self.selection.beginLine() == lineIndex:
             start = self.selection.beginPos()
@@ -708,7 +707,7 @@ class PatchViewer(QAbstractScrollArea):
             formats.append(formatRange)
 
         # format for \r
-        if textLayout.text().endswith("^M"):
+        if self.showWhiteSpace and textLayout.text().endswith("^M"):
             fmtCRRg = QTextLayout.FormatRange()
             fmtCRRg.start = len(textLayout.text()) - 2
             fmtCRRg.length = 2
@@ -766,7 +765,7 @@ class PatchViewer(QAbstractScrollArea):
             if i in self.itemWidths:
                 width = self.itemWidths[i]
             else:
-                item = self.lineItems[i]
+                item = self.__getItem(i)
                 fm = QFontMetrics(self.itemFont(item.type))
                 width = fm.width(item.content)
                 self.itemWidths[i] = width
@@ -783,7 +782,7 @@ class PatchViewer(QAbstractScrollArea):
 
         # TODO: improve
         for i in range(value, -1, -1):
-            item = self.lineItems[i]
+            item = self.__getItem(i)
             if item.type == ItemFile:
                 self.fileRowChanged.emit(i)
                 break
@@ -804,11 +803,11 @@ class PatchViewer(QAbstractScrollArea):
         self.wordPattern = None
         self.selection.begin(0, 0)
         lastLine = len(self.lineItems) - 1
-        self.selection.end(lastLine, len(self.lineItems[lastLine]))
+        self.selection.end(lastLine, len(self.__getItem(lastLine)))
         self.__updateSelection()
 
     def __makeContent(self, item, begin=None, end=None):
-        if item.type == ItemDiff:
+        if self.showWhiteSpace and item.type == ItemDiff:
             return item.content[begin:end].rstrip("^M")
         return item.content[begin:end]
 
@@ -825,26 +824,26 @@ class PatchViewer(QAbstractScrollArea):
             beginLine = 0
             beginPos = 0
             endLine = len(self.lineItems) - 1
-            endPos = len(self.lineItems[endLine - 1]) - 1
+            endPos = len(self.__getItem(endLine - 1)) - 1
 
         content = ""
         # only one line
         if beginLine == endLine:
-            item = self.lineItems[beginLine]
+            item = self.__getItem(beginLine)
             content = self.__makeContent(item, beginPos, endPos + 1)
         else:
             # first line
             content = self.__makeContent(
-                self.lineItems[beginLine], beginPos, None)
+                self.__getItem(beginLine), beginPos, None)
             beginLine += 1
 
             # middle lines
             for i in range(beginLine, endLine):
-                content += "\n" + self.__makeContent(self.lineItems[i])
+                content += "\n" + self.__makeContent(self.__getItem(i))
 
             # last line
             content += "\n" + \
-                self.__makeContent(self.lineItems[endLine], 0, endPos + 1)
+                self.__makeContent(self.__getItem(endLine), 0, endPos + 1)
 
         clipboard = QApplication.clipboard()
         mimeData = QMimeData()
@@ -868,7 +867,7 @@ class PatchViewer(QAbstractScrollArea):
 
         x = pos.x() + self.horizontalScrollBar().value()
 
-        item = self.lineItems[lineIndex]
+        item = self.__getItem(lineIndex)
         if len(item.content) < 2:
             return lineIndex, 0
 
@@ -938,8 +937,22 @@ class PatchViewer(QAbstractScrollArea):
         textOption = QTextOption()
         textOption.setWrapMode(QTextOption.NoWrap)
 
-        if item.type == ItemDiff and self.showWhiteSpace:
+        if item.type == ItemDiff:
             textOption.setTabStop(self.tabstopWidth)
-            textOption.setFlags(QTextOption.ShowTabsAndSpaces)
+            if self.showWhiteSpace:
+                textOption.setFlags(QTextOption.ShowTabsAndSpaces)
 
         return textOption
+
+    def __getItem(self, index):
+        """ ugly way to make content consist """
+        item = self.lineItems[index]
+        if item.type != ItemDiff:
+            return item
+
+        if self.showWhiteSpace:
+            content = item.content.replace('\r', '^M')
+        else:
+            content = item.content.rstrip('\r')
+
+        return LineItem(item.type, content)

@@ -19,6 +19,69 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
+     <widget class="QWidget" name="tabGeneral">
+      <attribute name="title">
+       <string>&amp;General</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QGroupBox" name="groupBox_5">
+         <property name="title">
+          <string>Diff view</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="0" column="1">
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QLabel" name="label_10">
+              <property name="text">
+               <string>&amp;Tab size:</string>
+              </property>
+              <property name="buddy">
+               <cstring>sbTabSize</cstring>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSpinBox" name="sbTabSize">
+              <property name="minimum">
+               <number>1</number>
+              </property>
+              <property name="maximum">
+               <number>8</number>
+              </property>
+              <property name="value">
+               <number>4</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="cbShowWhitespace">
+            <property name="text">
+             <string>&amp;Visualize whitespace</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tabFonts">
       <attribute name="title">
        <string>&amp;Fonts</string>
@@ -110,7 +173,7 @@
      </widget>
      <widget class="QWidget" name="tabSummary">
       <attribute name="title">
-       <string>&amp;Commit</string>
+       <string>Co&amp;mmit</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>

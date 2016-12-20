@@ -36,6 +36,9 @@ class Preferences(QDialog):
         self.ui.leBugUrl.setText(self.settings.bugUrl())
         self.ui.leBugPattern.setText(self.settings.bugPattern())
 
+        self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
+        self.ui.sbTabSize.setValue(self.settings.tabSize())
+
     def __updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
@@ -94,3 +97,9 @@ class Preferences(QDialog):
 
         value = self.ui.leBugPattern.text().strip()
         self.settings.setBugPattern(value)
+
+        value = self.ui.cbShowWhitespace.isChecked()
+        self.settings.setShowWhitespace(value)
+
+        value = self.ui.sbTabSize.value()
+        self.settings.setTabSize(value)

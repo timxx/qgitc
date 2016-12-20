@@ -77,3 +77,15 @@ class Settings(QSettings):
 
     def setBugPattern(self, pattern):
         self.setValue("bugPattern", pattern)
+
+    def showWhitespace(self):
+        return self.value("showWhitespace", True, type=bool)
+
+    def setShowWhitespace(self, show):
+        self.setValue("showWhitespace", show)
+
+    def tabSize(self):
+        return self.value("tabSize", 4, type=int)
+
+    def setTabSize(self, size):
+        self.setValue("tabSize", size)
