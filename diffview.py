@@ -359,15 +359,15 @@ class PatchViewer(QAbstractScrollArea):
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
 
+        # width of LineItem.content
+        self.itemWidths = {}
+
         self.lineItems = []
         self.resetFont()
 
         self.highlightPattern = None
         self.highlightField = FindField.Comments
         self.wordPattern = None
-
-        # width of LineItem.content
-        self.itemWidths = {}
 
         self.selection = Selection()
         self.tripleClickTimer = QElapsedTimer()
@@ -406,6 +406,8 @@ class PatchViewer(QAbstractScrollArea):
         self.showWhiteSpace = settings.showWhitespace()
         tabSize = settings.tabSize()
         self.tabstopWidth = fm.width(' ') * tabSize
+
+        self.itemWidths.clear()
 
         self.__adjust()
 
@@ -766,8 +768,15 @@ class PatchViewer(QAbstractScrollArea):
                 width = self.itemWidths[i]
             else:
                 item = self.__getItem(i)
-                fm = QFontMetrics(self.itemFont(item.type))
-                width = fm.width(item.content)
+
+                textLayout = QTextLayout(
+                    item.content, self.itemFont(item.type))
+                textLayout.setTextOption(self.__textOption(item))
+                textLayout.beginLayout()
+                textLayout.createLine()
+                textLayout.endLayout()
+
+                width = int(textLayout.boundingRect().width())
                 self.itemWidths[i] = width
             maxWidth = max(maxWidth, width)
 
