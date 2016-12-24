@@ -190,7 +190,16 @@ class GitView(QWidget):
         if pattern != self.pattern:
             self.pattern = pattern
             index = self.ui.cbBranch.currentIndex()
+            preSha1 = None
+            if pattern == None:
+                curIdx = self.ui.logView.currentIndex()
+                if curIdx != -1:
+                    preSha1 = self.ui.logView.getCommit(curIdx).sha1
+
             self.__onBranchChanged(index)
+
+            if preSha1:
+                self.ui.logView.switchToCommit(preSha1)
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
