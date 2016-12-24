@@ -30,6 +30,15 @@ diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
 diff_encoding = "utf-8"
 
 
+def createFormatRange(start, length, fmt):
+    formatRange = QTextLayout.FormatRange()
+    formatRange.start = start
+    formatRange.length = length
+    formatRange.format = fmt
+
+    return formatRange
+
+
 class TreeItemDelegate(QItemDelegate):
 
     def __init__(self, parent=None):
@@ -58,10 +67,7 @@ class TreeItemDelegate(QItemDelegate):
             else:
                 fmt.setBackground(QBrush(Qt.yellow))
             for m in matchs:
-                rg = QTextLayout.FormatRange()
-                rg.start = m.start()
-                rg.length = m.end() - rg.start
-                rg.format = fmt
+                rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
                 formats.append(rg)
 
         textLayout.setAdditionalFormats(formats)
@@ -85,6 +91,7 @@ class TreeItemDelegate(QItemDelegate):
 
 
 class DiffView(QWidget):
+    requestCommit = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(DiffView, self).__init__(parent)
@@ -122,6 +129,7 @@ class DiffView(QWidget):
 
         self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
+        self.viewer.requestCommit.connect(self.requestCommit)
 
         self.treeWidget.installEventFilter(self)
 
@@ -267,7 +275,7 @@ class DiffView(QWidget):
         self.filterPath = path
 
     def updateSettings(self):
-        self.viewer.resetFont()
+        self.viewer.updateSettings()
 
     def highlightKeyword(self, pattern, field=FindField.Comments):
         self.viewer.highlightKeyword(pattern, field)
@@ -353,8 +361,44 @@ class Selection():
         self._endPos = pos
 
 
+class Link():
+    Sha1 = 0
+    BugId = 1
+    Email = 2
+
+    def __init__(self, url, rect, linkType):
+        self.url = url
+        self.rect = rect
+        self.linkType = linkType
+        self.clickHandler = None
+
+    def setUrl(self, url):
+        self.url = url
+
+    def setRect(self, rect):
+        self.rect = rect
+
+    def hitTest(self, pos):
+        return self.rect.contains(pos)
+
+    def onClicked(self, pos):
+        if not self.hitTest(pos):
+            return False
+
+        if self.clickHandler:
+            self.clickHandler(self.url)
+        else:
+            QDesktopServices.openUrl(QUrl(self.url))
+
+        return True
+
+    def setClickHandler(self, handler):
+        self.clickHandler = handler
+
+
 class PatchViewer(QAbstractScrollArea):
     fileRowChanged = pyqtSignal(int)
+    requestCommit = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
@@ -363,7 +407,7 @@ class PatchViewer(QAbstractScrollArea):
         self.itemWidths = {}
 
         self.lineItems = []
-        self.resetFont()
+        self.updateSettings()
 
         self.highlightPattern = None
         self.highlightField = FindField.Comments
@@ -371,6 +415,13 @@ class PatchViewer(QAbstractScrollArea):
 
         self.selection = Selection()
         self.tripleClickTimer = QElapsedTimer()
+        self.clickOnLink = False
+        self.cursorChanged = False
+
+        self.links = []
+        self.sha1Re = re.compile("\\b[a-f0-9]{7,40}\\b")
+        self.emailRe = re.compile(
+            "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
         self.menu = QMenu()
         action = self.menu.addAction(self.tr("&Copy"), self.__onCopy)
@@ -394,7 +445,7 @@ class PatchViewer(QAbstractScrollArea):
         self.viewport().setCursor(Qt.IBeamCursor)
         self.viewport().setMouseTracking(True)
 
-    def resetFont(self):
+    def updateSettings(self):
         # font for comments, file info, diff
         self.fonts = [None, None, None]
 
@@ -408,6 +459,8 @@ class PatchViewer(QAbstractScrollArea):
         self.tabstopWidth = fm.width(' ') * tabSize
 
         self.itemWidths.clear()
+        self.bugUrl = settings.bugUrl()
+        self.bugRe = re.compile(settings.bugPattern())
 
         self.__adjust()
 
@@ -449,6 +502,25 @@ class PatchViewer(QAbstractScrollArea):
         if self.tripleClickTimer.isValid():
             self.tripleClickTimer.invalidate()
 
+        if not self.lineItems:
+            return
+
+        hoveredLink = False
+        self.clickOnLink = False
+        for link in self.links:
+            if link.hitTest(event.pos()):
+                hoveredLink = True
+                break
+
+        # is setCursor waste many resource?
+        if hoveredLink:
+            if not self.cursorChanged:
+                self.viewport().setCursor(Qt.PointingHandCursor)
+                self.cursorChanged = True
+        elif self.cursorChanged:
+            self.cursorChanged = False
+            self.viewport().setCursor(Qt.IBeamCursor)
+
         if not (event.buttons() & Qt.LeftButton):
             return
 
@@ -462,6 +534,15 @@ class PatchViewer(QAbstractScrollArea):
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
+
+        if not self.lineItems:
+            return
+
+        self.clickOnLink = False
+        for link in self.links:
+            if link.hitTest(event.pos()):
+                self.clickOnLink = True
+                break
 
         timeout = QApplication.doubleClickInterval()
         # triple click
@@ -484,9 +565,30 @@ class PatchViewer(QAbstractScrollArea):
             self.selection.begin(line, index)
             self.selection.end(-1, -1)
 
+    def mouseReleaseEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        if not self.lineItems:
+            return
+
+        if not self.clickOnLink:
+            return
+
+        self.clickOnLink = False
+        for link in self.links:
+            if link.onClicked(event.pos()):
+                return
+
     def mouseDoubleClickEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
+
+        if not self.lineItems:
+            return
+
+        for link in self.links:
+            if link.hitTest(event.pos()):
+                return
 
         self.tripleClickTimer.restart()
 
@@ -547,6 +649,9 @@ class PatchViewer(QAbstractScrollArea):
         endLine = startLine + self.__linesPerPage() + 1
         endLine = min(len(self.lineItems), endLine)
 
+        # reset every paints
+        self.links.clear()
+
         for i in range(startLine, endLine):
             item = self.__getItem(i)
             rect = self.__lineRect(i)
@@ -572,6 +677,9 @@ class PatchViewer(QAbstractScrollArea):
             elif self.__initDiffLayout(item, textLayout, formats):
                 pass
 
+            topLeft = QPointF(rect.topLeft())
+            self.__findLinks(topLeft, item, formats)
+
             textLayout.setTextOption(textOption)
             textLayout.setAdditionalFormats(formats)
 
@@ -580,7 +688,7 @@ class PatchViewer(QAbstractScrollArea):
             textLine.setPosition(QPointF(0, 0))
             textLayout.endLayout()
 
-            textLayout.draw(painter, QPointF(rect.topLeft()))
+            textLayout.draw(painter, topLeft)
 
             painter.restore()
 
@@ -615,13 +723,10 @@ class PatchViewer(QAbstractScrollArea):
         formats = []
         if self.highlightPattern:
             matchs = self.highlightPattern.finditer(text)
+            fmt = QTextCharFormat()
+            fmt.setBackground(QBrush(Qt.yellow))
             for m in matchs:
-                rg = QTextLayout.FormatRange()
-                rg.start = m.start()
-                rg.length = m.end() - rg.start
-                fmt = QTextCharFormat()
-                fmt.setBackground(QBrush(Qt.yellow))
-                rg.format = fmt
+                rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
                 formats.append(rg)
         return formats
 
@@ -634,10 +739,7 @@ class PatchViewer(QAbstractScrollArea):
         fmt.setTextOutline(QPen(QColor(68, 29, 98)))
         matches = self.wordPattern.finditer(text)
         for m in matches:
-            rg = QTextLayout.FormatRange()
-            rg.start = m.start()
-            rg.length = m.end() - rg.start
-            rg.format = fmt
+            rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
             formats.append(rg)
 
         return formats
@@ -660,12 +762,7 @@ class PatchViewer(QAbstractScrollArea):
         else:
             fmt.setBackground(QBrush(QColor(229, 235, 241)))
 
-        fmtRg = QTextLayout.FormatRange()
-        fmtRg.start = start
-        fmtRg.length = end - start + 1
-        fmtRg.format = fmt
-
-        return fmtRg
+        return createFormatRange(start, end - start + 1, fmt)
 
     def __initCommentsLayout(self, item, textLayout, formats):
         if not (item.type >= ItemAuthor and item.type <= ItemComments):
@@ -821,6 +918,8 @@ class PatchViewer(QAbstractScrollArea):
         return item.content[begin:end]
 
     def __doCopy(self, selectionOnly=True):
+        if not self.lineItems:
+            return
         if selectionOnly and not self.selection.hasSelection:
             return
 
@@ -965,3 +1064,83 @@ class PatchViewer(QAbstractScrollArea):
             content = item.content.rstrip('\r')
 
         return LineItem(item.type, content)
+
+    def __getLinkRect(self, pos, item, begin, end):
+        textLayout = QTextLayout()
+        textLayout.setFont(self.itemFont(item.type))
+        textLayout.setTextOption(self.__textOption(item))
+
+        ranges = [begin, end]
+        rects = []
+        for i in ranges:
+            substr = item.content[0:i]
+            textLayout.setText(substr)
+            textLayout.beginLayout()
+            textLayout.createLine()
+            textLayout.endLayout()
+            rect = textLayout.boundingRect()
+            rect.moveTo(pos)
+            rects.append(rect)
+
+        rects[1].setTopLeft(rects[0].topRight())
+        return rects[1]
+
+    def __findLinks(self, pos, item, formats):
+        if not item.content:
+            return
+        if item.type == ItemFile or \
+                item.type == ItemFileInfo:
+            return
+
+        patterns = {Link.Sha1: self.sha1Re,
+                    Link.Email: self.emailRe}
+
+        if self.bugRe and self.bugUrl:
+            patterns[Link.BugId] = self.bugRe
+
+        foundLinks = []
+        fmt = QTextCharFormat()
+        fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
+        fmt.setForeground(self.palette().link())
+
+        for linkType, pattern in patterns.items():
+            # only find email if item is author
+            if linkType != Link.Email and \
+                    item.type == ItemAuthor:
+                continue
+            # search sha1 only if item is parent
+            if linkType != Link.Sha1 and \
+                    item.type == ItemParent:
+                continue
+
+            matches = pattern.finditer(item.content)
+            for m in matches:
+                found = False
+                for l in foundLinks:
+                    if m.start() >= l.x() and m.start() <= l.y() \
+                            or m.end() >= l.x() and m.end() <= l.y():
+                        found = True
+                        break
+                # not allow links in the same range
+                if found:
+                    continue
+
+                linkRg = createFormatRange(m.start(), m.end() - m.start(), fmt)
+                formats.append(linkRg)
+
+                rect = self.__getLinkRect(pos, item, m.start(), m.end())
+                link = Link(None, rect, linkType)
+
+                if linkType == Link.Sha1:
+                    url = m.group(0)
+                    link.setClickHandler(self.__requestCommit)
+                elif linkType == Link.Email:
+                    url = "mailto:" + m.group(0)
+                else:
+                    url = self.bugUrl + m.group(0)
+                link.setUrl(url)
+                self.links.append(link)
+                foundLinks.append(QPoint(m.start(), m.end()))
+
+    def __requestCommit(self, sha1):
+        self.requestCommit.emit(sha1)

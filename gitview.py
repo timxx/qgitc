@@ -34,6 +34,7 @@ class GitView(QWidget):
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.findProgress.connect(self.__onFindProgress)
+        self.ui.diffView.requestCommit.connect(self.__onRequestCommit)
 
         self.reqCommit.connect(self.__onReqCommit)
         self.reqFind.connect(self.__onNextFindCommit)
@@ -181,6 +182,9 @@ class GitView(QWidget):
 
     def __onFindProgress(self, progress):
         self.window().updateProgress(progress, self.branchA)
+
+    def __onRequestCommit(self, sha1):
+        self.ui.logView.switchToCommit(sha1)
 
     def __filterLog(self, pattern):
         if pattern != self.pattern:
