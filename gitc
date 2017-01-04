@@ -167,24 +167,6 @@ class Application(QApplication):
         return self._settings
 
 
-def normalizePath(path):
-    """convert win path to unix path"""
-    if not path:
-        return path
-
-    new_path = ""
-    start = 0
-    if len(path) > 1 and path[1] == ':':
-        new_path = "/" + path[0].lower()
-        start = 2
-
-    for i in range(start, len(path)):
-        ch = path[i]
-        new_path += '/' if ch is '\\' else ch
-
-    return new_path
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -199,10 +181,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     repoDir = getRepoDirectory(os.getcwd())
-    filterFile = normalizePath(args.file)
+    filterFile = args.file
 
     if args.repo:
-        repoDir = getRepoDirectory(normalizePath(args.repo))
+        repoDir = getRepoDirectory(args.repo)
 
     app = Application(sys.argv)
 
