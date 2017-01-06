@@ -128,6 +128,9 @@ class DiffView(QWidget):
         splitter.setSizes(sizes)
 
         self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
+        self.treeWidget.itemDoubleClicked.connect(
+            self.__onTreeItemDoubleClicked)
+
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
         self.viewer.requestCommit.connect(self.requestCommit)
 
@@ -164,6 +167,16 @@ class DiffView(QWidget):
 
         clipboard = QApplication.clipboard()
         clipboard.setText(item.text(0))
+
+    def __onTreeItemDoubleClicked(self, item, column):
+        if not item or item == self.treeWidget.topLevelItem(0):
+            return
+
+        if not self.commit:
+            return
+
+        filePath = item.text(0)
+        externalDiff(self.commit, filePath)
 
     def __addToTreeWidget(self, string, row):
         """specify the @row number of the file in the viewer"""
