@@ -24,8 +24,8 @@ ItemDiff = 6
 LineItem = namedtuple("LineItem", ["type", "content"])
 
 diff_re = re.compile(b"^diff --(git a/(.*) b/(.*)|cc (.*))")
-diff_begin_re = re.compile("^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
-diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}")
+diff_begin_re = re.compile("^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
+diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 
 diff_encoding = "utf-8"
 
