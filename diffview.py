@@ -617,17 +617,18 @@ class PatchViewer(QAbstractScrollArea):
         begin = index
         end = index
 
-        for i in range(index - 1, -1, -1):
-            if self.__isLetter(content[i]):
-                begin = i
-                continue
-            break
+        if index < len(content) and self.__isLetter(content[index]):
+            for i in range(index - 1, -1, -1):
+                if self.__isLetter(content[i]):
+                    begin = i
+                    continue
+                break
 
-        for i in range(index + 1, len(content)):
-            if self.__isLetter(content[i]):
-                end = i
-                continue
-            break
+            for i in range(index + 1, len(content)):
+                if self.__isLetter(content[i]):
+                    end = i
+                    continue
+                break
 
         word = content[begin:end + 1]
         if word:
@@ -933,7 +934,7 @@ class PatchViewer(QAbstractScrollArea):
     def __doCopy(self, selectionOnly=True):
         if not self.lineItems:
             return
-        if selectionOnly and not self.selection.hasSelection:
+        if selectionOnly and not self.selection.hasSelection():
             return
 
         if selectionOnly:
@@ -1043,7 +1044,9 @@ class PatchViewer(QAbstractScrollArea):
         self.viewport().update(rect)
 
     def __isLetter(self, char):
-        if char.isalpha():
+        if char >= 'a' and char <= 'z':
+            return True
+        if char >= 'A' and char <= 'Z':
             return True
 
         if char == '_':
