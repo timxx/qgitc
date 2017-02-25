@@ -112,6 +112,7 @@ class DiffView(QWidget):
         splitter.addWidget(self.treeWidget)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(splitter)
 
         self.treeWidget.setColumnCount(1)
