@@ -179,12 +179,18 @@ def decodeDiffData(data, preferEncoding="utf-8"):
         encodings.remove(preferEncoding)
         encodings.insert(0, preferEncoding)
     line = None
+    ok = False
     for e in encodings:
         try:
             line = data.decode(e)
+            ok = True
             break
         except UnicodeDecodeError:
             pass
+
+    if not ok:
+        line = data.decode(preferEncoding, "replace")
+        e = preferEncoding
 
     return line, e
 
