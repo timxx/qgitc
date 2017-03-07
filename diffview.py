@@ -8,6 +8,7 @@ from common import *
 
 import subprocess
 import re
+import bisect
 
 
 # item type for LineItem
@@ -522,9 +523,11 @@ class PatchViewer(QPlainTextEdit):
             matches = pattern.finditer(item.content)
             for m in matches:
                 found = False
-                for l in foundLinks:
-                    if m.start() >= l.x() and m.start() <= l.y() \
-                            or m.end() >= l.x() and m.end() <= l.y():
+                i = bisect.bisect_left(foundLinks, (m.start(), m.end()))
+                for x in range(i, len(foundLinks)):
+                    start, end = foundLinks[x]
+                    if (start <= m.start() and m.start() <= end) \
+                            or (start <= m.end() and m.end() <= end):
                         found = True
                         break
                 # not allow links in the same range
@@ -536,7 +539,7 @@ class PatchViewer(QPlainTextEdit):
                 link.setData(m.group(0))
 
                 data.addLink(link)
-                foundLinks.append(QPoint(m.start(), m.end()))
+                bisect.insort(foundLinks, (m.start(), m.end()))
 
         return data
 
@@ -603,17 +606,21 @@ class PatchViewer(QPlainTextEdit):
         self.clear()
         self.currentLink = None
 
-        if data:
-            textCursor = self.textCursor()
-            textCursor.beginEditBlock()
+        if not data:
+            return
 
-            self.__lineItemToTextBlock(textCursor, data[0])
+        textCursor = self.textCursor()
+        textCursor.beginEditBlock()
 
-            for i in range(1, len(data)):
-                textCursor.insertBlock()
-                self.__lineItemToTextBlock(textCursor, data[i])
+        self.__lineItemToTextBlock(textCursor, data[0])
 
-            textCursor.endEditBlock()
+        for i in range(1, len(data)):
+            textCursor.insertBlock()
+            self.__lineItemToTextBlock(textCursor, data[i])
+
+        textCursor.endEditBlock()
+        # scroll to comments
+        self.moveCursor(QTextCursor.Start)
 
     def scrollToRow(self, row):
         block = self.document().findBlockByNumber(row)
