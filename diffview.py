@@ -275,7 +275,8 @@ class DiffView(QWidget):
                 itemType = ItemFileInfo
 
             line, lastEncoding = decodeDiffData(line, lastEncoding)
-            line = line.rstrip('\r')
+            if itemType != ItemDiff:
+                line = line.rstrip('\r')
             lineItems.append(LineItem(itemType, line))
 
         self.viewer.setData(lineItems)
@@ -321,187 +322,793 @@ class DiffView(QWidget):
         return False
 
 
+class Selection():
+
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self._beginLine = -1
+        self._beginPos = -1
+        self._endLine = -1
+        self._endPos = -1
+
+    def hasSelection(self):
+        return self._beginLine != -1 and self._endLine != -1
+
+    def within(self, line):
+        if not self.hasSelection():
+            return False
+
+        if line >= self.beginLine() and line <= self.endLine():
+            return True
+
+        return False
+
+    def beginLine(self):
+        return min(self._beginLine, self._endLine)
+
+    def endLine(self):
+        return max(self._beginLine, self._endLine)
+
+    def beginPos(self):
+        if self._beginLine == self._endLine:
+            return min(self._beginPos, self._endPos)
+        elif self._beginLine < self._endLine:
+            return self._beginPos
+        else:
+            return self._endPos
+
+    def endPos(self):
+        if self._beginLine == self._endLine:
+            return max(self._beginPos, self._endPos)
+        elif self._beginLine < self._endLine:
+            return self._endPos
+        else:
+            return self._beginPos
+
+    def begin(self, line, pos):
+        self._beginLine = line
+        self._beginPos = pos
+
+    def end(self, line, pos):
+        self._endLine = line
+        self._endPos = pos
+
+
 class Link():
     Sha1 = 0
     BugId = 1
     Email = 2
 
-    def __init__(self, offset, start, end, type):
-        self.offset = offset  # block position
-        self.start = start
-        self.end = end
-        self.type = type
-        self.data = None
+    def __init__(self, url, rect, linkType):
+        self.url = url
+        self.rect = rect
+        self.linkType = linkType
         self.clickHandler = None
 
-    def setData(self, data):
-        self.data = data
+    def setUrl(self, url):
+        self.url = url
+
+    def setRect(self, rect):
+        self.rect = rect
 
     def hitTest(self, pos):
-        return (self.offset + self.start) <= pos and \
-            pos <= (self.offset + self.end)
+        return self.rect.contains(pos)
 
-    def onClicked(self):
+    def onClicked(self, pos):
+        if not self.hitTest(pos):
+            return False
+
         if self.clickHandler:
-            self.clickHandler(self)
+            self.clickHandler(self.url)
         else:
-            QDesktopServices.openUrl(QUrl(self.data))
+            QDesktopServices.openUrl(QUrl(self.url))
+
+        return True
 
     def setClickHandler(self, handler):
         self.clickHandler = handler
 
 
-class ColorSchema():
-
-    def __init__(self, palette):
-        self._clrNewline = QColor(0, 0, 255)
-        self._clrAdding = QColor(0, 128, 0)
-        self._clrDeletion = QColor(255, 0, 0)
-        self._clrInfo = QColor(170, 170, 170)
-        self._clrLink = palette.link().color()
-        self._clrSpace = QColor(Qt.lightGray)
-
-    def newLine(self):
-        return self._clrNewline
-
-    def adding(self):
-        return self._clrAdding
-
-    def deletion(self):
-        return self._clrDeletion
-
-    def info(self):
-        return self._clrInfo
-
-    def link(self):
-        return self._clrLink
-
-    def space(self):
-        return self._clrSpace
-
-
-class TextBlockData(QTextBlockUserData):
-
-    def __init__(self):
-        super(TextBlockData, self).__init__()
-        self.type = ItemInvalid
-        self.links = []
-
-    def hasLink(self):
-        return len(self.links) > 0
-
-    def addLink(self, link):
-        self.links.append(link)
-
-
-class DiffHighlighter(QSyntaxHighlighter):
-
-    def __init__(self, cs, parent):
-        super(DiffHighlighter, self).__init__(parent)
-
-        self._cs = cs
-        self._fmtSpaces = QTextCharFormat()
-        self._fmtSpaces.setForeground(cs.space())
-
-    def highlightBlock(self, text):
-        if not text:
-            return
-
-        data = self.currentBlockUserData()
-        if not data:
-            return
-
-        tcFormat = QTextCharFormat()
-
-        if data.type == ItemFile or data.type == ItemFileInfo:
-            font = self.document().defaultFont()
-            font.setBold(True)
-            tcFormat.setFont(font)
-        elif diff_begin_re.search(text) or text.startswith("\ No newline "):
-            tcFormat.setForeground(self._cs.newLine())
-        elif text.lstrip().startswith("+"):
-            tcFormat.setForeground(self._cs.adding())
-        elif text.lstrip().startswith("-"):
-            tcFormat.setForeground(self._cs.deletion())
-
-        self.setFormat(0, len(text), tcFormat)
-
-        if data.hasLink():
-            fmt = QTextCharFormat()
-            fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
-            fmt.setForeground(self._cs.link())
-            for link in data.links:
-                self.setFormat(link.start, link.end - link.start, fmt)
-
-        self.applyWhitespaces(text)
-
-    def applyWhitespaces(self, text):
-        offset = 0
-        length = len(text)
-        while offset < length:
-            if text[offset].isspace():
-                start = offset
-                offset += 1
-                while offset < length and text[offset].isspace():
-                    offset += 1
-                self.setFormat(start, offset - start, self._fmtSpaces)
-            else:
-                offset += 1
-
-
-class PatchViewer(QPlainTextEdit):
+class PatchViewer(QAbstractScrollArea):
     fileRowChanged = pyqtSignal(int)
     requestCommit = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
 
-        self.setReadOnly(True)
-        self.setWordWrapMode(QTextOption.NoWrap)
-        self.viewport().setMouseTracking(True)
+        # width of LineItem.content
+        self.itemWidths = {}
 
-        self.cs = ColorSchema(self.palette())
-        self.highlighter = DiffHighlighter(self.cs, self.document())
-
+        self.lineItems = []
         self.updateSettings()
 
+        self.highlightPattern = None
+        self.highlightField = FindField.Comments
+        self.wordPattern = None
+
+        self.selection = Selection()
+        self.tripleClickTimer = QElapsedTimer()
+        self.clickOnLink = False
+        self.cursorChanged = False
+
+        self.links = []
         self.sha1Re = re.compile("\\b[a-f0-9]{7,40}\\b")
         self.emailRe = re.compile(
             "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
-        self.currentLink = None
-        self.clickOnLink = False
+        self.menu = QMenu()
+        action = self.menu.addAction(self.tr("&Copy"), self.__onCopy)
+        action.setIcon(QIcon.fromTheme("edit-copy"))
+        action.setShortcuts(QKeySequence.Copy)
+
+        self.menu.addAction(self.tr("Copy All"), self.__onCopyAll)
+        self.menu.addSeparator()
+
+        action = self.menu.addAction(self.tr("Select All"), self.__onSelectAll)
+        action.setIcon(QIcon.fromTheme("edit-select-all"))
+        action.setShortcuts(QKeySequence.SelectAll)
+
+        # FIXME: show scrollbar always to prevent dead loop
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
         self.verticalScrollBar().valueChanged.connect(
             self.__onVScollBarValueChanged)
 
-    def __openLink(self, link):
-        url = None
-        if link.type == Link.Sha1:
-            self.requestCommit.emit(link.data)
-        elif link.type == Link.Email:
-            url = "mailto:" + link.data
-        elif link.type == Link.BugId:
-            url = self.bugUrl + link.data
+        self.viewport().setCursor(Qt.IBeamCursor)
+        self.viewport().setMouseTracking(True)
 
-        if url:
-            QDesktopServices.openUrl(QUrl(url))
+    def updateSettings(self):
+        # font for comments, file info, diff
+        self.fonts = [None, None, None]
 
-    def __lineItemToTextBlock(self, textCursor, lineItem):
-        block = textCursor.block()
-        block.setUserData(self.__createBlockData(block, lineItem))
-        textCursor.insertText(lineItem.content)
+        settings = QApplication.instance().settings()
+        fm = QFontMetrics(settings.diffViewFont())
+        # total height of a line
+        self.lineHeight = fm.height()
 
-    def __createBlockData(self, block, item):
-        data = TextBlockData()
-        data.type = item.type
+        self.showWhiteSpace = settings.showWhitespace()
+        tabSize = settings.tabSize()
+        self.tabstopWidth = fm.width(' ') * tabSize
 
+        self.itemWidths.clear()
+        self.bugUrl = settings.bugUrl()
+        self.bugRe = re.compile(settings.bugPattern())
+
+        self.__adjust()
+
+    def setData(self, items):
+        self.lineItems = items
+        self.itemWidths.clear()
+        self.selection.clear()
+        self.wordPattern = None
+
+        hScrollBar = self.horizontalScrollBar()
+        vScrollBar = self.verticalScrollBar()
+        hScrollBar.blockSignals(True)
+        vScrollBar.blockSignals(True)
+
+        hScrollBar.setValue(0)
+        vScrollBar.setValue(0)
+
+        hScrollBar.blockSignals(False)
+        vScrollBar.blockSignals(False)
+
+        self.__adjust()
+        self.viewport().update()
+
+    def scrollToRow(self, row):
+        vScrollBar = self.verticalScrollBar()
+        if vScrollBar.value() != row:
+            vScrollBar.blockSignals(True)
+            vScrollBar.setValue(row)
+            vScrollBar.blockSignals(False)
+            self.__updateHScrollBar()
+            self.viewport().update()
+
+    def highlightKeyword(self, pattern, field):
+        self.highlightPattern = pattern
+        self.highlightField = field
+        self.viewport().update()
+
+    def mouseMoveEvent(self, event):
+        if self.tripleClickTimer.isValid():
+            self.tripleClickTimer.invalidate()
+
+        if not self.lineItems:
+            return
+
+        hoveredLink = False
+        self.clickOnLink = False
+        for link in self.links:
+            if link.hitTest(event.pos()):
+                hoveredLink = True
+                break
+
+        # is setCursor waste many resource?
+        if hoveredLink:
+            if not self.cursorChanged:
+                self.viewport().setCursor(Qt.PointingHandCursor)
+                self.cursorChanged = True
+        elif self.cursorChanged:
+            self.cursorChanged = False
+            self.viewport().setCursor(Qt.IBeamCursor)
+
+        if not (event.buttons() & Qt.LeftButton):
+            return
+
+        self.__updateSelection()
+        line, index = self.__posToContentIndex(event.pos())
+        if line == -1 or index == -1:
+            return
+        self.selection.end(line, index)
+        self.__updateSelection()
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+
+        if not self.lineItems:
+            return
+
+        self.clickOnLink = False
+        for link in self.links:
+            if link.hitTest(event.pos()):
+                self.clickOnLink = True
+                break
+
+        timeout = QApplication.doubleClickInterval()
+        # triple click
+        isTripleClick = False
+        if self.tripleClickTimer.isValid():
+            isTripleClick = not self.tripleClickTimer.hasExpired(timeout)
+            self.tripleClickTimer.invalidate()
+
+        self.__updateSelection()
+        self.wordPattern = None
+        line, index = self.__posToContentIndex(event.pos(), not isTripleClick)
+        if line == -1:
+            return
+
+        if isTripleClick:
+            self.selection.begin(line, 0)
+            self.selection.end(line, len(self.__getItem(line).content))
+            self.__updateSelection()
+        elif index != -1:
+            self.selection.begin(line, index)
+            self.selection.end(-1, -1)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        if not self.lineItems:
+            return
+
+        if not self.clickOnLink:
+            return
+
+        self.clickOnLink = False
+        for link in self.links:
+            if link.onClicked(event.pos()):
+                return
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+
+        if not self.lineItems:
+            return
+
+        for link in self.links:
+            if link.hitTest(event.pos()):
+                return
+
+        self.tripleClickTimer.restart()
+
+        self.__updateSelection()
+        self.selection.clear()
+
+        line, index = self.__posToContentIndex(event.pos())
+        if line == -1 or index == -1:
+            return
+
+        # find the word
+        content = self.__getItem(line).content
+        begin = index
+        end = index
+
+        if index < len(content) and self.__isLetter(content[index]):
+            for i in range(index - 1, -1, -1):
+                if self.__isLetter(content[i]):
+                    begin = i
+                    continue
+                break
+
+            for i in range(index + 1, len(content)):
+                if self.__isLetter(content[i]):
+                    end = i
+                    continue
+                break
+
+        word = content[begin:end + 1]
+        if word:
+            word = normalizeRegex(word)
+            self.wordPattern = re.compile('\\b' + word + '\\b')
+            self.selection.begin(line, begin)
+            self.selection.end(line, end)
+        else:
+            self.wordPattern = None
+
+        self.viewport().update()
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.Copy):
+            self.__doCopy()
+        elif event.matches(QKeySequence.SelectAll):
+            self.__onSelectAll()
+
+    def contextMenuEvent(self, event):
+        self.menu.exec(event.globalPos())
+
+    def resizeEvent(self, event):
+        self.__adjust()
+
+    def paintEvent(self, event):
+        if not self.lineItems:
+            return
+
+        painter = QPainter(self.viewport())
+
+        startLine = self.verticalScrollBar().value()
+        endLine = startLine + self.__linesPerPage() + 1
+        endLine = min(len(self.lineItems), endLine)
+
+        # reset every paints
+        self.links.clear()
+
+        for i in range(startLine, endLine):
+            item = self.__getItem(i)
+            rect = self.__lineRect(i)
+
+            painter.save()
+
+            textLayout = QTextLayout(item.content, self.itemFont(item.type))
+            formats = []
+
+            # selection
+            selectionRg = self.__selectionFormatRange(i)
+            if selectionRg:
+                formats.append(selectionRg)
+
+            formats.extend(self.__wordFormatRange(item.content))
+
+            textOption = self.__textOption(item)
+
+            if self.__initCommentsLayout(item, textLayout, formats):
+                pass
+            elif self.__initInfoLayout(item, textLayout, formats):
+                self.__drawInfo(painter, item, rect)
+            elif self.__initDiffLayout(item, textLayout, formats):
+                pass
+
+            topLeft = QPointF(rect.topLeft())
+            self.__findLinks(topLeft, item, formats)
+
+            textLayout.setTextOption(textOption)
+            textLayout.setAdditionalFormats(formats)
+
+            textLayout.beginLayout()
+            textLine = textLayout.createLine()
+            textLine.setPosition(QPointF(0, 0))
+            textLayout.endLayout()
+
+            textLayout.draw(painter, topLeft)
+
+            painter.restore()
+
+    def commentsFont(self):
+        if not self.fonts[0]:
+            settings = QApplication.instance().settings()
+            self.fonts[0] = settings.diffViewFont()
+        return self.fonts[0]
+
+    def fileInfoFont(self):
+        if not self.fonts[1]:
+            settings = QApplication.instance().settings()
+            self.fonts[1] = settings.diffViewFont()
+            self.fonts[1].setBold(True)
+        return self.fonts[1]
+
+    def diffFont(self):
+        if not self.fonts[2]:
+            settings = QApplication.instance().settings()
+            self.fonts[2] = settings.diffViewFont()
+        return self.fonts[2]
+
+    def itemFont(self, itemType):
+        if itemType >= ItemAuthor and itemType <= ItemComments:
+            return self.commentsFont()
+        elif itemType >= ItemFile and itemType <= ItemFileInfo:
+            return self.fileInfoFont()
+        else:
+            return self.diffFont()
+
+    def __highlightFormatRange(self, text):
+        formats = []
+        if self.highlightPattern:
+            matchs = self.highlightPattern.finditer(text)
+            fmt = QTextCharFormat()
+            fmt.setBackground(QBrush(Qt.yellow))
+            for m in matchs:
+                rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
+                formats.append(rg)
+        return formats
+
+    def __wordFormatRange(self, text):
+        if not self.wordPattern:
+            return []
+
+        formats = []
+        fmt = QTextCharFormat()
+        fmt.setTextOutline(QPen(QColor(68, 29, 98)))
+        matches = self.wordPattern.finditer(text)
+        for m in matches:
+            rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
+            formats.append(rg)
+
+        return formats
+
+    def __selectionFormatRange(self, lineIndex):
+        if not self.selection.within(lineIndex):
+            return None
+
+        start = 0
+        end = len(self.__getItem(lineIndex).content)
+
+        if self.selection.beginLine() == lineIndex:
+            start = self.selection.beginPos()
+        if self.selection.endLine() == lineIndex:
+            end = self.selection.endPos()
+
+        fmt = QTextCharFormat()
+        if self.hasFocus():
+            fmt.setBackground(QBrush(QColor(173, 214, 255)))
+        else:
+            fmt.setBackground(QBrush(QColor(229, 235, 241)))
+
+        return createFormatRange(start, end - start + 1, fmt)
+
+    def __initCommentsLayout(self, item, textLayout, formats):
+        if not (item.type >= ItemAuthor and item.type <= ItemComments):
+            return False
+
+        if self.highlightField == FindField.Comments:
+            formats.extend(self.__highlightFormatRange(item.content))
+
+        return True
+
+    def __initInfoLayout(self, item, textLayout, formats):
+        if item.type != ItemFile and item.type != ItemFileInfo:
+            return False
+
+        return True
+
+    def __drawInfo(self, painter, item, rect):
+        painter.fillRect(rect, QBrush(QColor(170, 170, 170)))
+
+    def __initDiffLayout(self, item, textLayout, formats):
+        if item.type != ItemDiff:
+            return False
+
+        color = QColor()
+        if diff_begin_re.search(item.content) or \
+                item.content.startswith("\ No newline "):
+            color = QColor(0, 0, 255)
+        elif item.content.lstrip().startswith("+"):
+            color = QColor(0, 128, 0)
+        elif item.content.lstrip().startswith("-"):
+            color = QColor(255, 0, 0)
+
+        if color.isValid() or self.showWhiteSpace:
+            formatRange = QTextLayout.FormatRange()
+            formatRange.start = 0
+            formatRange.length = len(textLayout.text())
+            if color.isValid():
+                fmt = QTextCharFormat()
+                fmt.setForeground(QBrush(color))
+                formatRange.format = fmt
+            formats.append(formatRange)
+
+        # format for \r
+        if self.showWhiteSpace and textLayout.text().endswith("^M"):
+            fmtCRRg = QTextLayout.FormatRange()
+            fmtCRRg.start = len(textLayout.text()) - 2
+            fmtCRRg.length = 2
+            fmt = QTextCharFormat()
+            fmt.setForeground(QBrush(Qt.white))
+            fmt.setBackground(QBrush(Qt.black))
+            fmtCRRg.format = fmt
+            formats.append(fmtCRRg)
+
+        if self.highlightField == FindField.Diffs:
+            formats.extend(self.__highlightFormatRange(item.content))
+
+        return True
+
+    def __linesPerPage(self):
+        return int(self.viewport().height() / self.lineHeight)
+
+    def __totalLines(self):
+        return len(self.lineItems)
+
+    def __adjust(self):
+
+        hScrollBar = self.horizontalScrollBar()
+        vScrollBar = self.verticalScrollBar()
+
+        if not self.lineItems:
+            hScrollBar.setRange(0, 0)
+            vScrollBar.setRange(0, 0)
+            return
+
+        linesPerPage = self.__linesPerPage()
+        totalLines = self.__totalLines()
+
+        vScrollBar.setRange(0, totalLines - linesPerPage)
+        vScrollBar.setPageStep(linesPerPage)
+
+        self.__updateHScrollBar()
+
+    def __updateHScrollBar(self):
+        hScrollBar = self.horizontalScrollBar()
+        vScrollBar = self.verticalScrollBar()
+
+        if not self.lineItems:
+            hScrollBar.setRange(0, 0)
+            return
+
+        linesPerPage = self.__linesPerPage()
+        totalLines = self.__totalLines()
+
+        offsetY = vScrollBar.value()
+        maxY = min(totalLines, offsetY + linesPerPage)
+
+        maxWidth = 0
+        for i in range(offsetY, maxY):
+            if i in self.itemWidths:
+                width = self.itemWidths[i]
+            else:
+                item = self.__getItem(i)
+
+                textLayout = QTextLayout(
+                    item.content, self.itemFont(item.type))
+                textLayout.setTextOption(self.__textOption(item))
+                textLayout.beginLayout()
+                textLayout.createLine()
+                textLayout.endLayout()
+
+                width = int(textLayout.boundingRect().width())
+                self.itemWidths[i] = width
+            maxWidth = max(maxWidth, width)
+
+        hScrollBar.setRange(0, maxWidth - self.viewport().width())
+        hScrollBar.setPageStep(self.viewport().width())
+
+    def __onVScollBarValueChanged(self, value):
+        self.__updateHScrollBar()
+
+        if not self.lineItems:
+            return
+
+        # TODO: improve
+        for i in range(value, -1, -1):
+            item = self.__getItem(i)
+            if item.type == ItemFile:
+                self.fileRowChanged.emit(i)
+                break
+            elif item.type == ItemParent or item.type == ItemAuthor:
+                self.fileRowChanged.emit(0)
+                break
+
+    def __onCopy(self):
+        self.__doCopy()
+
+    def __onCopyAll(self):
+        self.__doCopy(False)
+
+    def __onSelectAll(self):
+        if not self.lineItems:
+            return
+
+        self.wordPattern = None
+        self.selection.begin(0, 0)
+        lastLine = len(self.lineItems) - 1
+        self.selection.end(lastLine, len(self.__getItem(lastLine)))
+        self.__updateSelection()
+
+    def __makeContent(self, item, begin=None, end=None):
+        if self.showWhiteSpace and item.type == ItemDiff:
+            return item.content[begin:end].rstrip("^M")
+        return item.content[begin:end]
+
+    def __doCopy(self, selectionOnly=True):
+        if not self.lineItems:
+            return
+        if selectionOnly and not self.selection.hasSelection():
+            return
+
+        if selectionOnly:
+            beginLine = self.selection.beginLine()
+            beginPos = self.selection.beginPos()
+            endLine = self.selection.endLine()
+            endPos = self.selection.endPos()
+        else:
+            beginLine = 0
+            beginPos = 0
+            endLine = len(self.lineItems) - 1
+            endPos = len(self.__getItem(endLine - 1)) - 1
+
+        content = ""
+        # only one line
+        if beginLine == endLine:
+            item = self.__getItem(beginLine)
+            content = self.__makeContent(item, beginPos, endPos + 1)
+        else:
+            # first line
+            content = self.__makeContent(
+                self.__getItem(beginLine), beginPos, None)
+            beginLine += 1
+
+            # middle lines
+            for i in range(beginLine, endLine):
+                content += "\n" + self.__makeContent(self.__getItem(i))
+
+            # last line
+            content += "\n" + \
+                self.__makeContent(self.__getItem(endLine), 0, endPos + 1)
+
+        clipboard = QApplication.clipboard()
+        mimeData = QMimeData()
+        mimeData.setText(content)
+
+        # TODO: html format support
+        clipboard.setMimeData(mimeData)
+
+    def __posToContentIndex(self, pos, calCharIndex=True):
+        if not self.lineItems:
+            return -1, -1
+
+        lineIndex = int(pos.y() / self.lineHeight)
+        lineIndex += self.verticalScrollBar().value()
+
+        if lineIndex >= len(self.lineItems):
+            lineIndex = len(self.lineItems) - 1
+
+        if not calCharIndex:
+            return lineIndex, -1
+
+        x = pos.x() + self.horizontalScrollBar().value()
+
+        item = self.__getItem(lineIndex)
+        if len(item.content) < 2:
+            return lineIndex, 0
+
+        font = self.itemFont(item.type)
+
+        textLayout = QTextLayout()
+        textLayout.setFont(font)
+        textLayout.setTextOption(self.__textOption(item))
+
+        # TODO: improve performance, calc like binary search?
+        charIndex = len(item.content) - 1
+        for i in range(0, len(item.content)):
+            textLayout.setText(item.content[0:i + 1])
+            textLayout.beginLayout()
+            line = textLayout.createLine()
+            textLayout.endLayout()
+            width = int(textLayout.boundingRect().width())
+            if width > x:
+                charIndex = i
+                break
+
+        return lineIndex, charIndex
+
+    def __lineRect(self, index):
+        # the row number in viewport
+        row = (index - self.verticalScrollBar().value())
+
+        offsetX = self.horizontalScrollBar().value()
+        x = 0 - offsetX
+        y = 0 + row * self.lineHeight
+        w = self.viewport().width() - x
+        h = self.lineHeight
+
+        return QRect(x, y, w, h)
+
+    def __updateSelection(self):
+        if self.wordPattern:
+            self.viewport().update()
+            return
+
+        if not self.selection.hasSelection():
+            return
+
+        begin = self.selection.beginLine()
+        end = self.selection.endLine()
+        rect = self.__lineRect(begin)
+        rect.setWidth(self.viewport().width())
+        # the rect may not actually the one draws, so add some extra spaces
+        rect.setHeight(self.lineHeight * (end - begin + 1) +
+                       self.lineHeight / 3)
+
+        self.viewport().update(rect)
+
+    def __isLetter(self, char):
+        if char >= 'a' and char <= 'z':
+            return True
+        if char >= 'A' and char <= 'Z':
+            return True
+
+        if char == '_':
+            return True
+
+        if char.isdigit():
+            return True
+
+        return False
+
+    def __textOption(self, item):
+        textOption = QTextOption()
+        textOption.setWrapMode(QTextOption.NoWrap)
+
+        if item.type == ItemDiff:
+            textOption.setTabStop(self.tabstopWidth)
+            if self.showWhiteSpace:
+                textOption.setFlags(QTextOption.ShowTabsAndSpaces)
+
+        return textOption
+
+    def __getItem(self, index):
+        """ ugly way to make content consist """
+        item = self.lineItems[index]
+        if item.type != ItemDiff:
+            return item
+
+        if self.showWhiteSpace:
+            content = item.content.replace('\r', '^M')
+        else:
+            content = item.content.rstrip('\r')
+
+        return LineItem(item.type, content)
+
+    def __getLinkRect(self, pos, item, begin, end):
+        textLayout = QTextLayout()
+        textLayout.setFont(self.itemFont(item.type))
+        textLayout.setTextOption(self.__textOption(item))
+
+        ranges = [begin, end]
+        rects = []
+        for i in ranges:
+            substr = item.content[0:i]
+            textLayout.setText(substr)
+            textLayout.beginLayout()
+            textLayout.createLine()
+            textLayout.endLayout()
+            rect = textLayout.boundingRect()
+            rect.moveTo(pos)
+            rects.append(rect)
+
+        rects[1].setTopLeft(rects[0].topRight())
+        return rects[1]
+
+    def __findLinks(self, pos, item, formats):
         if not item.content:
-            return data
-
+            return
         if item.type == ItemFile or \
                 item.type == ItemFileInfo:
-            return data
+            return
 
         patterns = {Link.Sha1: self.sha1Re,
                     Link.Email: self.emailRe}
@@ -510,6 +1117,10 @@ class PatchViewer(QPlainTextEdit):
             patterns[Link.BugId] = self.bugRe
 
         foundLinks = []
+        fmt = QTextCharFormat()
+        fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
+        fmt.setForeground(self.palette().link())
+
         for linkType, pattern in patterns.items():
             # only find email if item is author
             if linkType != Link.Email and \
@@ -534,230 +1145,22 @@ class PatchViewer(QPlainTextEdit):
                 if found:
                     continue
 
-                link = Link(block.position(), m.start(), m.end(), linkType)
-                link.setClickHandler(self.__openLink)
-                link.setData(m.group(0))
+                linkRg = createFormatRange(m.start(), m.end() - m.start(), fmt)
+                formats.append(linkRg)
 
-                data.addLink(link)
+                rect = self.__getLinkRect(pos, item, m.start(), m.end())
+                link = Link(None, rect, linkType)
+
+                if linkType == Link.Sha1:
+                    url = m.group(0)
+                    link.setClickHandler(self.__requestCommit)
+                elif linkType == Link.Email:
+                    url = "mailto:" + m.group(0)
+                else:
+                    url = self.bugUrl + m.group(0)
+                link.setUrl(url)
+                self.links.append(link)
                 bisect.insort(foundLinks, (m.start(), m.end()))
 
-        return data
-
-    def __onVScollBarValueChanged(self, value):
-        block = self.firstVisibleBlock()
-        while block.isValid():
-            data = block.userData()
-            itemType = ItemInvalid if not data else data.type
-            if itemType == ItemFile:
-                self.fileRowChanged.emit(block.blockNumber())
-                break
-            elif itemType == ItemParent or itemType == ItemAuthor:
-                self.fileRowChanged.emit(0)
-                break
-
-            block = block.previous()
-
-    def __updateCursorAndLink(self, pos, leftButtonPressed):
-        self.currentLink = None
-        textCursor = self.cursorForPosition(pos)
-        if not textCursor.isNull():
-            onText = self.cursorRect(textCursor).right() >= pos.x()
-            if not onText:
-                nextPos = textCursor
-                nextPos.movePosition(QTextCursor.Right)
-                onText = self.cursorRect(nextPos).right() >= pos.x()
-
-            data = textCursor.block().userData()
-            if onText and data:
-                for link in data.links:
-                    if link.hitTest(textCursor.position()):
-                        self.currentLink = link
-                        break
-
-        if not leftButtonPressed and self.currentLink:
-            self.viewport().setCursor(Qt.PointingHandCursor)
-        else:
-            self.viewport().setCursor(Qt.IBeamCursor)
-
-    def updateSettings(self):
-        settings = QApplication.instance().settings()
-        self.document().setDefaultFont(settings.diffViewFont())
-
-        self.bugUrl = settings.bugUrl()
-        self.bugRe = re.compile(settings.bugPattern())
-
-        self.showWhiteSpace = settings.showWhitespace()
-        tabSize = settings.tabSize()
-
-        option = self.document().defaultTextOption()
-        if self.showWhiteSpace:
-            option.setFlags(option.flags() | QTextOption.ShowTabsAndSpaces)
-        else:
-            option.setFlags(option.flags() & ~QTextOption.ShowTabsAndSpaces)
-
-        fm = QFontMetrics(settings.diffViewFont())
-        option.setTabStop(tabSize * fm.width(' '))
-        self.document().setDefaultTextOption(option)
-
-        # TODO: rehighlight only when font and show whitespaces changed
-        self.highlighter.rehighlight()
-
-    def setData(self, data):
-        self.clear()
-        self.currentLink = None
-
-        if not data:
-            return
-
-        textCursor = self.textCursor()
-        textCursor.beginEditBlock()
-
-        self.__lineItemToTextBlock(textCursor, data[0])
-
-        for i in range(1, len(data)):
-            textCursor.insertBlock()
-            self.__lineItemToTextBlock(textCursor, data[i])
-
-        textCursor.endEditBlock()
-        # scroll to comments
-        self.moveCursor(QTextCursor.Start)
-
-    def scrollToRow(self, row):
-        block = self.document().findBlockByNumber(row)
-        if block.isValid():
-            self.moveCursor(QTextCursor.End)
-            self.setTextCursor(QTextCursor(block))
-
-    def fillBackground(self, p, rect, brush, gradientRect=QRectF()):
-        p.save()
-        if brush.style() >= Qt.LinearGradientPattern and brush.style() <= Qt.ConicalGradientPattern:
-            if not gradientRect.isNull():
-                m = QTransform.fromTranslate(
-                    gradientRect.left(), gradientRect.top())
-                m.scale(gradientRect.width(), gradientRect.height())
-                brush.setTransform(m)
-                brush.gradient().setCoordinateMode(QGradient.LogicalMode)
-        else:
-            p.setBrushOrigin(rect.topLeft())
-
-        p.fillRect(rect, brush)
-        p.restore()
-
-    def paintEvent(self, event):
-        # taken from QPlainTextEdit::paintEvent
-        painter = QPainter(self.viewport())
-        offset = QPointF(self.contentOffset())
-
-        er = event.rect()
-        viewportRect = self.viewport().rect()
-
-        block = self.firstVisibleBlock()
-        maximumWidth = self.document().documentLayout().documentSize().width()
-
-        # Set a brush origin so that the WaveUnderline knows where the wave
-        # started
-        painter.setBrushOrigin(offset)
-
-        # keep right margin clean from full-width selection
-        maxX = offset.x() + max(viewportRect.width(), maximumWidth) - \
-            self.document().documentMargin()
-        er.setRight(min(er.right(), maxX))
-        painter.setClipRect(er)
-
-        context = self.getPaintContext()
-
-        while block.isValid():
-            r = self.blockBoundingRect(block).translated(offset)
-            layout = block.layout()
-
-            if not block.isVisible():
-                offset.setY(offset.y() + r.height())
-                block = block.next()
-                continue
-
-            if r.bottom() >= er.top() and r.top() <= er.bottom():
-                blockFormat = block.blockFormat()
-
-                bg = blockFormat.background()
-                if bg != Qt.NoBrush:
-                    contentsRect = r
-                    contentsRect.setWidth(max(r.width(), maximumWidth))
-                    self.fillBackground(painter, contentsRect, bg)
-
-                # file info background
-                itemType = ItemInvalid if not block.userData() else block.userData().type
-                if itemType == ItemFile or itemType == ItemFileInfo:
-                    # one line one block
-                    rr = layout.lineForTextPosition(0).rect()
-                    rr.moveTop(rr.top() + r.top())
-                    rr.setLeft(0)
-                    rr.setRight(viewportRect.width() - offset.x())
-                    painter.fillRect(rr, self.cs.info())
-
-                selections = []
-                blpos = block.position()
-                bllen = block.length()
-                for i in range(0, len(context.selections)):
-                    rg = context.selections[i]
-                    selStart = rg.cursor.selectionStart() - blpos
-                    selEnd = rg.cursor.selectionEnd() - blpos
-                    if selStart < bllen and selEnd > 0 and selEnd > selStart:
-                        o = QTextLayout.FormatRange()
-                        o.start = selStart
-                        o.length = selEnd - selStart
-                        o.format = rg.format
-                        selections.append(o)
-                    elif not rg.cursor.hasSelection() and rg.format.hasProperty(QTextFormat.FullWidthSelection) \
-                            and block.contains(rg.cursor.position()):
-                        # for full width selections we don't require an actual selection, just
-                        # a position to specify the line. that's more
-                        # convenience in usage.
-                        o = QTextLayout.FormatRange()
-                        l = layout.lineForTextPosition(
-                            rg.cursor.position() - blpos)
-                        o.start = l.textStart()
-                        o.length = l.textLength()
-                        if o.start + o.length == bllen - 1:
-                            o.length += 1  # include newline
-                        o.format = rg.format
-                        selections.append(o)
-
-                layout.draw(painter, offset, selections, QRectF(er))
-
-            offset.setY(offset.y() + r.height())
-            if offset.y() > viewportRect.height():
-                break
-            block = block.next()
-
-        if self.backgroundVisible() and not block.isValid() and offset.y() <= er.bottom() \
-                and (self.centerOnScroll() or self.verticalScrollBar().maximum() == self.verticalScrollBar().minimum()):
-            painter.fillRect(QRect(QPoint(er.left(), offset.y()),
-                                   er.bottomRight()), self.palette().background())
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self.clickOnLink = self.currentLink is not None
-
-        super(PatchViewer, self).mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton and \
-                self.clickOnLink and self.currentLink:
-            self.currentLink.onClicked()
-            self.clickOnLink = False
-        else:
-            super(PatchViewer, self).mouseReleaseEvent(event)
-
-        self.__updateCursorAndLink(event.pos(), False)
-
-    def mouseMoveEvent(self, event):
-        self.clickOnLink = False
-
-        leftButtonPressed = event.buttons() & Qt.LeftButton
-        self.__updateCursorAndLink(event.pos(), leftButtonPressed)
-
-        super(PatchViewer, self).mouseMoveEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        if not self.currentLink:
-            super(PatchViewer, self).mouseDoubleClickEvent(event)
+    def __requestCommit(self, sha1):
+        self.requestCommit.emit(sha1)
