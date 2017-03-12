@@ -407,10 +407,7 @@ class TextLine():
         self._patterns = None
         self._rehighlight = True
         self._invalidated = True
-        if type == TextLine.File or type == TextLine.FileInfo:
-            self._font = viewer.infoFont
-        else:
-            self._font = viewer.defFont
+        self._font = viewer.defFont
 
         self._defOption = viewer.diffOption \
             if type == TextLine.Diff \
@@ -526,13 +523,15 @@ class TextLine():
                 patterns.update(self._patterns)
             self.__findLinks(patterns)
 
-        if self._invalidated:
-            self.__relayout()
-            self._invalidated = False
-
         if self._rehighlight:
             self.rehighlight()
             self._rehighlight = False
+            # need relayout
+            self._invalidated = True
+
+        if self._invalidated:
+            self.__relayout()
+            self._invalidated = False
 
     def boundingRect(self):
         self.ensureLayout()
@@ -583,9 +582,17 @@ class DiffTextLine(TextLine):
         tcFormat = QTextCharFormat()
         if diff_begin_re.search(text) or text.startswith(r"\ No newline "):
             tcFormat.setForeground(ColorSchema.Newline)
-        elif text.lstrip().startswith("+"):
+        elif text.startswith("++"):
+            tcFormat.setFontWeight(QFont.Bold)
+        elif text.startswith(" +"):
+            tcFormat.setFontWeight(QFont.Bold)
             tcFormat.setForeground(ColorSchema.Adding)
-        elif text.lstrip().startswith("-"):
+        elif text.startswith("+"):
+            tcFormat.setForeground(ColorSchema.Adding)
+        elif text.startswith(" -"):
+            tcFormat.setFontWeight(QFont.Bold)
+            tcFormat.setForeground(ColorSchema.Deletion)
+        elif text.startswith("-"):
             tcFormat.setForeground(ColorSchema.Deletion)
 
         if tcFormat.isValid():
@@ -618,6 +625,22 @@ class DiffTextLine(TextLine):
                 formats.append(rg)
             else:
                 offset += 1
+
+
+class InfoTextLine(TextLine):
+
+    def __init__(self, viewer, type, text):
+        super(InfoTextLine, self).__init__(viewer, type, text)
+
+    def rehighlight(self):
+        fmt = QTextCharFormat()
+        fmt.setFontWeight(QFont.Bold)
+        fmtRg = createFormatRange(0, len(self.text()), fmt)
+
+        formats = []
+        formats.append(fmtRg)
+
+        self._layout.setAdditionalFormats(formats)
 
 
 class ColorSchema():
@@ -685,8 +708,6 @@ class PatchViewer(QAbstractScrollArea):
 
         # to save the time call settings every time
         self.defFont = settings.diffViewFont()
-        self.infoFont = settings.diffViewFont()
-        self.infoFont.setBold(True)
 
         fm = QFontMetrics(self.defFont)
         # total height of a line
@@ -710,13 +731,10 @@ class PatchViewer(QAbstractScrollArea):
             pattern = {Link.BugId: self.bugRe}
 
         for i, line in self._textLines.items():
-            if line.isInfoType():
-                line.setFont(self.infoFont)
-            else:
-                if line.type() == TextLine.Diff:
-                    line.setDefOption(self.diffOption)
-                line.setFont(self.defFont)
-                line.setCustomLinkPatterns(pattern)
+            if line.type() == TextLine.Diff:
+                line.setDefOption(self.diffOption)
+            line.setFont(self.defFont)
+            line.setCustomLinkPatterns(pattern)
 
         self.__adjust()
 
@@ -769,6 +787,9 @@ class PatchViewer(QAbstractScrollArea):
             item.content, self.lastEncoding)
         if item.type == TextLine.Diff:
             textLine = DiffTextLine(self, text)
+        elif item.type == TextLine.File or \
+                item.type == TextLine.FileInfo:
+            textLine = InfoTextLine(self, item.type, text)
         else:
             textLine = TextLine(self, item.type, text)
 
@@ -1243,7 +1264,7 @@ class PatchViewer(QAbstractScrollArea):
         url = None
         if link.type == Link.Sha1:
             isNear = link.lineType == TextLine.Parent
-            goNext = isNear # currently only have Parent
+            goNext = isNear  # currently only have Parent
             self.requestCommit.emit(link.data, isNear, goNext)
         elif link.type == Link.Email:
             url = "mailto:" + link.data
