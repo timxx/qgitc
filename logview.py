@@ -51,10 +51,12 @@ class CommitFetcher():
         if source:
             self.items = [None for i in range(len(source))]
 
-    def findCommitIndex(self, sha1):
+    def findCommitIndex(self, sha1, begin=0, findNext=True):
         index = -1
 
-        for i in range(len(self.items)):
+        findRange = range(begin, len(self.items)) \
+                          if findNext else range(begin, -1, -1)
+        for i in findRange:
             self.__ensureCommit(i)
             item = self.items[i]
             if item.sha1.startswith(sha1):
@@ -307,6 +309,13 @@ class LogView(QAbstractScrollArea):
         if index != -1:
             self.setCurrentIndex(index)
 
+        return index != -1
+
+    def switchToNearCommit(self, sha1, goNext=True):
+        curIdx = self.curIdx if self.curIdx >= 0 else 0
+        index = self.data.findCommitIndex(sha1, self.curIdx, goNext)
+        if index != -1:
+            self.setCurrentIndex(index)
         return index != -1
 
     def showContextMenu(self, pos):
