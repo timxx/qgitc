@@ -187,8 +187,11 @@ class GitView(QWidget):
     def __onFindProgress(self, progress):
         self.window().updateProgress(progress, self.branchA)
 
-    def __onRequestCommit(self, sha1):
-        self.ui.logView.switchToCommit(sha1)
+    def __onRequestCommit(self, sha1, isNear, goNext):
+        if isNear:
+            self.ui.logView.switchToNearCommit(sha1, goNext)
+        else:
+            self.ui.logView.switchToCommit(sha1)
 
     def __filterLog(self, pattern):
         if pattern != self.pattern:

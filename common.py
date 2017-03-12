@@ -47,7 +47,7 @@ class Commit():
         self.authorDate = parts[3]
         self.commiter = parts[4]
         self.commiterDate = parts[5]
-        self.parents = parts[6].split(" ")
+        self.parents = [ x for x in parts[6].split(" ") if x]
 
 
 class MyProfile():

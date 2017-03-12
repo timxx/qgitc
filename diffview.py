@@ -84,7 +84,7 @@ class TreeItemDelegate(QItemDelegate):
 
 
 class DiffView(QWidget):
-    requestCommit = pyqtSignal(str)
+    requestCommit = pyqtSignal(str, bool, bool)
 
     def __init__(self, parent=None):
         super(DiffView, self).__init__(parent)
@@ -373,12 +373,12 @@ class Link():
     BugId = 1
     Email = 2
 
-    def __init__(self, start, end, type):
+    def __init__(self, start, end, linkType, lineType):
         self.start = start
         self.end = end
-        self.type = type
+        self.type = linkType
         self.data = None
-        self.clickHandler = None
+        self.lineType = lineType
 
     def setData(self, data):
         self.data = data
@@ -450,7 +450,7 @@ class TextLine():
                 if found:
                     continue
 
-                link = Link(m.start(), m.end(), linkType)
+                link = Link(m.start(), m.end(), linkType, self._type)
                 link.setData(m.group(0))
 
                 self._links.append(link)
@@ -634,7 +634,7 @@ class ColorSchema():
 
 class PatchViewer(QAbstractScrollArea):
     fileRowChanged = pyqtSignal(int)
-    requestCommit = pyqtSignal(str)
+    requestCommit = pyqtSignal(str, bool, bool)
 
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
@@ -1242,7 +1242,9 @@ class PatchViewer(QAbstractScrollArea):
     def __openLink(self, link):
         url = None
         if link.type == Link.Sha1:
-            self.requestCommit.emit(link.data)
+            isNear = link.lineType == TextLine.Parent
+            goNext = isNear # currently only have Parent
+            self.requestCommit.emit(link.data, isNear, goNext)
         elif link.type == Link.Email:
             url = "mailto:" + link.data
         elif link.type == Link.BugId:
