@@ -37,7 +37,7 @@ class GitView(QWidget):
         self.ui.diffView.requestCommit.connect(self.__onRequestCommit)
 
         self.reqCommit.connect(self.__onReqCommit)
-        self.reqFind.connect(self.__onNextFindCommit)
+        self.reqFind.connect(self.__onFindCommit)
 
         self.ui.tbPrev.clicked.connect(self.__onPreFindCommit)
         self.ui.tbNext.clicked.connect(self.__onNextFindCommit)
@@ -149,6 +149,10 @@ class GitView(QWidget):
             if not ok:
                 self.window().showMessage(
                     self.tr("Revision '{0}' is not known".format(sha1)))
+
+    def __onFindCommit(self):
+        beginCommit = self.ui.logView.currentIndex()
+        self.__doFindCommit(beginCommit, True)
 
     def __onPreFindCommit(self, checked=False):
         beginCommit = self.ui.logView.currentIndex() - 1
