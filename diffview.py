@@ -21,6 +21,7 @@ sha1_re = re.compile("\\b[a-f0-9]{7,40}\\b")
 email_re = re.compile("[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
 diff_encoding = "utf-8"
+cr_char = "^M"
 
 
 def createFormatRange(start, length, fmt):
@@ -569,11 +570,52 @@ class TextLine():
                 return link
         return None
 
+    def hasCR(self):
+        return False
+
 
 class DiffTextLine(TextLine):
 
     def __init__(self, viewer, text):
+        self._hasCR = text.endswith('\r')
+        if self._hasCR:
+            text = text[:-1]
         super(DiffTextLine, self).__init__(viewer, TextLine.Diff, text)
+
+        self._crWidth = 0
+        self.__updateCRWidth()
+
+    def hasCR(self):
+        return self._hasCR
+
+    def setDefOption(self, option):
+        super(DiffTextLine, self).setDefOption(option)
+        self.__updateCRWidth()
+
+    def setFont(self, font):
+        super(DiffTextLine, self).setFont(font)
+        self.__updateCRWidth()
+
+    def boundingRect(self):
+        br = super(DiffTextLine, self).boundingRect()
+        br.setWidth(br.width() + self._crWidth)
+
+        return br
+
+    def draw(self, painter, pos, selections=None, clip=QRectF()):
+        super(DiffTextLine, self).draw(painter, pos, selections, clip)
+
+        if self._hasCR and self.__showWhitespaces():
+            br = super(DiffTextLine, self).boundingRect()
+            rect = self.boundingRect()
+            rect.setTopLeft(br.topRight())
+            rect.moveTo(rect.topLeft() + pos)
+
+            painter.save()
+            painter.setFont(self._font)
+            painter.setPen(ColorSchema.Whitespace)
+            painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, cr_char)
+            painter.restore()
 
     def rehighlight(self):
         text = self.text()
@@ -625,6 +667,17 @@ class DiffTextLine(TextLine):
                 formats.append(rg)
             else:
                 offset += 1
+
+    def __showWhitespaces(self):
+        flags = self._defOption.flags()
+        return flags & QTextOption.ShowTabsAndSpaces
+
+    def __updateCRWidth(self):
+        if self._hasCR and self.__showWhitespaces():
+            fm = QFontMetrics(self._font)
+            self._crWidth = fm.width(cr_char) + fm.width(' ')
+        else:
+            self._crWidth = 0
 
 
 class InfoTextLine(TextLine):
