@@ -25,6 +25,29 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
+        <widget class="QGroupBox" name="groupBox_6">
+         <property name="title">
+          <string>Application</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <widget class="QCheckBox" name="cbEsc">
+            <property name="text">
+             <string>&amp;Quit also via Esc key</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cbState">
+            <property name="text">
+             <string>&amp;Remember window state</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_5">
          <property name="title">
           <string>Diff view</string>
@@ -105,7 +128,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Family:</string>
+             <string>&amp;Family:</string>
             </property>
             <property name="buddy">
              <cstring>cbFamilyLog</cstring>
@@ -115,7 +138,7 @@
           <item row="1" column="0">
            <widget class="QLabel" name="label_7">
             <property name="text">
-             <string>Size:</string>
+             <string>&amp;Size:</string>
             </property>
             <property name="buddy">
              <cstring>cbSizeLog</cstring>
@@ -140,7 +163,7 @@
           <item row="1" column="0">
            <widget class="QLabel" name="label_9">
             <property name="text">
-             <string>Size:</string>
+             <string>S&amp;ize:</string>
             </property>
             <property name="buddy">
              <cstring>cbSizeDiff</cstring>
@@ -159,7 +182,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Family:</string>
+             <string>F&amp;amily:</string>
             </property>
             <property name="buddy">
              <cstring>cbFamilyDiff</cstring>
@@ -198,14 +221,20 @@
           <item row="1" column="0">
            <widget class="QLabel" name="label_2">
             <property name="text">
-             <string>Branch B:</string>
+             <string>Branch &amp;B:</string>
+            </property>
+            <property name="buddy">
+             <cstring>colorB</cstring>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
            <widget class="QLabel" name="label">
             <property name="text">
-             <string>Branch A:</string>
+             <string>Branch &amp;A:</string>
+            </property>
+            <property name="buddy">
+             <cstring>colorA</cstring>
             </property>
            </widget>
           </item>
@@ -234,7 +263,7 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_3">
             <property name="text">
-             <string>Commit URL:</string>
+             <string>C&amp;ommit URL:</string>
             </property>
             <property name="buddy">
              <cstring>leCommitUrl</cstring>
@@ -244,7 +273,7 @@
           <item row="1" column="0">
            <widget class="QLabel" name="label_4">
             <property name="text">
-             <string>BUG URL:</string>
+             <string>B&amp;UG URL:</string>
             </property>
             <property name="buddy">
              <cstring>leBugUrl</cstring>
@@ -260,7 +289,7 @@
           <item row="2" column="0">
            <widget class="QLabel" name="label_5">
             <property name="text">
-             <string>BUG Pattern:</string>
+             <string>BUG &amp;Pattern:</string>
             </property>
             <property name="buddy">
              <cstring>leBugPattern</cstring>

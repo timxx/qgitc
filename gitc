@@ -43,6 +43,9 @@ class MainWindow(QMainWindow):
 
         self.ui.lePattern.installEventFilter(self)
 
+        if not self.__restoreState():
+            self.showMaximized()
+
     def __setupSignals(self):
         self.ui.acQuit.triggered.connect(QCoreApplication.instance().quit)
 
@@ -110,6 +113,40 @@ class MainWindow(QMainWindow):
             if not self.logMode:
                 self.ui.gitViewB.updateSettings()
 
+    def __saveState(self):
+        sett = qApp.instance().settings()
+        if not sett.rememberWindowState():
+            return False
+
+        state = self.saveState()
+        geometry = self.saveGeometry()
+        sett.setWindowState(state, geometry, self.isMaximized())
+
+        self.ui.gitViewA.saveState(sett, True)
+        self.ui.gitViewB.saveState(sett, False)
+
+        return True
+
+    def __restoreState(self):
+        sett = qApp.instance().settings()
+        if not sett.rememberWindowState():
+            return False
+
+        state, geometry, isMaximized = sett.windowState()
+        self.restoreState(state)
+        if geometry:
+            self.restoreGeometry(geometry)
+
+        self.ui.gitViewA.restoreState(sett, True)
+        self.ui.gitViewB.restoreState(sett, False)
+
+        if isMaximized:
+            self.showMaximized()
+        else:
+            self.show()
+
+        return True
+
     def filterPattern(self, pattern):
         index = self.ui.cbPatternType.currentIndex()
         if index == 0:
@@ -144,6 +181,20 @@ class MainWindow(QMainWindow):
                 self.filterPattern(pattern)
 
         return False
+
+    def closeEvent(self, event):
+        self.__saveState()
+
+        super(MainWindow, self).closeEvent(event)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            sett = qApp.instance().settings()
+            if sett.quitViaEsc():
+                self.close()
+                return
+
+        super(MainWindow, self).keyPressEvent(event)
 
     def setRepoDir(self, repoDir):
         self.ui.leRepo.setText(repoDir)
@@ -199,8 +250,6 @@ if __name__ == "__main__":
 
     if repoDir:
         window.setRepoDir(repoDir)
-
-    window.showMaximized()
 
     app.exec()
     app.deleteLater()

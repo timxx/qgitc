@@ -238,6 +238,20 @@ class GitView(QWidget):
         self.ui.diffView.setFilterPath(None)
         self.__filterLog(newPattern)
 
+    def saveState(self, settings, isBranchA):
+        state = self.ui.splitter.saveState()
+        settings.setGitViewState(state, isBranchA)
+
+        self.ui.diffView.saveState(settings, isBranchA)
+
+    def restoreState(self, settings, isBranchA):
+        state = settings.gitViewState(isBranchA)
+
+        if state:
+            self.ui.splitter.restoreState(state)
+
+        self.ui.diffView.restoreState(settings, isBranchA)
+
     def updateSettings(self):
         self.ui.logView.updateSettings()
         self.ui.diffView.updateSettings()

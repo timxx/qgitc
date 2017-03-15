@@ -89,3 +89,44 @@ class Settings(QSettings):
 
     def setTabSize(self, size):
         self.setValue("tabSize", size)
+
+    def quitViaEsc(self):
+        return self.value("quitViaEsc", False, type=bool)
+
+    def setQuitViaEsc(self, via):
+        self.setValue("quitViaEsc", via)
+
+    def rememberWindowState(self):
+        return self.value("rememberWindowState", True, type=bool)
+
+    def setRememberWindowState(self, remember):
+        self.setValue("rememberWindowState", remember)
+
+    def windowState(self):
+        state = self.value("windowState", None)
+        geometry = self.value("geometry", None)
+        isMaximized = self.value("mwMaximized", True, type=bool)
+
+        return state, geometry, isMaximized
+
+    def setWindowState(self, state, geometry, isMaximized):
+        self.setValue("windowState", state)
+        if not isMaximized:
+            self.setValue("geometry", geometry)
+        self.setValue("mwMaximized", isMaximized)
+
+    def gitViewState(self, isBranchA):
+        key = "gvStateA" if isBranchA else "gvStateB"
+        return self.value(key, None)
+
+    def setGitViewState(self, state, isBranchA):
+        key = "gvStateA" if isBranchA else "gvStateB"
+        self.setValue(key, state)
+
+    def diffViewState(self, isBranchA):
+        key = "dvStateA" if isBranchA else "dvStateB"
+        return self.value(key, None)
+
+    def setDiffViewState(self, state, isBranchA):
+        key = "dvStateA" if isBranchA else "dvStateB"
+        self.setValue(key, state)
