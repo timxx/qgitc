@@ -101,13 +101,13 @@ class DiffView(QWidget):
         self.twMenu.addAction(self.tr("&Copy path"),
                               self.__onCopyPath)
 
-        splitter = QSplitter(self)
-        splitter.addWidget(self.viewer)
-        splitter.addWidget(self.treeWidget)
+        self.splitter = QSplitter(self)
+        self.splitter.addWidget(self.viewer)
+        self.splitter.addWidget(self.treeWidget)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(splitter)
+        layout.addWidget(self.splitter)
 
         self.treeWidget.setColumnCount(1)
         self.treeWidget.setHeaderHidden(True)
@@ -120,7 +120,7 @@ class DiffView(QWidget):
 
         width = self.sizeHint().width()
         sizes = [width * 2 / 3, width * 1 / 3]
-        splitter.setSizes(sizes)
+        self.splitter.setSizes(sizes)
 
         self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
         self.treeWidget.itemDoubleClicked.connect(
@@ -292,6 +292,15 @@ class DiffView(QWidget):
         else:
             self.itemDelegate.setHighlightPattern(None)
         self.treeWidget.viewport().update()
+
+    def saveState(self, settings, isBranchA):
+        state = self.splitter.saveState()
+        settings.setDiffViewState(state, isBranchA)
+
+    def restoreState(self, settings, isBranchA):
+        state = settings.diffViewState(isBranchA)
+        if state:
+            self.splitter.restoreState(state)
 
     def eventFilter(self, obj, event):
         if obj != self.treeWidget:

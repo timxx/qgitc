@@ -39,6 +39,9 @@ class Preferences(QDialog):
         self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
         self.ui.sbTabSize.setValue(self.settings.tabSize())
 
+        self.ui.cbEsc.setChecked(self.settings.quitViaEsc())
+        self.ui.cbState.setChecked(self.settings.rememberWindowState())
+
     def __updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
@@ -103,3 +106,9 @@ class Preferences(QDialog):
 
         value = self.ui.sbTabSize.value()
         self.settings.setTabSize(value)
+
+        value = self.ui.cbEsc.isChecked()
+        self.settings.setQuitViaEsc(value)
+
+        value = self.ui.cbState.isChecked()
+        self.settings.setRememberWindowState(value)
