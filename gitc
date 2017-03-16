@@ -43,9 +43,6 @@ class MainWindow(QMainWindow):
 
         self.ui.lePattern.installEventFilter(self)
 
-        if not self.__restoreState():
-            self.showMaximized()
-
     def __setupSignals(self):
         self.ui.acQuit.triggered.connect(QCoreApplication.instance().quit)
 
@@ -113,12 +110,12 @@ class MainWindow(QMainWindow):
             if not self.logMode:
                 self.ui.gitViewB.updateSettings()
 
-    def __saveState(self):
+    def saveState(self):
         sett = qApp.instance().settings()
         if not sett.rememberWindowState():
             return False
 
-        state = self.saveState()
+        state = super(MainWindow, self).saveState()
         geometry = self.saveGeometry()
         sett.setWindowState(state, geometry, self.isMaximized())
 
@@ -127,13 +124,14 @@ class MainWindow(QMainWindow):
 
         return True
 
-    def __restoreState(self):
+    def restoreState(self):
         sett = qApp.instance().settings()
         if not sett.rememberWindowState():
             return False
 
         state, geometry, isMaximized = sett.windowState()
-        self.restoreState(state)
+        if state:
+            super(MainWindow, self).restoreState(state)
         if geometry:
             self.restoreGeometry(geometry)
 
@@ -141,9 +139,7 @@ class MainWindow(QMainWindow):
         self.ui.gitViewB.restoreState(sett, False)
 
         if isMaximized:
-            self.showMaximized()
-        else:
-            self.show()
+            self.setWindowState(self.windowState() | Qt.WindowMaximized)
 
         return True
 
@@ -183,7 +179,7 @@ class MainWindow(QMainWindow):
         return False
 
     def closeEvent(self, event):
-        self.__saveState()
+        self.saveState()
 
         super(MainWindow, self).closeEvent(event)
 
@@ -250,6 +246,11 @@ if __name__ == "__main__":
 
     if repoDir:
         window.setRepoDir(repoDir)
+
+    if window.restoreState():
+        window.show()
+    else:
+        window.showMaximized()
 
     app.exec()
     app.deleteLater()
