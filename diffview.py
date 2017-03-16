@@ -1029,6 +1029,8 @@ class PatchViewer(QAbstractScrollArea):
             self.__doCopy()
         elif event.matches(QKeySequence.SelectAll):
             self.__onSelectAll()
+        else:
+            super(PatchViewer, self).keyPressEvent(event)
 
     def contextMenuEvent(self, event):
         self.menu.exec(event.globalPos())

@@ -3,6 +3,11 @@
 from PyQt4.QtCore import QSettings
 from PyQt4.QtGui import *
 
+import os
+
+
+is_win = (os.name == "nt")
+
 
 def fixedFont(pointSize):
     """return a fixed font if available"""
@@ -111,7 +116,8 @@ class Settings(QSettings):
 
     def setWindowState(self, state, geometry, isMaximized):
         self.setValue("windowState", state)
-        if not isMaximized:
+        # FIXME: make a common version
+        if not isMaximized or is_win:
             self.setValue("geometry", geometry)
         self.setValue("mwMaximized", isMaximized)
 
