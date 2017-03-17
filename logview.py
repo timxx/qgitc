@@ -55,7 +55,7 @@ class CommitFetcher():
         index = -1
 
         findRange = range(begin, len(self.items)) \
-                          if findNext else range(begin, -1, -1)
+            if findNext else range(begin, -1, -1)
         for i in findRange:
             self.__ensureCommit(i)
             item = self.items[i]
@@ -492,7 +492,7 @@ class LogView(QAbstractScrollArea):
             flags = Qt.AlignLeft | Qt.AlignVCenter
             rect.adjust(2, 0, 0, 0)
 
-            # autor
+            # author
             boundingRect = painter.boundingRect(rect, flags, author)
             painter.fillRect(boundingRect, QColor(255, 221, 170))
             painter.drawRect(boundingRect.adjusted(-1, -1, 0, 0))
@@ -593,6 +593,8 @@ class LogView(QAbstractScrollArea):
                     self.verticalScrollBar().setValue(v + 1)
 
                 self.currentIndexChanged.emit(self.curIdx)
+
+        super(LogView, self).keyPressEvent(event)
 
     def focusInEvent(self, event):
         self.invalidateItem(self.curIdx)
