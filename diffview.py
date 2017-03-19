@@ -744,14 +744,20 @@ class PatchViewer(QAbstractScrollArea):
         self.cursorChanged = False
 
         self.menu = QMenu()
+
+        action = self.menu.addAction(self.tr("&Open commit in browser"), self.__onOpenCommit)
+        self.acOpenCommit = action
+        self.menu.addSeparator()
+
         action = self.menu.addAction(self.tr("&Copy"), self.__onCopy)
         action.setIcon(QIcon.fromTheme("edit-copy"))
         action.setShortcuts(QKeySequence.Copy)
+        self.acCopy = action
 
-        self.menu.addAction(self.tr("Copy All"), self.__onCopyAll)
+        self.menu.addAction(self.tr("Copy &All"), self.__onCopyAll)
         self.menu.addSeparator()
 
-        action = self.menu.addAction(self.tr("Select All"), self.__onSelectAll)
+        action = self.menu.addAction(self.tr("&Select All"), self.__onSelectAll)
         action.setIcon(QIcon.fromTheme("edit-select-all"))
         action.setShortcuts(QKeySequence.SelectAll)
 
@@ -1033,6 +1039,16 @@ class PatchViewer(QAbstractScrollArea):
             super(PatchViewer, self).keyPressEvent(event)
 
     def contextMenuEvent(self, event):
+        self.__updateCursorAndLink(event.pos(), False)
+        canVisible = False
+        if self.currentLink and self.currentLink.type == Link.Sha1:
+            sett = qApp.instance().settings()
+            url = sett.commitUrl()
+            canVisible = url is not None
+
+        self.acOpenCommit.setVisible(canVisible)
+        self.acCopy.setEnabled(self.selection.hasSelection())
+
         self.menu.exec(event.globalPos())
 
     def resizeEvent(self, event):
@@ -1204,6 +1220,16 @@ class PatchViewer(QAbstractScrollArea):
             elif textLine.type() == TextLine.Parent or textLine.type() == TextLine.Author:
                 self.fileRowChanged.emit(0)
                 break
+
+    def __onOpenCommit(self):
+        assert self.currentLink
+
+        sett = qApp.instance().settings()
+        url = sett.commitUrl()
+        assert url
+
+        url += self.currentLink.data
+        QDesktopServices.openUrl(QUrl(url))
 
     def __onCopy(self):
         self.__doCopy()
