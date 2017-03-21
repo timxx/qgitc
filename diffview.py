@@ -745,7 +745,8 @@ class PatchViewer(QAbstractScrollArea):
 
         self.menu = QMenu()
 
-        action = self.menu.addAction(self.tr("&Open commit in browser"), self.__onOpenCommit)
+        action = self.menu.addAction(
+            self.tr("&Open commit in browser"), self.__onOpenCommit)
         self.acOpenCommit = action
         self.menu.addSeparator()
 
@@ -757,7 +758,8 @@ class PatchViewer(QAbstractScrollArea):
         self.menu.addAction(self.tr("Copy &All"), self.__onCopyAll)
         self.menu.addSeparator()
 
-        action = self.menu.addAction(self.tr("&Select All"), self.__onSelectAll)
+        action = self.menu.addAction(
+            self.tr("&Select All"), self.__onSelectAll)
         action.setIcon(QIcon.fromTheme("edit-select-all"))
         action.setShortcuts(QKeySequence.SelectAll)
 
@@ -848,6 +850,10 @@ class PatchViewer(QAbstractScrollArea):
             return None
 
         item = self._lineItems[index]
+
+        # only diff line needs different encoding
+        if item.type != TextLine.Diff:
+            self.lastEncoding = diff_encoding
 
         # alloc too many objects at the same time is too slow
         # so delay construct TextLine and decode bytes here
