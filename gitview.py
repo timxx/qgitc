@@ -100,7 +100,7 @@ class GitView(QWidget):
         data = process.communicate()[0]
 
         if process.returncode is 0 and data:
-            commits = data.decode("utf-8").split("\0")
+            commits = data.decode("utf-8", "replace").split("\0")
             self.ui.logView.setLogs(commits)
 
     def __onCommitChanged(self, index):
