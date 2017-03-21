@@ -192,6 +192,49 @@ class FindThread(QThread):
         self.findFinished.emit(result)
 
 
+class Marker():
+    CHAR_MARK = chr(0x2713)
+
+    def __init__(self):
+        self._begin = -1
+        self._end = -1
+
+    def mark(self, begin, end):
+        self._begin = min(begin, end)
+        self._end = max(begin, end)
+
+    def clear(self):
+        self._begin = -1
+        self._end = -1
+
+    def hasMark(self):
+        return self._begin != -1 and \
+            self._end != -1
+
+    def begin(self):
+        return self._begin
+
+    def end(self):
+        return self._end
+
+    def isMarked(self, index):
+        return self.hasMark() and \
+            self._begin <= index and \
+            self._end >= index
+
+    def draw(self, index, painter, rect):
+        if not self.isMarked(index):
+            return
+
+        painter.save()
+
+        painter.setPen(Qt.red)
+        br = painter.drawText(rect, Qt.AlignVCenter, Marker.CHAR_MARK)
+        rect.setLeft(br.right())
+
+        painter.restore()
+
+
 class LogView(QAbstractScrollArea):
     currentIndexChanged = pyqtSignal(int)
     findFinished = pyqtSignal(int)
@@ -222,10 +265,19 @@ class LogView(QAbstractScrollArea):
         self.findThread.findProgress.connect(self.findProgress)
 
         self.highlightPattern = None
+        self.marker = Marker()
 
         self.menu = QMenu()
         self.menu.addAction(self.tr("&Copy commit summary"),
                             self.__onCopyCommitSummary)
+        self.menu.addSeparator()
+
+        self.menu.addAction(self.tr("&Mark this commit"),
+                            self.__onMarkCommit)
+        self.acMarkTo = self.menu.addAction(self.tr("Mark &to this commit"),
+                                            self.__onMarkToCommit)
+        self.acClearMarks = self.menu.addAction(self.tr("Clea&r Marks"),
+                                                self.__onClearMarks)
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -267,6 +319,7 @@ class LogView(QAbstractScrollArea):
     def clear(self):
         self.data.setSource(None)
         self.curIdx = -1
+        self.marker.clear()
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
         self.cancelFindCommit()
@@ -319,9 +372,15 @@ class LogView(QAbstractScrollArea):
         return index != -1
 
     def showContextMenu(self, pos):
-        if self.curIdx != -1:
-            globalPos = self.mapToGlobal(pos)
-            self.menu.exec(globalPos)
+        if self.curIdx == -1:
+            return
+
+        hasMark = self.marker.hasMark()
+        self.acMarkTo.setVisible(hasMark)
+        self.acClearMarks.setVisible(hasMark)
+
+        globalPos = self.mapToGlobal(pos)
+        self.menu.exec(globalPos)
 
     def updateSettings(self):
         settings = QApplication.instance().settings()
@@ -380,6 +439,29 @@ class LogView(QAbstractScrollArea):
             commit["date"]))
 
         clipboard.setMimeData(mimeData)
+
+    def __onMarkCommit(self):
+        assert self.curIdx >= 0
+
+        begin = self.curIdx
+        end = self.curIdx
+        self.marker.mark(begin, end)
+        # TODO: update marked lines only
+        self.viewport().update()
+
+    def __onMarkToCommit(self):
+        assert self.curIdx >= 0
+
+        begin = self.marker.begin()
+        end = self.curIdx
+        self.marker.mark(begin, end)
+        # TODO: update marked lines only
+        self.viewport().update()
+
+    def __onClearMarks(self):
+        self.marker.clear()
+        # TODO: update marked lines only
+        self.viewport().update()
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
@@ -494,19 +576,22 @@ class LogView(QAbstractScrollArea):
 
             # author
             boundingRect = painter.boundingRect(rect, flags, author)
+            boundingRect.adjust(-1, -1, 1, 1)
             painter.fillRect(boundingRect, QColor(255, 221, 170))
-            painter.drawRect(boundingRect.adjusted(-1, -1, 0, 0))
+            painter.drawRect(boundingRect)
             painter.drawText(rect, flags, author)
-            rect.moveLeft(boundingRect.right() + 2)
-            rect.setWidth(rect.width() - boundingRect.width() - 2)
+            rect.setLeft(boundingRect.right() + 2)
 
             # date
             boundingRect = painter.boundingRect(rect, flags, date)
+            boundingRect.adjust(-1, -1, 1, 1)
             painter.fillRect(boundingRect, QColor(140, 208, 80))
-            painter.drawRect(boundingRect.adjusted(-1, -1, 0, 0))
+            painter.drawRect(boundingRect)
             painter.drawText(rect, flags, date)
-            rect.moveLeft(boundingRect.right() + 6)
-            rect.setWidth(rect.width() - boundingRect.width() - 6)
+            rect.setLeft(boundingRect.right() + 6)
+
+            # marker
+            self.marker.draw(i, painter, rect)
 
             # subject
             painter.save()
@@ -566,7 +651,15 @@ class LogView(QAbstractScrollArea):
         index = int(y / self.lineHeight)
         index += self.verticalScrollBar().value()
 
-        if index < len(self.data):
+        if index >= len(self.data):
+            return
+
+        mod = qApp.keyboardModifiers()
+        # no OR combination
+        if mod == Qt.ShiftModifier:
+            self.marker.mark(self.curIdx, index)
+            self.viewport().update()
+        else:
             self.setCurrentIndex(index)
 
     def keyPressEvent(self, event):
