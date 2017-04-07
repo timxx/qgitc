@@ -47,7 +47,7 @@ class Commit():
         self.authorDate = parts[3]
         self.commiter = parts[4]
         self.commiterDate = parts[5]
-        self.parents = [ x for x in parts[6].split(" ") if x]
+        self.parents = [x for x in parts[6].split(" ") if x]
 
 
 class MyProfile():
@@ -138,13 +138,16 @@ def getCommitFiles(sha1):
     return data.decode("utf-8")
 
 
-def getCommitRawDiff(sha1, filePath=None):
+def getCommitRawDiff(sha1, filePath=None, gitArgs=None):
     args = ["git", "diff-tree",
             "-r", "-p", "--textconv",
             "--submodule", "-C",
             "--cc", "--no-commit-id",
             "-U3", "--root",
             sha1]
+    if gitArgs:
+        args.extend(gitArgs)
+
     if filePath:
         args.append(filePath)
 

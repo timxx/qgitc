@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
             self.ui.gitViewB.setVisible(False)
 
         self.__setupSignals()
+        self.__setupMenus()
 
         self.ui.lePattern.installEventFilter(self)
 
@@ -55,6 +56,31 @@ class MainWindow(QMainWindow):
         self.ui.leRepo.textChanged.connect(self.__onRepoChanged)
         self.ui.cbPatternType.currentIndexChanged.connect(
             self.__onPatternTypeChanged)
+
+        self.ui.acIgnoreNone.triggered.connect(
+                self.__onAcIgnoreNoneTriggered)
+        self.ui.acIgnoreEOL.triggered.connect(
+                self.__onAcIgnoreEOLTriggered)
+        self.ui.acIgnoreAll.triggered.connect(
+                self.__onAcIgnoreAllTriggered)
+
+        self.ui.acVisualizeWhitespace.triggered.connect(
+                self.__onAcVisualizeWhitespaceTriggered)
+
+        # settings
+        sett = qApp.instance().settings()
+
+        sett.ignoreWhitespaceChanged.connect(
+                self.__onIgnoreWhitespaceChanged)
+
+        sett.showWhitespaceChanged.connect(
+                self.ui.acVisualizeWhitespace.setChecked)
+
+    def __setupMenus(self):
+        acGroup = QActionGroup(self)
+        acGroup.addAction(self.ui.acIgnoreNone)
+        acGroup.addAction(self.ui.acIgnoreEOL)
+        acGroup.addAction(self.ui.acIgnoreAll)
 
     def __onBtnRepoBrowseClicked(self, checked):
         repoDir = QFileDialog.getExistingDirectory(self,
@@ -102,13 +128,42 @@ class MainWindow(QMainWindow):
         self.filterPattern(pattern)
 
     def __onAcPreferencesTriggered(self):
-        settings = QApplication.instance().settings()
+        settings = qApp.instance().settings()
         preferences = Preferences(settings, self)
         if preferences.exec() == QDialog.Accepted:
             preferences.save()
             self.ui.gitViewA.updateSettings()
             if not self.logMode:
                 self.ui.gitViewB.updateSettings()
+
+    def __onIgnoreWhitespaceChanged(self, index):
+        actions = [self.ui.acIgnoreNone,
+                   self.ui.acIgnoreEOL,
+                   self.ui.acIgnoreAll]
+        if index < 0 or index >= len(actions):
+            index = 0
+
+        actions[index].setChecked(True)
+
+    def __onAcIgnoreNoneTriggered(self, checked):
+        sett = qApp.instance().settings()
+        sett.setIgnoreWhitespace(0)
+
+    def __onAcIgnoreEOLTriggered(self, checked):
+        sett = qApp.instance().settings()
+        sett.setIgnoreWhitespace(1)
+
+    def __onAcIgnoreAllTriggered(self, checked):
+        sett = qApp.instance().settings()
+        sett.setIgnoreWhitespace(2)
+
+    def __onAcVisualizeWhitespaceTriggered(self, checked):
+        sett = qApp.instance().settings()
+        sett.setShowWhitespace(checked)
+
+        self.ui.gitViewA.updateSettings()
+        if not self.logMode:
+            self.ui.gitViewB.updateSettings()
 
     def saveState(self):
         sett = qApp.instance().settings()
@@ -140,6 +195,10 @@ class MainWindow(QMainWindow):
 
         if isMaximized:
             self.setWindowState(self.windowState() | Qt.WindowMaximized)
+
+        self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
+        self.ui.acVisualizeWhitespace.setChecked(
+                sett.showWhitespace())
 
         return True
 

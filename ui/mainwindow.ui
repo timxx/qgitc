@@ -122,7 +122,24 @@
     </property>
     <addaction name="acPreferences"/>
    </widget>
+   <widget class="QMenu" name="menu_View">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <widget class="QMenu" name="menuIgnoreWhitespace">
+     <property name="title">
+      <string>&amp;Ignore whitespace</string>
+     </property>
+     <addaction name="acIgnoreNone"/>
+     <addaction name="acIgnoreEOL"/>
+     <addaction name="acIgnoreAll"/>
+    </widget>
+    <addaction name="acVisualizeWhitespace"/>
+    <addaction name="separator"/>
+    <addaction name="menuIgnoreWhitespace"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menu_View"/>
    <addaction name="menu_Settings"/>
    <addaction name="menu_Help"/>
   </widget>
@@ -140,6 +157,43 @@
   <action name="acPreferences">
    <property name="text">
     <string>&amp;Preferences...</string>
+   </property>
+  </action>
+  <action name="actionIgnore_whitespace_changes">
+   <property name="text">
+    <string>Ignore whitespace changes</string>
+   </property>
+  </action>
+  <action name="acVisualizeWhitespace">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Visualize whitespace</string>
+   </property>
+  </action>
+  <action name="acIgnoreEOL">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>At &amp;end of line</string>
+   </property>
+  </action>
+  <action name="acIgnoreAll">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;All</string>
+   </property>
+  </action>
+  <action name="acIgnoreNone">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;None</string>
    </property>
   </action>
  </widget>
