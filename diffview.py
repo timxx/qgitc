@@ -100,6 +100,9 @@ class DiffView(QWidget):
                               self.__onExternalDiff)
         self.twMenu.addAction(self.tr("&Copy path"),
                               self.__onCopyPath)
+        self.twMenu.addSeparator()
+        self.twMenu.addAction(self.tr("&Log this file"),
+                              self.__onFilterPath)
 
         self.splitter = QSplitter(self)
         self.splitter.addWidget(self.viewer)
@@ -162,6 +165,14 @@ class DiffView(QWidget):
 
         clipboard = QApplication.clipboard()
         clipboard.setText(item.text(0))
+
+    def __onFilterPath(self):
+        item = self.treeWidget.currentItem()
+        if not item:
+            return
+
+        filePath = item.text(0)
+        self.window().setFilterFile(filePath)
 
     def __onTreeItemDoubleClicked(self, item, column):
         if not item or item == self.treeWidget.topLevelItem(0):
