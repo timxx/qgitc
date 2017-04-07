@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtCore import QSettings
+from PyQt4.QtCore import (
+    QSettings,
+    pyqtSignal
+)
 from PyQt4.QtGui import *
 
 import os
@@ -29,6 +32,9 @@ def fixedFont(pointSize):
 
 
 class Settings(QSettings):
+
+    showWhitespaceChanged = pyqtSignal(bool)
+    ignoreWhitespaceChanged = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -88,6 +94,7 @@ class Settings(QSettings):
 
     def setShowWhitespace(self, show):
         self.setValue("showWhitespace", show)
+        self.showWhitespaceChanged.emit(show)
 
     def tabSize(self):
         return self.value("tabSize", 4, type=int)
@@ -136,3 +143,10 @@ class Settings(QSettings):
     def setDiffViewState(self, state, isBranchA):
         key = "dvStateA" if isBranchA else "dvStateB"
         self.setValue(key, state)
+
+    def ignoreWhitespace(self):
+        return self.value("ignoreWhitespace", 0, type=int)
+
+    def setIgnoreWhitespace(self, index):
+        self.setValue("ignoreWhitespace", index)
+        self.ignoreWhitespaceChanged.emit(index)

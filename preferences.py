@@ -42,6 +42,11 @@ class Preferences(QDialog):
         self.ui.cbEsc.setChecked(self.settings.quitViaEsc())
         self.ui.cbState.setChecked(self.settings.rememberWindowState())
 
+        index = self.settings.ignoreWhitespace()
+        if index < 0 or index >= self.ui.cbIgnoreWhitespace.count():
+            index = 0
+        self.ui.cbIgnoreWhitespace.setCurrentIndex(index)
+
     def __updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
@@ -112,3 +117,6 @@ class Preferences(QDialog):
 
         value = self.ui.cbState.isChecked()
         self.settings.setRememberWindowState(value)
+
+        value = self.ui.cbIgnoreWhitespace.currentIndex()
+        self.settings.setIgnoreWhitespace(value)

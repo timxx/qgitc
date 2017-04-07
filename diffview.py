@@ -95,6 +95,7 @@ class DiffView(QWidget):
         self.filterPath = None
         self.twMenu = QMenu()
         self.commit = None
+        self.gitArgs = []
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
@@ -131,6 +132,11 @@ class DiffView(QWidget):
 
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
         self.viewer.requestCommit.connect(self.requestCommit)
+
+        sett = qApp.instance().settings()
+        sett.ignoreWhitespaceChanged.connect(
+            self.__onIgnoreWhitespaceChanged)
+        self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
 
         self.treeWidget.installEventFilter(self)
 
@@ -184,6 +190,20 @@ class DiffView(QWidget):
         filePath = item.text(0)
         externalDiff(self.commit, filePath)
 
+    def __onIgnoreWhitespaceChanged(self, index):
+        args = ["", "--ignore-space-at-eol",
+                "--ignore-space-change"]
+        if index < 0 or index >= len(args):
+            index = 0
+
+        # TODO: remove args only
+        self.gitArgs.clear()
+        if index > 0:
+            self.gitArgs.append(args[index])
+
+        if self.commit:
+            self.showCommit(self.commit)
+
     def __addToTreeWidget(self, string, row):
         """specify the @row number of the file in the viewer"""
         item = QTreeWidgetItem([string])
@@ -230,7 +250,7 @@ class DiffView(QWidget):
         self.clear()
         self.commit = commit
 
-        data = getCommitRawDiff(commit.sha1, self.filterPath)
+        data = getCommitRawDiff(commit.sha1, self.filterPath, self.gitArgs)
         lines = data.split(b'\n')
 
         self.__addToTreeWidget(self.tr("Comments"), 0)
@@ -818,6 +838,7 @@ class PatchViewer(QAbstractScrollArea):
             line.setCustomLinkPatterns(pattern)
 
         self.__adjust()
+        self.viewport().update()
 
     def setData(self, items):
         self._lineItems = items
