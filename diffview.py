@@ -138,7 +138,9 @@ class DiffView(QWidget):
             self.__onIgnoreWhitespaceChanged)
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
 
-        self.treeWidget.installEventFilter(self)
+        self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.treeWidget.customContextMenuRequested.connect(
+            self.__onTreeWidgetContextMenuRequested)
 
     def __onTreeItemChanged(self, current, previous):
         if current:
@@ -203,6 +205,19 @@ class DiffView(QWidget):
 
         if self.commit:
             self.showCommit(self.commit)
+
+    def __onTreeWidgetContextMenuRequested(self, pos):
+        item = self.treeWidget.currentItem()
+        if not item:
+            return
+
+        if self.treeWidget.topLevelItemCount() < 2:
+            return
+
+        if item == self.treeWidget.topLevelItem(0):
+            return
+
+        self.twMenu.exec(self.treeWidget.mapToGlobal(pos))
 
     def __addToTreeWidget(self, string, row):
         """specify the @row number of the file in the viewer"""
@@ -332,27 +347,6 @@ class DiffView(QWidget):
         state = settings.diffViewState(isBranchA)
         if state:
             self.splitter.restoreState(state)
-
-    def eventFilter(self, obj, event):
-        if obj != self.treeWidget:
-            return False
-
-        if event.type() != QEvent.ContextMenu:
-            return False
-
-        item = self.treeWidget.currentItem()
-        if not item:
-            return False
-
-        if self.treeWidget.topLevelItemCount() < 2:
-            return False
-
-        if item == self.treeWidget.topLevelItem(0):
-            return False
-
-        self.twMenu.exec(event.globalPos())
-
-        return False
 
 
 class Selection():

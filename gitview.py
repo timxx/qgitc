@@ -42,8 +42,8 @@ class GitView(QWidget):
         self.ui.tbPrev.clicked.connect(self.__onPreFindCommit)
         self.ui.tbNext.clicked.connect(self.__onNextFindCommit)
 
-        self.ui.leSha1.installEventFilter(self)
-        self.ui.leFindWhat.installEventFilter(self)
+        self.ui.leSha1.returnPressed.connect(self.reqCommit)
+        self.ui.leFindWhat.returnPressed.connect(self.reqFind)
 
     def __updateBranches(self):
         self.ui.cbBranch.clear()
@@ -255,12 +255,3 @@ class GitView(QWidget):
     def updateSettings(self):
         self.ui.logView.updateSettings()
         self.ui.diffView.updateSettings()
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.KeyRelease and event.key() == Qt.Key_Return:
-            if obj == self.ui.leSha1:
-                self.reqCommit.emit()
-            elif obj == self.ui.leFindWhat:
-                self.reqFind.emit()
-
-        return super(GitView, self).eventFilter(obj, event)
