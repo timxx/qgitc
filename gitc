@@ -42,8 +42,6 @@ class MainWindow(QMainWindow):
         self.__setupSignals()
         self.__setupMenus()
 
-        self.ui.lePattern.installEventFilter(self)
-
     def __setupSignals(self):
         self.ui.acQuit.triggered.connect(QCoreApplication.instance().quit)
 
@@ -58,23 +56,26 @@ class MainWindow(QMainWindow):
             self.__onPatternTypeChanged)
 
         self.ui.acIgnoreNone.triggered.connect(
-                self.__onAcIgnoreNoneTriggered)
+            self.__onAcIgnoreNoneTriggered)
         self.ui.acIgnoreEOL.triggered.connect(
-                self.__onAcIgnoreEOLTriggered)
+            self.__onAcIgnoreEOLTriggered)
         self.ui.acIgnoreAll.triggered.connect(
-                self.__onAcIgnoreAllTriggered)
+            self.__onAcIgnoreAllTriggered)
 
         self.ui.acVisualizeWhitespace.triggered.connect(
-                self.__onAcVisualizeWhitespaceTriggered)
+            self.__onAcVisualizeWhitespaceTriggered)
+
+        self.ui.lePattern.returnPressed.connect(
+            self.__onPatternReturnPressed)
 
         # settings
         sett = qApp.instance().settings()
 
         sett.ignoreWhitespaceChanged.connect(
-                self.__onIgnoreWhitespaceChanged)
+            self.__onIgnoreWhitespaceChanged)
 
         sett.showWhitespaceChanged.connect(
-                self.ui.acVisualizeWhitespace.setChecked)
+            self.ui.acVisualizeWhitespace.setChecked)
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -165,6 +166,10 @@ class MainWindow(QMainWindow):
         if not self.logMode:
             self.ui.gitViewB.updateSettings()
 
+    def __onPatternReturnPressed(self):
+        pattern = self.ui.lePattern.text().strip()
+        self.filterPattern(pattern)
+
     def saveState(self):
         sett = qApp.instance().settings()
         if not sett.rememberWindowState():
@@ -198,7 +203,7 @@ class MainWindow(QMainWindow):
 
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
         self.ui.acVisualizeWhitespace.setChecked(
-                sett.showWhitespace())
+            sett.showWhitespace())
 
         return True
 
@@ -228,14 +233,6 @@ class MainWindow(QMainWindow):
     def updateProgress(self, value, isBranchA):
         progressBar = self.progressBarA if isBranchA else self.progressBarB
         progressBar.setValue(value)
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.KeyPress and event.key() == Qt.Key_Return:
-            if obj == self.ui.lePattern:
-                pattern = obj.text().strip()
-                self.filterPattern(pattern)
-
-        return False
 
     def closeEvent(self, event):
         self.saveState()
