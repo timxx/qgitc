@@ -5,9 +5,9 @@ from PyQt4.QtCore import *
 
 from ui.mainwindow import *
 from gitview import *
-from common import *
 from preferences import *
 from settings import *
+from git import Git
 
 import os
 import sys
@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
         if not repoDir:
             return
 
-        repoDir = getRepoDirectory(repoDir)
+        repoDir = Git.repoTopLevelDir(repoDir)
         if not repoDir:
             QMessageBox.critical(self, self.windowTitle(),
                                  self.tr("The directory you choosen is not a git repository!"))
@@ -109,15 +109,14 @@ class MainWindow(QMainWindow):
             self.ui.lePattern.setText(path.lstrip("/"))
 
     def __onRepoChanged(self, repoDir):
-        if not getRepoDirectory(repoDir):
+        if not Git.repoTopLevelDir(repoDir):
             self.ui.statusbar.showMessage(
                 self.tr("'{0}' is not a git repository".format(repoDir)),
                 5000)  # 5 seconds
             # let gitview clear the old branches
             repoDir = None
         else:
-            # change working directory to repoDir
-            os.chdir(repoDir)
+            Git.REPO_DIR = repoDir
 
         self.ui.gitViewA.setRepo(repoDir)
         if not self.logMode:
@@ -283,11 +282,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    repoDir = getRepoDirectory(os.getcwd())
+    repoDir = Git.repoTopLevelDir(os.getcwd())
     filterFile = args.file
 
     if args.repo:
-        repoDir = getRepoDirectory(args.repo)
+        repoDir = Git.repoTopLevelDir(args.repo)
 
     app = Application(sys.argv)
 
