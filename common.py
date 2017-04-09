@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import subprocess
-import os
 import cProfile
 import pstats
 import io
@@ -71,109 +69,8 @@ class FindField():
     Diffs = 2
 
 
-def getRepoDirectory(directory):
-    """simply check whether directory is git repository,
-       if it is, return the top directory path
-    """
-    oldDir = os.getcwd()
-    try:
-        os.chdir(directory)
-    except FileNotFoundError:
-        return None
-    except NotADirectoryError:
-        return None
-
-    process = subprocess.Popen(["git", "rev-parse", "--show-toplevel"],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-
-    realDir = process.communicate()[0]
-
-    os.chdir(oldDir)
-
-    if process.returncode is not 0:
-        return None
-
-    return realDir.decode("utf-8").replace("\n", "")
-
-
-def getCommitSummary(sha1):
-    fmt = "%h%x01%s%x01%ad%x01%an%x01%ae"
-    args = ["git", "show", "-s",
-            "--pretty=format:{0}".format(fmt),
-            "--date=short",
-            sha1]
-
-    process = subprocess.Popen(args,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    data = process.communicate()[0]
-
-    if process.returncode is not 0:
-        return None
-
-    if not data:
-        return None
-
-    parts = data.decode("utf-8").split("\x01")
-
-    return {"sha1": parts[0],
-            "subject": parts[1],
-            "date": parts[2],
-            "author": parts[3],
-            "email": parts[4]}
-
-
-def getCommitFiles(sha1):
-    args = ["git", "diff-tree", "--no-commit-id",
-            "--name-only", "--root", "-r", "-z",
-            "--submodule", sha1]
-    process = subprocess.Popen(args,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    data = process.communicate()[0]
-    if process.returncode is not 0:
-        return None
-
-    return data.decode("utf-8")
-
-
-def getCommitRawDiff(sha1, filePath=None, gitArgs=None):
-    args = ["git", "diff-tree",
-            "-r", "-p", "--textconv",
-            "--submodule", "-C",
-            "--cc", "--no-commit-id",
-            "-U3", "--root",
-            sha1]
-    if gitArgs:
-        args.extend(gitArgs)
-
-    if filePath:
-        args.append(filePath)
-
-    process = subprocess.Popen(args,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    data = process.communicate()[0]
-    if process.returncode is not 0:
-        return None
-
-    return data
-
-
 def htmlEscape(text):
     return "".join(html_escape_table.get(c, c) for c in text)
-
-
-def externalDiff(commit, path=None):
-    args = ["git", "difftool",
-            "{0}^..{0}".format(commit.sha1)]
-    if path:
-        args.append(path)
-
-    prcoess = subprocess.Popen(args,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
 
 
 def decodeDiffData(data, preferEncoding="utf-8"):

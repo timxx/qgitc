@@ -4,6 +4,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from common import *
+from git import Git
 
 import re
 
@@ -113,14 +114,14 @@ class FindThread(QThread):
         return False
 
     def __findCommitInPath(self, commit):
-        paths = getCommitFiles(commit.sha1)
+        paths = Git.commitFiles(commit.sha1)
         if self.regexp.search(paths):
             return True
         return False
 
     def __findCommitInDiff(self, commit):
         # TODO: improve performance
-        diff = getCommitRawDiff(commit.sha1)
+        diff = Git.commitRawDiff(commit.sha1)
         # remove useless lines
         diff = self.diffRe.sub(b'', diff)
 
@@ -405,7 +406,7 @@ class LogView(QAbstractScrollArea):
         if not commit:
             return
 
-        commit = getCommitSummary(commit.sha1)
+        commit = Git.commitSummary(commit.sha1)
 
         clipboard = QApplication.clipboard()
 

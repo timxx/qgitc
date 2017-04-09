@@ -5,8 +5,8 @@ from PyQt4.QtCore import *
 
 from ui.gitview import *
 from common import *
+from git import Git
 
-import subprocess
 import re
 
 
@@ -54,9 +54,7 @@ class GitView(QWidget):
         if not self.repo:
             return
 
-        data = subprocess.check_output(["git", "branch", "-a"])
-        data = data.decode("utf-8")
-        branches = data.split('\n')
+        branches = Git.branches()
 
         curBranchIdx = -1
         self.ui.cbBranch.blockSignals(True)
@@ -88,19 +86,8 @@ class GitView(QWidget):
         self.ui.diffView.clear()
 
         curBranch = self.ui.cbBranch.currentText()
-        args = ["git", "log", "-z",
-                "--pretty=format:{0}".format(log_fmt),
-                curBranch]
-        if self.pattern:
-            args.append(self.pattern)
-
-        process = subprocess.Popen(args,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
-        data = process.communicate()[0]
-
-        if process.returncode is 0 and data:
-            commits = data.decode("utf-8", "replace").split("\0")
+        commits = Git.branchLogs(curBranch, self.pattern)
+        if commits:
             self.ui.logView.setLogs(commits)
 
     def __onCommitChanged(self, index):

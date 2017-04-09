@@ -5,8 +5,8 @@ from PyQt4.QtCore import *
 from collections import namedtuple
 
 from common import *
+from git import Git
 
-import subprocess
 import re
 import bisect
 
@@ -164,7 +164,7 @@ class DiffView(QWidget):
         if not self.commit:
             return
         filePath = item.text(0)
-        externalDiff(self.commit, filePath)
+        Git.externalDiff(self.commit, filePath)
 
     def __onCopyPath(self):
         item = self.treeWidget.currentItem()
@@ -265,7 +265,7 @@ class DiffView(QWidget):
         self.clear()
         self.commit = commit
 
-        data = getCommitRawDiff(commit.sha1, self.filterPath, self.gitArgs)
+        data = Git.commitRawDiff(commit.sha1, self.filterPath, self.gitArgs)
         lines = data.split(b'\n')
 
         self.__addToTreeWidget(self.tr("Comments"), 0)
