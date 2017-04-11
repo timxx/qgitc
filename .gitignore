@@ -92,3 +92,5 @@ ui/*.py
 
 # vim backup files
 *.swp
+
+.idea

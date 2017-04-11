@@ -190,7 +190,7 @@ class DiffView(QWidget):
             return
 
         filePath = item.text(0)
-        externalDiff(self.commit, filePath)
+        Git.externalDiff(self.commit, filePath)
 
     def __onIgnoreWhitespaceChanged(self, index):
         args = ["", "--ignore-space-at-eol",
@@ -265,8 +265,10 @@ class DiffView(QWidget):
         self.clear()
         self.commit = commit
 
+        lines = []
         data = Git.commitRawDiff(commit.sha1, self.filterPath, self.gitArgs)
-        lines = data.split(b'\n')
+        if data:
+            lines = data.split(b'\n')
 
         self.__addToTreeWidget(self.tr("Comments"), 0)
 

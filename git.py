@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from collections import defaultdict
+
 import subprocess
 import os
+import bisect
 
 from common import log_fmt
 
@@ -27,12 +30,93 @@ class GitProcess():
         return self._process.communicate()
 
 
+class Ref():
+    INVALID = -1
+    TAG = 0
+    HEAD = 1
+    REMOTE = 2
+
+    def __init__(self, type, name):
+        self._type = type
+        self._name = name
+
+    def __str__(self):
+        string = "type: {0}\n".format(self._type)
+        string += "name: {0}".format(self._name)
+
+        return string
+
+    def __lt__(self, other):
+        return self._type < other._type
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, type):
+        self._type = type
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+
+    @classmethod
+    def fromRawString(cls, string):
+        if not string or len(string) < 46:
+            return None
+
+        sha1 = string[0:40]
+        name = string[41:]
+
+        if not name.startswith("refs/"):
+            return None
+
+        name = name[5:]
+
+        _type = Ref.INVALID
+        _name = None
+
+        if name.startswith("heads/"):
+            _type = Ref.HEAD
+            _name = name[6:]
+        elif name.startswith("remotes") \
+                and not name.endswith("HEAD"):
+            _type = Ref.REMOTE
+            _name = name
+        elif name.startswith("tags/"):
+            _type = Ref.TAG
+            if name.endswith("^{}"):
+                _name = name[5:-3]
+            else:
+                _name = name[5:]
+        else:
+            return None
+
+        return cls(_type, _name)
+
+
 class Git():
     REPO_DIR = os.getcwd()
+    REF_MAP = {}
+    REV_HEAD = None
 
     @staticmethod
     def run(args):
         return GitProcess(Git.REPO_DIR, args)
+
+    @staticmethod
+    def checkOutput(args):
+        process = Git.run(args)
+        data = process.communicate()[0]
+        if process.returncode != 0:
+            return None
+
+        return data
 
     @staticmethod
     def repoTopLevelDir(directory):
@@ -53,26 +137,54 @@ class Git():
         return realDir.decode("utf-8").replace("\n", "")
 
     @staticmethod
+    def refs():
+        args = ["show-ref", "-d"]
+        data = Git.checkOutput(args)
+        if not data:
+            return None
+        lines = data.decode("utf-8").split('\n')
+        refMap = defaultdict(list)
+
+        for line in lines:
+            ref = Ref.fromRawString(line)
+            if not ref:
+                continue
+
+            sha1 = line[0:40]
+            bisect.insort(refMap[sha1], ref)
+
+        return refMap
+
+    @staticmethod
+    def revHead():
+        args = ["rev-parse", "HEAD"]
+        data = Git.checkOutput(args)
+        if not data:
+            return None
+
+        return data.decode("utf-8").rstrip('\n')
+
+    @staticmethod
     def branches():
         args = ["branch", "-a"]
-        process = Git.run(args)
-        data = process.communicate()[0]
-        if process.returncode != 0:
+        data = Git.checkOutput(args)
+        if not data:
             return None
 
         return data.decode("utf-8").split('\n')
 
     @staticmethod
     def branchLogs(branch, pattern=None):
-        args = ["log", "-z",
+        args = ["log", "-z", "--topo-order",
+                "--parents", "--boundary",
+                "--no-color",
                 "--pretty=format:{0}".format(log_fmt),
                 branch]
         if pattern:
             args.append(pattern)
 
-        process = Git.run(args)
-        data = process.communicate()[0]
-        if process.returncode != 0:
+        data = Git.checkOutput(args)
+        if not data:
             return None
 
         return data.decode("utf-8", "replace").split('\0')
@@ -84,10 +196,7 @@ class Git():
                 "--pretty=format:{0}".format(fmt),
                 "--date=short", sha1]
 
-        process = Git.run(args)
-        data = process.communicate()[0]
-        if process.returncode != 0:
-            return None
+        data = Git.checkOutput(args)
         if not data:
             return None
 
@@ -106,9 +215,8 @@ class Git():
                 "-z", "-C", "--cc",
                 "--submodule", sha1]
 
-        process = Git.run(args)
-        data = process.communicate()[0]
-        if process.returncode != 0:
+        data = Git.checkOutput(args)
+        if not data:
             return None
 
         return data.decode("utf-8")
@@ -127,9 +235,8 @@ class Git():
             args.append("--")
             args.append(filePath)
 
-        process = Git.run(args)
-        data = process.communicate()[0]
-        if process.returncode != 0:
+        data = Git.checkOutput(args)
+        if not data:
             return None
 
         return data
