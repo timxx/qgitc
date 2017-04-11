@@ -4,7 +4,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 from common import *
-from git import Git
+from git import *
 
 import re
 
@@ -231,7 +231,7 @@ class Marker():
 
         painter.setPen(Qt.red)
         br = painter.drawText(rect, Qt.AlignVCenter, Marker.CHAR_MARK)
-        rect.setLeft(br.right())
+        rect.adjust(br.width(), 0, 0, 0)
 
         painter.restore()
 
@@ -240,6 +240,11 @@ class LogView(QAbstractScrollArea):
     currentIndexChanged = pyqtSignal(int)
     findFinished = pyqtSignal(int)
     findProgress = pyqtSignal(int)
+
+    # for refs
+    TAG_COLORS = [Qt.yellow,
+                  QColor(0, 0x7F, 0),
+                  QColor(255, 221, 170)]
 
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
@@ -500,6 +505,132 @@ class LogView(QAbstractScrollArea):
 
         return rect
 
+    def __drawTag(self, painter, rect, color, text, bold=False):
+        painter.save()
+
+        if bold:
+            font = painter.font()
+            font.setBold(True)
+            painter.setFont(font)
+
+        flags = Qt.AlignLeft | Qt.AlignVCenter
+        br = painter.boundingRect(rect, flags, text)
+        br.adjust(0, -1, 4, 1)
+
+        painter.fillRect(br, color)
+        painter.setPen(Qt.black)
+        painter.drawRect(br)
+
+        painter.drawText(br, Qt.AlignCenter, text)
+
+        painter.restore()
+        rect.adjust(br.width(), 0, 0, 0)
+
+    def __drawTriangleTag(self, painter, rect, color, text):
+        painter.save()
+
+        flags = Qt.AlignLeft | Qt.AlignVCenter
+        br = painter.boundingRect(rect, flags, text)
+        br.adjust(0, -1, 4, 1)
+
+        h = br.height()
+        w = int(h / 2)
+
+        path = QPainterPath()
+        path.moveTo(QPoint(br.x(), br.y() + int(h / 2)))
+
+        # move rect to right
+        br.adjust(w, 0, w, 0)
+
+        path.lineTo(br.topLeft())
+        path.lineTo(br.topRight())
+        path.lineTo(br.bottomRight())
+        path.lineTo(br.bottomLeft())
+        path.closeSubpath()
+
+        painter.setPen(Qt.black)
+        painter.fillPath(path, color)
+        painter.drawPath(path)
+
+        painter.drawText(br, Qt.AlignCenter, text)
+
+        painter.restore()
+        rect.adjust(path.boundingRect().width(), 0, 0, 0)
+
+    def __drawGraph(self, painter, rect, commit):
+        w = int(rect.height() * 3 / 4)
+        x1 = 0
+        x2 = x1 + w
+
+        h = int(rect.height() / 2)
+        m = int((x1 + x2) / 2)
+        r = int((x2 - x1) * 1 / 3)
+        d = int(2 * r)
+
+        # points
+        # TL(m-r, h-r), TR(m+r, h-r)
+        ###########
+        #         #
+        #    #    #  center (m, h)
+        #         #
+        ###########
+        # BL(m, h+r), BR(m+r, h+r)
+
+        painter.save()
+
+        painter.translate(rect.topLeft())
+        rc = QRect(rect)
+        rc.moveTo(QPoint(0, 0))
+
+        # TODO: implement graph drawing
+
+        # vertical line
+        painter.setPen(QPen(Qt.black, 2))
+        if not commit.parents:
+            painter.drawLine(m, 0, m, h)
+        else:
+            painter.drawLine(m, 0, m, 2 * h)
+
+        # only antialiasing for rounding
+        painter.save()
+        painter.setRenderHints(QPainter.Antialiasing)
+        painter.setPen(Qt.black)
+        painter.setBrush(Qt.blue)
+        painter.drawEllipse(m - r, h - r, d, d)
+        painter.restore()
+
+        # the real rect width
+        graphW = m + r
+        rc.adjust(graphW, 0, 0, 0)
+
+        # refs
+        if commit.sha1 in Git.REF_MAP:
+            refs = Git.REF_MAP[commit.sha1]
+            x = m + r
+            cW = d  # line width
+            for ref in refs:
+                # connector
+                painter.setPen(QPen(Qt.black, 2))
+                painter.drawLine(x, h, x + cW, h)
+                rc.adjust(cW, 0, 0, 0)
+
+                # tag
+                painter.setPen(QPen(Qt.black))
+                color = LogView.TAG_COLORS[ref.type]
+
+                preL = rc.left()
+                if ref.type == Ref.TAG:
+                    self.__drawTriangleTag(painter, rc, color, ref.name)
+                else:
+                    bold = (ref.type == Ref.HEAD and commit.sha1 == Git.REV_HEAD)
+                    self.__drawTag(painter, rc, color, ref.name, bold)
+                x += (rc.left() - preL) + cW + 1
+
+            graphW += x - (m + r)
+
+        painter.restore()
+        rect.adjust(graphW + r, 0, 0, 0)
+
     def invalidateItem(self, index):
         rect = self.__itemRect(index)
         # update if visible in the viewport
@@ -555,6 +686,7 @@ class LogView(QAbstractScrollArea):
             return
 
         painter = QPainter(self.viewport())
+        painter.setClipRect(event.rect())
 
         startLine = self.verticalScrollBar().value()
         endLine = startLine + self.__linesPerPage() + 1
@@ -565,31 +697,25 @@ class LogView(QAbstractScrollArea):
         for i in range(startLine, endLine):
             commit = self.data[i]
             content = commit.comments.split('\n')[0]
-            author = self.authorRe.sub("\\1", commit.author)
-            date = commit.authorDate.split(' ')[0]
 
             rect = self.__itemRect(i)
 
             painter.setFont(self.font)
 
-            flags = Qt.AlignLeft | Qt.AlignVCenter
             rect.adjust(2, 0, 0, 0)
 
+            self.__drawGraph(painter, rect, commit)
+
             # author
-            boundingRect = painter.boundingRect(rect, flags, author)
-            boundingRect.adjust(-1, -1, 1, 1)
-            painter.fillRect(boundingRect, QColor(255, 221, 170))
-            painter.drawRect(boundingRect)
-            painter.drawText(rect, flags, author)
-            rect.setLeft(boundingRect.right() + 2)
+            text = self.authorRe.sub("\\1", commit.author)
+            color = Qt.gray
+            self.__drawTag(painter, rect, color, text)
 
             # date
-            boundingRect = painter.boundingRect(rect, flags, date)
-            boundingRect.adjust(-1, -1, 1, 1)
-            painter.fillRect(boundingRect, QColor(140, 208, 80))
-            painter.drawRect(boundingRect)
-            painter.drawText(rect, flags, date)
-            rect.setLeft(boundingRect.right() + 6)
+            text = commit.authorDate.split(' ')[0]
+            color = QColor(140, 208, 80)
+            self.__drawTag(painter, rect, color, text)
+            rect.adjust(4, 0, 0, 0)
 
             # marker
             self.marker.draw(i, painter, rect)
@@ -609,7 +735,7 @@ class LogView(QAbstractScrollArea):
 
             textOption = QTextOption()
             textOption.setWrapMode(QTextOption.NoWrap)
-            textOption.setAlignment(flags)
+            textOption.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
             textLayout.setTextOption(textOption)
 
@@ -637,7 +763,7 @@ class LogView(QAbstractScrollArea):
 
             # setAlignment doesn't works at all!
             # we have to vcenter by self LoL
-            rect = rect.adjusted(2, 0, 0, 0)
+            rect.adjust(2, 0, 0, 0)
             offsetY = (rect.height() - painter.fontMetrics().lineSpacing()) / 2
             pos = QPointF(rect.left(), rect.top() + offsetY)
             textLayout.draw(painter, pos)
