@@ -55,6 +55,9 @@ class GitView(QWidget):
             return
 
         branches = Git.branches()
+        if not branches:
+            self.window().showMessage(self.tr("Can't get branch"))
+            return
 
         curBranchIdx = -1
         self.ui.cbBranch.blockSignals(True)
