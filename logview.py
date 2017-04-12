@@ -115,24 +115,37 @@ class FindThread(QThread):
 
     def __findCommitInPath(self, commit):
         paths = Git.commitFiles(commit.sha1)
-        if self.regexp.search(paths):
+        if paths and self.regexp.search(paths):
             return True
         return False
 
     def __findCommitInDiff(self, commit):
         # TODO: improve performance
         diff = Git.commitRawDiff(commit.sha1)
+        if not diff:
+            return False
+
         # remove useless lines
         diff = self.diffRe.sub(b'', diff)
 
         # different file might have different encoding
         # so split the diff data into lines
-        lastEncoding = None
+        lastEncoding = "utf-8"
         lines = diff.split(b'\n')
         for line in lines:
             line, lastEncoding = decodeDiffData(line, lastEncoding)
-            if line and self.regexp.search(line):
+
+            line = line.lstrip()
+            if not line:
+                continue
+
+            if not (line.startswith('+') or
+                    line.startswith('-')):
+                continue
+
+            if self.regexp.search(line):
                 return True
+
         return False
 
     def __isInterruptionRequested(self):
@@ -243,7 +256,7 @@ class LogView(QAbstractScrollArea):
 
     # for refs
     TAG_COLORS = [Qt.yellow,
-                  QColor(0, 0x7F, 0),
+                  Qt.green,
                   QColor(255, 221, 170)]
 
     def __init__(self, parent=None):
@@ -412,6 +425,8 @@ class LogView(QAbstractScrollArea):
             return
 
         commit = Git.commitSummary(commit.sha1)
+        if not commit:
+            return
 
         clipboard = QApplication.clipboard()
 

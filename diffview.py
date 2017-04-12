@@ -1192,7 +1192,9 @@ class PatchViewer(QAbstractScrollArea):
 
     def __createDiffFormats(self, textLine):
         if self.highlightField == FindField.Diffs:
-            return self.__highlightFormatRange(textLine.text())
+            text = textLine.text().lstrip()
+            if text.startswith('+') or text.startswith('-'):
+                return self.__highlightFormatRange(textLine.text())
 
         return None
 
