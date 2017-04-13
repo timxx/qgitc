@@ -67,6 +67,8 @@ class FindField():
     Comments = 0
     Paths = 1
     Diffs = 2
+    # for highlight only
+    All = 0xff
 
 
 def htmlEscape(text):

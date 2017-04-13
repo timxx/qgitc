@@ -8,6 +8,7 @@ from gitview import *
 from preferences import *
 from settings import *
 from git import Git
+from diffview import PatchViewer
 
 import os
 import sys
@@ -62,6 +63,18 @@ class MainWindow(QMainWindow):
         self.ui.acIgnoreAll.triggered.connect(
             self.__onAcIgnoreAllTriggered)
 
+        self.ui.acCopy.triggered.connect(
+            self.__onCopyTriggered)
+
+        self.ui.acSelectAll.triggered.connect(
+            self.__onSelectAllTriggered)
+
+        self.ui.acFind.triggered.connect(
+            self.__onFindTriggered)
+
+        self.ui.menu_Edit.aboutToShow.connect(
+            self.__updateEditMenu)
+
         self.ui.acVisualizeWhitespace.triggered.connect(
             self.__onAcVisualizeWhitespaceTriggered)
 
@@ -77,11 +90,32 @@ class MainWindow(QMainWindow):
         sett.showWhitespaceChanged.connect(
             self.ui.acVisualizeWhitespace.setChecked)
 
+        # application
+        qApp.focusChanged.connect(self.__updateEditMenu)
+
     def __setupMenus(self):
         acGroup = QActionGroup(self)
         acGroup.addAction(self.ui.acIgnoreNone)
         acGroup.addAction(self.ui.acIgnoreEOL)
         acGroup.addAction(self.ui.acIgnoreAll)
+
+    def __updateEditMenu(self):
+        fw = qApp.focusWidget()
+
+        self.ui.acCopy.setEnabled(False)
+        self.ui.acSelectAll.setEnabled(False)
+        self.ui.acFind.setEnabled(False)
+
+        if not fw:
+            pass
+        elif isinstance(fw, PatchViewer):
+            self.ui.acCopy.setEnabled(fw.hasSelection())
+            self.ui.acSelectAll.setEnabled(True)
+            self.ui.acFind.setEnabled(True)
+        elif isinstance(fw, QLineEdit):
+            self.ui.acCopy.setEnabled(fw.hasSelectedText())
+            self.ui.acSelectAll.setEnabled(True)
+            self.ui.acFind.setEnabled(False)
 
     def __onBtnRepoBrowseClicked(self, checked):
         repoDir = QFileDialog.getExistingDirectory(self,
@@ -174,6 +208,21 @@ class MainWindow(QMainWindow):
     def __onPatternReturnPressed(self):
         pattern = self.ui.lePattern.text().strip()
         self.filterPattern(pattern)
+
+    def __onCopyTriggered(self):
+        fw = qApp.focusWidget()
+        assert fw
+        fw.copy()
+
+    def __onSelectAllTriggered(self):
+        fw = qApp.focusWidget()
+        assert fw
+        fw.selectAll()
+
+    def __onFindTriggered(self):
+        fw = qApp.focusWidget()
+        assert fw and isinstance(fw, PatchViewer)
+        fw.executeFind()
 
     def saveState(self):
         sett = qApp.instance().settings()
@@ -269,6 +318,7 @@ class Application(QApplication):
     def __init__(self, argv):
         super(Application, self).__init__(argv)
 
+        self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
         self._settings = Settings(self)
 
     def settings(self):

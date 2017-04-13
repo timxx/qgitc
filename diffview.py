@@ -6,6 +6,7 @@ from collections import namedtuple
 
 from common import *
 from git import Git
+from findwidget import FindWidget
 
 import re
 import bisect
@@ -268,7 +269,7 @@ class DiffView(QWidget):
         lines = []
         data = Git.commitRawDiff(commit.sha1, self.filterPath, self.gitArgs)
         if data:
-            lines = data.split(b'\n')
+            lines = data.rstrip(b'\n').split(b'\n')
 
         self.__addToTreeWidget(self.tr("Comments"), 0)
 
@@ -351,7 +352,7 @@ class DiffView(QWidget):
             self.splitter.restoreState(state)
 
 
-class Selection():
+class Cursor():
 
     def __init__(self):
         self.clear()
@@ -362,8 +363,25 @@ class Selection():
         self._endLine = -1
         self._endPos = -1
 
+    def isValid(self):
+        return self._beginLine != -1 and \
+            self._endLine != -1 and \
+            self._beginPos != -1 and \
+            self._endPos != -1
+
+    def hasMultiLines(self):
+        if not self.isValid():
+            return False
+
+        return self._beginLine != self._endLine
+
     def hasSelection(self):
-        return self._beginLine != -1 and self._endLine != -1
+        if not self.isValid():
+            return False
+
+        if self.hasMultiLines():
+            return True
+        return self._beginPos != self._endPos
 
     def within(self, line):
         if not self.hasSelection():
@@ -396,11 +414,13 @@ class Selection():
         else:
             return self._beginPos
 
-    def begin(self, line, pos):
+    def moveTo(self, line, pos):
         self._beginLine = line
         self._beginPos = pos
+        self._endLine = line
+        self._endPos = pos
 
-    def end(self, line, pos):
+    def selectTo(self, line, pos):
         self._endLine = line
         self._endPos = pos
 
@@ -711,7 +731,7 @@ class DiffTextLine(TextLine):
     def __updateCRWidth(self):
         if self._hasCR and self.__showWhitespaces():
             fm = QFontMetrics(self._font)
-            self._crWidth = fm.width(cr_char) + fm.width(' ')
+            self._crWidth = fm.width(cr_char)
         else:
             self._crWidth = 0
 
@@ -764,13 +784,14 @@ class PatchViewer(QAbstractScrollArea):
         self.highlightField = FindField.Comments
         self.wordPattern = None
 
-        self.selection = Selection()
+        self.cursor = Cursor()
         self.tripleClickTimer = QElapsedTimer()
         self.clickOnLink = False
         self.currentLink = None
         self.cursorChanged = False
 
         self.menu = QMenu()
+        self.findWidget = None
 
         action = self.menu.addAction(
             self.tr("&Open commit in browser"), self.__onOpenCommit)
@@ -841,7 +862,7 @@ class PatchViewer(QAbstractScrollArea):
         self._textLines.clear()
         self.currentLink = None
         self.clickOnLink = False
-        self.selection.clear()
+        self.cursor.clear()
         self.wordPattern = None
 
         hScrollBar = self.horizontalScrollBar()
@@ -953,6 +974,44 @@ class PatchViewer(QAbstractScrollArea):
 
         return self.textLineAt(n)
 
+    def hasSelection(self):
+        return self.cursor.hasSelection()
+
+    def copy(self):
+        self.__onCopy()
+
+    def selectAll(self):
+        self.__onSelectAll()
+
+    def executeFind(self):
+        if not self.findWidget:
+            self.findWidget = FindWidget(self)
+            self.findWidget.find.connect(self.__onFind)
+            self.findWidget.findNext.connect(self.__onFindNext)
+
+        if self.cursor.hasSelection():
+            # first line only
+            beginLine = self.cursor.beginLine()
+            beginPos = self.cursor.beginPos()
+
+            endPos = self.cursor.endPos() \
+                if not self.cursor.hasMultiLines() \
+                else None
+            text = self.__makeContent(beginLine, beginPos, endPos)
+            self.findWidget.setText(text)
+        self.findWidget.showAnimate()
+
+    def ensureVisible(self, lineNo):
+        if not self.hasTextLines():
+            return
+
+        startLine = self.firstVisibleLine()
+        endLine = startLine + self.__linesPerPage()
+        endLine = min(self.textLineCount(), endLine)
+
+        if lineNo < startLine or lineNo >= endLine:
+            self.verticalScrollBar().setValue(lineNo)
+
     def mouseMoveEvent(self, event):
         if self.tripleClickTimer.isValid():
             self.tripleClickTimer.invalidate()
@@ -974,7 +1033,7 @@ class PatchViewer(QAbstractScrollArea):
             return
         n = textLine.lineNo()
         offset = textLine.offsetForPos(self.mapToContents(event.pos()))
-        self.selection.end(n, offset)
+        self.cursor.selectTo(n, offset)
         self.__updateSelection()
 
     def mousePressEvent(self, event):
@@ -1001,13 +1060,12 @@ class PatchViewer(QAbstractScrollArea):
             return
 
         if isTripleClick:
-            self.selection.begin(textLine.lineNo(), 0)
-            self.selection.end(textLine.lineNo(), len(textLine.text()))
+            self.cursor.moveTo(textLine.lineNo(), 0)
+            self.cursor.selectTo(textLine.lineNo(), len(textLine.text()))
             self.__updateSelection()
         else:
             offset = textLine.offsetForPos(self.mapToContents(event.pos()))
-            self.selection.begin(textLine.lineNo(), offset)
-            self.selection.end(-1, -1)
+            self.cursor.moveTo(textLine.lineNo(), offset)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and \
@@ -1027,7 +1085,7 @@ class PatchViewer(QAbstractScrollArea):
             return
 
         self.__updateSelection()
-        self.selection.clear()
+        self.cursor.clear()
 
         textLine = self.textLineForPos(event.pos())
         if not textLine:
@@ -1053,12 +1111,14 @@ class PatchViewer(QAbstractScrollArea):
                     continue
                 break
 
-        word = content[begin:end + 1]
+        end += 1
+        word = content[begin:end]
+
         if word:
             word = normalizeRegex(word)
             self.wordPattern = re.compile('\\b' + word + '\\b')
-            self.selection.begin(textLine.lineNo(), begin)
-            self.selection.end(textLine.lineNo(), end)
+            self.cursor.moveTo(textLine.lineNo(), begin)
+            self.cursor.selectTo(textLine.lineNo(), end)
         else:
             self.wordPattern = None
 
@@ -1081,7 +1141,7 @@ class PatchViewer(QAbstractScrollArea):
             canVisible = url is not None
 
         self.acOpenCommit.setVisible(canVisible)
-        self.acCopy.setEnabled(self.selection.hasSelection())
+        self.acCopy.setEnabled(self.cursor.hasSelection())
 
         self.menu.exec(event.globalPos())
 
@@ -1110,12 +1170,6 @@ class PatchViewer(QAbstractScrollArea):
             r = textLine.boundingRect().translated(offset)
 
             formats = []
-
-            # selection
-            selectionRg = self.__selectionFormatRange(i)
-            if selectionRg:
-                formats.append(selectionRg)
-
             formats.extend(self.__wordFormatRange(textLine.text()))
 
             if textLine.type() >= TextLine.Author and textLine.type() <= TextLine.Comments:
@@ -1126,6 +1180,11 @@ class PatchViewer(QAbstractScrollArea):
                 fmt = self.__createDiffFormats(textLine)
                 if fmt:
                     formats.extend(fmt)
+
+            # selection
+            selectionRg = self.__selectionFormatRange(i)
+            if selectionRg:
+                formats.append(selectionRg)
 
             if textLine.isInfoType():
                 rr = textLine.boundingRect()
@@ -1164,17 +1223,17 @@ class PatchViewer(QAbstractScrollArea):
         return formats
 
     def __selectionFormatRange(self, lineIndex):
-        if not self.selection.within(lineIndex):
+        if not self.cursor.within(lineIndex):
             return None
 
         textLine = self.textLineAt(lineIndex)
         start = 0
         end = len(textLine.text())
 
-        if self.selection.beginLine() == lineIndex:
-            start = self.selection.beginPos()
-        if self.selection.endLine() == lineIndex:
-            end = self.selection.endPos()
+        if self.cursor.beginLine() == lineIndex:
+            start = self.cursor.beginPos()
+        if self.cursor.endLine() == lineIndex:
+            end = self.cursor.endPos()
 
         fmt = QTextCharFormat()
         if self.hasFocus():
@@ -1182,16 +1241,19 @@ class PatchViewer(QAbstractScrollArea):
         else:
             fmt.setBackground(QBrush(ColorSchema.SelNoFocus))
 
-        return createFormatRange(start, end - start + 1, fmt)
+        return createFormatRange(start, end - start, fmt)
 
     def __createCommentsFormats(self, textLine):
-        if self.highlightField == FindField.Comments:
+        if self.highlightField == FindField.Comments or \
+                self.highlightField == FindField.All:
             return self.__highlightFormatRange(textLine.text())
 
         return None
 
     def __createDiffFormats(self, textLine):
-        if self.highlightField == FindField.Diffs:
+        if self.highlightField == FindField.All:
+            return self.__highlightFormatRange(textLine.text())
+        elif self.highlightField == FindField.Diffs:
             text = textLine.text().lstrip()
             if text.startswith('+') or text.startswith('-'):
                 return self.__highlightFormatRange(textLine.text())
@@ -1278,10 +1340,50 @@ class PatchViewer(QAbstractScrollArea):
             return
 
         self.wordPattern = None
-        self.selection.begin(0, 0)
+        self.cursor.moveTo(0, 0)
         lastLine = self.textLineCount() - 1
-        self.selection.end(lastLine, len(self.textLineAt(lastLine).text()))
+        self.cursor.selectTo(lastLine, len(self.textLineAt(lastLine).text()))
         self.__updateSelection()
+
+    def __onFind(self, text):
+        if not self.hasTextLines():
+            self.findWidget.setNotFound()
+            return
+
+        self.highlightPattern = None
+        self.cursor.clear()
+        self.viewport().update()
+
+        if not text:
+            return
+
+        # text only for now
+        textRe = re.compile(normalizeRegex(text))
+        found = False
+
+        for i in range(0, self.textLineCount()):
+            text = self.textLineAt(i).text()
+            m = textRe.search(text)
+            if m:
+                self.__setFindResult(textRe, i, m.start(), m.end())
+                found = True
+                break
+
+        if not found:
+            self.findWidget.setNotFound()
+
+    def __onFindNext(self, reverse):
+        pass
+
+    def __setFindResult(self, textRe, lineNo, start, end):
+        self.highlightPattern = textRe
+        self.highlightField = FindField.All
+
+        self.cursor.moveTo(lineNo, start)
+        self.cursor.selectTo(lineNo, end)
+
+        self.ensureVisible(lineNo)
+        self.viewport().update()
 
     def __makeContent(self, lineNo, begin=None, end=None):
         textLine = self.textLineAt(lineNo)
@@ -1290,14 +1392,14 @@ class PatchViewer(QAbstractScrollArea):
     def __doCopy(self, selectionOnly=True):
         if not self.hasTextLines():
             return
-        if selectionOnly and not self.selection.hasSelection():
+        if selectionOnly and not self.cursor.hasSelection():
             return
 
         if selectionOnly:
-            beginLine = self.selection.beginLine()
-            beginPos = self.selection.beginPos()
-            endLine = self.selection.endLine()
-            endPos = self.selection.endPos()
+            beginLine = self.cursor.beginLine()
+            beginPos = self.cursor.beginPos()
+            endLine = self.cursor.endLine()
+            endPos = self.cursor.endPos()
         else:
             beginLine = 0
             beginPos = 0
@@ -1307,7 +1409,7 @@ class PatchViewer(QAbstractScrollArea):
         content = ""
         # only one line
         if beginLine == endLine:
-            content = self.__makeContent(beginLine, beginPos, endPos + 1)
+            content = self.__makeContent(beginLine, beginPos, endPos)
         else:
             # first line
             content = self.__makeContent(beginLine, beginPos, None)
@@ -1319,7 +1421,7 @@ class PatchViewer(QAbstractScrollArea):
 
             # last line
             content += "\n" + \
-                self.__makeContent(endLine, 0, endPos + 1)
+                self.__makeContent(endLine, 0, endPos)
 
         clipboard = QApplication.clipboard()
         mimeData = QMimeData()
@@ -1345,11 +1447,11 @@ class PatchViewer(QAbstractScrollArea):
             self.viewport().update()
             return
 
-        if not self.selection.hasSelection():
+        if not self.cursor.hasSelection():
             return
 
-        begin = self.selection.beginLine()
-        end = self.selection.endLine()
+        begin = self.cursor.beginLine()
+        end = self.cursor.endLine()
         rect = self.__lineRect(begin)
         rect.setWidth(self.viewport().width())
         # the rect may not actually the one draws, so add some extra spaces
