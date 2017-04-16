@@ -8,6 +8,22 @@ from git import *
 
 import re
 
+# for refs
+TAG_COLORS = [Qt.yellow,
+              Qt.green,
+              QColor(255, 221, 170)]
+
+# for circles
+GRAPH_COLORS = [Qt.black,
+                Qt.red,
+                Qt.green,
+                Qt.blue,
+                Qt.darkGray,
+                QColor(150, 75, 0),  # brown
+                Qt.magenta,
+                QColor(255, 160, 50)  # orange
+                ]
+
 
 class CommitFetcher():
 
@@ -249,15 +265,302 @@ class Marker():
         painter.restore()
 
 
+# reference to QGit source code
+class Lane():
+    EMPTY = 0
+    ACTIVE = 1
+    NOT_ACTIVE = 2
+    MERGE_FORK = 3
+    MERGE_FORK_R = 4
+    MERGE_FORK_L = 5
+    JOIN = 6
+    JOIN_R = 7
+    JOIN_L = 8
+    HEAD = 9
+    HEAD_R = 10
+    HEAD_L = 11
+    TAIL = 12
+    TAIL_R = 13
+    TAIL_L = 14
+    CROSS = 15
+    CROSS_EMPTY = 16
+    INITIAL = 17
+    BRANCH = 18
+    BOUNDARY = 19
+    BOUNDARY_C = 20
+    BOUNDARY_R = 21
+    BOUNDARY_L = 22
+    UNAPPLIED = 23
+    APPLIED = 24
+
+    @staticmethod
+    def isHead(t):
+        return t >= Lane.HEAD and \
+            t <= Lane.HEAD_L
+
+    @staticmethod
+    def isTail(t):
+        return t >= Lane.TAIL and \
+            t <= Lane.TAIL_L
+
+    @staticmethod
+    def isJoin(t):
+        return t >= Lane.JOIN and \
+            t <= Lane.JOIN_L
+
+    @staticmethod
+    def isFreeLane(t):
+        return t == Lane.NOT_ACTIVE or \
+            t == Lane.CROSS or \
+            Lane.isJoin(t)
+
+    @staticmethod
+    def isBoundary(t):
+        return t >= Lane.BOUNDARY and \
+            t <= Lane.BOUNDARY_L
+
+    @staticmethod
+    def isMerge(t):
+        return (t >= Lane.MERGE_FORK and
+                t <= Lane.MERGE_FORK_L) or \
+            Lane.isBoundary(t)
+
+    @staticmethod
+    def isActive(t):
+        return t == Lane.ACTIVE or \
+            t == Lane.INITIAL or \
+            t == Lane.BRANCH or \
+            Lane.isMerge(t)
+
+
+class Lanes():
+
+    def __init__(self):
+        self.activeLane = 0
+        self.types = []
+        self.nextSha = []
+        self.isBoundary = False
+        self.node = 0
+        self.node_l = 0
+        self.node_r = 0
+
+    def isEmpty(self):
+        return not self.types
+
+    def isFork(self, sha1):
+        pos = self.findNextSha1(sha1, 0)
+        isDiscontinuity = self.activeLane != pos
+        if pos == -1:  # new branch case
+            return False, isDiscontinuity
+
+        isFork = self.findNextSha1(sha1, pos + 1) != -1
+        return isFork, isDiscontinuity
+
+    def isBranch(self):
+        return self.types[self.activeLane] == Lane.BRANCH
+
+    def isNode(self, t):
+        return t == self.node or \
+            t == self.node_r or \
+            t == self.node_l
+
+    def findNextSha1(self, next, pos):
+        for i in range(pos, len(self.nextSha)):
+            if self.nextSha[i] == next:
+                return i
+
+        return -1
+
+    def init(self, sha1):
+        self.clear()
+        self.activeLane = 0
+        self.setBoundary(False)
+        self.add(Lane.BRANCH, sha1, self.activeLane)
+
+    def clear(self):
+        self.types.clear()
+        self.nextSha.clear()
+
+    def setBoundary(self, b):
+        if b:
+            self.node = Lane.BOUNDARY_C
+            self.node_r = Lane.BOUNDARY_R
+            self.node_l = Lane.BOUNDARY_L
+            self.types[self.activeLane] = Lane.BOUNDARY
+        else:
+            self.node = Lane.MERGE_FORK
+            self.node_r = Lane.MERGE_FORK_R
+            self.node_l = Lane.MERGE_FORK_L
+
+        self.isBoundary = b
+
+    def findType(self, type, pos):
+        for i in range(pos, len(self.types)):
+            if self.types[i] == type:
+                return i
+        return -1
+
+    def add(self, type, next, pos):
+        if pos < len(self.types):
+            pos = self.findType(Lane.EMPTY, pos)
+            if pos != -1:
+                self.types[pos] = type
+                self.nextSha[pos] = next
+                return pos
+
+        self.types.append(type)
+        self.nextSha.append(next)
+
+        return len(self.types) - 1
+
+    def changeActiveLane(self, sha1):
+        t = self.types[self.activeLane]
+        if t == Lane.INITIAL or Lane.isBoundary(t):
+            self.types[self.activeLane] = Lane.EMPTY
+        else:
+            self.types[self.activeLane] = Lane.NOT_ACTIVE
+
+        idx = self.findNextSha1(sha1, 0)
+        if idx != -1:
+            self.types[idx] = Lane.ACTIVE
+        else:
+            idx = self.add(Lane.BRANCH, sha1, self.activeLane)
+
+        self.activeLane = idx
+
+    def setFork(self, sha1):
+        s = e = idx = self.findNextSha1(sha1, 0)
+        while idx != -1:
+            e = idx
+            self.types[idx] = Lane.TAIL
+            idx = self.findNextSha1(sha1, idx + 1)
+
+        self.types[self.activeLane] = self.node
+        if self.types[s] == self.node:
+            self.types[s] = self.node_l
+
+        if self.types[e] == self.node:
+            self.types[e] = self.node_r
+
+        if self.types[s] == Lane.TAIL:
+            self.types[s] == Lane.TAIL_L
+
+        if self.types[e] == Lane.TAIL:
+            self.types[e] = Lane.TAIL_R
+
+        for i in range(s + 1, e):
+            if self.types[i] == Lane.NOT_ACTIVE:
+                self.types[i] = Lane.CROSS
+            elif self.types[i] == Lane.EMPTY:
+                self.types[i] = Lane.CROSS_EMPTY
+
+    def setMerge(self, parents):
+        if self.isBoundary:
+            return
+
+        t = self.types[self.activeLane]
+        wasFork = t == self.node
+        wasForkL = t == self.node_l
+        wasForkR = t == self.node_r
+
+        self.types[self.activeLane] = self.node
+
+        s = e = self.activeLane
+        startJoinWasACross = False
+        endJoinWasACross = False
+        # skip first parent
+        for i in range(1, len(parents)):
+            idx = self.findNextSha1(parents[i], 0)
+            if idx != -1:
+                if idx > e:
+                    e = idx
+                    endJoinWasACross = self.types[idx] == Lane.CROSS
+                if idx < s:
+                    s = idx
+                    startJoinWasACross = self.types[idx] == Lane.CROSS
+
+                self.types[idx] = Lane.JOIN
+            else:
+                e = self.add(Lane.HEAD, parents[i], e + 1)
+
+        if self.types[s] == self.node and not wasFork and not wasForkR:
+            self.types[s] = self.node_l
+        if self.types[e] == self.node and not wasFork and not wasForkL:
+            self.types[e] = self.node_r
+
+        if self.types[s] == Lane.JOIN and not startJoinWasACross:
+            self.types[s] = Lane.JOIN_L
+        if self.types[e] == Lane.JOIN and not endJoinWasACross:
+            self.types[e] = Lane.JOIN_R
+
+        if self.types[s] == Lane.HEAD:
+            self.types[s] = Lane.HEAD_L
+        if self.types[e] == Lane.HEAD:
+            self.types[e] = Lane.HEAD_R
+
+        for i in range(s + 1, e):
+            if self.types[i] == Lane.NOT_ACTIVE:
+                self.types[i] = Lane.CROSS
+            elif self.types[i] == Lane.EMPTY:
+                self.types[i] = Lane.CROSS_EMPTY
+            elif self.types[i] == Lane.TAIL_R or \
+                    self.types[i] == Lane.TAIL_L:
+                self.types[i] = Lane.TAIL
+
+    def setInitial(self):
+        t = self.types[self.activeLane]
+        # TODO: applied
+        if not self.isNode(t):
+            if self.isBoundary:
+                self.types[self.activeLane] = Lane.BOUNDARY
+            else:
+                self.types[self.activeLane] = Lane.INITIAL
+
+    def getLanes(self):
+        return list(self.types)
+
+    def nextParent(self, sha1):
+        if self.isBoundary:
+            self.nextSha[self.activeLane] = ""
+        else:
+            self.nextSha[self.activeLane] = sha1
+
+    def afterMerge(self):
+        if self.isBoundary:
+            return
+
+        for i in range(len(self.types)):
+            t = self.types[i]
+            if Lane.isHead(t) or Lane.isJoin(t) or t == Lane.CROSS:
+                self.types[i] = Lane.NOT_ACTIVE
+            elif t == Lane.CROSS_EMPTY:
+                self.types[i] = Lane.EMPTY
+            elif self.isNode(t):
+                self.types[i] = Lane.ACTIVE
+
+    def afterFork(self):
+        for i in range(len(self.types)):
+            t = self.types[i]
+            if t == Lane.CROSS:
+                self.types[i] = Lane.NOT_ACTIVE
+            elif Lane.isTail(t) or t == Lane.CROSS_EMPTY:
+                self.types[i] = Lane.EMPTY
+
+            if not self.isBoundary and self.isNode(t):
+                self.types[i] = Lane.ACTIVE
+
+        while self.types[-1] == Lane.EMPTY:
+            self.types.pop()
+            self.nextSha.pop()
+
+    def afterBranch(self):
+        self.types[self.activeLane] = Lane.ACTIVE
+
+
 class LogView(QAbstractScrollArea):
     currentIndexChanged = pyqtSignal(int)
     findFinished = pyqtSignal(int)
     findProgress = pyqtSignal(int)
-
-    # for refs
-    TAG_COLORS = [Qt.yellow,
-                  Qt.green,
-                  QColor(255, 221, 170)]
 
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
@@ -271,6 +574,11 @@ class LogView(QAbstractScrollArea):
         self.lineSpace = 5
         self.marginX = 3
         self.marginY = 3
+
+        # commit history graphs
+        self.graphs = {}
+        self.lanes = Lanes()
+        self.firstFreeLane = 0
 
         self.color = "#FF0000"
         self.sha1Url = None
@@ -286,17 +594,7 @@ class LogView(QAbstractScrollArea):
         self.highlightPattern = None
         self.marker = Marker()
 
-        self.menu = QMenu()
-        self.menu.addAction(self.tr("&Copy commit summary"),
-                            self.__onCopyCommitSummary)
-        self.menu.addSeparator()
-
-        self.menu.addAction(self.tr("&Mark this commit"),
-                            self.__onMarkCommit)
-        self.acMarkTo = self.menu.addAction(self.tr("Mark &to this commit"),
-                                            self.__onMarkToCommit)
-        self.acClearMarks = self.menu.addAction(self.tr("Clea&r Marks"),
-                                                self.__onClearMarks)
+        self.__setupMenu()
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -309,6 +607,19 @@ class LogView(QAbstractScrollArea):
 
     def __del__(self):
         self.cancelFindCommit()
+
+    def __setupMenu(self):
+        self.menu = QMenu()
+        self.menu.addAction(self.tr("&Copy commit summary"),
+                            self.__onCopyCommitSummary)
+        self.menu.addSeparator()
+
+        self.menu.addAction(self.tr("&Mark this commit"),
+                            self.__onMarkCommit)
+        self.acMarkTo = self.menu.addAction(self.tr("Mark &to this commit"),
+                                            self.__onMarkToCommit)
+        self.acClearMarks = self.menu.addAction(self.tr("Clea&r Marks"),
+                                                self.__onClearMarks)
 
     def setBranchB(self):
         self.branchA = False
@@ -338,6 +649,9 @@ class LogView(QAbstractScrollArea):
     def clear(self):
         self.data.setSource(None)
         self.curIdx = -1
+        self.graphs.clear()
+        self.lanes = Lanes()
+        self.firstFreeLane = 0
         self.marker.clear()
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
@@ -522,6 +836,7 @@ class LogView(QAbstractScrollArea):
 
     def __drawTag(self, painter, rect, color, text, bold=False):
         painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, False)
 
         if bold:
             font = painter.font()
@@ -543,6 +858,7 @@ class LogView(QAbstractScrollArea):
 
     def __drawTriangleTag(self, painter, rect, color, text):
         painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, False)
 
         flags = Qt.AlignLeft | Qt.AlignVCenter
         br = painter.boundingRect(rect, flags, text)
@@ -567,17 +883,73 @@ class LogView(QAbstractScrollArea):
         painter.fillPath(path, color)
         painter.drawPath(path)
 
-        painter.drawText(br, Qt.AlignCenter, text)
+        painter.drawText(br, flags, text)
 
         painter.restore()
         rect.adjust(path.boundingRect().width(), 0, 0, 0)
 
-    def __drawGraph(self, painter, rect, commit):
-        w = int(rect.height() * 3 / 4)
-        x1 = 0
-        x2 = x1 + w
+    def __laneWidth(self):
+        return int(self.lineHeight * 3 / 4)
 
-        h = int(rect.height() / 2)
+    def __drawGraph(self, painter, rect, cid):
+        commit = self.data[cid]
+        if not commit.sha1 in self.graphs:
+            self.__updateGraph(cid)
+
+        lanes = self.graphs[commit.sha1]
+        activeLane = 0
+        for i in range(len(lanes)):
+            if Lane.isActive(lanes[i]):
+                activeLane = i
+                break
+
+        totalColor = len(GRAPH_COLORS)
+        activeColor = GRAPH_COLORS[activeLane % totalColor]
+        w = self.__laneWidth()
+        x1 = 0
+        x2 = 0
+        isHead = (commit.sha1 == Git.REV_HEAD)
+        firstCommit = (cid == 0)
+
+        painter.save()
+        painter.translate(rect.topLeft())
+        painter.setRenderHints(QPainter.Antialiasing)
+
+        for i in range(len(lanes)):
+            x1 = x2
+            x2 += w
+
+            lane = lanes[i]
+            if lane == Lane.EMPTY:
+                continue
+
+            if i == activeLane:
+                color = activeColor
+            else:
+                color = GRAPH_COLORS[i % totalColor]
+            self.__drawGraphLane(painter, lane, x1, x2,
+                                 color, activeColor, isHead, firstCommit)
+
+        # refs
+        rc = QRect(rect)
+        rc.moveTo(0, 0)
+        preL = rc.left()
+        self.__drawGraphRef(painter, rc, lanes, activeLane, commit)
+
+        painter.restore()
+        offset = rc.left() - preL
+        if offset == 0:  # no refs
+            m = int(w / 2)
+            r = int(w / 3)
+            # same as spaces between ref tags
+            offset = (x2 - (w - (m + r))) + 2 * r
+        else:
+            # spaces after refs
+            offset += int(w / 3)
+        rect.adjust(offset, 0, 0, 0)
+
+    def __drawGraphLane(self, painter, lane, x1, x2, color, activeColor, isHead, firstCommit):
+        h = int(self.lineHeight / 2)
         m = int((x1 + x2) / 2)
         r = int((x2 - x1) * 1 / 3)
         d = int(2 * r)
@@ -592,59 +964,219 @@ class LogView(QAbstractScrollArea):
         # BL(m, h+r), BR(m+r, h+r)
 
         painter.save()
+        lanePen = QPen(Qt.black, 2)
 
-        painter.translate(rect.topLeft())
-        rc = QRect(rect)
-        rc.moveTo(QPoint(0, 0))
+        # arc
+        if lane == Lane.JOIN or \
+           lane == Lane.JOIN_R or \
+           lane == Lane.HEAD or \
+           lane == Lane.HEAD_R:
+            gradient = QConicalGradient(x1, 2 * h, 225)
+            gradient.setColorAt(0.375, color)
+            gradient.setColorAt(0.625, activeColor)
 
-        # TODO: implement graph drawing
+            lanePen.setBrush(gradient)
+            painter.setPen(lanePen)
+            painter.drawArc(m, h, 2 * (x1 - m), 2 * h, 0 * 16, 90 * 16)
+
+        elif lane == Lane.JOIN_L:
+            gradient = QConicalGradient(x2, 2 * h, 315)
+            gradient.setColorAt(0.375, activeColor)
+            gradient.setColorAt(0.625, color)
+
+            lanePen.setBrush(gradient)
+            painter.setPen(lanePen)
+            painter.drawArc(m, h, 2 * (x2 - m), 2 * h, 90 * 16, 90 * 16)
+
+        elif lane == Lane.TAIL or \
+                lane == Lane.TAIL_R:
+            gradient = QConicalGradient(x1, 0, 135)
+            gradient.setColorAt(0.375, activeColor)
+            gradient.setColorAt(0.625, color)
+
+            lanePen.setBrush(gradient)
+            painter.setPen(lanePen)
+            painter.drawArc(m, h, 2 * (x1 - m), 2 * -h, 270 * 16, 90 * 16)
+
+        lanePen.setColor(color)
+        painter.setPen(lanePen)
 
         # vertical line
-        painter.setPen(QPen(Qt.black, 2))
-        if not commit.parents:
+        if lane == Lane.ACTIVE or \
+                lane == Lane.NOT_ACTIVE or \
+                lane == Lane.MERGE_FORK or \
+                lane == Lane.MERGE_FORK_R or \
+                lane == Lane.MERGE_FORK_L or \
+                lane == Lane.CROSS or \
+                Lane.isJoin(lane):
+            if firstCommit:
+                painter.drawLine(m, h, m, 2 * h)
+            else:
+                painter.drawLine(m, 0, m, 2 * h)
+
+        elif lane == Lane.HEAD_L or \
+                lane == Lane.BRANCH:
+            painter.drawLine(m, h, m, 2 * h)
+
+        elif lane == Lane.TAIL_L or \
+                lane == Lane.INITIAL or \
+                Lane.isBoundary(lane):
             painter.drawLine(m, 0, m, h)
-        else:
-            painter.drawLine(m, 0, m, 2 * h)
 
-        # only antialiasing for rounding
+        lanePen.setColor(activeColor)
+        painter.setPen(lanePen)
+
+        # horizontal line
+        if lane == Lane.MERGE_FORK or \
+                lane == Lane.JOIN or \
+                lane == Lane.HEAD or \
+                lane == Lane.TAIL or \
+                lane == Lane.CROSS or \
+                lane == Lane.CROSS_EMPTY or \
+                lane == Lane.BOUNDARY_C:
+            painter.drawLine(x1, h, x2, h)
+
+        elif lane == Lane.MERGE_FORK_R or \
+                lane == Lane.BOUNDARY_R:
+            painter.drawLine(x1, h, m, h)
+
+        elif lane == Lane.MERGE_FORK_L or \
+                lane == Lane.HEAD_L or \
+                lane == Lane.TAIL_L or \
+                lane == Lane.BOUNDARY_L:
+            painter.drawLine(m, h, x2, h)
+
+        # circle
+        if isHead:
+            color = Qt.yellow
+        if lane == Lane.ACTIVE or \
+                lane == Lane.INITIAL or \
+                lane == Lane.BRANCH:
+            painter.setPen(Qt.black)
+            painter.setBrush(color)
+            painter.drawEllipse(m - r, h - r, d, d)
+
+        elif lane == Lane.MERGE_FORK or \
+                lane == Lane.MERGE_FORK_R or \
+                lane == Lane.MERGE_FORK_L:
+            painter.setPen(Qt.black)
+            painter.setBrush(color)
+            painter.drawRect(m - r, h - r, d, d)
+
+        elif lane == Lane.UNAPPLIED:
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(Qt.red)
+            painter.drawRect(m - r, h - 1, d, 2)
+
+        elif lane == Lane.APPLIED:
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(Qt.darkGreen)
+            painter.drawRect(m - r, h - 1, d, 2)
+            painter.drawRect(m - 1, h - r, 2, d)
+
+        elif lane == Lane.BOUNDARY:
+            painter.setPen(Qt.black)
+            painter.setBrush(painter.background())
+            painter.drawEllipse(m - r, h - r, d, d)
+
+        elif lane == Lane.BOUNDARY_C or \
+                lane == Lane.BOUNDARY_R or \
+                lane == Lane.BOUNDARY_L:
+            painter.setPen(Qt.black)
+            painter.setBrush(painter.background())
+            painter.drawRect(m - r, h - r, d, d)
+
+        painter.restore()
+
+    def __drawGraphRef(self, painter, rc, lanes, activeLane, commit):
+        if not commit.sha1 in Git.REF_MAP:
+            return
+
+        w = self.__laneWidth()
+        h = int(self.lineHeight / 2)
+        m = int(w / 2)
+        r = int(w / 3)
+        d = int(2 * r)
+
+        refs = Git.REF_MAP[commit.sha1]
         painter.save()
-        painter.setRenderHints(QPainter.Antialiasing)
-        painter.setPen(Qt.black)
-        painter.setBrush(Qt.blue)
-        painter.drawEllipse(m - r, h - r, d, d)
-        painter.restore()
 
-        # the real rect width
-        graphW = m + r
-        rc.adjust(graphW, 0, 0, 0)
+        # first draw the line from circle right outline
+        # to the right most lane
+        painter.setPen(QPen(Qt.black, 2))
+        x1 = activeLane * w + m + r
+        x2 = x1 + (len(lanes) - activeLane - 1) * w
+        if x1 != x2:
+            painter.drawLine(x1, h, x2, h)
+        rc.adjust(x2, 0, 0, 0)
 
-        # refs
-        if commit.sha1 in Git.REF_MAP:
-            refs = Git.REF_MAP[commit.sha1]
-            x = m + r
-            cW = d  # line width
-            for ref in refs:
-                # connector
-                painter.setPen(QPen(Qt.black, 2))
-                painter.drawLine(x, h, x + cW, h)
-                rc.adjust(cW, 0, 0, 0)
+        isHead = commit.sha1 == Git.REV_HEAD
+        for ref in refs:
+            # connector
+            painter.setPen(QPen(Qt.black, 2))
+            painter.drawLine(x2, h, x2 + d, h)
+            rc.adjust(d, 0, 0, 0)
 
-                # tag
-                painter.setPen(QPen(Qt.black))
-                color = LogView.TAG_COLORS[ref.type]
+            # tag
+            painter.setPen(QPen(Qt.black))
+            color = TAG_COLORS[ref.type]
 
-                preL = rc.left()
-                if ref.type == Ref.TAG:
-                    self.__drawTriangleTag(painter, rc, color, ref.name)
-                else:
-                    bold = (ref.type == Ref.HEAD and commit.sha1 == Git.REV_HEAD)
-                    self.__drawTag(painter, rc, color, ref.name, bold)
-                x += (rc.left() - preL) + cW + 1
-
-            graphW += x - (m + r)
+            preL = rc.left()
+            if ref.type == Ref.TAG:
+                self.__drawTriangleTag(painter, rc, color, ref.name)
+            else:
+                bold = (ref.type == Ref.HEAD and isHead)
+                self.__drawTag(painter, rc, color, ref.name, bold)
+            x2 = rc.left() + 1
 
         painter.restore()
-        rect.adjust(graphW + r, 0, 0, 0)
+
+    def __updateGraph(self, cid):
+        for i in range(self.firstFreeLane, len(self.data)):
+            commit = self.data[i]
+            if not commit.sha1 in self.graphs:
+                self.__updateLanes(commit, self.lanes)
+
+            if i == cid:
+                break
+        self.firstFreeLane = i + 1
+
+    def __updateLanes(self, commit, lanes):
+        if lanes.isEmpty():
+            lanes.init(commit.sha1)
+
+        isFork, isDiscontinuity = lanes.isFork(commit.sha1)
+        isMerge = (len(commit.parents) > 1)
+        isInitial = (not commit.parents)
+
+        if isDiscontinuity:
+            lanes.changeActiveLane(commit.sha1)
+
+        lanes.setBoundary(False)  # TODO
+        if isFork:
+            lanes.setFork(commit.sha1)
+        if isMerge:
+            lanes.setMerge(commit.parents)
+        if isInitial:
+            lanes.setInitial()
+
+        l = lanes.getLanes()
+        self.graphs[commit.sha1] = l
+
+        if isInitial:
+            nextSha1 = ""
+        else:
+            nextSha1 = commit.parents[0]
+
+        lanes.nextParent(nextSha1)
+
+        # TODO: applied
+        if isMerge:
+            lanes.afterMerge()
+        if isFork:
+            lanes.afterFork()
+        if lanes.isBranch():
+            lanes.afterBranch()
 
     def invalidateItem(self, index):
         rect = self.__itemRect(index)
@@ -710,17 +1242,13 @@ class LogView(QAbstractScrollArea):
         palette = self.palette()
 
         for i in range(startLine, endLine):
-            commit = self.data[i]
-            content = commit.comments.split('\n')[0]
-
-            rect = self.__itemRect(i)
-
             painter.setFont(self.font)
-
+            rect = self.__itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
-            self.__drawGraph(painter, rect, commit)
+            self.__drawGraph(painter, rect, i)
 
+            commit = self.data[i]
             # author
             text = self.authorRe.sub("\\1", commit.author)
             color = Qt.gray
@@ -746,6 +1274,7 @@ class LogView(QAbstractScrollArea):
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
+            content = commit.comments.split('\n')[0]
             textLayout = QTextLayout(content, self.font)
 
             textOption = QTextOption()
