@@ -17,28 +17,17 @@ import argparse
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, logMode=False, parent=None):
+    def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
-        self.logMode = logMode
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.gitViewB = None
 
         self.progressBarA = QProgressBar()
         self.ui.statusbar.addWidget(self.progressBarA, 1)
         self.progressBarA.setVisible(False)
-
-        if not self.logMode:
-            self.progressBarB = QProgressBar()
-            self.ui.statusbar.addWidget(self.progressBarB, 1)
-            self.progressBarB.setVisible(False)
-
-        if not self.logMode:
-            self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
-            self.ui.gitViewB.setBranchDesc(self.tr("Branch B:"))
-            self.ui.gitViewB.setBranchB()
-        else:
-            self.ui.gitViewB.setVisible(False)
 
         self.__setupSignals()
         self.__setupMenus()
@@ -62,6 +51,9 @@ class MainWindow(QMainWindow):
             self.__onAcIgnoreEOLTriggered)
         self.ui.acIgnoreAll.triggered.connect(
             self.__onAcIgnoreAllTriggered)
+
+        self.ui.acCompare.triggered.connect(
+            self.__onAcCompareTriggered)
 
         self.ui.acCopy.triggered.connect(
             self.__onCopyTriggered)
@@ -159,8 +151,8 @@ class MainWindow(QMainWindow):
             Git.REV_HEAD = Git.revHead()
 
         self.ui.gitViewA.setRepo(repoDir)
-        if not self.logMode:
-            self.ui.gitViewB.setRepo(repoDir)
+        if self.gitViewB:
+            self.gitViewB.setRepo(repoDir)
 
     def __onPatternTypeChanged(self, index):
         self.ui.btnFileSelect.setEnabled(index == 0)
@@ -173,8 +165,8 @@ class MainWindow(QMainWindow):
         if preferences.exec() == QDialog.Accepted:
             preferences.save()
             self.ui.gitViewA.updateSettings()
-            if not self.logMode:
-                self.ui.gitViewB.updateSettings()
+            if self.gitViewB:
+                self.gitViewB.updateSettings()
 
     def __onIgnoreWhitespaceChanged(self, index):
         actions = [self.ui.acIgnoreNone,
@@ -202,8 +194,14 @@ class MainWindow(QMainWindow):
         sett.setShowWhitespace(checked)
 
         self.ui.gitViewA.updateSettings()
-        if not self.logMode:
-            self.ui.gitViewB.updateSettings()
+        if self.gitViewB:
+            self.gitViewB.updateSettings()
+
+    def __onAcCompareTriggered(self, checked):
+        if checked:
+            self.setCompareMode()
+        else:
+            self.setLogMode()
 
     def __onPatternReturnPressed(self):
         pattern = self.ui.lePattern.text().strip()
@@ -234,7 +232,8 @@ class MainWindow(QMainWindow):
         sett.setWindowState(state, geometry, self.isMaximized())
 
         self.ui.gitViewA.saveState(sett, True)
-        self.ui.gitViewB.saveState(sett, False)
+        if self.gitViewB:
+            self.gitViewB.saveState(sett, False)
 
         return True
 
@@ -250,7 +249,8 @@ class MainWindow(QMainWindow):
             self.restoreGeometry(geometry)
 
         self.ui.gitViewA.restoreState(sett, True)
-        self.ui.gitViewB.restoreState(sett, False)
+        if self.gitViewB:
+            self.gitViewB.restoreState(sett, False)
 
         if isMaximized:
             self.setWindowState(self.windowState() | Qt.WindowMaximized)
@@ -265,28 +265,31 @@ class MainWindow(QMainWindow):
         index = self.ui.cbPatternType.currentIndex()
         if index == 0:
             self.ui.gitViewA.filterPath(pattern)
-            if not self.logMode:
-                self.ui.gitViewB.filterPath(pattern)
+            if self.gitViewB:
+                self.gitViewB.filterPath(pattern)
         else:
             self.ui.gitViewA.filterCommit(pattern)
-            if not self.logMode:
-                self.ui.gitViewB.filterCommit(pattern)
+            if self.gitViewB:
+                self.gitViewB.filterCommit(pattern)
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
 
     def showProgress(self, maximum, isBranchA):
         progressBar = self.progressBarA if isBranchA else self.progressBarB
-        progressBar.setRange(0, maximum)
-        progressBar.setVisible(True)
+        if progressBar:
+            progressBar.setRange(0, maximum)
+            progressBar.setVisible(True)
 
     def hideProgress(self, isBranchA):
         progressBar = self.progressBarA if isBranchA else self.progressBarB
-        progressBar.setVisible(False)
+        if progressBar:
+            progressBar.setVisible(False)
 
     def updateProgress(self, value, isBranchA):
         progressBar = self.progressBarA if isBranchA else self.progressBarB
-        progressBar.setValue(value)
+        if progressBar:
+            progressBar.setValue(value)
 
     def closeEvent(self, event):
         self.saveState()
@@ -312,6 +315,33 @@ class MainWindow(QMainWindow):
         else:
             self.__onPatternTypeChanged(0)
 
+    def setCompareMode(self):
+        self.gitViewB = GitView(self)
+        self.ui.splitter.addWidget(self.gitViewB)
+
+        self.progressBarB = QProgressBar()
+        self.ui.statusbar.addWidget(self.progressBarB, 1)
+        self.progressBarB.setVisible(False)
+
+        self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
+        self.gitViewB.setBranchDesc(self.tr("Branch B:"))
+        self.gitViewB.setBranchB()
+
+        repoDir = self.ui.leRepo.text()
+        self.gitViewB.setRepo(repoDir)
+        self.ui.acCompare.setChecked(True)
+
+    def setLogMode(self):
+        self.ui.statusbar.removeWidget(self.progressBarB)
+        self.ui.gitViewA.setBranchDesc(self.tr("Branch"))
+
+        self.gitViewB.deleteLater()
+        self.progressBarB.deleteLater()
+
+        self.gitViewB = None
+        self.progressBarB = None
+        self.ui.acCompare.setChecked(False)
+
 
 class Application(QApplication):
 
@@ -333,8 +363,8 @@ if __name__ == "__main__":
                         help="Init repositories directory, default to current working dir if it is.")
     parser.add_argument("-f", "--file",
                         help="Filter file")
-    parser.add_argument("-l", "--log-mode", action="store_true",
-                        help="Show log only")
+    parser.add_argument("-c", "--compare-mode", action="store_true",
+                        help="Compare mode, show two branches for comparing")
 
     args = parser.parse_args()
 
@@ -346,11 +376,14 @@ if __name__ == "__main__":
 
     app = Application(sys.argv)
 
-    window = MainWindow(args.log_mode)
+    window = MainWindow()
     window.setGeometry(QStyle.alignedRect(
         Qt.LeftToRight, Qt.AlignCenter,
         window.size(),
         app.desktop().availableGeometry()))
+
+    if args.compare_mode:
+        window.setCompareMode()
 
     if filterFile:
         window.setFilterFile(filterFile)
