@@ -90,7 +90,6 @@
        <enum>Qt::Horizontal</enum>
       </property>
       <widget class="GitView" name="gitViewA" native="true"/>
-      <widget class="GitView" name="gitViewB" native="true"/>
      </widget>
     </item>
    </layout>
@@ -135,8 +134,9 @@
      <addaction name="acIgnoreAll"/>
     </widget>
     <addaction name="acVisualizeWhitespace"/>
-    <addaction name="separator"/>
     <addaction name="menuIgnoreWhitespace"/>
+    <addaction name="separator"/>
+    <addaction name="acCompare"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
     <property name="title">
@@ -156,7 +156,9 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="acQuit">
    <property name="icon">
-    <iconset theme="application-exit"/>
+    <iconset theme="application-exit">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -167,7 +169,9 @@
   </action>
   <action name="acAbout">
    <property name="icon">
-    <iconset theme="help-about"/>
+    <iconset theme="help-about">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>&amp;About gitc</string>
@@ -217,7 +221,9 @@
   </action>
   <action name="acCopy">
    <property name="icon">
-    <iconset theme="edit-copy"/>
+    <iconset theme="edit-copy">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>&amp;Copy</string>
@@ -228,7 +234,9 @@
   </action>
   <action name="acSelectAll">
    <property name="icon">
-    <iconset theme="edit-select-all"/>
+    <iconset theme="edit-select-all">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Select &amp;All</string>
@@ -239,13 +247,23 @@
   </action>
   <action name="acFind">
    <property name="icon">
-    <iconset theme="edit-find"/>
+    <iconset theme="edit-find">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>&amp;Find</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="acCompare">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Compare Mode</string>
    </property>
   </action>
  </widget>
