@@ -1430,18 +1430,6 @@ class PatchViewer(QAbstractScrollArea):
         # TODO: html format support
         clipboard.setMimeData(mimeData)
 
-    def __lineRect(self, index):
-        # the row number in viewport
-        row = (index - self.verticalScrollBar().value())
-
-        offsetX = self.horizontalScrollBar().value()
-        x = 0 - offsetX
-        y = 0 + row * self.lineHeight
-        w = self.viewport().width() - x
-        h = self.lineHeight
-
-        return QRect(x, y, w, h)
-
     def __updateSelection(self):
         if self.wordPattern:
             self.viewport().update()
@@ -1452,12 +1440,13 @@ class PatchViewer(QAbstractScrollArea):
 
         begin = self.cursor.beginLine()
         end = self.cursor.endLine()
-        rect = self.__lineRect(begin)
-        rect.setWidth(self.viewport().width())
-        # the rect may not actually the one draws, so add some extra spaces
-        rect.setHeight(self.lineHeight * (end - begin + 1) +
-                       self.lineHeight / 3)
 
+        x = 0
+        y = (begin - self.firstVisibleLine()) * self.lineHeight
+        w = self.viewport().width()
+        h = (end - begin + 1) * self.lineHeight
+
+        rect = QRect(x, y, w, h)
         self.viewport().update(rect)
 
     def __isLetter(self, char):
