@@ -1115,7 +1115,7 @@ class PatchViewer(QAbstractScrollArea):
         word = content[begin:end]
 
         if word:
-            word = normalizeRegex(word)
+            word = re.escape(word)
             self.wordPattern = re.compile('\\b' + word + '\\b')
             self.cursor.moveTo(textLine.lineNo(), begin)
             self.cursor.selectTo(textLine.lineNo(), end)
@@ -1358,7 +1358,7 @@ class PatchViewer(QAbstractScrollArea):
             return
 
         # text only for now
-        textRe = re.compile(normalizeRegex(text))
+        textRe = re.compile(re.escape(text))
         found = False
 
         for i in range(0, self.textLineCount()):

@@ -118,7 +118,7 @@ class GitView(QWidget):
         pattern = findWhat
         # not regexp, escape the special chars
         if findType != 2:
-            pattern = normalizeRegex(findWhat)
+            pattern = re.escape(findWhat)
 
         flags = re.IGNORECASE if findType == 1 else 0
         self.findPattern = re.compile(pattern, flags)
