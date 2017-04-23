@@ -16,5 +16,4 @@ It also can be a commit viewer if pass --log-mode/-l argument
 
 1. Improve performance for finding commit, use ==--stdin== to avoid start git process many times e.t.c.
 2. Auto collect git conflict files for merging.
-3. Add application icon, translation support e.t.c.
 

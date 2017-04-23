@@ -94,3 +94,4 @@ ui/*.py
 *.swp
 
 .idea
+*.qm
