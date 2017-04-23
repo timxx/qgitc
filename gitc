@@ -136,8 +136,9 @@ class MainWindow(QMainWindow):
 
     def __onRepoChanged(self, repoDir):
         if not Git.repoTopLevelDir(repoDir):
+            msg = self.tr("'{0}' is not a git repository")
             self.ui.statusbar.showMessage(
-                self.tr("'{0}' is not a git repository".format(repoDir)),
+                msg.format(repoDir),
                 5000)  # 5 seconds
             # let gitview clear the old branches
             repoDir = None
@@ -343,16 +344,48 @@ class MainWindow(QMainWindow):
         self.ui.acCompare.setChecked(False)
 
 
+def appDirPath():
+    # qApp.applicationDirPath not works as expected
+    path = os.path.realpath(__file__)
+    return os.path.split(path)[0]
+
+
+def dataDirPath():
+    return appDirPath() + "/data"
+
+
 class Application(QApplication):
 
     def __init__(self, argv):
         super(Application, self).__init__(argv)
 
         self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
+        self.setApplicationName("gitc")
+
+        iconPath = dataDirPath() + "/icons/gitc.svg"
+        self.setWindowIcon(QIcon(iconPath))
+
+        self.setupTranslator()
         self._settings = Settings(self)
 
     def settings(self):
         return self._settings
+
+    def setupTranslator(self):
+        # the Qt translations
+        dirPath = QLibraryInfo.location(QLibraryInfo.TranslationsPath)
+        translator = QTranslator(self)
+        if translator.load(QLocale.system(), "qt", "_", dirPath):
+            self.installTranslator(translator)
+        else:
+            translator = None
+
+        translator = QTranslator(self)
+        dirPath = dataDirPath() + "/translations"
+        if translator.load(QLocale.system(), "", "", dirPath):
+            self.installTranslator(translator)
+        else:
+            translator = None
 
 
 if __name__ == "__main__":

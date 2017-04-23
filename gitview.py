@@ -137,8 +137,8 @@ class GitView(QWidget):
         if sha1:
             ok = self.ui.logView.switchToCommit(sha1)
             if not ok:
-                self.window().showMessage(
-                    self.tr("Revision '{0}' is not known".format(sha1)))
+                msg = self.tr("Revision '{0}' is not known")
+                self.window().showMessage(msg.format(sha1))
 
     def __onFindCommit(self):
         beginCommit = self.ui.logView.currentIndex()
