@@ -1447,6 +1447,9 @@ class PatchViewer(QAbstractScrollArea):
         h = (end - begin + 1) * self.lineHeight
 
         rect = QRect(x, y, w, h)
+        # offset for some odd fonts LoL
+        offset = int(self.lineHeight / 2)
+        rect.adjust(0, -offset, 0, offset)
         self.viewport().update(rect)
 
     def __isLetter(self, char):
