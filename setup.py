@@ -1,11 +1,13 @@
 import sys
 import os
+import codecs
 
 from setuptools import setup
 from distutils.core import Command
 from distutils.command.build import build
 from distutils.spawn import find_executable, spawn
 from distutils.errors import DistutilsExecError
+from glob import glob
 
 from PyQt4 import uic
 
@@ -34,8 +36,11 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        uiDir = os.path.realpath("ui")
-        uic.compileUiDir(uiDir)
+        # uic.compileUiDir doesn't works on Windows
+        for uiFile in glob("ui/*.ui"):
+            pyFile = codecs.open(uiFile[:-3] + ".py", "w+", encoding="utf-8")
+            uic.compileUi(uiFile, pyFile)
+            pyFile.close()
 
     def compile_ts(self):
         lrelease = find_executable("lrelease-qt4") or \
