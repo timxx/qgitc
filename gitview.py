@@ -10,6 +10,29 @@ from git import Git
 import re
 
 
+class BranchFilterProxyModel(QSortFilterProxyModel):
+
+    def __init__(self, parent=None):
+        super(BranchFilterProxyModel, self).__init__(parent)
+
+    def filterAcceptsRow(self, sourceRow, sourceParent):
+        regExp = self.filterRegExp()
+        if regExp.isEmpty():
+            return False
+
+        model = self.sourceModel()
+        index = model.index(sourceRow, 0, sourceParent)
+        if not index.isValid():
+            return False
+
+        branch = index.data(Qt.DisplayRole).lower()
+        pattern = regExp.pattern().lower()
+
+        if branch == pattern:
+            return False
+        return pattern in branch
+
+
 class GitView(QWidget):
     reqCommit = pyqtSignal()
     reqFind = pyqtSignal()
@@ -30,7 +53,24 @@ class GitView(QWidget):
         sizes = [height * 1 / 4, height * 3 / 4]
         self.ui.splitter.setSizes(sizes)
 
+        self.ui.cbBranch.setInsertPolicy(QComboBox.NoInsert)
+        self.ui.cbBranch.setEditable(True)
+
+        # Qt5: uses setFilterMode(Qt.MatchContains) instead the buggy code
+        self.filterModel = BranchFilterProxyModel(self)
+        self.filterModel.setSourceModel(self.ui.cbBranch.model())
+        self.ui.cbBranch.completer().setModel(self.filterModel)
+        self.ui.cbBranch.completer().setCompletionMode(
+            QCompleter.UnfilteredPopupCompletion)
+
+        self.__setupSignals()
+
+    def __setupSignals(self):
         self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
+        # don't use editTextChanged as it will emit when activated signaled
+        self.ui.cbBranch.lineEdit().textEdited.connect(
+            self.filterModel.setFilterFixedString)
+
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.findProgress.connect(self.__onFindProgress)
@@ -44,6 +84,8 @@ class GitView(QWidget):
 
         self.ui.leSha1.returnPressed.connect(self.reqCommit)
         self.ui.leFindWhat.returnPressed.connect(self.reqFind)
+
+        self.ui.cbBranch.completer().activated.connect(self.__onBranchChanged)
 
     def __updateBranches(self):
         self.ui.cbBranch.clear()
@@ -82,7 +124,11 @@ class GitView(QWidget):
         self.__onBranchChanged(branchIdx)
 
     def __onBranchChanged(self, index):
-        if index == -1 or self.ui.cbBranch.count() == 0:
+        if self.ui.cbBranch.count() == 0:
+            return
+        if isinstance(index, int) and index == -1:
+            return
+        if isinstance(index, str) and not index:
             return
 
         self.ui.logView.clear()
