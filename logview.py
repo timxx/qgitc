@@ -7,6 +7,7 @@ from common import *
 from git import *
 
 import re
+import bisect
 
 # for refs
 TAG_COLORS = [Qt.yellow,
@@ -81,145 +82,6 @@ class CommitFetcher():
                 break
 
         return index
-
-
-class FindThread(QThread):
-    findFinished = pyqtSignal(int)
-    findProgress = pyqtSignal(int)
-
-    def __init__(self, parent=None):
-        super(FindThread, self).__init__(parent)
-
-        self.mutex = QMutex()
-
-        pattern = b'diff --(git a/.* b/.*|cc .*)\n'
-        pattern += b'|index [a-z0-9]{7,}..[a-z0-9]{7,}( [0-7]{6})?\n'
-        pattern += b'|@{2,}( (\+|\-)[0-9]+,[0-9]+)+ @{2,}'
-        pattern += b'|\-\-\- (a/.*|/dev/null)\n'
-        pattern += b'|\+\+\+ (b/.*|/dev/null)\n'
-        pattern += b'|(new|deleted) file mode [0-7]{6}\n'
-        pattern += b'|Binary files.* and .* differ\n'
-        pattern += b'|\\ No newline at end of file'
-        self.diffRe = re.compile(pattern)
-
-        self.initData(None, None, None, 0)
-
-    def __findCommitInHeader(self, commit):
-        if self.regexp.search(commit.comments):
-            return True
-
-        if self.regexp.search(commit.author):
-            return True
-
-        if self.regexp.search(commit.commiter):
-            return True
-
-        if self.regexp.search(commit.sha1):
-            return True
-
-        if self.regexp.search(commit.authorDate):
-            return True
-
-        if self.regexp.search(commit.commiterDate):
-            return True
-
-        for p in commit.parents:
-            if self.regexp.search(p):
-                return True
-
-        return False
-
-    def __findCommitInPath(self, commit):
-        paths = Git.commitFiles(commit.sha1)
-        if paths and self.regexp.search(paths):
-            return True
-        return False
-
-    def __findCommitInDiff(self, commit):
-        # TODO: improve performance
-        diff = Git.commitRawDiff(commit.sha1)
-        if not diff:
-            return False
-
-        # remove useless lines
-        diff = self.diffRe.sub(b'', diff)
-
-        # different file might have different encoding
-        # so split the diff data into lines
-        lastEncoding = "utf-8"
-        lines = diff.split(b'\n')
-        for line in lines:
-            line, lastEncoding = decodeDiffData(line, lastEncoding)
-
-            line = line.lstrip()
-            if not line:
-                continue
-
-            if not (line.startswith('+') or
-                    line.startswith('-')):
-                continue
-
-            if self.regexp.search(line):
-                return True
-
-        return False
-
-    def __isInterruptionRequested(self):
-        interruptionReguested = False
-        self.mutex.lock()
-        interruptionReguested = self.interruptionReguested
-        self.mutex.unlock()
-        return interruptionReguested
-
-    def initData(self, commits, findPattern, findRange, findField):
-        self.commits = commits
-        self.regexp = findPattern
-        self.findRange = findRange
-        self.findField = findField
-        self.interruptionReguested = False
-
-    def requestInterruption(self):
-        if not self.isRunning():
-            return
-        self.mutex.lock()
-        self.interruptionReguested = True
-        self.mutex.unlock()
-
-    def isInterruptionRequested(self):
-        if not self.isRunning():
-            return False
-        return self.__isInterruptionRequested()
-
-    def run(self):
-        findInCommit = self.__findCommitInDiff
-        if self.findField == FindField.Comments:
-            findInCommit = self.__findCommitInHeader
-        elif self.findField == FindField.Paths:
-            findInCommit = self.__findCommitInPath
-
-        result = -1
-        total = abs(self.findRange.stop - self.findRange.start)
-        progress = 0
-        percentage = -1
-        # profile = MyProfile()
-        for i in self.findRange:
-            if self.__isInterruptionRequested():
-                result = -2
-                break
-
-            progress += 1
-            new_percentage = int(progress * 100 / total)
-            # avoid too many updates on main thread
-            if percentage != new_percentage:
-                percentage = new_percentage
-                self.findProgress.emit(percentage)
-
-            if findInCommit(self.commits[i]):
-                result = i
-                break
-
-        # profile = None
-        self.findFinished.emit(result)
 
 
 class Marker():
@@ -557,6 +419,63 @@ class Lanes():
         self.types[self.activeLane] = Lane.ACTIVE
 
 
+class FindData():
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.param = None
+        self.needUpdate = True
+        self.result = []
+        self.dataFragment = None
+        self.sha1IndexMap = {}
+
+    def parseData(self, data):
+        if self.dataFragment:
+            fullData = self.dataFragment
+            fullData += data
+            self.dataFragment = None
+        else:
+            fullData = data
+
+        # full sha1 length + newline
+        if len(fullData) < 41:
+            self.dataFragment = fullData
+            return False
+
+        parts = fullData.rstrip(b'\n').split(b'\n')
+        if len(parts[-1]) < 40:
+            self.dataFragment = parts[-1]
+            parts.pop()
+
+        for sha1 in parts:
+            index = self.sha1IndexMap[sha1.decode("utf-8")]
+            bisect.insort(self.result, index)
+
+        return True
+
+    def nextResult(self):
+        if not self.param.range or not self.result:
+            return FIND_NOTFOUND
+
+        x = self.param.range.start
+        if self.param.range.start > self.param.range.stop:
+            index = bisect.bisect_left(self.result, x)
+            if index < len(self.result) and self.result[index] <= x:
+                return self.result[index]
+            if index - 1 >= 0 and self.result[index - 1] <= x:
+                return self.result[index - 1]
+        else:
+            index = bisect.bisect_right(self.result, x)
+            if index - 1 >= 0 and self.result[index - 1] >= x:
+                return self.result[index - 1]
+            if index < len(self.result):
+                return self.result[index]
+
+        return FIND_NOTFOUND
+
+
 class LogView(QAbstractScrollArea):
     currentIndexChanged = pyqtSignal(int)
     findFinished = pyqtSignal(int)
@@ -587,9 +506,9 @@ class LogView(QAbstractScrollArea):
 
         self.authorRe = re.compile("(.*) <.*>$")
 
-        self.findThread = FindThread(self)
-        self.findThread.findFinished.connect(self.findFinished)
-        self.findThread.findProgress.connect(self.findProgress)
+        self.findProc = None
+        self.isFindFinished = False
+        self.findData = FindData()
 
         self.highlightPattern = None
         self.marker = Marker()
@@ -653,6 +572,7 @@ class LogView(QAbstractScrollArea):
         self.lanes = Lanes()
         self.firstFreeLane = 0
         self.marker.clear()
+        self.clearFindData()
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
         self.cancelFindCommit()
@@ -797,6 +717,24 @@ class LogView(QAbstractScrollArea):
         self.marker.clear()
         # TODO: update marked lines only
         self.viewport().update()
+
+    def __onFindDataAvailable(self):
+        data = self.findProc.readAllStandardOutput()
+        if self.findData.parseData(data.data()):
+            if self.findData.needUpdate:
+                index = self.findData.nextResult()
+                self.findFinished.emit(index)
+
+            self.viewport().update()
+
+    def __onFindFinished(self, exitCode, exitStatus):
+        self.findProc = None
+        self.isFindFinished = True
+
+        if exitCode != 0 and exitStatus != QProcess.NormalExit:
+            self.findFinished.emit(FIND_CANCELED)
+        elif not self.findData.result:
+            self.findFinished.emit(FIND_NOTFOUND)
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
@@ -1199,29 +1137,143 @@ class LogView(QAbstractScrollArea):
         vScrollBar.setRange(0, totalLines - linesPerPage)
         vScrollBar.setPageStep(linesPerPage)
 
-    def findCommitAsync(self, findPattern, findRange, findField):
-        # cancel the previous one
-        self.cancelFindCommit()
+    def findCommitAsync(self, findParam):
+        # cancel the previous one if find changed
+        if self.findData.param != findParam:
+            self.findData.reset()
+            self.cancelFindCommit()
 
-        if not findPattern:
+        self.findData.param = findParam
+        if not findParam.pattern:
             return False
 
-        self.findThread.initData(
-            self.data, findPattern, findRange, findField)
-        self.findThread.start()
+        result = self.findData.nextResult()
+        if result != FIND_NOTFOUND or self.isFindFinished:
+            self.findFinished.emit(result)
+            return False
+
+        self.findData.needUpdate = True
+        if not self.findProc:
+            args = ["diff-tree", "-r", "-s", "--stdin"]
+            if findParam.field == FindField.AddOrDel:
+                args.append("-S" + findParam.pattern)
+                if findParam.flag == FIND_REGEXP:
+                    args.append("--pickaxe-regex")
+            else:
+                assert findParam.field == FindField.Changes
+                args.append("-G" + findParam.pattern)
+
+            process = QProcess()
+            process.setWorkingDirectory(Git.REPO_DIR)
+            process.readyReadStandardOutput.connect(self.__onFindDataAvailable)
+            process.finished.connect(self.__onFindFinished)
+            self.findProc = process
+            self.isFindFinished = False
+
+            tempFile = QTemporaryFile()
+            tempFile.open()
+
+            # find the target range first
+            for i in findParam.range:
+                sha1 = self.data[i].sha1
+                tempFile.write(sha1 + "\n")
+                self.findData.sha1IndexMap[sha1] = i
+
+            if findParam.range.start > findParam.range.stop:
+                begin = findParam.range.start + 1
+                end = len(self.data)
+            else:
+                begin = 0
+                end = findParam.range.start
+
+            # then the rest
+            for i in range(begin, end):
+                sha1 = self.data[i].sha1
+                tempFile.write(sha1 + "\n")
+                self.findData.sha1IndexMap[sha1] = i
+
+            tempFile.close()
+            process.setStandardInputFile(tempFile.fileName())
+            process.start("git", args)
 
         return True
 
-    def cancelFindCommit(self):
-        if self.findThread.isRunning():
-            self.findThread.requestInterruption()
-            self.findThread.wait()
+    def findCommitSync(self, findPattern, findRange, findField):
+        # only use for finding in comments, as it should pretty fast
+        assert findField == FindField.Comments
+
+        def findInCommit(commit):
+            if findPattern.search(commit.comments):
+                return True
+
+            if findPattern.search(commit.author):
+                return True
+
+            if findPattern.search(commit.commiter):
+                return True
+
+            if findPattern.search(commit.sha1):
+                return True
+
+            if findPattern.search(commit.authorDate):
+                return True
+
+            if findPattern.search(commit.commiterDate):
+                return True
+
+            for p in commit.parents:
+                if findPattern.search(p):
+                    return True
+
+            return False
+
+        result = -1
+        total = abs(findRange.stop - findRange.start)
+        progress = 0
+        percentage = -1
+
+        for i in findRange:
+            progress += 1
+            new_percentage = int(progress * 100 / total)
+            # avoid too many updates on main thread
+            if percentage != new_percentage:
+                percentage = new_percentage
+                self.findProgress.emit(percentage)
+                qApp.processEvents(QEventLoop.ExcludeUserInputEvents, 50)
+
+            if findInCommit(self.data[i]):
+                result = i
+                break
+
+        return result
+
+    def cancelFindCommit(self, forced=True):
+        self.isFindFinished = False
+        self.findData.needUpdate = False
+
+        needEmit = self.findProc is not None
+
+        # only terminate when forced
+        # otherwise still load at background
+        if self.findProc and forced:
+            # disconnect signals in case invalid state changes
+            self.findProc.readyReadStandardOutput.disconnect()
+            self.findProc.finished.disconnect()
+            self.findProc.close()
+            self.findProc = None
             return True
+
+        if needEmit:
+            self.findFinished.emit(FIND_CANCELED)
+
         return False
 
     def highlightKeyword(self, pattern):
         self.highlightPattern = pattern
         self.viewport().update()
+
+    def clearFindData(self):
+        self.findData.reset()
 
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)
@@ -1297,6 +1349,17 @@ class LogView(QAbstractScrollArea):
                     rg.length = m.end() - rg.start
                     rg.format = fmt
                     formats.append(rg)
+
+            # bold find result
+            # it seems that *in* already fast, so no bsearch
+            if i in self.findData.result:
+                fmt = QTextCharFormat()
+                fmt.setFontWeight(QFont.Bold)
+                rg = QTextLayout.FormatRange()
+                rg.start = 0
+                rg.length = len(content)
+                rg.format = fmt
+                formats.append(rg)
 
             textLayout.setAdditionalFormats(formats)
 

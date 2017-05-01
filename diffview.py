@@ -336,10 +336,6 @@ class DiffView(QWidget):
 
     def highlightKeyword(self, pattern, field=FindField.Comments):
         self.viewer.highlightKeyword(pattern, field)
-        if field == FindField.Paths:
-            self.itemDelegate.setHighlightPattern(pattern)
-        else:
-            self.itemDelegate.setHighlightPattern(None)
         self.treeWidget.viewport().update()
 
     def saveState(self, settings, isBranchA):
@@ -1253,7 +1249,7 @@ class PatchViewer(QAbstractScrollArea):
     def __createDiffFormats(self, textLine):
         if self.highlightField == FindField.All:
             return self.__highlightFormatRange(textLine.text())
-        elif self.highlightField == FindField.Diffs:
+        elif FindField.isDiff(self.highlightField):
             text = textLine.text().lstrip()
             if text.startswith('+') or text.startswith('-'):
                 return self.__highlightFormatRange(textLine.text())

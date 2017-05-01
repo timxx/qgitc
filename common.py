@@ -64,11 +64,47 @@ class MyProfile():
 
 class FindField():
 
-    Comments = 0
-    Paths = 1
-    Diffs = 2
+    AddOrDel = 0
+    Changes = 1
+    Comments = 2
     # for highlight only
     All = 0xff
+
+    @staticmethod
+    def isDiff(field):
+        return field == FindField.AddOrDel or \
+            field == FindField.Changes
+
+
+class FindParameter():
+
+    def __init__(self, range, pattern, field, flag):
+        self.range = range
+        self.pattern = pattern
+        self.field = field
+        self.flag = flag
+
+    def __eq__(self, other):
+        if not other:
+            return False
+
+        if self.field != other.field:
+            return False
+        if self.flag != other.flag:
+            return False
+        if self.pattern != other.pattern:
+            return False
+        # ignore range compare
+        return True
+
+
+# refer to find type combobox
+FIND_EXTACT = 0
+FIND_IGNORECASE = 1
+FIND_REGEXP = 2
+
+FIND_NOTFOUND = -1
+FIND_CANCELED = -2
 
 
 def htmlEscape(text):

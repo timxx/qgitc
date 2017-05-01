@@ -101,17 +101,17 @@
             <widget class="QComboBox" name="cbFindWhat">
              <item>
               <property name="text">
-               <string>containing</string>
-              </property>
-             </item>
-             <item>
-              <property name="text">
-               <string>touching paths</string>
+               <string>adding/removing string</string>
               </property>
              </item>
              <item>
               <property name="text">
                <string>changing lines matching</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>containing</string>
               </property>
              </item>
             </widget>
