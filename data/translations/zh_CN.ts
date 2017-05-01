@@ -67,17 +67,12 @@
         <translation>记录</translation>
     </message>
     <message>
-        <location filename="../../ui/gitview.ui" line="104"/>
+        <location filename="../../ui/gitview.ui" line="114"/>
         <source>containing</source>
         <translation>包含</translation>
     </message>
     <message>
         <location filename="../../ui/gitview.ui" line="109"/>
-        <source>touching paths</source>
-        <translation>改动的路径</translation>
-    </message>
-    <message>
-        <location filename="../../ui/gitview.ui" line="114"/>
         <source>changing lines matching</source>
         <translation>匹配改动的行</translation>
     </message>
@@ -122,45 +117,50 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="59"/>
+        <location filename="../../gitview.py" line="101"/>
         <source>Can&apos;t get branch</source>
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="140"/>
+        <location filename="../../gitview.py" line="200"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="171"/>
+        <location filename="../../gitview.py" line="231"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="173"/>
+        <location filename="../../gitview.py" line="233"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
+    </message>
+    <message>
+        <location filename="../../ui/gitview.ui" line="104"/>
+        <source>adding/removing string</source>
+        <translation>字符串增删</translation>
     </message>
 </context>
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="614"/>
+        <location filename="../../logview.py" line="533"/>
         <source>&amp;Copy commit summary</source>
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="618"/>
+        <location filename="../../logview.py" line="537"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="620"/>
+        <location filename="../../logview.py" line="539"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="622"/>
+        <location filename="../../logview.py" line="541"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
@@ -346,22 +346,22 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="796"/>
+        <location filename="../../diffview.py" line="792"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="801"/>
+        <location filename="../../diffview.py" line="797"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="806"/>
+        <location filename="../../diffview.py" line="802"/>
         <source>Copy &amp;All</source>
         <translation>复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="809"/>
+        <location filename="../../diffview.py" line="805"/>
         <source>&amp;Select All</source>
         <translation>全选(&amp;S)</translation>
     </message>

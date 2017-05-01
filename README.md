@@ -26,6 +26,5 @@ NOTE: Run *python setup.py build* before *build_exe*
 
 ## TODO
 
-1. Improve performance for finding commit, use ==--stdin== to avoid start git process many times e.t.c.
-2. Auto collect git conflict files for merging.
+* Auto collect git conflict files for merging.
 

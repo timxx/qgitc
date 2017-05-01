@@ -140,7 +140,7 @@ class GitView(QWidget):
             self.ui.logView.setLogs(commits)
 
     def __onCommitChanged(self, index):
-        if self.ui.logView.cancelFindCommit():
+        if self.ui.logView.cancelFindCommit(False):
             self.unsetCursor()
         if index != -1:
             commit = self.ui.logView.getCommit(index)
@@ -159,24 +159,38 @@ class GitView(QWidget):
         if not findWhat:
             self.ui.logView.highlightKeyword(None)
             self.ui.diffView.highlightKeyword(None)
+            self.ui.logView.clearFindData()
+            return
+
+        if beginCommit == -1 or \
+                beginCommit == self.ui.logView.getCount():
+            self.__onFindFinished(FIND_NOTFOUND)
             return
 
         pattern = findWhat
         # not regexp, escape the special chars
-        if findType != 2:
+        if findType != FIND_REGEXP:
             pattern = re.escape(findWhat)
 
-        flags = re.IGNORECASE if findType == 1 else 0
+        flags = re.IGNORECASE if findType == FIND_IGNORECASE else 0
         self.findPattern = re.compile(pattern, flags)
         findRange = range(beginCommit, self.ui.logView.getCount()
                           ) if findNext else range(beginCommit, -1, -1)
 
-        findStarted = self.ui.logView.findCommitAsync(
-            self.findPattern, findRange, self.findField)
-
-        if findStarted:
+        if self.findField == FindField.Comments:
             self.window().showProgress(100, self.branchA)
             self.setCursor(Qt.WaitCursor)
+            result = self.ui.logView.findCommitSync(self.findPattern,
+                                                    findRange,
+                                                    self.findField)
+            self.__onFindFinished(result)
+        else:
+            param = FindParameter(findRange, findWhat,
+                                  self.findField, findType)
+            findStarted = self.ui.logView.findCommitAsync(param)
+            if findStarted:
+                self.window().showProgress(0, self.branchA)
+                self.setCursor(Qt.WaitCursor)
 
     def __onReqCommit(self):
         sha1 = self.ui.leSha1.text().strip()
@@ -211,7 +225,7 @@ class GitView(QWidget):
 
         if result >= 0:
             self.ui.logView.setCurrentIndex(result)
-        elif result == -1:
+        elif result == FIND_NOTFOUND:
             message = None
             if self.findNext:
                 message = self.tr("Find reached the end of logs.")
