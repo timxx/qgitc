@@ -426,6 +426,7 @@ class FindData():
 
     def reset(self):
         self.param = None
+        self.filterPath = None
         self.needUpdate = True
         self.result = []
         self.dataFragment = None
@@ -512,6 +513,8 @@ class LogView(QAbstractScrollArea):
 
         self.highlightPattern = None
         self.marker = Marker()
+
+        self.filterPath = None
 
         self.__setupMenu()
 
@@ -1139,11 +1142,13 @@ class LogView(QAbstractScrollArea):
 
     def findCommitAsync(self, findParam):
         # cancel the previous one if find changed
-        if self.findData.param != findParam:
+        if self.findData.param != findParam or \
+                self.findData.filterPath != self.filterPath:
             self.findData.reset()
             self.cancelFindCommit()
 
         self.findData.param = findParam
+        self.findData.filterPath = self.filterPath
         if not findParam.pattern:
             return False
 
@@ -1162,6 +1167,10 @@ class LogView(QAbstractScrollArea):
             else:
                 assert findParam.field == FindField.Changes
                 args.append("-G" + findParam.pattern)
+
+            if self.filterPath:
+                args.append("--")
+                args.append(self.filterPath)
 
             process = QProcess()
             process.setWorkingDirectory(Git.REPO_DIR)
@@ -1274,6 +1283,9 @@ class LogView(QAbstractScrollArea):
 
     def clearFindData(self):
         self.findData.reset()
+
+    def setFilterPath(self, path):
+        self.filterPath = path
 
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)

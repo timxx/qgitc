@@ -277,6 +277,7 @@ class GitView(QWidget):
             newPattern = path
 
         self.ui.diffView.setFilterPath(path)
+        self.ui.logView.setFilterPath(path)
         self.__filterLog(newPattern)
 
     def filterCommit(self, pattern):
@@ -286,6 +287,7 @@ class GitView(QWidget):
             newPattern = "--grep={0}".format(pattern)
 
         self.ui.diffView.setFilterPath(None)
+        self.ui.logView.setFilterPath(None)
         self.__filterLog(newPattern)
 
     def saveState(self, settings, isBranchA):
