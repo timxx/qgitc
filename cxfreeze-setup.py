@@ -21,6 +21,7 @@ buildOptions = dict(
     excludes=excludes,
     includes=includes,
     include_files=includeFiles,
+    include_msvcr=True,
     silent=True)
 
 base = None
