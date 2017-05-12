@@ -1159,7 +1159,7 @@ class LogView(QAbstractScrollArea):
 
         self.findData.needUpdate = True
         if not self.findProc:
-            args = ["diff-tree", "-r", "-s", "--stdin"]
+            args = ["diff-tree", "-r", "-s", "-m", "--stdin"]
             if findParam.field == FindField.AddOrDel:
                 args.append("-S" + findParam.pattern)
                 if findParam.flag == FIND_REGEXP:
