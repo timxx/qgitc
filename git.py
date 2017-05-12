@@ -12,11 +12,16 @@ from common import log_fmt
 class GitProcess():
 
     def __init__(self, repoDir, args):
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         self._process = subprocess.Popen(
             ["git"] + args,
             cwd=repoDir,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+            stderr=subprocess.PIPE,
+            startupinfo=startupinfo)
 
     @property
     def process(self):
