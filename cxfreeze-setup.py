@@ -12,10 +12,6 @@ includeFiles = [("data/icons/gitc.svg", "data/icons/gitc.svg")]
 for qm in glob("data/translations/*.qm"):
     includeFiles.append((qm, qm))
 
-# FIXME: find a better way merge ui files
-for ui in glob("ui/*.py"):
-    includeFiles.append((ui, ui))
-
 buildOptions = dict(
     packages=[],
     excludes=excludes,
