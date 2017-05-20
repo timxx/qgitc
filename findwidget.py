@@ -4,36 +4,26 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 
-# TODO: implement
-class FindOption():
-    CaseSensitive = 0x01
-    WholeWordsOnly = 0x02
-    UseRegEx = 0x04
-
-
-class SearchBox(QLineEdit):
-
-    def __init__(self, parent=None):
-        super(SearchBox, self).__init__(parent)
-
-
 class FindWidget(QWidget):
     find = pyqtSignal(str)
-    findNext = pyqtSignal(bool)
+    findNext = pyqtSignal()
+    findPrevious = pyqtSignal()
 
     def __init__(self, parent=None):
         super(FindWidget, self).__init__(parent, Qt.Popup)
 
-        self.setFocusPolicy(Qt.ClickFocus)
-        self.resize(150, 24)
-
-        self._options = 0
-
         self.__setupUi()
         self.__setupSignals()
 
+        self.setFocusPolicy(Qt.ClickFocus)
+        self.setFocusProxy(self._leFind)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+        self.resize(150, self._leFind.height())
+        self.__updateButtons(False)
+
     def __setupUi(self):
-        self._sbox = SearchBox(self)
+        self._leFind = QLineEdit(self)
         self._tbPrev = QToolButton(self)
         self._tbNext = QToolButton(self)
 
@@ -41,37 +31,23 @@ class FindWidget(QWidget):
         hlayout.setMargin(0)
         hlayout.setSpacing(0)
 
-        hlayout.addWidget(self._sbox)
+        hlayout.addWidget(self._leFind)
         hlayout.addWidget(self._tbPrev)
         hlayout.addWidget(self._tbNext)
 
         self._tbPrev.setText('∧')
         self._tbNext.setText('∨')
-        # TODO: not supported at the moment
-        self._tbPrev.setVisible(False)
-        self._tbNext.setVisible(False)
 
     def __setupSignals(self):
-        self._sbox.textChanged.connect(
-            self.__onTextChanged)
+        self._leFind.textChanged.connect(self.find)
+        self._leFind.returnPressed.connect(self.findNext)
 
-        self._tbPrev.clicked.connect(
-            self.__onPrevClicked)
-        self._tbNext.clicked.connect(
-            self.__onNextClicked)
+        self._tbPrev.clicked.connect(self.findPrevious)
+        self._tbNext.clicked.connect(self.findNext)
 
-    def __onTextChanged(self, text):
-        self.doFind()
-
-    def __onPrevClicked(self):
-        self.findNext.emit(True)
-
-    def __onNextClicked(self):
-        self.findNext.emit(False)
-
-    def doFind(self):
-        text = self._sbox.text()
-        self.find.emit(text)
+    def __updateButtons(self, enable):
+        self._tbNext.setEnabled(enable)
+        self._tbPrev.setEnabled(enable)
 
     def showAnimate(self):
         # TODO: make it animate
@@ -85,19 +61,22 @@ class FindWidget(QWidget):
         offset = viewport.width() - self.width()
         pos.setX(pos.x() + offset)
         self.move(pos)
-        self._sbox.setFocus()
-        self._sbox.selectAll()
+        self._leFind.setFocus()
+        self._leFind.selectAll()
         self.show()
 
     def hideAnimate(self):
         self.hide()
 
     def setText(self, text):
-        self._sbox.setText(text)
+        self._leFind.setText(text)
 
-    def setNotFound(self):
-        # TODO:
-        pass
+    def updateFindStatus(self, found):
+        palette = self._leFind.palette()
+        color = Qt.white if found else QColor(255, 102, 102)
+        palette.setColor(QPalette.Active, QPalette.Base, color)
+        self._leFind.setPalette(palette)
+        self.__updateButtons(found)
 
     def focusOutEvent(self, event):
         self.hideAnimate()
