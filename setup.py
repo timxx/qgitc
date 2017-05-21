@@ -10,6 +10,7 @@ from distutils.errors import DistutilsExecError
 from glob import glob
 
 from PyQt4 import uic
+from version import VERSION
 
 
 class CustomBuild(build):
@@ -86,11 +87,11 @@ class BuildExe(Command):
 
 
 setup(name='gitc',
-      version='1.0',
+      version=VERSION,
       description='A file conflict viewer for git',
       cmdclass=dict(build=CustomBuild,
-          build_qt=BuildQt,
-          build_exe=BuildExe,
-          update_ts=UpdateTs
-          )
+                    build_qt=BuildQt,
+                    build_exe=BuildExe,
+                    update_ts=UpdateTs
+                    )
       )

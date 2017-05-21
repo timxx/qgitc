@@ -9,6 +9,8 @@ from preferences import *
 from settings import *
 from git import Git
 from diffview import PatchViewer
+from common import dataDirPath
+from aboutdialog import AboutDialog
 
 import os
 import sys
@@ -72,6 +74,9 @@ class MainWindow(QMainWindow):
 
         self.ui.lePattern.returnPressed.connect(
             self.__onPatternReturnPressed)
+
+        self.ui.acAbout.triggered.connect(
+            self.__onAboutTriggered)
 
         # settings
         sett = qApp.instance().settings()
@@ -223,6 +228,10 @@ class MainWindow(QMainWindow):
         assert fw and isinstance(fw, PatchViewer)
         fw.executeFind()
 
+    def __onAboutTriggered(self):
+        aboutDlg = AboutDialog(self)
+        aboutDlg.exec()
+
     def saveState(self):
         sett = qApp.instance().settings()
         if not sett.rememberWindowState():
@@ -342,19 +351,6 @@ class MainWindow(QMainWindow):
         self.gitViewB = None
         self.progressBarB = None
         self.ui.acCompare.setChecked(False)
-
-
-def appDirPath():
-    # qApp.applicationDirPath not works as expected
-    if getattr(sys, "frozen", False):
-        path = os.path.realpath(sys.executable)
-    else:
-        path = os.path.realpath(__file__)
-    return os.path.dirname(path)
-
-
-def dataDirPath():
-    return appDirPath() + "/data"
 
 
 class Application(QApplication):

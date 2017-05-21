@@ -2,12 +2,15 @@ import sys
 
 from glob import glob
 from cx_Freeze import setup, Executable
+from version import VERSION
 
 # Dependencies are automatically detected, but it might need
 # fine tuning.
-excludes=["Tkinter"]
+excludes = ["Tkinter"]
 includes = ["logview", "colorwidget"]
-includeFiles = [("data/icons/gitc.svg", "data/icons/gitc.svg")]
+includeFiles = [("data/icons/gitc.svg", "data/icons/gitc.svg"),
+                ("data/licenses/Apache-2.0.html", "data/licenses/Apache-2.0.html"),
+                ("LICENSE", "data/licenses/LICENSE")]
 
 for qm in glob("data/translations/*.qm"):
     includeFiles.append((qm, qm))
@@ -33,7 +36,7 @@ executables = [
                )]
 
 setup(name='gitc',
-      version='1.0',
+      version=VERSION,
       description='A file conflict viewer for git',
       options=dict(build_exe=buildOptions),
       executables=executables,
