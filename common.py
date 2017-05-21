@@ -3,6 +3,8 @@
 import cProfile
 import pstats
 import io
+import os
+import sys
 
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
@@ -131,3 +133,16 @@ def decodeDiffData(data, preferEncoding="utf-8"):
         e = preferEncoding
 
     return line, e
+
+
+def appDirPath():
+    # qApp.applicationDirPath not works as expected
+    if getattr(sys, "frozen", False):
+        path = os.path.realpath(sys.executable)
+    else:
+        path = os.path.realpath(__file__)
+    return os.path.dirname(path)
+
+
+def dataDirPath():
+    return appDirPath() + "/data"

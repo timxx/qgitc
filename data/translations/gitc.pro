@@ -1,6 +1,7 @@
 FORMS = ../../ui/gitview.ui \
     ../../ui/mainwindow.ui \
-    ../../ui/preferences.ui
+    ../../ui/preferences.ui \
+    ../../ui/aboutdialog.ui
 
 SOURCES = ../../gitc \
     ../../colorwidget.py \
@@ -11,6 +12,7 @@ SOURCES = ../../gitc \
     ../../gitview.py \
     ../../logview.py \
     ../../preferences.py \
-    ../../settings.py
+    ../../settings.py \
+    ../../aboutdialog.py
 
 TRANSLATIONS = zh_CN.ts
