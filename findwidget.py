@@ -10,7 +10,8 @@ class FindWidget(QWidget):
     findPrevious = pyqtSignal()
 
     def __init__(self, parent=None):
-        super(FindWidget, self).__init__(parent, Qt.Popup)
+        super(FindWidget, self).__init__(
+            parent, Qt.Popup | Qt.FramelessWindowHint)
 
         self.__setupUi()
         self.__setupSignals()
@@ -19,7 +20,7 @@ class FindWidget(QWidget):
         self.setFocusProxy(self._leFind)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
-        self.resize(150, self._leFind.height())
+        self.resize(150, self._leFind.minimumSize().height())
         self.__updateButtons(False)
 
     def __setupUi(self):
