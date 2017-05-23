@@ -1,4 +1,4 @@
-# --*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -595,6 +595,12 @@ class TextLine():
         line = self._layout.lineAt(0)
         return line.xToCursor(pos.x())
 
+    def offsetToX(self, offset):
+        self.ensureLayout()
+        line = self._layout.lineAt(0)
+        x, _ = line.cursorToX(offset)
+        return x
+
     def draw(self, painter, pos, selections=None, clip=QRectF()):
         self.ensureLayout()
         self._layout.draw(painter, pos, selections, clip)
@@ -999,7 +1005,7 @@ class PatchViewer(QAbstractScrollArea):
             self.findWidget.setText(text)
         self.findWidget.showAnimate()
 
-    def ensureVisible(self, lineNo):
+    def ensureVisible(self, lineNo, start, end):
         if not self.hasTextLines():
             return
 
@@ -1009,6 +1015,18 @@ class PatchViewer(QAbstractScrollArea):
 
         if lineNo < startLine or lineNo >= endLine:
             self.verticalScrollBar().setValue(lineNo)
+
+        hbar = self.horizontalScrollBar()
+
+        textLine = self.textLineAt(lineNo)
+        x1 = textLine.offsetToX(start)
+        x2 = textLine.offsetToX(end)
+
+        viewWidth = self.viewport().width()
+        offset = hbar.value()
+
+        if x1 < offset or x2 > (offset + viewWidth):
+            hbar.setValue(x1)
 
     def mouseMoveEvent(self, event):
         if self.tripleClickTimer.isValid():
@@ -1439,7 +1457,7 @@ class PatchViewer(QAbstractScrollArea):
         self.cursor.moveTo(lineNo, start)
         self.cursor.selectTo(lineNo, end)
 
-        self.ensureVisible(lineNo)
+        self.ensureVisible(lineNo, start, end)
         self.viewport().update()
 
     def __makeContent(self, lineNo, begin=None, end=None):
