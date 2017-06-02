@@ -338,6 +338,14 @@ class MainWindow(QMainWindow):
         self.gitViewB.setBranchB()
 
         repoDir = self.ui.leRepo.text()
+        pattern = self.ui.lePattern.text().strip()
+        if pattern:
+            index = self.ui.cbPatternType.currentIndex()
+            if index == 0:
+                self.gitViewB.filterPath(pattern)
+            else:
+                self.gitViewB.filterCommit(pattern)
+
         self.gitViewB.setRepo(repoDir)
         self.ui.acCompare.setChecked(True)
 
