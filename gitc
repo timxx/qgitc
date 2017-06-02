@@ -31,6 +31,10 @@ class MainWindow(QMainWindow):
         self.ui.statusbar.addWidget(self.progressBarA, 1)
         self.progressBarA.setVisible(False)
 
+        self.isWindowReady = False
+        self.repoDir = None
+        self.timerId = -1
+
         self.__setupSignals()
         self.__setupMenus()
 
@@ -156,9 +160,13 @@ class MainWindow(QMainWindow):
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
 
+        qApp.setOverrideCursor(Qt.WaitCursor)
+
         self.ui.gitViewA.setRepo(repoDir)
         if self.gitViewB:
             self.gitViewB.setRepo(repoDir)
+
+        qApp.restoreOverrideCursor()
 
     def __onPatternTypeChanged(self, index):
         self.ui.btnFileSelect.setEnabled(index == 0)
@@ -315,8 +323,25 @@ class MainWindow(QMainWindow):
 
         super(MainWindow, self).keyPressEvent(event)
 
+    def showEvent(self, event):
+        super(MainWindow, self).showEvent(event)
+        if not self.isWindowReady:
+            self.isWindowReady = True
+
+    def timerEvent(self, event):
+        if event.timerId() != self.timerId:
+            return
+
+        if self.isWindowReady:
+            if self.repoDir:
+                self.ui.leRepo.setText(self.repoDir)
+            self.killTimer(self.timerId)
+            self.timerId = -1
+
     def setRepoDir(self, repoDir):
-        self.ui.leRepo.setText(repoDir)
+        self.repoDir = repoDir
+        if self.timerId == -1:
+            self.timerId = self.startTimer(50)
 
     def setFilterFile(self, filePath):
         self.ui.lePattern.setText(filePath)

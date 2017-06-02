@@ -134,10 +134,14 @@ class GitView(QWidget):
         self.ui.logView.clear()
         self.ui.diffView.clear()
 
+        qApp.setOverrideCursor(Qt.WaitCursor)
+
         curBranch = self.ui.cbBranch.currentText()
         commits = Git.branchLogs(curBranch, self.pattern)
         if commits:
             self.ui.logView.setLogs(commits)
+
+        qApp.restoreOverrideCursor()
 
     def __onCommitChanged(self, index):
         if self.ui.logView.cancelFindCommit(False):
