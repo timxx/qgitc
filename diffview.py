@@ -263,6 +263,8 @@ class DiffView(QWidget):
 
     # TODO: shall we cache the commit?
     def showCommit(self, commit):
+        qApp.setOverrideCursor(Qt.WaitCursor)
+
         self.clear()
         self.commit = commit
 
@@ -322,6 +324,8 @@ class DiffView(QWidget):
         self.treeWidget.setCurrentItem(item)
 
         self.viewer.setData(lineItems)
+
+        qApp.restoreOverrideCursor()
 
     def clear(self):
         self.treeWidget.clear()
