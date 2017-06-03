@@ -28,6 +28,7 @@ class Commit():
         self.committer = ""
         self.commiterDate = ""
         self.parents = []
+        self.children = None
 
     def __str__(self):
         return "Commit: {0}\n"  \

@@ -214,6 +214,13 @@ class Git():
                 "email": parts[4]}
 
     @staticmethod
+    def commitSubject(sha1):
+        args = ["show", "-s", "--pretty=format:%s", sha1]
+        data = Git.checkOutput(args)
+
+        return data
+
+    @staticmethod
     def commitFiles(sha1):
         args = ["diff-tree", "--no-commit-id",
                 "--name-only", "--root", "-r",

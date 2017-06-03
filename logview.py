@@ -604,6 +604,7 @@ class LogView(QAbstractScrollArea):
             self.curIdx = index
             self.ensureVisible()
             self.viewport().update()
+            self.__ensureChildren(index)
             self.currentIndexChanged.emit(index)
 
     def switchToCommit(self, sha1):
@@ -1118,6 +1119,17 @@ class LogView(QAbstractScrollArea):
             lanes.afterFork()
         if lanes.isBranch():
             lanes.afterBranch()
+
+    def __ensureChildren(self, index):
+        commit = self.data[index]
+        if commit.children != None:
+            return
+
+        commit.children = []
+        for i in range(index, -1, -1):
+            child = self.data[i]
+            if commit.sha1 in child.parents:
+                commit.children.append(child.sha1)
 
     def invalidateItem(self, index):
         rect = self.__itemRect(index)
