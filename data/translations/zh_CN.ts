@@ -47,24 +47,29 @@
         <translation>查看此文件日志(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="234"/>
+        <location filename="../../diffview.py" line="237"/>
         <source>Author: </source>
         <translation>作者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="239"/>
+        <location filename="../../diffview.py" line="242"/>
         <source>Committer: </source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="246"/>
+        <location filename="../../diffview.py" line="248"/>
         <source>Parent: </source>
-        <translation>父亲：</translation>
+        <translation>父提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="274"/>
+        <location filename="../../diffview.py" line="282"/>
         <source>Comments</source>
         <translation>记录信息</translation>
+    </message>
+    <message>
+        <location filename="../../diffview.py" line="254"/>
+        <source>Child: </source>
+        <translation>子提交：</translation>
     </message>
 </context>
 <context>
@@ -150,17 +155,17 @@
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="200"/>
+        <location filename="../../gitview.py" line="204"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="231"/>
+        <location filename="../../gitview.py" line="235"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="233"/>
+        <location filename="../../gitview.py" line="237"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -341,32 +346,32 @@
         <translation>比较模式(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="118"/>
+        <location filename="../../gitc" line="122"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="128"/>
+        <location filename="../../gitc" line="132"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="144"/>
+        <location filename="../../gitc" line="148"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="336"/>
+        <location filename="../../gitc" line="361"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="337"/>
+        <location filename="../../gitc" line="362"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="346"/>
+        <location filename="../../gitc" line="379"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -374,22 +379,22 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="793"/>
+        <location filename="../../diffview.py" line="806"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="798"/>
+        <location filename="../../diffview.py" line="811"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="803"/>
+        <location filename="../../diffview.py" line="816"/>
         <source>Copy &amp;All</source>
         <translation>复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="806"/>
+        <location filename="../../diffview.py" line="819"/>
         <source>&amp;Select All</source>
         <translation>全选(&amp;S)</translation>
     </message>

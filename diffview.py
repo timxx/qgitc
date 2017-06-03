@@ -229,6 +229,9 @@ class DiffView(QWidget):
     def __toBytes(self, string):
         return string.encode("utf-8")
 
+    def __commitDesc(self, sha1):
+        return b" (" + Git.commitSubject(sha1) + b")"
+
     def __commitToLineItems(self, commit):
         items = []
         content = self.__toBytes(self.tr("Author: ") + commit.author +
@@ -241,13 +244,16 @@ class DiffView(QWidget):
         item = LineItem(TextLine.Author, content)
         items.append(item)
 
-        # TODO: get commit info
         for parent in commit.parents:
             content = self.__toBytes(self.tr("Parent: ") + parent)
+            content += self.__commitDesc(parent)
             item = LineItem(TextLine.Parent, content)
             items.append(item)
 
-        # TODO: add child, branch etc...
+        for child in commit.children:
+            content = self.__toBytes(self.tr("Child: ") + child)
+            content += self.__commitDesc(child)
+            items.append(LineItem(TextLine.Child, content))
 
         items.append(LineItem(TextLine.Comments, b""))
 
@@ -448,11 +454,12 @@ class TextLine():
 
     Author = 0
     Parent = 1
-    Branch = 2
-    Comments = 3
-    File = 4
-    FileInfo = 5
-    Diff = 6
+    Child = 2
+    Branch = 3
+    Comments = 4
+    File = 5
+    FileInfo = 6
+    Diff = 7
 
     def __init__(self, viewer, type, text):
         self._viewer = viewer
@@ -484,10 +491,6 @@ class TextLine():
             # only find email if item is author
             if linkType != Link.Email and \
                     self._type == TextLine.Author:
-                continue
-            # search sha1 only if item is parent
-            if linkType != Link.Sha1 and \
-                    self._type == TextLine.Parent:
                 continue
 
             matches = pattern.finditer(self._text)
@@ -1562,8 +1565,8 @@ class PatchViewer(QAbstractScrollArea):
     def __openLink(self, link):
         url = None
         if link.type == Link.Sha1:
-            isNear = link.lineType == TextLine.Parent
-            goNext = isNear  # currently only have Parent
+            isNear = link.lineType in (TextLine.Parent, TextLine.Child)
+            goNext = link.lineType == TextLine.Parent
             self.requestCommit.emit(link.data, isNear, goNext)
         elif link.type == Link.Email:
             url = "mailto:" + link.data
