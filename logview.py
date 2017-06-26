@@ -691,7 +691,7 @@ class LogView(QAbstractScrollArea):
 
         mimeData = QMimeData()
         mimeData.setHtml(htmlText)
-        mimeData.setText('{0} ("{1}"), {2}, {3}'.format(
+        mimeData.setText('{0} ("{1}", {2}, {3})'.format(
             commit["sha1"],
             commit["subject"],
             commit["author"],
