@@ -84,6 +84,42 @@ class BuildExe(Command):
 
     def run(self):
         spawn([sys.executable, "cxfreeze-setup.py", "build_exe"])
+        # remove the unused files
+        if sys.platform == "win32":
+            import shutil
+            import distutils.util
+
+            dirName = "exe.%s-%s" % (distutils.util.get_platform(),
+                                     sys.version[0:3])
+            baseDir = "build\\" + dirName
+            files = [baseDir + "\\Qt*.dll",
+                     baseDir + "\\PyQt4\\*.exe"]
+            for pattern in files:
+                for file in glob(pattern):
+                    os.remove(file)
+
+            baseDir += "\\PyQt4"
+            dirs = ["doc", "examples", "include", "mkspecs",
+                    "uic"]
+
+            for dir in dirs:
+                fullPath = baseDir + "\\" + dir
+                if os.path.exists(fullPath):
+                    shutil.rmtree(fullPath)
+
+            files = ["QtWebKit4.dll", "QtDesigner4.dll",
+                     "QtDeclarative4.dll", "QtDesignerComponents4.dll",
+                     "QtScript4.dll", "QtCLucene4.dll",
+                     "QtScriptTools4.dll", "QtHelp4.dll",
+                     "QtTest4.dll"]
+            for file in files:
+                fullPath = baseDir + "\\" + file
+                if os.path.exists(fullPath):
+                    os.remove(fullPath)
+
+                fullPath = fullPath.replace("4.dll", ".pyd")
+                if os.path.exists(fullPath):
+                    os.remove(fullPath)
 
 
 setup(name='gitc',
