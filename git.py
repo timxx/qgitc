@@ -181,12 +181,14 @@ class Git():
     @staticmethod
     def branchLogs(branch, pattern=None):
         args = ["log", "-z", "--topo-order",
-                "--parents", "--boundary",
+                "--parents",
                 "--no-color",
                 "--pretty=format:{0}".format(log_fmt),
                 branch]
         if pattern:
             args.append(pattern)
+        else:
+            args.append("--boundary")
 
         data = Git.checkOutput(args)
         if not data:
