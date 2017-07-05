@@ -221,127 +221,127 @@
         <translation>记录模式</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="60"/>
+        <location filename="../../ui/mainwindow.ui" line="70"/>
         <source>&amp;Browse...</source>
         <translation>浏览(&amp;B)...</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="67"/>
+        <location filename="../../ui/mainwindow.ui" line="77"/>
         <source>Type keyword here and press Enter to filter</source>
         <translation>输入关键字，按回车来过滤</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="74"/>
+        <location filename="../../ui/mainwindow.ui" line="84"/>
         <source>&amp;Choose...</source>
         <translation>选择(&amp;C)...</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="108"/>
+        <location filename="../../ui/mainwindow.ui" line="118"/>
         <source>&amp;File</source>
         <translation>文件(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="114"/>
+        <location filename="../../ui/mainwindow.ui" line="124"/>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="120"/>
+        <location filename="../../ui/mainwindow.ui" line="130"/>
         <source>&amp;Settings</source>
         <translation>设置(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="126"/>
+        <location filename="../../ui/mainwindow.ui" line="136"/>
         <source>&amp;View</source>
         <translation>视图(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="130"/>
+        <location filename="../../ui/mainwindow.ui" line="140"/>
         <source>&amp;Ignore whitespace</source>
         <translation>忽略空白改动(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="143"/>
+        <location filename="../../ui/mainwindow.ui" line="153"/>
         <source>&amp;Edit</source>
         <translation>编辑(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="164"/>
+        <location filename="../../ui/mainwindow.ui" line="174"/>
         <source>&amp;Quit</source>
         <translation>退出(&amp;Q)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="167"/>
+        <location filename="../../ui/mainwindow.ui" line="177"/>
         <source>Ctrl+Q</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="177"/>
+        <location filename="../../ui/mainwindow.ui" line="187"/>
         <source>&amp;About gitc</source>
         <translation>关于gitc(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="182"/>
+        <location filename="../../ui/mainwindow.ui" line="192"/>
         <source>&amp;Preferences...</source>
         <translation>首选项(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="187"/>
+        <location filename="../../ui/mainwindow.ui" line="197"/>
         <source>Ignore whitespace changes</source>
         <translation>忽略空白改动</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="195"/>
+        <location filename="../../ui/mainwindow.ui" line="205"/>
         <source>&amp;Visualize whitespace</source>
         <translation>显示空白字符(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="203"/>
+        <location filename="../../ui/mainwindow.ui" line="213"/>
         <source>At &amp;end of line</source>
         <translation>行末(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="211"/>
+        <location filename="../../ui/mainwindow.ui" line="221"/>
         <source>&amp;All</source>
         <translation>全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="219"/>
+        <location filename="../../ui/mainwindow.ui" line="229"/>
         <source>&amp;None</source>
         <translation>无(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="229"/>
+        <location filename="../../ui/mainwindow.ui" line="239"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="232"/>
+        <location filename="../../ui/mainwindow.ui" line="242"/>
         <source>Ctrl+C</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="242"/>
+        <location filename="../../ui/mainwindow.ui" line="252"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="245"/>
+        <location filename="../../ui/mainwindow.ui" line="255"/>
         <source>Ctrl+A</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="255"/>
+        <location filename="../../ui/mainwindow.ui" line="265"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="258"/>
+        <location filename="../../ui/mainwindow.ui" line="268"/>
         <source>Ctrl+F</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="266"/>
+        <location filename="../../ui/mainwindow.ui" line="276"/>
         <source>&amp;Compare Mode</source>
         <translation>比较模式(&amp;C)</translation>
     </message>
@@ -361,19 +361,29 @@
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="361"/>
+        <location filename="../../gitc" line="366"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="362"/>
+        <location filename="../../gitc" line="367"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="379"/>
+        <location filename="../../gitc" line="380"/>
         <source>Branch</source>
         <translation>分支</translation>
+    </message>
+    <message>
+        <location filename="../../ui/mainwindow.ui" line="54"/>
+        <source>Author</source>
+        <translation>作者</translation>
+    </message>
+    <message>
+        <location filename="../../ui/mainwindow.ui" line="59"/>
+        <source>Committer</source>
+        <translation>提交者</translation>
     </message>
 </context>
 <context>

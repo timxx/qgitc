@@ -171,7 +171,8 @@ class MainWindow(QMainWindow):
     def __onPatternTypeChanged(self, index):
         self.ui.btnFileSelect.setEnabled(index == 0)
         pattern = self.ui.lePattern.text().strip()
-        self.filterPattern(pattern)
+        self.filterPattern(pattern, self.ui.gitViewA)
+        self.filterPattern(pattern, self.gitViewB)
 
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
@@ -219,7 +220,8 @@ class MainWindow(QMainWindow):
 
     def __onPatternReturnPressed(self):
         pattern = self.ui.lePattern.text().strip()
-        self.filterPattern(pattern)
+        self.filterPattern(pattern, self.ui.gitViewA)
+        self.filterPattern(pattern, self.gitViewB)
 
     def __onCopyTriggered(self):
         fw = qApp.focusWidget()
@@ -279,16 +281,19 @@ class MainWindow(QMainWindow):
 
         return True
 
-    def filterPattern(self, pattern):
+    def filterPattern(self, pattern, gitView):
+        if not gitView:
+            return
+
         index = self.ui.cbPatternType.currentIndex()
         if index == 0:
-            self.ui.gitViewA.filterPath(pattern)
-            if self.gitViewB:
-                self.gitViewB.filterPath(pattern)
-        else:
-            self.ui.gitViewA.filterCommit(pattern)
-            if self.gitViewB:
-                self.gitViewB.filterCommit(pattern)
+            gitView.filterPath(pattern)
+        elif index == 1:
+            gitView.filterCommit(pattern)
+        elif index == 2:
+            gitView.filterAuthor(pattern)
+        elif index == 3:
+            gitView.filterCommitter(pattern)
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
@@ -365,11 +370,7 @@ class MainWindow(QMainWindow):
         repoDir = self.ui.leRepo.text()
         pattern = self.ui.lePattern.text().strip()
         if pattern:
-            index = self.ui.cbPatternType.currentIndex()
-            if index == 0:
-                self.gitViewB.filterPath(pattern)
-            else:
-                self.gitViewB.filterCommit(pattern)
+            self.filterPattern(pattern, self.gitViewB)
 
         self.gitViewB.setRepo(repoDir)
         self.ui.acCompare.setChecked(True)

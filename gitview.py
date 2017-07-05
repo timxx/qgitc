@@ -294,6 +294,26 @@ class GitView(QWidget):
         self.ui.logView.setFilterPath(None)
         self.__filterLog(newPattern)
 
+    def filterAuthor(self, author):
+        if not author:
+            newPattern = None
+        else:
+            newPattern = "--author={0}".format(author)
+
+        self.ui.diffView.setFilterPath(None)
+        self.ui.logView.setFilterPath(None)
+        self.__filterLog(newPattern)
+
+    def filterCommitter(self, committer):
+        if not committer:
+            newPattern = None
+        else:
+            newPattern = "--committer={0}".format(committer)
+
+        self.ui.diffView.setFilterPath(None)
+        self.ui.logView.setFilterPath(None)
+        self.__filterLog(newPattern)
+
     def saveState(self, settings, isBranchA):
         state = self.ui.splitter.saveState()
         settings.setGitViewState(state, isBranchA)
