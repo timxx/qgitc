@@ -1425,6 +1425,7 @@ class LogView(QAbstractScrollArea):
             if self.curIdx > 0:
                 startLine = self.verticalScrollBar().value()
                 self.curIdx -= 1
+                self.__ensureChildren(self.curIdx)
                 if self.curIdx >= startLine:
                     self.invalidateItem(self.curIdx + 1)
                     self.invalidateItem(self.curIdx)
@@ -1436,6 +1437,7 @@ class LogView(QAbstractScrollArea):
             if self.curIdx + 1 < len(self.data):
                 endLine = self.verticalScrollBar().value() + self.__linesPerPage()
                 self.curIdx += 1
+                self.__ensureChildren(self.curIdx)
                 if self.curIdx < endLine:
                     self.invalidateItem(self.curIdx - 1)
                     self.invalidateItem(self.curIdx)
