@@ -622,7 +622,7 @@ class LogView(QAbstractScrollArea):
         return index != -1
 
     def switchToNearCommit(self, sha1, goNext=True):
-        curIdx = self.curIdx if self.curIdx >= 0 else 0
+        self.curIdx = self.curIdx if self.curIdx >= 0 else 0
         index = self.data.findCommitIndex(sha1, self.curIdx, goNext)
         if index != -1:
             self.setCurrentIndex(index)
