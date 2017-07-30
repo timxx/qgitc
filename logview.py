@@ -600,6 +600,9 @@ class LogView(QAbstractScrollArea):
             self.verticalScrollBar().setValue(self.curIdx)
 
     def setCurrentIndex(self, index):
+        if index == self.curIdx:
+            return
+
         if index >= 0 and index < len(self.data):
             self.curIdx = index
             self.ensureVisible()
@@ -1446,8 +1449,8 @@ class LogView(QAbstractScrollArea):
                     self.verticalScrollBar().setValue(v + 1)
 
                 self.currentIndexChanged.emit(self.curIdx)
-
-        super(LogView, self).keyPressEvent(event)
+        else:
+            super(LogView, self).keyPressEvent(event)
 
     def focusInEvent(self, event):
         self.invalidateItem(self.curIdx)
