@@ -178,22 +178,22 @@
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="536"/>
+        <location filename="../../logview.py" line="539"/>
         <source>&amp;Copy commit summary</source>
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="540"/>
+        <location filename="../../logview.py" line="543"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="542"/>
+        <location filename="../../logview.py" line="545"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="544"/>
+        <location filename="../../logview.py" line="547"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
@@ -261,117 +261,117 @@
         <translation>忽略空白改动(&amp;I)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="153"/>
+        <location filename="../../ui/mainwindow.ui" line="155"/>
         <source>&amp;Edit</source>
         <translation>编辑(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="174"/>
+        <location filename="../../ui/mainwindow.ui" line="176"/>
         <source>&amp;Quit</source>
         <translation>退出(&amp;Q)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="177"/>
+        <location filename="../../ui/mainwindow.ui" line="179"/>
         <source>Ctrl+Q</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="187"/>
+        <location filename="../../ui/mainwindow.ui" line="189"/>
         <source>&amp;About gitc</source>
         <translation>关于gitc(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="192"/>
+        <location filename="../../ui/mainwindow.ui" line="194"/>
         <source>&amp;Preferences...</source>
         <translation>首选项(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="197"/>
+        <location filename="../../ui/mainwindow.ui" line="199"/>
         <source>Ignore whitespace changes</source>
         <translation>忽略空白改动</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="205"/>
+        <location filename="../../ui/mainwindow.ui" line="207"/>
         <source>&amp;Visualize whitespace</source>
         <translation>显示空白字符(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="213"/>
+        <location filename="../../ui/mainwindow.ui" line="215"/>
         <source>At &amp;end of line</source>
         <translation>行末(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="221"/>
+        <location filename="../../ui/mainwindow.ui" line="223"/>
         <source>&amp;All</source>
         <translation>全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="229"/>
+        <location filename="../../ui/mainwindow.ui" line="231"/>
         <source>&amp;None</source>
         <translation>无(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="239"/>
+        <location filename="../../ui/mainwindow.ui" line="241"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="242"/>
+        <location filename="../../ui/mainwindow.ui" line="244"/>
         <source>Ctrl+C</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="252"/>
+        <location filename="../../ui/mainwindow.ui" line="254"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="255"/>
+        <location filename="../../ui/mainwindow.ui" line="257"/>
         <source>Ctrl+A</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="265"/>
+        <location filename="../../ui/mainwindow.ui" line="267"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="268"/>
+        <location filename="../../ui/mainwindow.ui" line="270"/>
         <source>Ctrl+F</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="276"/>
+        <location filename="../../ui/mainwindow.ui" line="278"/>
         <source>&amp;Compare Mode</source>
         <translation>比较模式(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="122"/>
+        <location filename="../../gitc" line="128"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="132"/>
+        <location filename="../../gitc" line="138"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="148"/>
+        <location filename="../../gitc" line="154"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="366"/>
+        <location filename="../../gitc" line="377"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="367"/>
+        <location filename="../../gitc" line="378"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="380"/>
+        <location filename="../../gitc" line="391"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -384,6 +384,11 @@
         <location filename="../../ui/mainwindow.ui" line="59"/>
         <source>Committer</source>
         <translation>提交者</translation>
+    </message>
+    <message>
+        <location filename="../../ui/mainwindow.ui" line="289"/>
+        <source>Show &amp;graph</source>
+        <translation>显示分支图(&amp;G)</translation>
     </message>
 </context>
 <context>

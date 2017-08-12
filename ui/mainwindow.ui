@@ -146,6 +146,8 @@
     <addaction name="acVisualizeWhitespace"/>
     <addaction name="menuIgnoreWhitespace"/>
     <addaction name="separator"/>
+    <addaction name="acShowGraph"/>
+    <addaction name="separator"/>
     <addaction name="acCompare"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
@@ -274,6 +276,17 @@
    </property>
    <property name="text">
     <string>&amp;Compare Mode</string>
+   </property>
+  </action>
+  <action name="acShowGraph">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show &amp;graph</string>
    </property>
   </action>
  </widget>
