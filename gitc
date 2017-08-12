@@ -18,6 +18,7 @@ import argparse
 
 
 class MainWindow(QMainWindow):
+    showGraphChanged = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -34,6 +35,8 @@ class MainWindow(QMainWindow):
         self.isWindowReady = False
         self.repoDir = None
         self.timerId = -1
+
+        self._showGraph = True
 
         self.__setupSignals()
         self.__setupMenus()
@@ -57,6 +60,9 @@ class MainWindow(QMainWindow):
             self.__onAcIgnoreEOLTriggered)
         self.ui.acIgnoreAll.triggered.connect(
             self.__onAcIgnoreAllTriggered)
+
+        self.ui.acShowGraph.triggered.connect(
+            self.__onAcShowGraphTriggered)
 
         self.ui.acCompare.triggered.connect(
             self.__onAcCompareTriggered)
@@ -211,6 +217,11 @@ class MainWindow(QMainWindow):
         self.ui.gitViewA.updateSettings()
         if self.gitViewB:
             self.gitViewB.updateSettings()
+
+    def __onAcShowGraphTriggered(self, checked):
+        if self._showGraph != checked:
+            self._showGraph = checked
+            self.showGraphChanged.emit(checked)
 
     def __onAcCompareTriggered(self, checked):
         if checked:
@@ -385,6 +396,10 @@ class MainWindow(QMainWindow):
         self.gitViewB = None
         self.progressBarB = None
         self.ui.acCompare.setChecked(False)
+
+    @property
+    def showGraph(self):
+        return self._showGraph
 
 
 class Application(QApplication):

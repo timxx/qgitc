@@ -525,6 +525,9 @@ class LogView(QAbstractScrollArea):
         # since we can view the long content in diff view
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
+        self.window().showGraphChanged.connect(
+            self.__onShowGraphChanged)
+
         self.updateSettings()
 
     def __del__(self):
@@ -742,6 +745,9 @@ class LogView(QAbstractScrollArea):
             self.findFinished.emit(FIND_CANCELED)
         elif not self.findData.result:
             self.findFinished.emit(FIND_NOTFOUND)
+
+    def __onShowGraphChanged(self, show):
+        self.viewport().update()
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
@@ -1325,7 +1331,8 @@ class LogView(QAbstractScrollArea):
             rect = self.__itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
-            self.__drawGraph(painter, rect, i)
+            if self.window().showGraph:
+                self.__drawGraph(painter, rect, i)
 
             commit = self.data[i]
             # author
