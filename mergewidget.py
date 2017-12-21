@@ -287,7 +287,6 @@ class MergeWidget(QWidget):
 
         self.resolveIndex = index.row()
         file = index.data()
-        self.requestResolve.emit(file)
 
         # TODO: custom suffix tool support
         args = ["mergetool", "--no-prompt", file]
@@ -298,3 +297,5 @@ class MergeWidget(QWidget):
         self.process.finished.connect(self.__onResolveFinished)
         self.process.setWorkingDirectory(Git.REPO_DIR)
         self.process.start("git", args)
+
+        self.requestResolve.emit(file)
