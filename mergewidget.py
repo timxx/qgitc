@@ -153,9 +153,7 @@ class MergeWidget(QWidget):
     def __onReadyRead(self):
         data = self.process.readAllStandardOutput()
         # seems no options to control this buggy prompt
-        if b'[y/n]?' in data:
-            # should be "Continue merging other unresolved paths"
-            print(data)
+        if b'Continue merging other unresolved paths [y/n]?' in data:
             self.process.write('n\n')
         elif b'Deleted merge conflict for' in data:
             text = data.data().decode("utf-8")
