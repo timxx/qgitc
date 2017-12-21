@@ -274,6 +274,13 @@ class GitView(QWidget):
             self.repo = repo
             self.__updateBranches()
 
+    def setCurrentBranch(self, branch):
+        index = self.ui.cbBranch.findText(branch)
+        if index == -1:
+            index = self.ui.cbBranch.findText(branch, Qt.MatchEndsWith)
+        if index != -1:
+            self.ui.cbBranch.setCurrentIndex(index)
+
     def filterPath(self, path):
         if not path:
             newPattern = None
@@ -331,3 +338,6 @@ class GitView(QWidget):
     def updateSettings(self):
         self.ui.logView.updateSettings()
         self.ui.diffView.updateSettings()
+
+    def setBranchChangeble(self, canChange):
+        self.ui.cbBranch.setEnabled(canChange)
