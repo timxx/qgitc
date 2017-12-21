@@ -256,17 +256,25 @@ class MergeWidget(QWidget):
     def updateList(self):
         files = Git.conflictFiles()
         self.view.model().clear()
-        for f in files:
-            item = QStandardItem(self.iconConflict, f)
-            item.setData(STATE_CONFLICT, StateRole)
-            self.view.model().appendRow(item)
+        if files:
+            for f in files:
+                item = QStandardItem(self.iconConflict, f)
+                item.setData(STATE_CONFLICT, StateRole)
+                self.view.model().appendRow(item)
 
-        index = self.view.model().index(0, 0)
-        self.view.setCurrentIndex(index)
+            index = self.view.model().index(0, 0)
+            self.view.setCurrentIndex(index)
         self.resolvedCount = 0
         self.__updateStatus()
 
+        for action in self.menu.actions():
+            action.setEnabled(not files is None)
+        self.btnResolve.setEnabled(not files is None)
+
     def resolve(self, index):
+        if not index.isValid():
+            return
+
         if index.data(StateRole) == STATE_RESOLVED:
             QMessageBox.information(self, qApp.applicationName(),
                                     self.tr("This file is already resolved."))
