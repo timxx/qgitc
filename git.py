@@ -5,6 +5,7 @@ from collections import defaultdict
 import subprocess
 import os
 import bisect
+import re
 
 from common import log_fmt
 
@@ -265,3 +266,82 @@ class Git():
             args.append(path)
 
         process = Git.run(args)
+
+    @staticmethod
+    def conflictFiles():
+        args = ["diff", "--name-only",
+                "--diff-filter=U",
+                "-no-color"]
+        data = Git.checkOutput(args)
+        if not data:
+            return None
+        return data.rstrip(b'\n').decode("utf-8").split('\n')
+
+    @staticmethod
+    def isMergeInProgress():
+        """return True only if in merge state and has unmerged paths"""
+        path = Git.gitPath("MERGE_HEAD")
+        if not path:
+            return False
+        if not os.path.exists(path):
+            return False
+
+        # use raw data without splitting
+        args = ["diff", "--name-only",
+                "--diff-filter=U",
+                "-no-color"]
+        data = Git.checkOutput(args)
+        if not data:
+            return False
+
+        return len(data.rstrip(b'\n')) > 0
+
+    @staticmethod
+    def gitDir():
+        args = ["rev-parse", "--git-dir"]
+        data = Git.checkOutput(args)
+        if not data:
+            return None
+
+        return data.rstrip(b'\n').decode("utf-8")
+
+    @staticmethod
+    def gitPath(name):
+        dir = Git.gitDir()
+        if not dir:
+            return None
+        if dir[-1] != '/' and dir[-1] != '\\':
+            dir += '/'
+
+        return dir + name
+
+    @staticmethod
+    def mergeBranchName():
+        """return the current merge branch name"""
+        # TODO: is there a better way?
+        path = Git.gitPath("MERGE_MSG")
+        if not os.path.exists(path):
+            return None
+
+        with open(path, "r") as f:
+            line = f.readline()
+            m = re.match("Merge.* '(.*)' into .*", line)
+            if m:
+                return m.group(1)
+
+        return None
+
+    @staticmethod
+    def resolveBy(ours, path):
+        args = ["checkout",
+                "--ours" if ours else "--theirs",
+                path]
+        process = Git.run(args)
+        process.communicate()
+        if process.returncode != 0:
+            return False
+
+        args = ["add", path]
+        process = Git.run(args)
+        process.communicate()
+        return True if process.returncode == 0 else False

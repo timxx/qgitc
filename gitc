@@ -11,6 +11,7 @@ from git import Git
 from diffview import PatchViewer
 from common import dataDirPath
 from aboutdialog import AboutDialog
+from mergewidget import MergeWidget
 
 import os
 import sys
@@ -20,7 +21,7 @@ import argparse
 class MainWindow(QMainWindow):
     showGraphChanged = pyqtSignal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, mergeMode=False, parent=None):
         super(MainWindow, self).__init__(parent)
 
         self.ui = Ui_MainWindow()
@@ -37,6 +38,17 @@ class MainWindow(QMainWindow):
         self.timerId = -1
 
         self._showGraph = True
+
+        self.mergeWidget = None
+        if mergeMode:
+            self.mergeWidget = MergeWidget(self)
+            self.mergeWidget.show()
+            self.setCompareMode()
+            # not allowed changed in this mode
+            self.ui.leRepo.setReadOnly(True)
+            self.ui.acCompare.setEnabled(False)
+            self.ui.gitViewA.setBranchChangeble(False)
+            self.gitViewB.setBranchChangeble(False)
 
         self.__setupSignals()
         self.__setupMenus()
@@ -87,6 +99,10 @@ class MainWindow(QMainWindow):
 
         self.ui.acAbout.triggered.connect(
             self.__onAboutTriggered)
+
+        if self.mergeWidget:
+            self.mergeWidget.requestResolve.connect(
+                self.__onRequestResolve)
 
         # settings
         sett = qApp.instance().settings()
@@ -172,6 +188,16 @@ class MainWindow(QMainWindow):
         if self.gitViewB:
             self.gitViewB.setRepo(repoDir)
 
+        # merge mode
+        if self.mergeWidget:
+            branch = Git.mergeBranchName()
+            if branch:
+                # TODO: make it inside setRepo?
+                self.ui.gitViewA.setCurrentBranch(branch)
+            else:
+                # TODO: let user choice
+                pass
+
         qApp.restoreOverrideCursor()
 
     def __onPatternTypeChanged(self, index):
@@ -252,6 +278,9 @@ class MainWindow(QMainWindow):
     def __onAboutTriggered(self):
         aboutDlg = AboutDialog(self)
         aboutDlg.exec()
+
+    def __onRequestResolve(self, filePath):
+        self.setFilterFile(filePath)
 
     def saveState(self):
         sett = qApp.instance().settings()
@@ -446,6 +475,8 @@ if __name__ == "__main__":
                         help="Filter file")
     parser.add_argument("-c", "--compare-mode", action="store_true",
                         help="Compare mode, show two branches for comparing")
+    parser.add_argument("-m", "--merge-mode", action="store_true",
+                        help="Merge mode, for helping resolve conflicts")
 
     args = parser.parse_args()
 
@@ -457,13 +488,19 @@ if __name__ == "__main__":
 
     app = Application(sys.argv)
 
-    window = MainWindow()
+    if args.merge_mode and not Git.isMergeInProgress():
+        QMessageBox.information(None, app.applicationName(),
+                                app.tr("Not in merge state, now quit!"))
+        sys.exit(0)
+
+    window = MainWindow(args.merge_mode)
     window.setGeometry(QStyle.alignedRect(
         Qt.LeftToRight, Qt.AlignCenter,
         window.size(),
         app.desktop().availableGeometry()))
 
-    if args.compare_mode:
+    # merge mode will also change to compare view
+    if not args.merge_mode and args.compare_mode:
         window.setCompareMode()
 
     if filterFile:
