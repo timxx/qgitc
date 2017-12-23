@@ -13,6 +13,7 @@ SOURCES = ../../gitc \
     ../../logview.py \
     ../../preferences.py \
     ../../settings.py \
-    ../../aboutdialog.py
+    ../../aboutdialog.py \
+    ../../mergewidget.py
 
 TRANSLATIONS = zh_CN.ts

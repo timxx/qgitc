@@ -150,3 +150,9 @@ class Settings(QSettings):
     def setIgnoreWhitespace(self, index):
         self.setValue("ignoreWhitespace", index)
         self.ignoreWhitespaceChanged.emit(index)
+
+    def mergeToolList(self):
+        return self.value("mergeTool", [])
+
+    def setMergeToolList(self, tools):
+        self.setValue("mergeTool", tools)

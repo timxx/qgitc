@@ -49,7 +49,7 @@ class MergeWidget(QWidget):
         vlayout.addWidget(self.view)
 
         hlayout = QHBoxLayout()
-        self.cbAutoNext = QCheckBox(self.tr("Auto resolve next conflict"))
+        self.cbAutoNext = QCheckBox(self.tr("Continuous resolve"))
         self.btnResolve = QPushButton(self.tr("Resolve"))
         hlayout.addWidget(self.cbAutoNext)
         hlayout.addSpacerItem(QSpacerItem(
@@ -150,7 +150,7 @@ class MergeWidget(QWidget):
             if Git.resolveBy(False, index.data()):
                 self.__resolvedIndex(index)
 
-    def __onReadyRead(self):
+    def __onResolveReadyRead(self):
         data = self.process.readAllStandardOutput()
         # seems no options to control this buggy prompt
         if b'Continue merging other unresolved paths [y/n]?' in data:
@@ -197,6 +197,9 @@ class MergeWidget(QWidget):
                 self.process.write("r\n")
             else:
                 self.process.write("a\n")
+        elif b'Was the merge successful [y/n]?' in data:
+            # TODO:
+            self.process.write("n\n")
         elif b'?' in data:
             # TODO: might have other prompt need yes no
             print(data)
@@ -248,6 +251,17 @@ class MergeWidget(QWidget):
         self.view.setCurrentIndex(index)
         self.resolve(index)
 
+    def __onResolveError(self):
+        data = self.process.readAllStandardError()
+        if b'Unknown merge tool' in data:
+            text = self.tr(
+                "Unknown merge tool, please check your configuration.")
+            QMessageBox.information(self,
+                                    qApp.applicationName(),
+                                    text)
+        else:
+            print(data)
+
     def contextMenuEvent(self, event):
         self.menu.exec(event.globalPos())
 
@@ -285,13 +299,22 @@ class MergeWidget(QWidget):
 
         self.resolveIndex = index.row()
         file = index.data()
+        args = ["mergetool", "--no-prompt"]
 
-        # TODO: custom suffix tool support
-        args = ["mergetool", "--no-prompt", file]
+        tools = qApp.instance().settings().mergeToolList()
+        # ignored case even on Unix platform
+        lowercase_file = file.lower()
+        for tool in tools:
+            if tool.enabled and tool.isValid():
+                if lowercase_file.endswith(tool.suffix.lower()):
+                    args.append("--tool={}".format(tool.command))
+                    break
+        args.append(file)
 
         # subprocess is not suitable here
         self.process = QProcess(self)
-        self.process.readyReadStandardOutput.connect(self.__onReadyRead)
+        self.process.readyReadStandardOutput.connect(self.__onResolveReadyRead)
+        self.process.readyReadStandardError.connect(self.__onResolveError)
         self.process.finished.connect(self.__onResolveFinished)
         self.process.setWorkingDirectory(Git.REPO_DIR)
         self.process.start("git", args)

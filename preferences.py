@@ -1,7 +1,145 @@
 # -*- coding: utf-8 -*-
 
 from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
 from ui.preferences import *
+from mergetool import MergeTool
+
+
+class ToolTableModel(QAbstractTableModel):
+    Col_Enabled = 0
+    Col_Suffix = 1
+    Col_Tool = 2
+
+    suffixExists = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super(ToolTableModel, self).__init__(parent)
+
+        self._data = []
+
+    def __checkSuffix(self, row, suffix):
+        for i in range(len(self._data)):
+            if i == row:
+                continue
+            tool = self._data[i]
+            if tool.suffix == suffix:
+                return False
+
+        return True
+
+    def columnCount(self, parent=QModelIndex()):
+        return 3
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._data)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation != Qt.Horizontal:
+            return None
+        if role != Qt.DisplayRole:
+            return None
+
+        if section == self.Col_Enabled:
+            return self.tr("Enabled")
+        if section == self.Col_Suffix:
+            return self.tr("Suffix")
+        if section == self.Col_Tool:
+            return self.tr("Tool")
+
+        return None
+
+    def flags(self, index):
+        f = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if index.column() == self.Col_Enabled:
+            f |= Qt.ItemIsUserCheckable
+        else:
+            f |= Qt.ItemIsEditable
+
+        return f
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+
+        tool = self._data[index.row()]
+        col = index.column()
+        if role == Qt.DisplayRole:
+            if col == self.Col_Suffix:
+                return tool.suffix
+            if col == self.Col_Tool:
+                return tool.command
+        elif role == Qt.CheckStateRole:
+            if col == self.Col_Enabled:
+                return Qt.Checked if tool.enabled else Qt.Unchecked
+
+        return None
+
+    def setData(self, index, value, role=Qt.EditRole):
+        row = index.row()
+        col = index.column()
+        tool = self._data[row]
+
+        if role == Qt.CheckStateRole:
+            if col == self.Col_Enabled:
+                tool.enabled = True if value == Qt.Checked else False
+        elif role == Qt.EditRole:
+            value = value.strip()
+            if not value:
+                return False
+            if col == self.Col_Suffix:
+                if not self.__checkSuffix(row, value):
+                    self.suffixExists.emit(value)
+                    return False
+                tool.suffix = value
+            elif col == self.Col_Tool:
+                tool.command = value
+        else:
+            return False
+
+        self._data[row] = tool
+        return True
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        self.beginInsertRows(parent, row, row + count - 1)
+
+        for i in range(count):
+            self._data.insert(row, MergeTool(True))
+
+        self.endInsertRows()
+
+        return True
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        if row >= len(self._data):
+            return False
+
+        self.beginRemoveRows(parent, row, row + count - 1)
+
+        for i in range(count - 1 + row, row - 1, -1):
+            if i < len(self._data):
+                del self._data[i]
+
+        self.endRemoveRows()
+
+        return True
+
+    def rawData(self):
+        return self._data
+
+    def setRawData(self, data):
+        parent = QModelIndex()
+
+        if self._data:
+            self.beginRemoveRows(parent, 0, len(self._data) - 1)
+            self._data = []
+            self.endRemoveRows()
+
+        if data:
+            self.beginInsertRows(parent, 0, len(data) - 1)
+            self._data = data
+            self.endInsertRows()
 
 
 class Preferences(QDialog):
@@ -13,14 +151,31 @@ class Preferences(QDialog):
         self.ui.setupUi(self)
         self.settings = settings
 
+        self.ui.tableView.setModel(ToolTableModel(self))
+        self.ui.tableView.horizontalHeader().setResizeMode(
+            ToolTableModel.Col_Tool,
+            QHeaderView.Stretch)
+
         self.ui.cbFamilyLog.currentFontChanged.connect(
             self.__onFamilyChanged)
         self.ui.cbFamilyDiff.currentFontChanged.connect(
             self.__onFamilyChanged)
 
+        self.ui.btnAdd.clicked.connect(
+            self.__onBtnAddClicked)
+        self.ui.btnDelete.clicked.connect(
+            self.__onBtnDeleteClicked)
+
+        self.ui.tableView.model().suffixExists.connect(
+            self.__onSuffixExists)
+
+        # default to General tab
+        self.ui.tabWidget.setCurrentIndex(0)
+
         self.__initSettings()
 
     def __initSettings(self):
+        # TODO: delay load config for each tab
         font = self.settings.logViewFont()
         self.ui.cbFamilyLog.setCurrentFont(font)
         self.ui.cbFamilyLog.currentFontChanged.emit(font)
@@ -46,6 +201,9 @@ class Preferences(QDialog):
         if index < 0 or index >= self.ui.cbIgnoreWhitespace.count():
             index = 0
         self.ui.cbIgnoreWhitespace.setCurrentIndex(index)
+
+        tools = self.settings.mergeToolList()
+        self.ui.tableView.model().setRawData(tools)
 
     def __updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -80,7 +238,43 @@ class Preferences(QDialog):
 
         self.__updateFontSizes(font.family(), size, cbSize)
 
+    def __onBtnAddClicked(self, checked=False):
+        model = self.ui.tableView.model()
+        row = model.rowCount()
+        if not model.insertRow(row):
+            return
+        index = model.index(row, ToolTableModel.Col_Suffix)
+        self.ui.tableView.edit(index)
+
+    def __onBtnDeleteClicked(self, checked=False):
+        indexes = self.ui.tableView.selectionModel().selectedRows()
+        if not indexes:
+            QMessageBox.information(self,
+                                    qApp.applicationName(),
+                                    self.tr("Please select one row at least to delete."))
+            return
+
+        if len(indexes) > 1:
+            text = self.tr(
+                "You have selected more than one record, do you really want delete all of them?")
+            r = QMessageBox.question(self, qApp.applicationName(),
+                                     text,
+                                     QMessageBox.Yes,
+                                     QMessageBox.No)
+            if r != QMessageBox.Yes:
+                return
+
+        indexes.sort(reverse=True)
+        for index in indexes:
+            self.ui.tableView.model().removeRow(index.row())
+
+    def __onSuffixExists(self, suffix):
+        QMessageBox.information(self,
+                                qApp.applicationName(),
+                                self.tr("The suffix you specify is already exists."))
+
     def save(self):
+        # TODO: only update those values that really changed
         font = QFont(self.ui.cbFamilyLog.currentText(),
                      int(self.ui.cbSizeLog.currentText()))
 
@@ -120,3 +314,7 @@ class Preferences(QDialog):
 
         value = self.ui.cbIgnoreWhitespace.currentIndex()
         self.settings.setIgnoreWhitespace(value)
+
+        tools = self.ui.tableView.model().rawData()
+        # TODO: validate if all tool isValid before saving
+        self.settings.setMergeToolList(tools)
