@@ -362,6 +362,13 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_8">
           <item>
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>You must add the tool to git config mergetool section to make it works.</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QTableView" name="tableView">
             <property name="selectionBehavior">
              <enum>QAbstractItemView::SelectRows</enum>

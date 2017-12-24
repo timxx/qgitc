@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS>
-<TS version="2.0" language="zh_CN">
+<!DOCTYPE TS><TS version="2.0" language="zh_CN" sourcelanguage="">
 <context>
     <name>AboutDialog</name>
     <message>
@@ -134,7 +133,7 @@
         <source>Find previous</source>
         <translation>查找上一条</translation>
     </message>
-    <message utf8="true">
+    <message encoding="UTF-8">
         <location filename="../../ui/gitview.ui" line="151"/>
         <source>↑</source>
         <translation></translation>
@@ -144,7 +143,7 @@
         <source>Find next</source>
         <translation>查找下一条</translation>
     </message>
-    <message utf8="true">
+    <message encoding="UTF-8">
         <location filename="../../ui/gitview.ui" line="161"/>
         <source>↓</source>
         <translation></translation>
@@ -660,12 +659,12 @@
         <translation>合并工具</translation>
     </message>
     <message>
-        <location filename="../../ui/preferences.ui" line="376"/>
+        <location filename="../../ui/preferences.ui" line="383"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/preferences.ui" line="383"/>
+        <location filename="../../ui/preferences.ui" line="390"/>
         <source>&amp;Delete</source>
         <translation>删除(&amp;D)</translation>
     </message>
@@ -683,6 +682,11 @@
         <location filename="../../preferences.py" line="272"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
+    </message>
+    <message>
+        <location filename="../../ui/preferences.ui" line="367"/>
+        <source>You must add the tool to git config mergetool section to make it works.</source>
+        <translation>您必需将“工具”添加到git配置文件的mergetool配置项以使其可用。</translation>
     </message>
 </context>
 <context>
