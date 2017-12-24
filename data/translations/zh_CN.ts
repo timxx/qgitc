@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS><TS version="2.0" language="zh_CN" sourcelanguage="">
+<!DOCTYPE TS>
+<TS version="2.0" language="zh_CN">
 <context>
     <name>AboutDialog</name>
     <message>
@@ -133,7 +134,7 @@
         <source>Find previous</source>
         <translation>查找上一条</translation>
     </message>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../../ui/gitview.ui" line="151"/>
         <source>↑</source>
         <translation></translation>
@@ -143,7 +144,7 @@
         <source>Find next</source>
         <translation>查找下一条</translation>
     </message>
-    <message encoding="UTF-8">
+    <message utf8="true">
         <location filename="../../ui/gitview.ui" line="161"/>
         <source>↓</source>
         <translation></translation>
@@ -398,99 +399,104 @@
         <translation>冲突列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="42"/>
+        <location filename="../../mergewidget.py" line="57"/>
         <source>Click to refresh the list</source>
         <translation>点击以刷新列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="52"/>
+        <location filename="../../mergewidget.py" line="58"/>
         <source>Continuous resolve</source>
         <translation>持续解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="53"/>
+        <location filename="../../mergewidget.py" line="59"/>
         <source>Resolve</source>
         <translation>解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="66"/>
+        <location filename="../../mergewidget.py" line="74"/>
         <source>&amp;Resolve</source>
         <translation>解决冲突(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="70"/>
+        <location filename="../../mergewidget.py" line="78"/>
         <source>Use &amp;ours</source>
         <translation>使用我们的(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="72"/>
+        <location filename="../../mergewidget.py" line="80"/>
         <source>Use &amp;theirs</source>
         <translation>使用他们的(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="110"/>
+        <location filename="../../mergewidget.py" line="120"/>
         <source>You are resolving this file, please close it first.</source>
         <translation>您正在处理此文件的冲突，请先关闭它。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="128"/>
+        <location filename="../../mergewidget.py" line="138"/>
         <source>You can&apos;t refresh before close the merge window.</source>
         <translation>您不能在合并窗口打开时刷新列表。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="167"/>
+        <location filename="../../mergewidget.py" line="180"/>
         <source>Use &amp;created</source>
         <translation>使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="167"/>
+        <location filename="../../mergewidget.py" line="180"/>
         <source>Use &amp;modified</source>
         <translation>使用修改的(&amp;)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="167"/>
+        <location filename="../../mergewidget.py" line="180"/>
         <source>&amp;Deleted file</source>
         <translation>删除文件(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="188"/>
+        <location filename="../../mergewidget.py" line="201"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="188"/>
+        <location filename="../../mergewidget.py" line="201"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="188"/>
+        <location filename="../../mergewidget.py" line="201"/>
         <source>Use &amp;remote</source>
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="227"/>
+        <location filename="../../mergewidget.py" line="241"/>
         <source>All resolved!</source>
         <translation>冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="239"/>
+        <location filename="../../mergewidget.py" line="272"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="257"/>
+        <location filename="../../mergewidget.py" line="285"/>
         <source>Unknown merge tool, please check your configuration.</source>
         <translation>未知合并工具，请检查配置是否正确。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="291"/>
+        <location filename="../../mergewidget.py" line="319"/>
         <source>This file is already resolved.</source>
         <translation>此文件冲突已处理完。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="296"/>
+        <location filename="../../mergewidget.py" line="324"/>
         <source>Please resolve current conflicts before start a new one.</source>
         <translation>请先处理完当前文件冲突再处理新文件的冲突。</translation>
+    </message>
+    <message>
+        <location filename="../../mergewidget.py" line="268"/>
+        <source>All filter conflicts are resolved, please clear the filter to resolve the rest.</source>
+        <translation>已解决掉过滤的全部冲突，请清除过滤以解决其它的冲突。</translation>
     </message>
 </context>
 <context>
