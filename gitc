@@ -490,7 +490,7 @@ if __name__ == "__main__":
 
     if args.merge_mode and not Git.isMergeInProgress():
         QMessageBox.information(None, app.applicationName(),
-                                app.tr("Not in merge state, now quit!"))
+                                app.translate("app","Not in merge state, now quit!"))
         sys.exit(0)
 
     window = MainWindow(args.merge_mode)

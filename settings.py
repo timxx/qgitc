@@ -5,6 +5,7 @@ from PyQt4.QtCore import (
     pyqtSignal
 )
 from PyQt4.QtGui import *
+from mergetool import MergeTool
 
 import os
 
@@ -152,7 +153,9 @@ class Settings(QSettings):
         self.ignoreWhitespaceChanged.emit(index)
 
     def mergeToolList(self):
-        return self.value("mergeTool", [])
+        tools = [MergeTool(False, ".png", "imgdiff"),
+                 MergeTool(False, ".jpg", "imgdiff")]
+        return self.value("mergeTool", tools)
 
     def setMergeToolList(self, tools):
         self.setValue("mergeTool", tools)

@@ -11,8 +11,8 @@ A file conflict viewer for git
 - [x] Copy commit summary as HTML format for pasting.
 - [x] Custom pattern for creating links.
 - [x] Collect conflict files for merging.
-- [ ] Launch specify merge tool for specify file suffix.
-- [ ] Image diff tool for easy finding the difference.
+- [x] Launch specify merge tool for specify file suffix.
+- [x] Builtin image diff tool for easy finding the difference.
 - [ ] Auto finding which commit cause conflicts.
 
 ## Build & Run
