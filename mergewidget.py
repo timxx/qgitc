@@ -38,22 +38,30 @@ class MergeWidget(QWidget):
         self.updateList()
 
     def __setupUi(self):
-        self.status = QLabel()
-        self.status.setToolTip(self.tr("Click to refresh the list"))
-        self.view = QListView()
-        self.view.setModel(QStandardItemModel())
+        self.view = QListView(self)
+        self.model = QStandardItemModel(self)
+        self.proxyModel = QSortFilterProxyModel(self)
+        self.proxyModel.setSourceModel(self.model)
+
+        self.view.setModel(self.proxyModel)
         self.view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.leFilter = QLineEdit(self)
 
         vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.status)
+        vlayout.addWidget(self.leFilter)
         vlayout.addWidget(self.view)
 
         hlayout = QHBoxLayout()
+
+        self.status = QLabel(self)
+        self.status.setToolTip(self.tr("Click to refresh the list"))
         self.cbAutoNext = QCheckBox(self.tr("Continuous resolve"))
         self.btnResolve = QPushButton(self.tr("Resolve"))
-        hlayout.addWidget(self.cbAutoNext)
+
+        hlayout.addWidget(self.status)
         hlayout.addSpacerItem(QSpacerItem(
             20, 20, QSizePolicy.MinimumExpanding))
+        hlayout.addWidget(self.cbAutoNext)
         hlayout.addWidget(self.btnResolve)
         vlayout.addLayout(hlayout)
 
@@ -76,6 +84,7 @@ class MergeWidget(QWidget):
         self.btnResolve.clicked.connect(self.__onResolveClicked)
         self.view.doubleClicked.connect(self.__onItemDoubleClicked)
         self.status.linkActivated.connect(self.__onStatusRefresh)
+        self.leFilter.textChanged.connect(self.__onFilterChanged)
 
     def __makeTextIcon(self, text, color):
         img = QPixmap(32, 32)
@@ -93,13 +102,14 @@ class MergeWidget(QWidget):
 
     def __updateStatus(self):
         # just don't wanna inherit a QLabel LoL
-        total = self.view.model().rowCount()
+        total = self.model.rowCount()
         self.status.setText(
             "<a href='#refresh'>{}/{}</a>".format(self.resolvedCount,
                                                   total))
 
     def __resolvedIndex(self, index):
-        item = self.view.model().itemFromIndex(index)
+        index = self.proxyModel.mapToSource(index)
+        item = self.model.itemFromIndex(index)
         item.setData(STATE_RESOLVED, StateRole)
         item.setIcon(self.iconResolved)
         self.resolvedCount += 1
@@ -130,6 +140,9 @@ class MergeWidget(QWidget):
                                     self.tr("You can't refresh before close the merge window."))
             return
         self.updateList()
+
+    def __onFilterChanged(self, text):
+        self.proxyModel.setFilterRegExp(text)
 
     def __onMenuResolve(self):
         self.__onResolveClicked()
@@ -206,7 +219,7 @@ class MergeWidget(QWidget):
 
     def __onResolveFinished(self, exitCode, exitStatus):
         if exitCode == 0:
-            index = self.view.model().index(self.resolveIndex, 0)
+            index = self.proxyModel.index(self.resolveIndex, 0)
             self.__resolvedIndex(index)
 
         self.process = None
@@ -216,6 +229,7 @@ class MergeWidget(QWidget):
         self.resolveFinished.emit(RESOLVE_SUCCEEDED if exitCode == 0
                                   else RESOLVE_FAILED)
 
+        self.leFilter.setEnabled(True)
         # auto next only when success
         if exitCode != 0:
             return
@@ -223,31 +237,45 @@ class MergeWidget(QWidget):
         if not self.cbAutoNext.isChecked():
             return
 
-        if self.resolvedCount == self.view.model().rowCount():
+        if self.resolvedCount == self.model.rowCount():
             QMessageBox.information(self, qApp.applicationName(),
                                     self.tr("All resolved!"))
             return
 
         index = None
-        for i in range(curRow + 1, self.view.model().rowCount()):
-            index = self.view.model().index(i, 0)
+        allFilterResolved = True
+        noEndConflicts = True
+        # search to the end
+        for i in range(curRow + 1, self.proxyModel.rowCount()):
+            index = self.proxyModel.index(i, 0)
             if index.data(StateRole) == STATE_CONFLICT:
+                allFilterResolved = False
+                noEndConflicts = False
                 break
             index = None
 
+        # search from beginning
         if not index:
+            for i in range(curRow):
+                index = self.proxyModel.index(i, 0)
+                if index.data(StateRole) == STATE_CONFLICT:
+                    allFilterResolved = False
+                    break
+                index = None
+
+        # to avoid show two messagebox if reach to the end
+        if allFilterResolved:
+            text = self.tr("All filter conflicts are resolved, please clear the filter to resolve the rest.")
+            QMessageBox.information(self, qApp.applicationName(), text)
+            return
+        elif noEndConflicts:
             text = self.tr(
                 "Resolve reach to the end of list, do you want to resolve from beginning?")
             r = QMessageBox.question(
                 self, qApp.applicationName(), text, QMessageBox.Yes, QMessageBox.No)
             if r == QMessageBox.No:
                 return
-            for i in range(self.view.model().rowCount()):
-                index = self.view.model().index(i, 0)
-                if index.data(StateRole) == STATE_CONFLICT:
-                    break
 
-        # index should not resolved when reach here
         self.view.setCurrentIndex(index)
         self.resolve(index)
 
@@ -267,14 +295,14 @@ class MergeWidget(QWidget):
 
     def updateList(self):
         files = Git.conflictFiles()
-        self.view.model().clear()
+        self.model.clear()
         if files:
             for f in files:
                 item = QStandardItem(self.iconConflict, f)
                 item.setData(STATE_CONFLICT, StateRole)
-                self.view.model().appendRow(item)
+                self.model.appendRow(item)
 
-            index = self.view.model().index(0, 0)
+            index = self.proxyModel.index(0, 0)
             self.view.setCurrentIndex(index)
         self.resolvedCount = 0
         self.__updateStatus()
@@ -297,6 +325,8 @@ class MergeWidget(QWidget):
                                     self.tr("Please resolve current conflicts before start a new one."))
             return
 
+        # since we saved the index, so disabled ...
+        self.leFilter.setEnabled(False)
         self.resolveIndex = index.row()
         file = index.data()
         args = ["mergetool", "--no-prompt"]
