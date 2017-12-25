@@ -170,7 +170,7 @@ class MergeWidget(QWidget):
             self.process.write('n\n')
         elif b'Deleted merge conflict for' in data:
             text = data.data().decode("utf-8")
-            isCreated = text.find("(c)reated")
+            isCreated = "(c)reated" in text
             if isCreated:
                 text = text.replace("(c)reated", "created")
             else:
