@@ -465,8 +465,10 @@ class Application(QApplication):
             translator = None
 
 
-if __name__ == "__main__":
+app = None
 
+
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-r", "--repo",
@@ -486,11 +488,12 @@ if __name__ == "__main__":
     if args.repo:
         repoDir = Git.repoTopLevelDir(args.repo)
 
+    global app
     app = Application(sys.argv)
 
     if args.merge_mode and not Git.isMergeInProgress():
         QMessageBox.information(None, app.applicationName(),
-                                app.translate("app","Not in merge state, now quit!"))
+                                app.translate("app", "Not in merge state, now quit!"))
         sys.exit(0)
 
     window = MainWindow(args.merge_mode)
@@ -516,3 +519,8 @@ if __name__ == "__main__":
 
     app.exec()
     app.deleteLater()
+
+
+# tips from http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html
+if __name__ == "__main__":
+    main()
