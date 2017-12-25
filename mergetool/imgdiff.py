@@ -325,15 +325,15 @@ class DiffWindow(QMainWindow):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"))
         self.fileMenu.addAction(self.tr("&Open"),
                                 self.__onMenuOpen,
-                                shortcut=QKeySequence("Ctrl+O"))
+                                QKeySequence("Ctrl+O"))
         self.fileMenu.addSeparator()
         self.acSave = self.fileMenu.addAction(self.tr("&Save"),
                                               self.__onMenuSave,
-                                              shortcut=QKeySequence("Ctrl+S"))
+                                              QKeySequence("Ctrl+S"))
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.tr("&Quit"),
                                 self.__onMenuQuit,
-                                shortcut=QKeySequence("Ctrl+Q"))
+                                QKeySequence("Ctrl+Q"))
 
         self.viewMenu = self.menuBar().addMenu(self.tr("&View"))
         acFitWindow = self.viewMenu.addAction(
@@ -357,13 +357,13 @@ class DiffWindow(QMainWindow):
         self.mergeMenu = self.menuBar().addMenu("&Merge")
         self.mergeMenu.addAction(self.tr("Choose &A"),
                                  self.__onMenuChooseA,
-                                 shortcut=QKeySequence("Ctrl+1"))
+                                 QKeySequence("Ctrl+1"))
         self.mergeMenu.addAction(self.tr("Choose &B"),
                                  self.__onMenuChooseB,
-                                 shortcut=QKeySequence("Ctrl+2"))
+                                 QKeySequence("Ctrl+2"))
         self.mergeMenu.addAction(self.tr("Choose &C"),
                                  self.__onMenuChooseC,
-                                 shortcut=QKeySequence("Ctrl+3"))
+                                 QKeySequence("Ctrl+3"))
         self.mergeMenu.setEnabled(False)
 
     def __doQuit(self):
