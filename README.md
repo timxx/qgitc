@@ -18,8 +18,8 @@ A file conflict viewer for git
 ## Build & Run
 
 - Using source directly
-  - You should run build for the first time: *python setup.py build*
-  - Now run **gitc** which in the source directory.
+  - Run **gitc** which in the source directory directly.
+  - NOTE: If you want translation other than English or updated the UI files, run *python setup.py build* for the first time.
 
 - Using binary
   - Run *python setup.py build_exe*, the binary will be generated in the **build** directory.
