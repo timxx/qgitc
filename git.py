@@ -323,13 +323,24 @@ class Git():
         if not os.path.exists(path):
             return None
 
+        name = None
         with open(path, "r") as f:
             line = f.readline()
             m = re.match("Merge.* '(.*)' into .*", line)
             if m:
-                return m.group(1)
+                name = m.group(1)
 
-        return None
+        # likely a sha1
+        if name and re.match("[a-f0-9]{7,40}", name):
+            data = Git.checkOutput(["branch", "--remotes",
+                                    "--contains", name])
+            if data:
+                data = data.rstrip(b'\n')
+                if data:
+                    # might have more than one branch
+                    name = data.decode("utf-8").split('\n')[0].strip()
+
+        return name
 
     @staticmethod
     def resolveBy(ours, path):
