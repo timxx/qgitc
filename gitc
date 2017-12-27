@@ -47,8 +47,6 @@ class MainWindow(QMainWindow):
             # not allowed changed in this mode
             self.ui.leRepo.setReadOnly(True)
             self.ui.acCompare.setEnabled(False)
-            self.ui.gitViewA.setBranchChangeble(False)
-            self.gitViewB.setBranchChangeble(False)
 
         self.__setupSignals()
         self.__setupMenus()
