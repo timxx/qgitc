@@ -187,6 +187,9 @@ class Git():
                 "--pretty=format:{0}".format(log_fmt),
                 branch]
         if pattern:
+            # FIXME: pass "--" from caller
+            if not pattern.startswith("-"):
+                args.append("--")
             args.append(pattern)
         else:
             args.append("--boundary")
