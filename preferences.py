@@ -5,10 +5,11 @@ from PyQt4.QtCore import *
 
 from ui.preferences import *
 from mergetool import MergeTool
+from comboboxitemdelegate import ComboBoxItemDelegate
 
 
 class ToolTableModel(QAbstractTableModel):
-    Col_Enabled = 0
+    Col_Scenes = 0
     Col_Suffix = 1
     Col_Tool = 2
 
@@ -18,6 +19,10 @@ class ToolTableModel(QAbstractTableModel):
         super(ToolTableModel, self).__init__(parent)
 
         self._data = []
+        self._scenes = {MergeTool.Nothing: self.tr("Disabled"),
+                        MergeTool.CanDiff: self.tr("Diff"),
+                        MergeTool.CanMerge: self.tr("Merge"),
+                        MergeTool.Both: self.tr("Both")}
 
     def __checkSuffix(self, row, suffix):
         for i in range(len(self._data)):
@@ -41,8 +46,8 @@ class ToolTableModel(QAbstractTableModel):
         if role != Qt.DisplayRole:
             return None
 
-        if section == self.Col_Enabled:
-            return self.tr("Enabled")
+        if section == self.Col_Scenes:
+            return self.tr("Scenes")
         if section == self.Col_Suffix:
             return self.tr("Suffix")
         if section == self.Col_Tool:
@@ -52,10 +57,7 @@ class ToolTableModel(QAbstractTableModel):
 
     def flags(self, index):
         f = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        if index.column() == self.Col_Enabled:
-            f |= Qt.ItemIsUserCheckable
-        else:
-            f |= Qt.ItemIsEditable
+        f |= Qt.ItemIsEditable
 
         return f
 
@@ -70,9 +72,8 @@ class ToolTableModel(QAbstractTableModel):
                 return tool.suffix
             if col == self.Col_Tool:
                 return tool.command
-        elif role == Qt.CheckStateRole:
-            if col == self.Col_Enabled:
-                return Qt.Checked if tool.enabled else Qt.Unchecked
+            if col == self.Col_Scenes:
+                return self._scenes[tool.capabilities]
 
         return None
 
@@ -81,10 +82,7 @@ class ToolTableModel(QAbstractTableModel):
         col = index.column()
         tool = self._data[row]
 
-        if role == Qt.CheckStateRole:
-            if col == self.Col_Enabled:
-                tool.enabled = True if value == Qt.Checked else False
-        elif role == Qt.EditRole:
+        if role == Qt.EditRole:
             value = value.strip()
             if not value:
                 return False
@@ -95,6 +93,9 @@ class ToolTableModel(QAbstractTableModel):
                 tool.suffix = value
             elif col == self.Col_Tool:
                 tool.command = value
+            elif col == self.Col_Scenes:
+                idx = list(self._scenes.values()).index(value)
+                tool.capabilities = list(self._scenes.keys())[idx]
         else:
             return False
 
@@ -105,7 +106,7 @@ class ToolTableModel(QAbstractTableModel):
         self.beginInsertRows(parent, row, row + count - 1)
 
         for i in range(count):
-            self._data.insert(row, MergeTool(True))
+            self._data.insert(row, MergeTool(MergeTool.Both))
 
         self.endInsertRows()
 
@@ -141,6 +142,9 @@ class ToolTableModel(QAbstractTableModel):
             self._data = data
             self.endInsertRows()
 
+    def getSceneNames(self):
+        return self._scenes.values()
+
 
 class Preferences(QDialog):
 
@@ -151,10 +155,15 @@ class Preferences(QDialog):
         self.ui.setupUi(self)
         self.settings = settings
 
-        self.ui.tableView.setModel(ToolTableModel(self))
+        model = ToolTableModel(self)
+        self.ui.tableView.setModel(model)
         self.ui.tableView.horizontalHeader().setResizeMode(
             ToolTableModel.Col_Tool,
             QHeaderView.Stretch)
+
+        delegate = ComboBoxItemDelegate(model.getSceneNames())
+        self.ui.tableView.setItemDelegateForColumn(
+            ToolTableModel.Col_Scenes, delegate)
 
         self.ui.cbFamilyLog.currentFontChanged.connect(
             self.__onFamilyChanged)

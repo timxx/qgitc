@@ -265,7 +265,8 @@ class MergeWidget(QWidget):
 
         # to avoid show two messagebox if reach to the end
         if allFilterResolved:
-            text = self.tr("All filter conflicts are resolved, please clear the filter to resolve the rest.")
+            text = self.tr(
+                "All filter conflicts are resolved, please clear the filter to resolve the rest.")
             QMessageBox.information(self, qApp.applicationName(), text)
             return
         elif noEndConflicts:
@@ -335,7 +336,7 @@ class MergeWidget(QWidget):
         # ignored case even on Unix platform
         lowercase_file = file.lower()
         for tool in tools:
-            if tool.enabled and tool.isValid():
+            if tool.canMerge() and tool.isValid():
                 if lowercase_file.endswith(tool.suffix.lower()):
                     args.append("--tool={}".format(tool.command))
                     break

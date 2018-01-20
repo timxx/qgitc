@@ -2,19 +2,23 @@
 
 
 class MergeTool:
+    Nothing = 0x0
+    CanDiff = 0x1
+    CanMerge = 0x2
+    Both = CanDiff | CanMerge
 
-    def __init__(self, enabled=False, suffix="", command=""):
-        self._enabled = enabled
+    def __init__(self, capabilities=Nothing, suffix="", command=""):
+        self._caps = capabilities
         self._suffix = suffix
         self._command = command
 
     @property
-    def enabled(self):
-        return self._enabled
+    def capabilities(self):
+        return self._caps
 
-    @enabled.setter
-    def enabled(self, b):
-        self._enabled = b
+    @capabilities.setter
+    def capabilities(self, capabilities):
+        self._caps = capabilities
 
     @property
     def suffix(self):
@@ -34,3 +38,9 @@ class MergeTool:
 
     def isValid(self):
         return self.suffix and self.command
+
+    def canDiff(self):
+        return (self._caps & self.CanDiff) == self.CanDiff
+
+    def canMerge(self):
+        return (self._caps & self.CanMerge) == self.CanMerge

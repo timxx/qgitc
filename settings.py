@@ -153,8 +153,8 @@ class Settings(QSettings):
         self.ignoreWhitespaceChanged.emit(index)
 
     def mergeToolList(self):
-        tools = [MergeTool(False, ".png", "imgdiff"),
-                 MergeTool(False, ".jpg", "imgdiff")]
+        tools = [MergeTool(MergeTool.Nothing, ".png", "imgdiff"),
+                 MergeTool(MergeTool.Nothing, ".jpg", "imgdiff")]
         return self.value("mergeTool", tools)
 
     def setMergeToolList(self, tools):
