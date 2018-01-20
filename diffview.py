@@ -165,7 +165,8 @@ class DiffView(QWidget):
         if not self.commit:
             return
         filePath = item.text(0)
-        Git.externalDiff(self.commit, filePath)
+        tool = self.__diffToolForFile(filePath)
+        Git.externalDiff(self.commit, filePath, tool)
 
     def __onCopyPath(self):
         item = self.treeWidget.currentItem()
@@ -191,7 +192,8 @@ class DiffView(QWidget):
             return
 
         filePath = item.text(0)
-        Git.externalDiff(self.commit, filePath)
+        tool = self.__diffToolForFile(filePath)
+        Git.externalDiff(self.commit, filePath, tool)
 
     def __onIgnoreWhitespaceChanged(self, index):
         args = ["", "--ignore-space-at-eol",
@@ -266,6 +268,17 @@ class DiffView(QWidget):
         items.append(LineItem(TextLine.Comments, b""))
 
         return items
+
+    def __diffToolForFile(self, filePath):
+        tools = qApp.instance().settings().mergeToolList()
+        # ignored case even on Unix platform
+        lowercase_file = filePath.lower()
+        for tool in tools:
+            if tool.canDiff() and tool.isValid():
+                if lowercase_file.endswith(tool.suffix.lower()):
+                    return tool.command
+
+        return None
 
     # TODO: shall we cache the commit?
     def showCommit(self, commit):

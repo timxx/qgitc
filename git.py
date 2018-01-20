@@ -260,9 +260,12 @@ class Git():
         return data
 
     @staticmethod
-    def externalDiff(commit, path=None):
+    def externalDiff(commit, path=None, tool=None):
         args = ["difftool",
                 "{0}^..{0}".format(commit.sha1)]
+
+        if tool:
+            args.append("--tool={}".format(tool))
 
         if path:
             args.append("--")

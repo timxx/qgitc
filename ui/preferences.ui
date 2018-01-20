@@ -350,21 +350,21 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabMerge">
+     <widget class="QWidget" name="tabTools">
       <attribute name="title">
-       <string>&amp;Merge</string>
+       <string>&amp;Tools</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
         <widget class="QGroupBox" name="groupBox_7">
          <property name="title">
-          <string>Merge Tool</string>
+          <string>Tools</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_8">
           <item>
            <widget class="QLabel" name="label_12">
             <property name="text">
-             <string>You must add the tool to git config mergetool section to make it works.</string>
+             <string>You must add the tool to git config mergetool/difftool section to make it works.</string>
             </property>
            </widget>
           </item>

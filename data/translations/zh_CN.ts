@@ -47,27 +47,27 @@
         <translation>查看此文件日志(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="237"/>
+        <location filename="../../diffview.py" line="239"/>
         <source>Author: </source>
         <translation>作者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="242"/>
+        <location filename="../../diffview.py" line="244"/>
         <source>Committer: </source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="248"/>
+        <location filename="../../diffview.py" line="250"/>
         <source>Parent: </source>
         <translation>父提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="282"/>
+        <location filename="../../diffview.py" line="295"/>
         <source>Comments</source>
         <translation>记录信息</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="254"/>
+        <location filename="../../diffview.py" line="256"/>
         <source>Child: </source>
         <translation>子提交：</translation>
     </message>
@@ -346,32 +346,32 @@
         <translation>比较模式(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="144"/>
+        <location filename="../../gitc" line="142"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="154"/>
+        <location filename="../../gitc" line="152"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="170"/>
+        <location filename="../../gitc" line="168"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="406"/>
+        <location filename="../../gitc" line="404"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="407"/>
+        <location filename="../../gitc" line="405"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="420"/>
+        <location filename="../../gitc" line="418"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -474,22 +474,22 @@
         <translation>冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="272"/>
+        <location filename="../../mergewidget.py" line="273"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="285"/>
+        <location filename="../../mergewidget.py" line="286"/>
         <source>Unknown merge tool, please check your configuration.</source>
         <translation>未知合并工具，请检查配置是否正确。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="319"/>
+        <location filename="../../mergewidget.py" line="320"/>
         <source>This file is already resolved.</source>
         <translation>此文件冲突已处理完。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="324"/>
+        <location filename="../../mergewidget.py" line="325"/>
         <source>Please resolve current conflicts before start a new one.</source>
         <translation>请先处理完当前文件冲突再处理新文件的冲突。</translation>
     </message>
@@ -502,22 +502,22 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="806"/>
+        <location filename="../../diffview.py" line="819"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="811"/>
+        <location filename="../../diffview.py" line="824"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="816"/>
+        <location filename="../../diffview.py" line="829"/>
         <source>Copy &amp;All</source>
         <translation>复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="819"/>
+        <location filename="../../diffview.py" line="832"/>
         <source>&amp;Select All</source>
         <translation>全选(&amp;S)</translation>
     </message>
@@ -657,12 +657,12 @@
     <message>
         <location filename="../../ui/preferences.ui" line="355"/>
         <source>&amp;Merge</source>
-        <translation>合并(&amp;M)</translation>
+        <translation type="obsolete">合并(&amp;M)</translation>
     </message>
     <message>
         <location filename="../../ui/preferences.ui" line="361"/>
-        <source>Merge Tool</source>
-        <translation>合并工具</translation>
+        <source>Tools</source>
+        <translation>工具</translation>
     </message>
     <message>
         <location filename="../../ui/preferences.ui" line="383"/>
@@ -675,24 +675,29 @@
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="252"/>
+        <location filename="../../preferences.py" line="261"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="258"/>
+        <location filename="../../preferences.py" line="267"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="272"/>
+        <location filename="../../preferences.py" line="281"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
     <message>
         <location filename="../../ui/preferences.ui" line="367"/>
-        <source>You must add the tool to git config mergetool section to make it works.</source>
-        <translation>您必需将“工具”添加到git配置文件的mergetool配置项以使其可用。</translation>
+        <source>You must add the tool to git config mergetool/difftool section to make it works.</source>
+        <translation>您必需将“工具”添加到git配置文件的mergetool/difftool配置项以使其可用。</translation>
+    </message>
+    <message>
+        <location filename="../../ui/preferences.ui" line="355"/>
+        <source>&amp;Tools</source>
+        <translation>工具(&amp;T)</translation>
     </message>
 </context>
 <context>
@@ -700,23 +705,48 @@
     <message>
         <location filename="../../preferences.py" line="45"/>
         <source>Enabled</source>
-        <translation>启用</translation>
+        <translation type="obsolete">启用</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="47"/>
+        <location filename="../../preferences.py" line="52"/>
         <source>Suffix</source>
         <translation>后缀</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="49"/>
+        <location filename="../../preferences.py" line="54"/>
         <source>Tool</source>
         <translation>工具</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.py" line="22"/>
+        <source>Disabled</source>
+        <translation>禁用</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.py" line="23"/>
+        <source>Diff</source>
+        <translation>Diff</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.py" line="24"/>
+        <source>Merge</source>
+        <translation>合并</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.py" line="25"/>
+        <source>Both</source>
+        <translation>Diff和合并</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.py" line="50"/>
+        <source>Scenes</source>
+        <translation>场景</translation>
     </message>
 </context>
 <context>
     <name>app</name>
     <message>
-        <location filename="../../gitc" line="492"/>
+        <location filename="../../gitc" line="493"/>
         <source>Not in merge state, now quit!</source>
         <translation>此分支不在合并状态，程序将退出！</translation>
     </message>
