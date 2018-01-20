@@ -18,7 +18,7 @@ diff_re = re.compile(b"^diff --(git a/(.*) b/(.*)|cc (.*))")
 diff_begin_re = re.compile("^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 
-sha1_re = re.compile("\\b[a-f0-9]{7,40}\\b")
+sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
 email_re = re.compile("[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
 diff_encoding = "utf-8"
