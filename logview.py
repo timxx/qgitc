@@ -26,6 +26,9 @@ GRAPH_COLORS = [Qt.black,
                 ]
 
 
+HALF_LINE_PERCENT = 0.76
+
+
 class CommitFetcher():
 
     def __init__(self):
@@ -597,10 +600,14 @@ class LogView(QAbstractScrollArea):
             return
 
         startLine = self.verticalScrollBar().value()
-        endLine = startLine + self.__linesPerPage()
+        endLineF = startLine + self.__linesPerPageF()
 
-        if self.curIdx < startLine or self.curIdx >= endLine:
+        if (self.curIdx < startLine) or (self.curIdx > int(endLineF)):
             self.verticalScrollBar().setValue(self.curIdx)
+        elif self.curIdx == int(endLineF):
+            # allow the last line not full visible
+            if (endLineF - self.curIdx) < HALF_LINE_PERCENT:
+                self.verticalScrollBar().setValue(startLine + 1)
 
     def setCurrentIndex(self, index):
         if index == self.curIdx:
@@ -765,9 +772,12 @@ class LogView(QAbstractScrollArea):
     def __mailTo(self, author, email):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))
 
-    def __linesPerPage(self):
+    def __linesPerPageF(self):
         h = self.viewport().height() - self.marginY
-        return int(h / self.lineHeight)
+        return h / self.lineHeight
+
+    def __linesPerPage(self):
+        return int(self.__linesPerPageF())
 
     def __itemRect(self, index):
         """@index the index of data"""
@@ -1445,10 +1455,12 @@ class LogView(QAbstractScrollArea):
                 self.currentIndexChanged.emit(self.curIdx)
         elif event.key() == Qt.Key_Down:
             if self.curIdx + 1 < len(self.data):
-                endLine = self.verticalScrollBar().value() + self.__linesPerPage()
+                endLineF = self.verticalScrollBar().value() + self.__linesPerPageF()
                 self.curIdx += 1
                 self.__ensureChildren(self.curIdx)
-                if self.curIdx < endLine:
+                if self.curIdx < int(endLineF) or \
+                        (self.curIdx == int(endLineF)
+                         and (endLineF - self.curIdx >= HALF_LINE_PERCENT)):
                     self.invalidateItem(self.curIdx - 1)
                     self.invalidateItem(self.curIdx)
                 else:
