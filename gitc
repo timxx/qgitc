@@ -12,6 +12,7 @@ from diffview import PatchViewer
 from common import dataDirPath
 from aboutdialog import AboutDialog
 from mergewidget import MergeWidget
+from excepthandler import ExceptHandler
 
 import os
 import sys
@@ -464,6 +465,7 @@ class Application(QApplication):
 
 
 app = None
+sys.excepthook = ExceptHandler
 
 
 def main():
