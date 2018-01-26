@@ -635,9 +635,10 @@ class TextLine():
         self._patterns = patterns
 
         if self._layout:
-            patterns[Link.Sha1] = sha1_re
-            patterns[Link.Email] = email_re
-            self.__findLinks(patterns)
+            if patterns:
+                patterns[Link.Sha1] = sha1_re
+                patterns[Link.Email] = email_re
+                self.__findLinks(patterns)
             self.rehighlight()
         else:
             self._rehighlight = True
