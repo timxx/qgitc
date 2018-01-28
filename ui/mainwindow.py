@@ -101,6 +101,8 @@ class Ui_MainWindow(object):
         self.acAbout.setIcon(icon)
         self.acAbout.setObjectName(_fromUtf8("acAbout"))
         self.acPreferences = QtGui.QAction(MainWindow)
+        icon = QtGui.QIcon.fromTheme(_fromUtf8("preferences-system"))
+        self.acPreferences.setIcon(icon)
         self.acPreferences.setObjectName(_fromUtf8("acPreferences"))
         self.actionIgnore_whitespace_changes = QtGui.QAction(MainWindow)
         self.actionIgnore_whitespace_changes.setObjectName(_fromUtf8("actionIgnore_whitespace_changes"))
@@ -135,8 +137,11 @@ class Ui_MainWindow(object):
         self.acShowGraph.setCheckable(True)
         self.acShowGraph.setChecked(True)
         self.acShowGraph.setObjectName(_fromUtf8("acShowGraph"))
+        self.acAboutQt = QtGui.QAction(MainWindow)
+        self.acAboutQt.setObjectName(_fromUtf8("acAboutQt"))
         self.menuFile.addAction(self.acQuit)
         self.menu_Help.addAction(self.acAbout)
+        self.menu_Help.addAction(self.acAboutQt)
         self.menu_Settings.addAction(self.acPreferences)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreNone)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreEOL)
@@ -197,5 +202,6 @@ class Ui_MainWindow(object):
         self.acFind.setShortcut(_translate("MainWindow", "Ctrl+F", None))
         self.acCompare.setText(_translate("MainWindow", "&Compare Mode", None))
         self.acShowGraph.setText(_translate("MainWindow", "Show &graph", None))
+        self.acAboutQt.setText(_translate("MainWindow", "About &Qt", None))
 
 from gitview import GitView
