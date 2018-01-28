@@ -7,7 +7,7 @@ from version import VERSION
 # Dependencies are automatically detected, but it might need
 # fine tuning.
 excludes = ["Tkinter"]
-includes = ["logview", "colorwidget"]
+includes = ["logview", "colorwidget", "pickle"]
 includeFiles = [("data/icons/gitc.svg", "data/icons/gitc.svg"),
                 ("data/licenses/Apache-2.0.html", "data/licenses/Apache-2.0.html"),
                 ("LICENSE", "data/licenses/LICENSE")]
