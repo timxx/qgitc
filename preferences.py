@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from Qt.QtGui import *
+from Qt.QtWidgets import *
+from Qt.QtCore import *
 
 from ui.preferences import *
 from mergetool import MergeTool
@@ -157,9 +158,14 @@ class Preferences(QDialog):
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
-        self.ui.tableView.horizontalHeader().setResizeMode(
-            ToolTableModel.Col_Tool,
-            QHeaderView.Stretch)
+        if QT_VERSION >= 0x050000:
+            self.ui.tableView.horizontalHeader().setSectionResizeMode(
+                ToolTableModel.Col_Tool,
+                QHeaderView.Stretch)
+        else:
+            self.ui.tableView.horizontalHeader().setResizeMode(
+                ToolTableModel.Col_Tool,
+                QHeaderView.Stretch)
 
         delegate = ComboBoxItemDelegate(model.getSceneNames())
         self.ui.tableView.setItemDelegateForColumn(

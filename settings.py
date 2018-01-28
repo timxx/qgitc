@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtCore import (
+from Qt.QtCore import (
     QSettings,
     pyqtSignal
 )
-from PyQt4.QtGui import *
+from Qt.QtGui import *
+from Qt.QtWidgets import *
 from mergetool import MergeTool
 
 import os

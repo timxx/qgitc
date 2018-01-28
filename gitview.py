@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from Qt.QtGui import *
+from Qt.QtWidgets import *
+from Qt.QtCore import *
 
 from ui.gitview import *
 from common import *
@@ -56,10 +57,13 @@ class GitView(QWidget):
         self.ui.cbBranch.setInsertPolicy(QComboBox.NoInsert)
         self.ui.cbBranch.setEditable(True)
 
-        # Qt5: uses setFilterMode(Qt.MatchContains) instead the buggy code
-        self.filterModel = BranchFilterProxyModel(self)
-        self.filterModel.setSourceModel(self.ui.cbBranch.model())
-        self.ui.cbBranch.completer().setModel(self.filterModel)
+        if QT_VERSION >= 0x050200:
+            self.ui.cbBranch.completer().setFilterMode(Qt.MatchContains)
+        else:
+            self.filterModel = BranchFilterProxyModel(self)
+            self.filterModel.setSourceModel(self.ui.cbBranch.model())
+            self.ui.cbBranch.completer().setModel(self.filterModel)
+
         self.ui.cbBranch.completer().setCompletionMode(
             QCompleter.UnfilteredPopupCompletion)
 
@@ -67,9 +71,10 @@ class GitView(QWidget):
 
     def __setupSignals(self):
         self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
-        # don't use editTextChanged as it will emit when activated signaled
-        self.ui.cbBranch.lineEdit().textEdited.connect(
-            self.filterModel.setFilterFixedString)
+        if QT_VERSION < 0x050200:
+            # don't use editTextChanged as it will emit when activated signaled
+            self.ui.cbBranch.lineEdit().textEdited.connect(
+                self.filterModel.setFilterFixedString)
 
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
