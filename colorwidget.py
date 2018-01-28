@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import Qt
+from Qt.QtGui import *
+from Qt.QtWidgets import *
+from Qt.QtCore import Qt
 
 
 class ColorWidget(QWidget):

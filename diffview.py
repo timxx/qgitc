@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from Qt.QtGui import *
+from Qt.QtWidgets import *
+from Qt.QtCore import *
 from collections import namedtuple
 
 from common import *
@@ -118,7 +119,10 @@ class DiffView(QWidget):
         self.treeWidget.setHeaderHidden(True)
         self.treeWidget.setRootIsDecorated(False)
         self.treeWidget.header().setStretchLastSection(False)
-        self.treeWidget.header().setResizeMode(QHeaderView.ResizeToContents)
+        if QT_VERSION >= 0x050000:
+            self.treeWidget.header().setSectionResizeMode(QHeaderView.ResizeToContents)
+        else:
+            self.treeWidget.header().setResizeMode(QHeaderView.ResizeToContents)
 
         self.itemDelegate = TreeItemDelegate(self)
         self.treeWidget.setItemDelegate(self.itemDelegate)
@@ -781,7 +785,7 @@ class ColorSchema():
     Adding = QColor(0, 128, 0)
     Deletion = QColor(255, 0, 0)
     Info = QColor(170, 170, 170)
-    Link = qApp.palette().link().color()
+    Link = QColor(Qt.blue)
     Whitespace = QColor(Qt.lightGray)
     SelFocus = QColor(173, 214, 255)
     SelNoFocus = QColor(229, 235, 241)
