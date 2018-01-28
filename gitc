@@ -99,6 +99,9 @@ class MainWindow(QMainWindow):
         self.ui.acAbout.triggered.connect(
             self.__onAboutTriggered)
 
+        self.ui.acAboutQt.triggered.connect(
+            qApp.aboutQt)
+
         if self.mergeWidget:
             self.mergeWidget.requestResolve.connect(
                 self.__onRequestResolve)

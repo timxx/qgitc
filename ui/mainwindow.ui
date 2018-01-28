@@ -124,6 +124,7 @@
      <string>&amp;Help</string>
     </property>
     <addaction name="acAbout"/>
+    <addaction name="acAboutQt"/>
    </widget>
    <widget class="QMenu" name="menu_Settings">
     <property name="title">
@@ -190,6 +191,9 @@
    </property>
   </action>
   <action name="acPreferences">
+   <property name="icon">
+    <iconset theme="preferences-system"/>
+   </property>
    <property name="text">
     <string>&amp;Preferences...</string>
    </property>
@@ -287,6 +291,11 @@
    </property>
    <property name="text">
     <string>Show &amp;graph</string>
+   </property>
+  </action>
+  <action name="acAboutQt">
+   <property name="text">
+    <string>About &amp;Qt</string>
    </property>
   </action>
  </widget>
