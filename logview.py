@@ -1217,7 +1217,7 @@ class LogView(QAbstractScrollArea):
             # find the target range first
             for i in findParam.range:
                 sha1 = self.data[i].sha1
-                tempFile.write(sha1 + "\n")
+                tempFile.write(sha1.encode("utf-8") + b"\n")
                 self.findData.sha1IndexMap[sha1] = i
 
             if findParam.range.start > findParam.range.stop:
@@ -1230,7 +1230,7 @@ class LogView(QAbstractScrollArea):
             # then the rest
             for i in range(begin, end):
                 sha1 = self.data[i].sha1
-                tempFile.write(sha1 + "\n")
+                tempFile.write(sha1.encode("utf-8") + b"\n")
                 self.findData.sha1IndexMap[sha1] = i
 
             tempFile.close()

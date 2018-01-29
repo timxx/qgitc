@@ -30,7 +30,7 @@ class FindWidget(QWidget):
         self._tbNext = QToolButton(self)
 
         hlayout = QHBoxLayout(self)
-        hlayout.setMargin(0)
+        hlayout.setContentsMargins(0, 0, 0, 0)
         hlayout.setSpacing(0)
 
         hlayout.addWidget(self._leFind)
