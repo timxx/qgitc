@@ -72,7 +72,7 @@ def _pyqt4():
 
 
 def _install():
-    default_order = ("PyQt4", "PyQt5")
+    default_order = ("PyQt5", "PyQt4")
     preferred_order = [QT_BINDING] if QT_BINDING else []
 
     order = preferred_order or default_order
