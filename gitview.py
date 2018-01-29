@@ -59,13 +59,14 @@ class GitView(QWidget):
 
         if QT_VERSION >= 0x050200:
             self.ui.cbBranch.completer().setFilterMode(Qt.MatchContains)
+            self.ui.cbBranch.completer().setCompletionMode(
+                QCompleter.PopupCompletion)
         else:
             self.filterModel = BranchFilterProxyModel(self)
             self.filterModel.setSourceModel(self.ui.cbBranch.model())
             self.ui.cbBranch.completer().setModel(self.filterModel)
-
-        self.ui.cbBranch.completer().setCompletionMode(
-            QCompleter.UnfilteredPopupCompletion)
+            self.ui.cbBranch.completer().setCompletionMode(
+                QCompleter.UnfilteredPopupCompletion)
 
         self.__setupSignals()
 
