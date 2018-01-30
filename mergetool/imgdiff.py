@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+try:
+    from PyQt5.QtCore import *
+    from PyQt5.QtGui import *
+    from PyQt5.QtWidgets import *
+except ImportError:
+    from PyQt4.QtCore import *
+    from PyQt4.QtGui import *
 
 import sys
 import argparse
