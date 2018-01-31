@@ -17,7 +17,10 @@ def selectImage(parent):
     f = QFileDialog.getOpenFileName(parent,
                                     parent.tr("Select Image"),
                                     filter=filter)
-    return f
+    if QT_VERSION >= 0x050000:
+        return f[0]
+    else:
+        return f
 
 
 class NewDiffDlg(QDialog):
