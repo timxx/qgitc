@@ -163,6 +163,9 @@ class MainWindow(QMainWindow):
         path = QFileDialog.getOpenFileName(self,
                                            self.windowTitle(),
                                            self.ui.leRepo.text())
+        if QT_VERSION >= 0x050000:
+            path = path[0]
+
         if path:
             path = path.replace(self.ui.leRepo.text(), "")
             self.ui.lePattern.setText(path.lstrip("/"))
