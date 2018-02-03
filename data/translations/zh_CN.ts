@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.0" language="zh_CN">
+<TS version="2.1" language="zh_CN">
 <context>
     <name>AboutDialog</name>
     <message>
@@ -47,29 +47,39 @@
         <translation>查看此文件日志(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="243"/>
+        <location filename="../../diffview.py" line="256"/>
         <source>Author: </source>
         <translation>作者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="248"/>
+        <location filename="../../diffview.py" line="261"/>
         <source>Committer: </source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="254"/>
+        <location filename="../../diffview.py" line="267"/>
         <source>Parent: </source>
         <translation>父提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="299"/>
+        <location filename="../../diffview.py" line="312"/>
         <source>Comments</source>
         <translation>记录信息</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="260"/>
+        <location filename="../../diffview.py" line="273"/>
         <source>Child: </source>
         <translation>子提交：</translation>
+    </message>
+    <message>
+        <location filename="../../diffview.py" line="240"/>
+        <source>Local uncommitted changes, not checked in to index</source>
+        <translation>本地未提交的改动，未检入索引</translation>
+    </message>
+    <message>
+        <location filename="../../diffview.py" line="244"/>
+        <source>Local changes checked in to index but not committed</source>
+        <translation>已检入到索引但未提交的本地改动</translation>
     </message>
 </context>
 <context>
@@ -134,7 +144,7 @@
         <source>Find previous</source>
         <translation>查找上一条</translation>
     </message>
-    <message utf8="true">
+    <message>
         <location filename="../../ui/gitview.ui" line="151"/>
         <source>↑</source>
         <translation></translation>
@@ -144,28 +154,28 @@
         <source>Find next</source>
         <translation>查找下一条</translation>
     </message>
-    <message utf8="true">
+    <message>
         <location filename="../../ui/gitview.ui" line="161"/>
         <source>↓</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="106"/>
+        <location filename="../../gitview.py" line="107"/>
         <source>Can&apos;t get branch</source>
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="209"/>
+        <location filename="../../gitview.py" line="232"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="240"/>
+        <location filename="../../gitview.py" line="263"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="242"/>
+        <location filename="../../gitview.py" line="265"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -173,6 +183,16 @@
         <location filename="../../ui/gitview.ui" line="104"/>
         <source>adding/removing string</source>
         <translation>字符串增删</translation>
+    </message>
+    <message>
+        <location filename="../../gitview.py" line="153"/>
+        <source>Local changes checked in to index but not committed</source>
+        <translation>已检入到索引但未提交的本地改动</translation>
+    </message>
+    <message>
+        <location filename="../../gitview.py" line="162"/>
+        <source>Local uncommitted changes, not checked in to index</source>
+        <translation>本地未提交的改动，未检入索引</translation>
     </message>
 </context>
 <context>
@@ -183,17 +203,17 @@
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="547"/>
+        <location filename="../../logview.py" line="548"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="549"/>
+        <location filename="../../logview.py" line="550"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="551"/>
+        <location filename="../../logview.py" line="552"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
@@ -356,22 +376,22 @@
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="172"/>
+        <location filename="../../gitc" line="175"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="408"/>
+        <location filename="../../gitc" line="411"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="409"/>
+        <location filename="../../gitc" line="412"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="422"/>
+        <location filename="../../gitc" line="425"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -507,22 +527,22 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="824"/>
+        <location filename="../../diffview.py" line="837"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="829"/>
+        <location filename="../../diffview.py" line="842"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="834"/>
+        <location filename="../../diffview.py" line="847"/>
         <source>Copy &amp;All</source>
         <translation>复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="837"/>
+        <location filename="../../diffview.py" line="850"/>
         <source>&amp;Select All</source>
         <translation>全选(&amp;S)</translation>
     </message>
@@ -751,7 +771,7 @@
 <context>
     <name>app</name>
     <message>
-        <location filename="../../gitc" line="498"/>
+        <location filename="../../gitc" line="501"/>
         <source>Not in merge state, now quit!</source>
         <translation>此分支不在合并状态，程序将退出！</translation>
     </message>

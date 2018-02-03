@@ -39,16 +39,23 @@ class Commit():
                             self.commiter, self.commiterDate,
                             self.comments)
 
-    def parseRawString(self, string):
+    @classmethod
+    def fromRawString(cls, string):
+        commit = cls()
+
         parts = string.split("\x01")
-        # assume everything's fine
-        self.sha1 = parts[0]
-        self.comments = parts[1].strip("\n")
-        self.author = parts[2]
-        self.authorDate = parts[3]
-        self.commiter = parts[4]
-        self.commiterDate = parts[5]
-        self.parents = [x for x in parts[6].split(" ") if x]
+        if len(parts) != 7:
+            return commit
+
+        commit.sha1 = parts[0]
+        commit.comments = parts[1].strip("\n")
+        commit.author = parts[2]
+        commit.authorDate = parts[3]
+        commit.commiter = parts[4]
+        commit.commiterDate = parts[5]
+        commit.parents = [x for x in parts[6].split(" ") if x]
+
+        return commit
 
 
 class MyProfile():
