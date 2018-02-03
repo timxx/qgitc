@@ -236,19 +236,32 @@ class DiffView(QWidget):
         return string.encode("utf-8")
 
     def __commitDesc(self, sha1):
-        return b" (" + Git.commitSubject(sha1) + b")"
+        if sha1 == Git.LUC_SHA1:
+            subject = self.__toBytes(
+                self.tr("Local uncommitted changes, not checked in to index")
+            )
+        elif sha1 == Git.LCC_SHA1:
+            subject = self.__toBytes(
+                self.tr("Local changes checked in to index but not committed")
+            )
+        else:
+            subject = Git.commitSubject(sha1)
+
+        return b" (" + subject + b")"
 
     def __commitToLineItems(self, commit):
         items = []
-        content = self.__toBytes(self.tr("Author: ") + commit.author +
-                                 " " + commit.authorDate)
-        item = LineItem(TextLine.Author, content)
-        items.append(item)
 
-        content = self.__toBytes(self.tr("Committer: ") + commit.commiter +
-                                 " " + commit.commiterDate)
-        item = LineItem(TextLine.Author, content)
-        items.append(item)
+        if not commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
+            content = self.__toBytes(self.tr("Author: ") + commit.author +
+                                     " " + commit.authorDate)
+            item = LineItem(TextLine.Author, content)
+            items.append(item)
+
+            content = self.__toBytes(self.tr("Committer: ") + commit.commiter +
+                                     " " + commit.commiterDate)
+            item = LineItem(TextLine.Author, content)
+            items.append(item)
 
         for parent in commit.parents:
             content = self.__toBytes(self.tr("Parent: ") + parent)

@@ -47,8 +47,7 @@ class CommitFetcher():
         if not self.source or self.items[index]:
             return
 
-        commit = Commit()
-        commit.parseRawString(self.source[index])
+        commit = Commit.fromRawString(self.source[index])
         self.items[index] = commit
         self.loadedCount += 1
 
@@ -539,8 +538,10 @@ class LogView(QAbstractScrollArea):
 
     def __setupMenu(self):
         self.menu = QMenu()
-        self.menu.addAction(self.tr("&Copy commit summary"),
-                            self.__onCopyCommitSummary)
+
+        self.acCopySummary = self.menu.addAction(
+            self.tr("&Copy commit summary"),
+            self.__onCopyCommitSummary)
         self.menu.addSeparator()
 
         self.menu.addAction(self.tr("&Mark this commit"),
@@ -645,6 +646,10 @@ class LogView(QAbstractScrollArea):
     def showContextMenu(self, pos):
         if self.curIdx == -1:
             return
+
+        commit = self.getCommit(self.curIdx)
+        self.acCopySummary.setEnabled(
+            not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1])
 
         hasMark = self.marker.hasMark()
         self.acMarkTo.setVisible(hasMark)
@@ -865,8 +870,14 @@ class LogView(QAbstractScrollArea):
                 activeLane = i
                 break
 
-        totalColor = len(GRAPH_COLORS)
-        activeColor = GRAPH_COLORS[activeLane % totalColor]
+        if commit.sha1 == Git.LUC_SHA1:
+            activeColor = Qt.red
+        elif commit.sha1 == Git.LCC_SHA1:
+            activeColor = Qt.green
+        else:
+            totalColor = len(GRAPH_COLORS)
+            activeColor = GRAPH_COLORS[activeLane % totalColor]
+
         w = self.__laneWidth()
         x1 = 0
         x2 = 0
@@ -1146,7 +1157,7 @@ class LogView(QAbstractScrollArea):
             return
 
         commit.children = []
-        for i in range(index, -1, -1):
+        for i in range(index - 1, -1, -1):
             child = self.data[i]
             if commit.sha1 in child.parents:
                 commit.children.append(child.sha1)
@@ -1346,16 +1357,18 @@ class LogView(QAbstractScrollArea):
                 self.__drawGraph(painter, rect, i)
 
             commit = self.data[i]
-            # author
-            text = self.authorRe.sub("\\1", commit.author)
-            color = Qt.gray
-            self.__drawTag(painter, rect, color, text)
 
-            # date
-            text = commit.authorDate.split(' ')[0]
-            color = QColor(140, 208, 80)
-            self.__drawTag(painter, rect, color, text)
-            rect.adjust(4, 0, 0, 0)
+            if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
+                # author
+                text = self.authorRe.sub("\\1", commit.author)
+                color = Qt.gray
+                self.__drawTag(painter, rect, color, text)
+
+                # date
+                text = commit.authorDate.split(' ')[0]
+                color = QColor(140, 208, 80)
+                self.__drawTag(painter, rect, color, text)
+                rect.adjust(4, 0, 0, 0)
 
             # marker
             self.marker.draw(i, painter, rect)
