@@ -168,7 +168,7 @@ class MergeWidget(QWidget):
         data = self.process.readAllStandardOutput()
         # seems no options to control this buggy prompt
         if b'Continue merging other unresolved paths [y/n]?' in data:
-            self.process.write('n\n')
+            self.process.write(b"n\n")
         elif b'Deleted merge conflict for' in data:
             text = data.data().decode("utf-8")
             isCreated = "(c)reated" in text
@@ -187,13 +187,13 @@ class MergeWidget(QWidget):
                                      self.tr("&Abort"))
             if r == 0:
                 if isCreated:
-                    self.process.write("c\n")
+                    self.process.write(b"c\n")
                 else:
-                    self.process.write("m\n")
+                    self.process.write(b"m\n")
             elif r == 1:
-                self.process.write("d\n")
+                self.process.write(b"d\n")
             else:  # r == 2:
-                self.process.write("a\n")
+                self.process.write(b"a\n")
         elif b'Symbolic link merge conflict for' in data:
             text = data.data().decode("utf-8")
             text = text.replace("(l)ocal", "local")
@@ -206,14 +206,14 @@ class MergeWidget(QWidget):
                                      self.tr("Use &remote"),
                                      self.tr("&Abort"))
             if r == 0:
-                self.process.write("l\n")
+                self.process.write(b"l\n")
             elif r == 1:
-                self.process.write("r\n")
+                self.process.write(b"r\n")
             else:
-                self.process.write("a\n")
+                self.process.write(b"a\n")
         elif b'Was the merge successful [y/n]?' in data:
             # TODO:
-            self.process.write("n\n")
+            self.process.write(b"n\n")
         elif b'?' in data:
             # TODO: might have other prompt need yes no
             print(data)
@@ -289,8 +289,6 @@ class MergeWidget(QWidget):
             QMessageBox.information(self,
                                     qApp.applicationName(),
                                     text)
-        else:
-            print(data)
 
     def contextMenuEvent(self, event):
         self.menu.exec(event.globalPos())
