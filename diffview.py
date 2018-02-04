@@ -8,6 +8,7 @@ from collections import namedtuple
 from common import *
 from git import Git
 from findwidget import FindWidget
+from datafetcher import DataFetcher
 
 import re
 import bisect
@@ -86,50 +87,20 @@ class TreeItemDelegate(QItemDelegate):
         self.pattern = pattern
 
 
-class DiffFetcher(QObject):
+class DiffFetcher(DataFetcher):
 
     diffAvailable = pyqtSignal(list, dict)
-    fetchFinished = pyqtSignal()
 
     def __init__(self, parent=None):
         super(DiffFetcher, self).__init__(parent)
-        self._process = None
-        self._dataChunk = None
         self._isDiffContent = False
         self._row = 0
 
-    def _onDataAvailabel(self):
-        data = self._process.readAllStandardOutput().data()
-        if self._dataChunk:
-            data = self._dataChunk + data
-            self._dataChunk = None
-
-        # full diff always ends with \n
-        if data[-1] != 10:  # b'\n' will not works LoL
-            idx = data.rfind(b'\n')
-
-            if idx != -1:
-                idx += 1
-                self._dataChunk = data[idx:]
-                data = data[:idx]
-            else:
-                self._dataChunk = data
-                data = None
-
-        if data:
-            self._parse(data)
-
-    def _onDataFinished(self, exitCode, exitStatus):
-        self._process = None
-        assert self._dataChunk is None
-        self.fetchFinished.emit()
-        qApp.restoreOverrideCursor()
-
-    def _parse(self, data):
+    def parse(self, data):
         lineItems = []
         fileItems = {}
 
-        lines = data.rstrip(b'\n').split(b'\n')
+        lines = data.rstrip(self.separator).split(self.separator)
         for line in lines:
             match = diff_re.search(line)
             if match:
@@ -177,43 +148,32 @@ class DiffFetcher(QObject):
         self._row = row
 
     def cancel(self):
-        if self._process:
-            self._process.disconnect()
-            self._process.close()
-            self._process = None
-
-        self._dataChunk = None
         self._isDiffContent = False
-        qApp.restoreOverrideCursor()
+        super(DiffFetcher, self).cancel()
 
-    def fetch(self, sha1, filePath=None, gitArgs=None):
-        self.cancel()
-
-        qApp.setOverrideCursor(Qt.WaitCursor)
+    def makeArgs(self, args):
+        sha1 = args[0]
+        filePath = args[1]
+        gitArgs = args[2]
 
         if sha1 == Git.LCC_SHA1:
-            args = ["diff-index", "--cached", "HEAD"]
+            git_args = ["diff-index", "--cached", "HEAD"]
         elif sha1 == Git.LUC_SHA1:
-            args = ["diff-files"]
+            git_args = ["diff-files"]
         else:
-            args = ["diff-tree", "-r", "--root", sha1]
+            git_args = ["diff-tree", "-r", "--root", sha1]
 
-        args.extend(["-p", "--textconv", "--submodule",
-                     "-C", "--cc", "--no-commit-id", "-U3"])
+        git_args.extend(["-p", "--textconv", "--submodule",
+                         "-C", "--cc", "--no-commit-id", "-U3"])
 
         if gitArgs:
-            args.extend(gitArgs)
+            git_args.extend(gitArgs)
 
         if filePath:
-            args.append("--")
-            args.append(filePath)
+            git_args.append("--")
+            git_args.append(filePath)
 
-        self._process = QProcess()
-        self._process.setWorkingDirectory(Git.REPO_DIR)
-        self._process.readyReadStandardOutput.connect(self._onDataAvailabel)
-        self._process.finished.connect(self._onDataFinished)
-
-        self._process.start("git", args)
+        return git_args
 
 
 class DiffView(QWidget):

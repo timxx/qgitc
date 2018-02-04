@@ -6,6 +6,7 @@ from Qt.QtCore import *
 
 from common import *
 from git import *
+from datafetcher import DataFetcher
 
 import re
 import bisect
@@ -30,61 +31,38 @@ GRAPH_COLORS = [Qt.black,
 HALF_LINE_PERCENT = 0.76
 
 
-class CommitFetcher():
+class LogsFetcher(DataFetcher):
 
-    def __init__(self):
-        self.items = []
-        self.source = None
-        self.loadedCount = 0
+    logsAvailable = pyqtSignal(list)
 
-    def __len__(self):
-        return self.count()
+    def __init__(self, parent=None):
+        super(LogsFetcher, self).__init__(parent)
+        self.separator = b'\0'
 
-    def __getitem__(self, index):
-        return self.data(index)
+    def parse(self, data):
+        logs = data.rstrip(self.separator) \
+            .decode("utf-8", "replace") \
+            .split('\0')
+        commits = [Commit.fromRawString(log) for log in logs]
+        self.logsAvailable.emit(commits)
 
-    def __ensureCommit(self, index):
-        if not self.source or self.items[index]:
-            return
+    def makeArgs(self, args):
+        branch = args[0]
+        pattern = args[1]
 
-        commit = Commit.fromRawString(self.source[index])
-        self.items[index] = commit
-        self.loadedCount += 1
+        git_args = ["log", "-z", "--topo-order",
+                    "--parents",
+                    "--no-color",
+                    "--pretty=format:{0}".format(log_fmt),
+                    branch]
+        if pattern:
+            if not pattern.startswith("-"):
+                git_args.append("--")
+            git_args.append(pattern)
+        else:
+            git_args.append("--boundary")
 
-        # no need the source
-        if self.loadedCount == len(self.source):
-            self.source = None
-
-    def count(self):
-        return len(self.items)
-
-    def data(self, index):
-        if index < 0 or index >= self.count():
-            return None
-
-        self.__ensureCommit(index)
-        return self.items[index]
-
-    def setSource(self, source):
-        self.source = source
-        self.items.clear()
-        self.loadedCount = 0
-        if source:
-            self.items = [None for i in range(len(source))]
-
-    def findCommitIndex(self, sha1, begin=0, findNext=True):
-        index = -1
-
-        findRange = range(begin, len(self.items)) \
-            if findNext else range(begin, -1, -1)
-        for i in findRange:
-            self.__ensureCommit(i)
-            item = self.items[i]
-            if item.sha1.startswith(sha1):
-                index = i
-                break
-
-        return index
+        return git_args
 
 
 class Marker():
@@ -490,9 +468,11 @@ class LogView(QAbstractScrollArea):
 
         self.setFocusPolicy(Qt.StrongFocus)
 
-        self.data = CommitFetcher()
+        self.data = []
+        self.fetcher = LogsFetcher(self)
         self.curIdx = -1
         self.branchA = True
+        self.curBranch = ""
 
         self.lineSpace = 5
         self.marginX = 3
@@ -531,6 +511,9 @@ class LogView(QAbstractScrollArea):
         self.window().showGraphChanged.connect(
             self.__onShowGraphChanged)
 
+        self.fetcher.logsAvailable.connect(
+            self.__onLogsAvailable)
+
         self.updateSettings()
 
     def __del__(self):
@@ -568,16 +551,12 @@ class LogView(QAbstractScrollArea):
     def setBugPattern(self, pattern):
         self.bugRe = re.compile(pattern)
 
-    def setLogs(self, commits):
-        self.data.setSource(commits)
-        if self.data:
-            self.setCurrentIndex(0)
-
-        self.updateGeometries()
-        self.viewport().update()
+    def showLogs(self, branch, pattern=None):
+        self.curBranch = branch
+        self.fetcher.fetch(branch, pattern)
 
     def clear(self):
-        self.data.setSource(None)
+        self.data.clear()
         self.curIdx = -1
         self.graphs.clear()
         self.lanes = Lanes()
@@ -630,7 +609,7 @@ class LogView(QAbstractScrollArea):
                 self.ensureVisible()
                 return True
 
-        index = self.data.findCommitIndex(sha1)
+        index = self.findCommitIndex(sha1)
         if index != -1:
             self.setCurrentIndex(index)
 
@@ -638,10 +617,23 @@ class LogView(QAbstractScrollArea):
 
     def switchToNearCommit(self, sha1, goNext=True):
         self.curIdx = self.curIdx if self.curIdx >= 0 else 0
-        index = self.data.findCommitIndex(sha1, self.curIdx, goNext)
+        index = self.findCommitIndex(sha1, self.curIdx, goNext)
         if index != -1:
             self.setCurrentIndex(index)
         return index != -1
+
+    def findCommitIndex(self, sha1, begin=0, findNext=True):
+        index = -1
+
+        findRange = range(begin, len(self.data)) \
+            if findNext else range(begin, -1, -1)
+        for i in findRange:
+            commit = self.data[i]
+            if commit.sha1.startswith(sha1):
+                index = i
+                break
+
+        return index
 
     def showContextMenu(self, pos):
         if self.curIdx == -1:
@@ -761,6 +753,37 @@ class LogView(QAbstractScrollArea):
 
     def __onShowGraphChanged(self, show):
         self.viewport().update()
+
+    def __onLogsAvailable(self, logs):
+        needUpdate = not self.data and logs
+        self.data.extend(logs)
+
+        if needUpdate:
+            parent_sha1 = self.data[0].sha1
+
+            if Git.hasLocalChanges(True):
+                lcc_cmit = Commit()
+                lcc_cmit.sha1 = Git.LCC_SHA1
+                lcc_cmit.comments = self.tr(
+                    "Local changes checked in to index but not committed")
+                lcc_cmit.parents = [parent_sha1]
+
+                self.data.insert(0, lcc_cmit)
+                parent_sha1 = lcc_cmit.sha1
+
+            if Git.hasLocalChanges():
+                luc_cmit = Commit()
+                luc_cmit.sha1 = Git.LUC_SHA1
+                luc_cmit.comments = self.tr(
+                    "Local uncommitted changes, not checked in to index")
+                luc_cmit.parents = [parent_sha1]
+
+                self.data.insert(0, luc_cmit)
+
+        if self.currentIndex() == -1:
+            self.setCurrentIndex(0)
+
+        self.updateGeometries()
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
