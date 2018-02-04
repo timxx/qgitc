@@ -86,6 +86,136 @@ class TreeItemDelegate(QItemDelegate):
         self.pattern = pattern
 
 
+class DiffFetcher(QObject):
+
+    diffAvailable = pyqtSignal(list, dict)
+    fetchFinished = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(DiffFetcher, self).__init__(parent)
+        self._process = None
+        self._dataChunk = None
+        self._isDiffContent = False
+        self._row = 0
+
+    def _onDataAvailabel(self):
+        data = self._process.readAllStandardOutput().data()
+        if self._dataChunk:
+            data = self._dataChunk + data
+            self._dataChunk = None
+
+        # full diff always ends with \n
+        if data[-1] != 10:  # b'\n' will not works LoL
+            idx = data.rfind(b'\n')
+
+            if idx != -1:
+                idx += 1
+                self._dataChunk = data[idx:]
+                data = data[:idx]
+            else:
+                self._dataChunk = data
+                data = None
+
+        if data:
+            self._parse(data)
+
+    def _onDataFinished(self, exitCode, exitStatus):
+        self._process = None
+        assert self._dataChunk is None
+        self.fetchFinished.emit()
+        qApp.restoreOverrideCursor()
+
+    def _parse(self, data):
+        lineItems = []
+        fileItems = {}
+
+        lines = data.rstrip(b'\n').split(b'\n')
+        for line in lines:
+            match = diff_re.search(line)
+            if match:
+                if match.group(4):  # diff --cc
+                    fileA = match.group(4)
+                    fileB = None
+                else:
+                    fileA = match.group(2)
+                    fileB = match.group(3)
+
+                fileItems[fileA.decode(diff_encoding)] = self._row
+                # renames, keep new file name only
+                if fileB and fileB != fileA:
+                    lineItems.append(LineItem(TextLine.File, fileB))
+                    fileItems[fileB.decode(diff_encoding)] = self._row
+                else:
+                    lineItems.append(LineItem(TextLine.File, fileA))
+
+                self._row += 1
+                self._isDiffContent = False
+
+                continue
+
+            if self._isDiffContent:
+                itemType = TextLine.Diff
+            elif diff_begin_bre.search(line):
+                self._isDiffContent = True
+                itemType = TextLine.Diff
+            elif line.startswith(b"--- ") or line.startswith(b"+++ "):
+                continue
+            elif not line:  # ignore the empty info line
+                continue
+            else:
+                itemType = TextLine.FileInfo
+
+            if itemType != TextLine.Diff:
+                line = line.rstrip(b'\r')
+            lineItems.append(LineItem(itemType, line))
+            self._row += 1
+
+        if lineItems:
+            self.diffAvailable.emit(lineItems, fileItems)
+
+    def setBeginRow(self, row):
+        self._row = row
+
+    def cancel(self):
+        if self._process:
+            self._process.disconnect()
+            self._process.close()
+            self._process = None
+
+        self._dataChunk = None
+        self._isDiffContent = False
+        qApp.restoreOverrideCursor()
+
+    def fetch(self, sha1, filePath=None, gitArgs=None):
+        self.cancel()
+
+        qApp.setOverrideCursor(Qt.WaitCursor)
+
+        if sha1 == Git.LCC_SHA1:
+            args = ["diff-index", "--cached", "HEAD"]
+        elif sha1 == Git.LUC_SHA1:
+            args = ["diff-files"]
+        else:
+            args = ["diff-tree", "-r", "--root", sha1]
+
+        args.extend(["-p", "--textconv", "--submodule",
+                     "-C", "--cc", "--no-commit-id", "-U3"])
+
+        if gitArgs:
+            args.extend(gitArgs)
+
+        if filePath:
+            args.append("--")
+            args.append(filePath)
+
+        self._process = QProcess()
+        self._process.setWorkingDirectory(Git.REPO_DIR)
+        self._process.readyReadStandardOutput.connect(self._onDataAvailabel)
+        self._process.finished.connect(self._onDataFinished)
+
+        self._process.start("git", args)
+
+
 class DiffView(QWidget):
     requestCommit = pyqtSignal(str, bool, bool)
 
@@ -98,6 +228,7 @@ class DiffView(QWidget):
         self.twMenu = QMenu()
         self.commit = None
         self.gitArgs = []
+        self.fetcher = DiffFetcher(self)
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
@@ -146,6 +277,11 @@ class DiffView(QWidget):
         self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.treeWidget.customContextMenuRequested.connect(
             self.__onTreeWidgetContextMenuRequested)
+
+        self.fetcher.diffAvailable.connect(
+            self.__onDiffAvailable)
+        self.fetcher.fetchFinished.connect(
+            self.__onFetchFinished)
 
     def __onTreeItemChanged(self, current, previous):
         if current:
@@ -226,11 +362,27 @@ class DiffView(QWidget):
 
         self.twMenu.exec(self.treeWidget.mapToGlobal(pos))
 
-    def __addToTreeWidget(self, string, row):
+    def __onDiffAvailable(self, lineItems, fileItems):
+        self.__addToTreeWidget(fileItems)
+        self.viewer.appendData(lineItems)
+
+    def __onFetchFinished(self):
+        self.viewer.clearCache()
+        self.viewer.tryUpdate()
+
+    def __addToTreeWidget(self, *args):
         """specify the @row number of the file in the viewer"""
-        item = QTreeWidgetItem([string])
-        item.setData(0, Qt.UserRole, row)
-        self.treeWidget.addTopLevelItem(item)
+        if len(args) == 1 and isinstance(args[0], dict):
+            items = []
+            for file, row in args[0].items():
+                item = QTreeWidgetItem([file])
+                item.setData(0, Qt.UserRole, row)
+                items.append(item)
+            self.treeWidget.addTopLevelItems(items)
+        else:
+            item = QTreeWidgetItem([args[0]])
+            item.setData(0, Qt.UserRole, args[1])
+            self.treeWidget.addTopLevelItem(item)
 
     def __toBytes(self, string):
         return string.encode("utf-8")
@@ -297,71 +449,20 @@ class DiffView(QWidget):
 
         return None
 
-    # TODO: shall we cache the commit?
     def showCommit(self, commit):
-        qApp.setOverrideCursor(Qt.WaitCursor)
-
         self.clear()
         self.commit = commit
 
-        lines = []
-        data = Git.commitRawDiff(commit.sha1, self.filterPath, self.gitArgs)
-        if data:
-            lines = data.rstrip(b'\n').split(b'\n')
-
         self.__addToTreeWidget(self.tr("Comments"), 0)
-
-        lineItems = []
-        lineItems.extend(self.__commitToLineItems(commit))
-
-        isDiffContent = False
-
-        for line in lines:
-            match = diff_re.search(line)
-            if match:
-                fileA = None
-                fileB = None
-                if match.group(4):  # diff --cc
-                    fileA = match.group(4)
-                else:
-                    fileA = match.group(2)
-                    fileB = match.group(3)
-
-                row = len(lineItems)
-                self.__addToTreeWidget(fileA.decode(diff_encoding), row)
-                # renames, keep new file name only
-                if fileB and fileB != fileA:
-                    lineItems.append(LineItem(TextLine.File, fileB))
-                    self.__addToTreeWidget(fileB.decode(diff_encoding), row)
-                else:
-                    lineItems.append(LineItem(TextLine.File, fileA))
-
-                isDiffContent = False
-
-                continue
-
-            if isDiffContent:
-                itemType = TextLine.Diff
-            elif diff_begin_bre.search(line):
-                isDiffContent = True
-                itemType = TextLine.Diff
-            elif line.startswith(b"--- ") or line.startswith(b"+++ "):
-                continue
-            elif not line:  # ignore the empty info line
-                continue
-            else:
-                itemType = TextLine.FileInfo
-
-            if itemType != TextLine.Diff:
-                line = line.rstrip(b'\r')
-            lineItems.append(LineItem(itemType, line))
 
         item = self.treeWidget.topLevelItem(0)
         self.treeWidget.setCurrentItem(item)
 
+        lineItems = self.__commitToLineItems(commit)
         self.viewer.setData(lineItems)
 
-        qApp.restoreOverrideCursor()
+        self.fetcher.setBeginRow(len(lineItems))
+        self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
 
     def clear(self):
         self.treeWidget.clear()
@@ -813,6 +914,8 @@ class PatchViewer(QAbstractScrollArea):
 
         self._lineItems = None
         self._textLines = {}
+        # only when all data loaded can clear _lineItems
+        self._canClearCache = False
         self.lastEncoding = None
 
         self.defOption = QTextOption()
@@ -901,6 +1004,7 @@ class PatchViewer(QAbstractScrollArea):
     def setData(self, items):
         self._lineItems = items
         self._textLines.clear()
+        self._canClearCache = False
         self.currentLink = None
         self.clickOnLink = False
         self.cursor.clear()
@@ -919,6 +1023,36 @@ class PatchViewer(QAbstractScrollArea):
 
         self.__adjust()
         self.viewport().update()
+
+    def appendData(self, items):
+        if not items:
+            return
+
+        prevTotalLines = self.textLineCount()
+
+        if self._lineItems:
+            self._lineItems.extend(items)
+        else:
+            self._lineItems = items
+
+        linesPerPage = self.__linesPerPage()
+        totalLines = self.textLineCount()
+
+        vScrollBar = self.verticalScrollBar()
+        vScrollBar.setRange(0, totalLines - linesPerPage)
+
+        if prevTotalLines < linesPerPage and totalLines >= linesPerPage:
+            self.__updateHScrollBar()
+            self.viewport().update()
+
+    def tryUpdate(self):
+        """update if total lines less than one page"""
+        linesPerPage = self.__linesPerPage()
+        totalLines = self.textLineCount()
+
+        if totalLines < linesPerPage:
+            self.__updateHScrollBar()
+            self.viewport().update()
 
     def textLineCount(self):
         if self._lineItems:
@@ -966,7 +1100,8 @@ class PatchViewer(QAbstractScrollArea):
         self._textLines[index] = textLine
 
         # clear lineItems since all converted
-        if len(self._textLines) == len(self._lineItems):
+        if self._canClearCache and \
+                len(self._textLines) == len(self._lineItems):
             self._lineItems = None
 
         return textLine
@@ -1065,6 +1200,11 @@ class PatchViewer(QAbstractScrollArea):
 
         if x1 < offset or x2 > (offset + viewWidth):
             hbar.setValue(x1)
+
+    def clearCache(self):
+        self._canClearCache = True
+        if len(self._textLines) == len(self._lineItems):
+            self._lineItems = None
 
     def mouseMoveEvent(self, event):
         if self.tripleClickTimer.isValid():
