@@ -140,36 +140,9 @@ class GitView(QWidget):
         self.ui.logView.clear()
         self.ui.diffView.clear()
 
-        qApp.setOverrideCursor(Qt.WaitCursor)
-
-        curBranch = self.ui.cbBranch.currentText()
-        commits = Git.branchLogs(curBranch, self.pattern)
-
-        parent_commit = Commit.fromRawString(
-            commits[0] if commits else "")
-
-        fmt = "{}\x01{}\x01\x01\x01\x01\x01{}"
-        if Git.hasLocalChanges(True):
-            commit = fmt.format(
-                Git.LCC_SHA1,
-                self.tr("Local changes checked in to index but not committed"),
-                parent_commit.sha1
-            )
-            commits.insert(0, commit)
-            parent_commit.sha1 = Git.LCC_SHA1
-
-        if Git.hasLocalChanges():
-            commit = fmt.format(
-                Git.LUC_SHA1,
-                self.tr("Local uncommitted changes, not checked in to index"),
-                parent_commit.sha1
-            )
-            commits.insert(0, commit)
-
-        if commits:
-            self.ui.logView.setLogs(commits)
-
-        qApp.restoreOverrideCursor()
+        self.ui.logView.showLogs(
+            self.ui.cbBranch.currentText(),
+            self.pattern)
 
     def __onCommitChanged(self, index):
         if self.ui.logView.cancelFindCommit(False):

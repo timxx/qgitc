@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+
+from Qt.QtCore import *
+from Qt.QtWidgets import qApp
+from git import Git
+
+
+class DataFetcher(QObject):
+
+    fetchFinished = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(DataFetcher, self).__init__(parent)
+        self._process = None
+        self._dataChunk = None
+        self._separator = b'\n'
+
+    @property
+    def process(self):
+        return self._process
+
+    @property
+    def dataChunk(self):
+        return self._dataChunk
+
+    @property
+    def separator(self):
+        return self._separator
+
+    @separator.setter
+    def separator(self, sep):
+        self._separator = sep
+
+    def parse(self, data):
+        """Implement in subclass"""
+        pass
+
+    def onDataAvailable(self):
+        data = self._process.readAllStandardOutput().data()
+        if self._dataChunk:
+            data = self._dataChunk + data
+            self._dataChunk = None
+
+        if data[-1] != ord(self.separator):
+            idx = data.rfind(self.separator)
+
+            if idx != -1:
+                idx += 1
+                self._dataChunk = data[idx:]
+                data = data[:idx]
+            else:
+                self._dataChunk = data
+                data = None
+
+        if data:
+            self.parse(data)
+
+    def onDataFinished(self, exitCode, exitStatus):
+        if self._dataChunk:
+            self.parse(self._dataChunk)
+
+        self._process = None
+        self.fetchFinished.emit()
+        qApp.restoreOverrideCursor()
+
+    def cancel(self):
+        if self._process:
+            self._process.disconnect()
+            self._process.close()
+            self._process = None
+
+        self._dataChunk = None
+        qApp.restoreOverrideCursor()
+
+    def makeArgs(self, args):
+        """Implement in subclass"""
+        return []
+
+    def fetch(self, *args):
+        self.cancel()
+
+        qApp.setOverrideCursor(Qt.WaitCursor)
+
+        git_args = self.makeArgs(args)
+
+        self._process = QProcess()
+        self._process.setWorkingDirectory(Git.REPO_DIR)
+        self._process.readyReadStandardOutput.connect(self.onDataAvailable)
+        self._process.finished.connect(self.onDataFinished)
+
+        self._process.start("git", git_args)
