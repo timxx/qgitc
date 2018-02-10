@@ -32,54 +32,54 @@
 <context>
     <name>DiffView</name>
     <message>
-        <location filename="../../diffview.py" line="193"/>
+        <location filename="../../diffview.py" line="188"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="195"/>
+        <location filename="../../diffview.py" line="190"/>
         <source>&amp;Copy path</source>
         <translation>复制路径(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="198"/>
+        <location filename="../../diffview.py" line="193"/>
         <source>&amp;Log this file</source>
         <translation>查看此文件日志(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="368"/>
+        <location filename="../../diffview.py" line="353"/>
         <source>Author: </source>
         <translation>作者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="373"/>
+        <location filename="../../diffview.py" line="358"/>
         <source>Committer: </source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="379"/>
+        <location filename="../../diffview.py" line="364"/>
         <source>Parent: </source>
         <translation>父提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="416"/>
+        <location filename="../../diffview.py" line="401"/>
         <source>Comments</source>
         <translation>记录信息</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="385"/>
+        <location filename="../../diffview.py" line="370"/>
         <source>Child: </source>
         <translation>子提交：</translation>
     </message>
     <message>
         <location filename="../../diffview.py" line="352"/>
         <source>Local uncommitted changes, not checked in to index</source>
-        <translation>本地未提交的改动，未检入索引</translation>
+        <translation type="obsolete">本地未提交的改动，未检入索引</translation>
     </message>
     <message>
         <location filename="../../diffview.py" line="356"/>
         <source>Local changes checked in to index but not committed</source>
-        <translation>已检入到索引但未提交的本地改动</translation>
+        <translation type="obsolete">已检入到索引但未提交的本地改动</translation>
     </message>
 </context>
 <context>
@@ -220,12 +220,12 @@
     <message>
         <location filename="../../logview.py" line="769"/>
         <source>Local changes checked in to index but not committed</source>
-        <translation>已检入到索引但未提交的本地改动</translation>
+        <translation type="obsolete">已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
         <location filename="../../logview.py" line="779"/>
         <source>Local uncommitted changes, not checked in to index</source>
-        <translation>本地未提交的改动，未检入索引</translation>
+        <translation type="obsolete">本地未提交的改动，未检入索引</translation>
     </message>
 </context>
 <context>
@@ -537,22 +537,22 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="900"/>
+        <location filename="../../diffview.py" line="885"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="905"/>
+        <location filename="../../diffview.py" line="890"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="910"/>
+        <location filename="../../diffview.py" line="895"/>
         <source>Copy &amp;All</source>
         <translation>复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="913"/>
+        <location filename="../../diffview.py" line="898"/>
         <source>&amp;Select All</source>
         <translation>全选(&amp;S)</translation>
     </message>

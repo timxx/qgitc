@@ -111,11 +111,6 @@ class Git():
     REF_MAP = {}
     REV_HEAD = None
 
-    # local uncommitted changes
-    LUC_SHA1 = "0000000000000000000000000000000000000000"
-    # local changes checked
-    LCC_SHA1 = "0000000000000000000000000000000000000001"
-
     @staticmethod
     def run(args):
         return GitProcess(Git.REPO_DIR, args)
@@ -246,15 +241,9 @@ class Git():
 
     @staticmethod
     def commitRawDiff(sha1, filePath=None, gitArgs=None):
-        if sha1 == Git.LCC_SHA1:
-            args = ["diff-index", "--cached", "HEAD"]
-        elif sha1 == Git.LUC_SHA1:
-            args = ["diff-files"]
-        else:
-            args = ["diff-tree", "-r", "--root", sha1]
-
-        args.extend(["-p", "--textconv", "--submodule",
-                     "-C", "--cc", "--no-commit-id", "-U3"])
+        args = ["diff-tree", "-r", "--root", sha1,
+                "-p", "--textconv", "--submodule",
+                "-C", "--cc", "--no-commit-id", "-U3"]
 
         if gitArgs:
             args.extend(gitArgs)
@@ -271,13 +260,8 @@ class Git():
 
     @staticmethod
     def externalDiff(commit, path=None, tool=None):
-        args = ["difftool"]
-        if commit.sha1 == Git.LUC_SHA1:
-            pass
-        elif commit.sha1 == Git.LCC_SHA1:
-            args.append("--cached")
-        else:
-            args.append("{0}^..{0}".format(commit.sha1))
+        args = ["difftool",
+                "{0}^..{0}".format(commit.sha1)]
 
         if tool:
             args.append("--tool={}".format(tool))

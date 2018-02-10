@@ -156,12 +156,7 @@ class DiffFetcher(DataFetcher):
         filePath = args[1]
         gitArgs = args[2]
 
-        if sha1 == Git.LCC_SHA1:
-            git_args = ["diff-index", "--cached", "HEAD"]
-        elif sha1 == Git.LUC_SHA1:
-            git_args = ["diff-files"]
-        else:
-            git_args = ["diff-tree", "-r", "--root", sha1]
+        git_args = ["diff-tree", "-r", "--root", sha1]
 
         git_args.extend(["-p", "--textconv", "--submodule",
                          "-C", "--cc", "--no-commit-id", "-U3"])
@@ -348,32 +343,22 @@ class DiffView(QWidget):
         return string.encode("utf-8")
 
     def __commitDesc(self, sha1):
-        if sha1 == Git.LUC_SHA1:
-            subject = self.__toBytes(
-                self.tr("Local uncommitted changes, not checked in to index")
-            )
-        elif sha1 == Git.LCC_SHA1:
-            subject = self.__toBytes(
-                self.tr("Local changes checked in to index but not committed")
-            )
-        else:
-            subject = Git.commitSubject(sha1)
+        subject = Git.commitSubject(sha1)
 
         return b" (" + subject + b")"
 
     def __commitToLineItems(self, commit):
         items = []
 
-        if not commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
-            content = self.__toBytes(self.tr("Author: ") + commit.author +
-                                     " " + commit.authorDate)
-            item = LineItem(TextLine.Author, content)
-            items.append(item)
+        content = self.__toBytes(self.tr("Author: ") + commit.author +
+                                 " " + commit.authorDate)
+        item = LineItem(TextLine.Author, content)
+        items.append(item)
 
-            content = self.__toBytes(self.tr("Committer: ") + commit.commiter +
-                                     " " + commit.commiterDate)
-            item = LineItem(TextLine.Author, content)
-            items.append(item)
+        content = self.__toBytes(self.tr("Committer: ") + commit.commiter +
+                                 " " + commit.commiterDate)
+        item = LineItem(TextLine.Author, content)
+        items.append(item)
 
         for parent in commit.parents:
             content = self.__toBytes(self.tr("Parent: ") + parent)
