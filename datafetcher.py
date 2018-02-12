@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from Qt.QtCore import *
-from Qt.QtWidgets import qApp
 from git import Git
 
 
@@ -61,7 +60,6 @@ class DataFetcher(QObject):
 
         self._process = None
         self.fetchFinished.emit()
-        qApp.restoreOverrideCursor()
 
     def cancel(self):
         if self._process:
@@ -70,7 +68,6 @@ class DataFetcher(QObject):
             self._process = None
 
         self._dataChunk = None
-        qApp.restoreOverrideCursor()
 
     def makeArgs(self, args):
         """Implement in subclass"""
@@ -78,8 +75,6 @@ class DataFetcher(QObject):
 
     def fetch(self, *args):
         self.cancel()
-
-        qApp.setOverrideCursor(Qt.WaitCursor)
 
         git_args = self.makeArgs(args)
 

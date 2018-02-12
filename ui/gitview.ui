@@ -20,6 +20,9 @@
       <enum>QLayout::SetDefaultConstraint</enum>
      </property>
      <item>
+      <widget class="QtWaitingSpinner" name="branchSpinner" native="true"/>
+     </item>
+     <item>
       <widget class="QLabel" name="lbBranch">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -56,6 +59,9 @@
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <item>
+            <widget class="QtWaitingSpinner" name="diffSpinner" native="true"/>
+           </item>
            <item>
             <widget class="QLabel" name="label">
              <property name="text">
@@ -186,6 +192,12 @@
    <class>LogView</class>
    <extends>QWidget</extends>
    <header>logview.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QtWaitingSpinner</class>
+   <extends>QWidget</extends>
+   <header>waitingspinnerwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
