@@ -68,6 +68,15 @@ class GitView(QWidget):
             self.ui.cbBranch.completer().setCompletionMode(
                 QCompleter.UnfilteredPopupCompletion)
 
+        height = self.ui.lbBranch.height() // 6
+        self.ui.branchSpinner.setLineLength(height)
+        self.ui.branchSpinner.setInnerRadius(height)
+        self.ui.branchSpinner.setNumberOfLines(14)
+
+        self.ui.diffSpinner.setLineLength(height)
+        self.ui.diffSpinner.setInnerRadius(height)
+        self.ui.diffSpinner.setNumberOfLines(14)
+
         self.__setupSignals()
 
     def __setupSignals(self):
@@ -80,7 +89,12 @@ class GitView(QWidget):
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.findProgress.connect(self.__onFindProgress)
+        self.ui.logView.beginFetch.connect(self.__onBeginFetch)
+        self.ui.logView.endFetch.connect(self.__onEndFetch)
+
         self.ui.diffView.requestCommit.connect(self.__onRequestCommit)
+        self.ui.diffView.beginFetch.connect(self.__onBeginFetch)
+        self.ui.diffView.endFetch.connect(self.__onEndFetch)
 
         self.reqCommit.connect(self.__onReqCommit)
         self.reqFind.connect(self.__onFindCommit)
@@ -154,6 +168,20 @@ class GitView(QWidget):
         else:
             self.ui.leSha1.clear()
             self.ui.diffView.clear()
+
+    def __onBeginFetch(self):
+        o = self.sender()
+        if isinstance(o, LogView):
+            self.ui.branchSpinner.start()
+        elif isinstance(o, DiffView):
+            self.ui.diffSpinner.start()
+
+    def __onEndFetch(self):
+        o = self.sender()
+        if isinstance(o, LogView):
+            self.ui.branchSpinner.stop()
+        elif isinstance(o, DiffView):
+            self.ui.diffSpinner.stop()
 
     def __doFindCommit(self, beginCommit=0, findNext=True):
         findWhat = self.ui.leFindWhat.text().strip()

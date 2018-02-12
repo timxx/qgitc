@@ -17,6 +17,9 @@ class Ui_GitView(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        self.branchSpinner = QtWaitingSpinner(GitView)
+        self.branchSpinner.setObjectName("branchSpinner")
+        self.horizontalLayout.addWidget(self.branchSpinner)
         self.lbBranch = QtWidgets.QLabel(GitView)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -45,6 +48,9 @@ class Ui_GitView(object):
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.diffSpinner = QtWaitingSpinner(self.verticalLayoutWidget)
+        self.diffSpinner.setObjectName("diffSpinner")
+        self.horizontalLayout_2.addWidget(self.diffSpinner)
         self.label = QtWidgets.QLabel(self.verticalLayoutWidget)
         self.label.setObjectName("label")
         self.horizontalLayout_2.addWidget(self.label)
@@ -121,3 +127,4 @@ class Ui_GitView(object):
 
 from diffview import DiffView
 from logview import LogView
+from waitingspinnerwidget import QtWaitingSpinner

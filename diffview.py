@@ -174,6 +174,9 @@ class DiffFetcher(DataFetcher):
 class DiffView(QWidget):
     requestCommit = pyqtSignal(str, bool, bool)
 
+    beginFetch = pyqtSignal()
+    endFetch = pyqtSignal()
+
     def __init__(self, parent=None):
         super(DiffView, self).__init__(parent)
 
@@ -324,6 +327,7 @@ class DiffView(QWidget):
     def __onFetchFinished(self):
         self.viewer.clearCache()
         self.viewer.tryUpdate()
+        self.endFetch.emit()
 
     def __addToTreeWidget(self, *args):
         """specify the @row number of the file in the viewer"""
@@ -408,6 +412,8 @@ class DiffView(QWidget):
 
         self.fetcher.setBeginRow(len(lineItems))
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
+        # FIXME: delay showing the spinner when loading small diff to avoid flicker
+        self.beginFetch.emit()
 
     def clear(self):
         self.treeWidget.clear()

@@ -463,6 +463,9 @@ class LogView(QAbstractScrollArea):
     findFinished = pyqtSignal(int)
     findProgress = pyqtSignal(int)
 
+    beginFetch = pyqtSignal()
+    endFetch = pyqtSignal()
+
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
 
@@ -513,6 +516,8 @@ class LogView(QAbstractScrollArea):
 
         self.fetcher.logsAvailable.connect(
             self.__onLogsAvailable)
+        self.fetcher.fetchFinished.connect(
+            self.endFetch)
 
         self.updateSettings()
 
@@ -554,6 +559,7 @@ class LogView(QAbstractScrollArea):
     def showLogs(self, branch, pattern=None):
         self.curBranch = branch
         self.fetcher.fetch(branch, pattern)
+        self.beginFetch.emit()
 
     def clear(self):
         self.data.clear()
