@@ -458,6 +458,30 @@ class FindData():
         return FIND_NOTFOUND
 
 
+class LogGraph(QFrame):
+
+    def __init__(self, parent=None):
+        super(LogGraph, self).__init__(parent)
+
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setBackgroundRole(QPalette.Base)
+        self.setAutoFillBackground(True)
+
+        self._graphImage = None
+
+    def render(self, graphImage):
+        self._graphImage = graphImage
+        self.update()
+
+    def sizeHint(self):
+        return QSize(25, 100)
+
+    def paintEvent(self, event):
+        if self._graphImage:
+            painter = QPainter(self)
+            painter.drawPixmap(0, 0, self._graphImage)
+
+
 class LogView(QAbstractScrollArea):
     currentIndexChanged = pyqtSignal(int)
     findFinished = pyqtSignal(int)
@@ -470,6 +494,7 @@ class LogView(QAbstractScrollArea):
         super(LogView, self).__init__(parent)
 
         self.setFocusPolicy(Qt.StrongFocus)
+        self.setFrameStyle(QFrame.NoFrame)
 
         self.data = []
         self.fetcher = LogsFetcher(self)
@@ -485,6 +510,8 @@ class LogView(QAbstractScrollArea):
         self.graphs = {}
         self.lanes = Lanes()
         self.firstFreeLane = 0
+
+        self.logGraph = None
 
         self.color = "#FF0000"
         self.sha1Url = None
@@ -510,9 +537,6 @@ class LogView(QAbstractScrollArea):
         # never show the horizontalScrollBar
         # since we can view the long content in diff view
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.window().showGraphChanged.connect(
-            self.__onShowGraphChanged)
 
         self.fetcher.logsAvailable.connect(
             self.__onLogsAvailable)
@@ -572,6 +596,8 @@ class LogView(QAbstractScrollArea):
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
         self.cancelFindCommit()
+        if self.logGraph:
+            self.logGraph.render(None)
 
     def getCommit(self, index):
         return self.data[index]
@@ -753,9 +779,6 @@ class LogView(QAbstractScrollArea):
         elif not self.findData.result:
             self.findFinished.emit(FIND_NOTFOUND)
 
-    def __onShowGraphChanged(self, show):
-        self.viewport().update()
-
     def __onLogsAvailable(self, logs):
         self.data.extend(logs)
 
@@ -860,7 +883,7 @@ class LogView(QAbstractScrollArea):
     def __laneWidth(self):
         return int(self.lineHeight * 3 / 4)
 
-    def __drawGraph(self, painter, rect, cid):
+    def __drawGraph(self, painter, graphPainter, rect, cid):
         commit = self.data[cid]
         if not commit.sha1 in self.graphs:
             self.__updateGraph(cid)
@@ -881,10 +904,8 @@ class LogView(QAbstractScrollArea):
         isHead = (commit.sha1 == Git.REV_HEAD)
         firstCommit = (cid == 0)
 
-        painter.save()
-        painter.translate(rect.topLeft())
-        painter.setRenderHints(QPainter.Antialiasing)
-
+        graphPainter.save()
+        graphPainter.translate(rect.topLeft())
         for i in range(len(lanes)):
             x1 = x2
             x2 += w
@@ -897,26 +918,26 @@ class LogView(QAbstractScrollArea):
                 color = activeColor
             else:
                 color = GRAPH_COLORS[i % totalColor]
-            self.__drawGraphLane(painter, lane, x1, x2,
+            self.__drawGraphLane(graphPainter, lane, x1, x2,
                                  color, activeColor, isHead, firstCommit)
+        graphPainter.restore()
 
         # refs
         rc = QRect(rect)
         rc.moveTo(0, 0)
         preL = rc.left()
-        self.__drawGraphRef(painter, rc, lanes, activeLane, commit)
+
+        painter.save()
+        painter.translate(rect.topLeft())
+        painter.setRenderHints(QPainter.Antialiasing)
+        self.__drawGraphRef(painter, rc, commit)
 
         painter.restore()
         offset = rc.left() - preL
-        if offset == 0:  # no refs
-            m = int(w / 2)
-            r = int(w / 3)
-            # same as spaces between ref tags
-            offset = (x2 - (w - (m + r))) + 2 * r
-        else:
+        if offset != 0:  # have refs
             # spaces after refs
             offset += int(w / 3)
-        rect.adjust(offset, 0, 0, 0)
+            rect.adjust(offset, 0, 0, 0)
 
     def __drawGraphLane(self, painter, lane, x1, x2, color, activeColor, isHead, firstCommit):
         h = int(self.lineHeight / 2)
@@ -1058,46 +1079,24 @@ class LogView(QAbstractScrollArea):
 
         painter.restore()
 
-    def __drawGraphRef(self, painter, rc, lanes, activeLane, commit):
+    def __drawGraphRef(self, painter, rc, commit):
         if not commit.sha1 in Git.REF_MAP:
             return
-
-        w = self.__laneWidth()
-        h = int(self.lineHeight / 2)
-        m = int(w / 2)
-        r = int(w / 3)
-        d = int(2 * r)
 
         refs = Git.REF_MAP[commit.sha1]
         painter.save()
 
-        # first draw the line from circle right outline
-        # to the right most lane
-        painter.setPen(QPen(Qt.black, 2))
-        x1 = activeLane * w + m + r
-        x2 = x1 + (len(lanes) - activeLane - 1) * w
-        if x1 != x2:
-            painter.drawLine(x1, h, x2, h)
-        rc.adjust(x2, 0, 0, 0)
-
         isHead = commit.sha1 == Git.REV_HEAD
         for ref in refs:
-            # connector
-            painter.setPen(QPen(Qt.black, 2))
-            painter.drawLine(x2, h, x2 + d, h)
-            rc.adjust(d, 0, 0, 0)
-
             # tag
             painter.setPen(QPen(Qt.black))
             color = TAG_COLORS[ref.type]
 
-            preL = rc.left()
             if ref.type == Ref.TAG:
                 self.__drawTriangleTag(painter, rc, color, ref.name)
             else:
                 bold = (ref.type == Ref.HEAD and isHead)
                 self.__drawTag(painter, rc, color, ref.name, bold)
-            x2 = rc.left() + 1
 
         painter.restore()
 
@@ -1327,6 +1326,9 @@ class LogView(QAbstractScrollArea):
     def setFilterPath(self, path):
         self.filterPath = path
 
+    def setLogGraph(self, logGraph):
+        self.logGraph = logGraph
+
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)
 
@@ -1345,13 +1347,18 @@ class LogView(QAbstractScrollArea):
 
         palette = self.palette()
 
+        size = self.logGraph.size() if self.logGraph else QSize(1, 1)
+        graphImage = QPixmap(size)
+        graphImage.fill(self.logGraph.palette().color(QPalette.Base))
+        graphPainter = QPainter(graphImage)
+        graphPainter.setRenderHints(QPainter.Antialiasing)
+
         for i in range(startLine, endLine):
             painter.setFont(self.font)
             rect = self.__itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
-            if self.window().showGraph:
-                self.__drawGraph(painter, rect, i)
+            self.__drawGraph(painter, graphPainter, rect, i)
 
             commit = self.data[i]
 
@@ -1430,6 +1437,10 @@ class LogView(QAbstractScrollArea):
             textLayout.draw(painter, pos)
 
             painter.restore()
+
+        del graphPainter
+        if self.logGraph:
+            self.logGraph.render(graphImage)
 
     def mousePressEvent(self, event):
         if not self.data:

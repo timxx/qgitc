@@ -48,10 +48,24 @@
      <property name="orientation">
       <enum>Qt::Vertical</enum>
      </property>
-     <widget class="LogView" name="logView" native="true">
+     <widget class="QSplitter" name="logWidget">
       <property name="focusPolicy">
-       <enum>Qt::StrongFocus</enum>
+       <enum>Qt::NoFocus</enum>
       </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="handleWidth">
+       <number>1</number>
+      </property>
+      <widget class="LogGraph" name="logGraph" native="true"/>
+      <widget class="LogView" name="logView" native="true"/>
      </widget>
      <widget class="QWidget" name="verticalLayoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -200,10 +214,16 @@
    <header>waitingspinnerwidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>LogGraph</class>
+   <extends>QWidget</extends>
+   <header>logview.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>cbBranch</tabstop>
-  <tabstop>logView</tabstop>
+  <tabstop>logWidget</tabstop>
   <tabstop>leSha1</tabstop>
   <tabstop>cbFindWhat</tabstop>
   <tabstop>leFindWhat</tabstop>

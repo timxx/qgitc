@@ -50,6 +50,10 @@ class GitView(QWidget):
         self.findNext = True
         self.findField = FindField.Comments
 
+        self.ui.logView.setLogGraph(self.ui.logGraph)
+        self.ui.logWidget.setStretchFactor(0, 0)
+        self.ui.logWidget.setStretchFactor(1, 1)
+
         height = self.ui.splitter.sizeHint().height()
         sizes = [height * 1 / 4, height * 3 / 4]
         self.ui.splitter.setSizes(sizes)

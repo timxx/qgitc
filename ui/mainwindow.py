@@ -135,8 +135,6 @@ class Ui_MainWindow(object):
         self.menu_View.addAction(self.acVisualizeWhitespace)
         self.menu_View.addAction(self.menuIgnoreWhitespace.menuAction())
         self.menu_View.addSeparator()
-        self.menu_View.addAction(self.acShowGraph)
-        self.menu_View.addSeparator()
         self.menu_View.addAction(self.acCompare)
         self.menu_Edit.addAction(self.acCopy)
         self.menu_Edit.addAction(self.acSelectAll)
