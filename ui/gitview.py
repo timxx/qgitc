@@ -36,8 +36,16 @@ class Ui_GitView(object):
         self.splitter.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.splitter.setOrientation(QtCore.Qt.Vertical)
         self.splitter.setObjectName("splitter")
-        self.logView = LogView(self.splitter)
-        self.logView.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.logWidget = QtWidgets.QSplitter(self.splitter)
+        self.logWidget.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.logWidget.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.logWidget.setFrameShadow(QtWidgets.QFrame.Sunken)
+        self.logWidget.setOrientation(QtCore.Qt.Horizontal)
+        self.logWidget.setHandleWidth(1)
+        self.logWidget.setObjectName("logWidget")
+        self.logGraph = LogGraph(self.logWidget)
+        self.logGraph.setObjectName("logGraph")
+        self.logView = LogView(self.logWidget)
         self.logView.setObjectName("logView")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
@@ -98,8 +106,8 @@ class Ui_GitView(object):
 
         self.retranslateUi(GitView)
         QtCore.QMetaObject.connectSlotsByName(GitView)
-        GitView.setTabOrder(self.cbBranch, self.logView)
-        GitView.setTabOrder(self.logView, self.leSha1)
+        GitView.setTabOrder(self.cbBranch, self.logWidget)
+        GitView.setTabOrder(self.logWidget, self.leSha1)
         GitView.setTabOrder(self.leSha1, self.cbFindWhat)
         GitView.setTabOrder(self.cbFindWhat, self.leFindWhat)
         GitView.setTabOrder(self.leFindWhat, self.cbFindType)
@@ -126,5 +134,5 @@ class Ui_GitView(object):
         self.tbNext.setText(_translate("GitView", "↓"))
 
 from diffview import DiffView
-from logview import LogView
+from logview import LogGraph, LogView
 from waitingspinnerwidget import QtWaitingSpinner

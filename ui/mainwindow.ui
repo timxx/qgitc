@@ -147,8 +147,6 @@
     <addaction name="acVisualizeWhitespace"/>
     <addaction name="menuIgnoreWhitespace"/>
     <addaction name="separator"/>
-    <addaction name="acShowGraph"/>
-    <addaction name="separator"/>
     <addaction name="acCompare"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
@@ -192,7 +190,9 @@
   </action>
   <action name="acPreferences">
    <property name="icon">
-    <iconset theme="preferences-system"/>
+    <iconset theme="preferences-system">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>&amp;Preferences...</string>
