@@ -693,6 +693,7 @@ class LogView(QAbstractScrollArea):
         self.setBugPattern(settings.bugPattern())
 
         self.updateGeometries()
+        self.viewport().update()
 
     def __onCopyCommitSummary(self):
         if self.curIdx == -1:
