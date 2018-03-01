@@ -541,7 +541,7 @@ class LogView(QAbstractScrollArea):
         self.fetcher.logsAvailable.connect(
             self.__onLogsAvailable)
         self.fetcher.fetchFinished.connect(
-            self.endFetch)
+            self.__onFetchFinished)
 
         self.updateSettings()
 
@@ -786,6 +786,11 @@ class LogView(QAbstractScrollArea):
             self.setCurrentIndex(0)
 
         self.updateGeometries()
+
+    def __onFetchFinished(self):
+        if len(self.data) < self.__linesPerPage():
+            self.viewport().update()
+        self.endFetch.emit()
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
