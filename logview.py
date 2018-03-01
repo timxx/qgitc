@@ -64,6 +64,9 @@ class LogsFetcher(DataFetcher):
 
         return git_args
 
+    def isLoading(self):
+        return self.process is not None
+
 
 class Marker():
     CHAR_MARK = chr(0x2713)
@@ -501,6 +504,8 @@ class LogView(QAbstractScrollArea):
         self.curIdx = -1
         self.branchA = True
         self.curBranch = ""
+        self.preferSha1 = None
+        self.delayVisible = False
 
         self.lineSpace = 5
         self.marginX = 3
@@ -623,6 +628,7 @@ class LogView(QAbstractScrollArea):
                 self.verticalScrollBar().setValue(startLine + 1)
 
     def setCurrentIndex(self, index):
+        self.preferSha1 = None
         if index == self.curIdx:
             return
 
@@ -644,6 +650,9 @@ class LogView(QAbstractScrollArea):
         index = self.findCommitIndex(sha1)
         if index != -1:
             self.setCurrentIndex(index)
+        elif self.fetcher.isLoading():
+            self.preferSha1 = sha1
+            return True
 
         return index != -1
 
@@ -784,13 +793,28 @@ class LogView(QAbstractScrollArea):
         self.data.extend(logs)
 
         if self.currentIndex() == -1:
-            self.setCurrentIndex(0)
+            if self.preferSha1:
+                begin = len(self.data) - len(logs)
+                idx = self.findCommitIndex(self.preferSha1, begin)
+                if idx != -1:
+                    self.setCurrentIndex(idx)
+                    # might not visible at the time
+                    self.delayVisible = True
+            else:
+                self.setCurrentIndex(0)
 
         self.updateGeometries()
 
     def __onFetchFinished(self):
+        if self.delayVisible:
+            self.ensureVisible()
+            self.delayVisible = False
+        elif self.curIdx == -1:
+            self.setCurrentIndex(0)
+
         if len(self.data) < self.__linesPerPage():
             self.viewport().update()
+
         self.endFetch.emit()
 
     def __sha1Url(self, sha1):
