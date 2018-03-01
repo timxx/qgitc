@@ -899,28 +899,33 @@ class LogView(QAbstractScrollArea):
         activeColor = GRAPH_COLORS[activeLane % totalColor]
 
         w = self.__laneWidth()
-        x1 = 0
-        x2 = 0
         isHead = (commit.sha1 == Git.REV_HEAD)
         firstCommit = (cid == 0)
 
-        graphPainter.save()
-        graphPainter.translate(rect.topLeft())
-        for i in range(len(lanes)):
-            x1 = x2
-            x2 += w
+        if graphPainter:
+            maxW = graphPainter.device().width()
+            x2 = 0
 
-            lane = lanes[i]
-            if lane == Lane.EMPTY:
-                continue
+            graphPainter.save()
+            graphPainter.translate(rect.topLeft())
+            for i in range(len(lanes)):
+                x1 = x2
+                x2 += w
 
-            if i == activeLane:
-                color = activeColor
-            else:
-                color = GRAPH_COLORS[i % totalColor]
-            self.__drawGraphLane(graphPainter, lane, x1, x2,
-                                 color, activeColor, isHead, firstCommit)
-        graphPainter.restore()
+                lane = lanes[i]
+                if lane == Lane.EMPTY:
+                    continue
+
+                if i == activeLane:
+                    color = activeColor
+                else:
+                    color = GRAPH_COLORS[i % totalColor]
+                self.__drawGraphLane(graphPainter, lane, x1, x2,
+                                     color, activeColor, isHead, firstCommit)
+
+                if x2 > maxW:
+                    break
+            graphPainter.restore()
 
         # refs
         rc = QRect(rect)
@@ -1347,11 +1352,13 @@ class LogView(QAbstractScrollArea):
 
         palette = self.palette()
 
-        size = self.logGraph.size() if self.logGraph else QSize(1, 1)
-        graphImage = QPixmap(size)
-        graphImage.fill(self.logGraph.palette().color(QPalette.Base))
-        graphPainter = QPainter(graphImage)
-        graphPainter.setRenderHints(QPainter.Antialiasing)
+        graphPainter = None
+        graphImage = None
+        if self.logGraph and not self.logGraph.size().isEmpty():
+            graphImage = QPixmap(self.logGraph.size())
+            graphImage.fill(self.logGraph.palette().color(QPalette.Base))
+            graphPainter = QPainter(graphImage)
+            graphPainter.setRenderHints(QPainter.Antialiasing)
 
         for i in range(startLine, endLine):
             painter.setFont(self.font)
@@ -1438,8 +1445,8 @@ class LogView(QAbstractScrollArea):
 
             painter.restore()
 
-        del graphPainter
-        if self.logGraph:
+        if graphImage:
+            del graphPainter
             self.logGraph.render(graphImage)
 
     def mousePressEvent(self, event):
