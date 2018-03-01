@@ -181,8 +181,6 @@ class MainWindow(QMainWindow):
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
 
-        qApp.setOverrideCursor(Qt.WaitCursor)
-
         self.ui.gitViewA.setRepo(repoDir)
         if self.gitViewB:
             self.gitViewB.setRepo(repoDir)
@@ -196,8 +194,6 @@ class MainWindow(QMainWindow):
             else:
                 # TODO: let user choice
                 pass
-
-        qApp.restoreOverrideCursor()
 
     def __onPatternTypeChanged(self, index):
         self.ui.btnFileSelect.setEnabled(index == 0)
