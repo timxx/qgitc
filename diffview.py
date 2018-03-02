@@ -1274,6 +1274,12 @@ class PatchViewer(QAbstractScrollArea):
             self.__doCopy()
         elif event.matches(QKeySequence.SelectAll):
             self.__onSelectAll()
+        elif event.key() == Qt.Key_Home:
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderToMinimum)
+        elif event.key() == Qt.Key_End:
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderToMaximum)
         else:
             super(PatchViewer, self).keyPressEvent(event)
 

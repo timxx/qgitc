@@ -598,6 +598,7 @@ class LogView(QAbstractScrollArea):
         self.firstFreeLane = 0
         self.marker.clear()
         self.clearFindData()
+        self.updateGeometries()
         self.viewport().update()
         self.currentIndexChanged.emit(self.curIdx)
         self.cancelFindCommit()
@@ -1526,6 +1527,12 @@ class LogView(QAbstractScrollArea):
                     self.verticalScrollBar().setValue(v + 1)
 
                 self.currentIndexChanged.emit(self.curIdx)
+        elif event.key() == Qt.Key_Home:
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderToMinimum)
+        elif event.key() == Qt.Key_End:
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderToMaximum)
         else:
             super(LogView, self).keyPressEvent(event)
 
