@@ -461,7 +461,7 @@ class FindData():
         return FIND_NOTFOUND
 
 
-class LogGraph(QFrame):
+class LogGraph(QWidget):
 
     def __init__(self, parent=None):
         super(LogGraph, self).__init__(parent)
@@ -1313,18 +1313,8 @@ class LogView(QAbstractScrollArea):
 
         result = -1
         total = abs(findRange.stop - findRange.start)
-        progress = 0
-        percentage = -1
 
         for i in findRange:
-            progress += 1
-            new_percentage = int(progress * 100 / total)
-            # avoid too many updates on main thread
-            if percentage != new_percentage:
-                percentage = new_percentage
-                self.findProgress.emit(percentage)
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents, 50)
-
             if findInCommit(self.data[i]):
                 result = i
                 break
