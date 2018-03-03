@@ -81,6 +81,10 @@ class GitView(QWidget):
         self.ui.diffSpinner.setInnerRadius(height)
         self.ui.diffSpinner.setNumberOfLines(14)
 
+        self.ui.findSpinner.setLineLength(height)
+        self.ui.findSpinner.setInnerRadius(height)
+        self.ui.findSpinner.setNumberOfLines(14)
+
         self.__setupSignals()
 
     def __setupSignals(self):
@@ -92,7 +96,6 @@ class GitView(QWidget):
 
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
-        self.ui.logView.findProgress.connect(self.__onFindProgress)
         self.ui.logView.beginFetch.connect(self.__onBeginFetch)
         self.ui.logView.endFetch.connect(self.__onEndFetch)
 
@@ -215,7 +218,7 @@ class GitView(QWidget):
                           ) if findNext else range(beginCommit, -1, -1)
 
         if self.findField == FindField.Comments:
-            self.window().showProgress(100, self.branchA)
+            self.ui.findSpinner.start()
             self.setCursor(Qt.WaitCursor)
             result = self.ui.logView.findCommitSync(self.findPattern,
                                                     findRange,
@@ -226,7 +229,7 @@ class GitView(QWidget):
                                   self.findField, findType)
             findStarted = self.ui.logView.findCommitAsync(param)
             if findStarted:
-                self.window().showProgress(0, self.branchA)
+                self.ui.findSpinner.start()
                 self.setCursor(Qt.WaitCursor)
 
     def __onReqCommit(self):
@@ -250,7 +253,7 @@ class GitView(QWidget):
         self.__doFindCommit(beginCommit, True)
 
     def __onFindFinished(self, result):
-        self.window().hideProgress(self.branchA)
+        self.ui.findSpinner.stop()
         self.unsetCursor()
 
         pattern = self.findPattern
@@ -270,9 +273,6 @@ class GitView(QWidget):
                 message = self.tr("Find reached the beginning of logs.")
 
             self.window().showMessage(message)
-
-    def __onFindProgress(self, progress):
-        self.window().updateProgress(progress, self.branchA)
 
     def __onRequestCommit(self, sha1, isNear, goNext):
         if isNear:

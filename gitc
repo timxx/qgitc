@@ -29,10 +29,6 @@ class MainWindow(QMainWindow):
 
         self.gitViewB = None
 
-        self.progressBarA = QProgressBar()
-        self.ui.statusbar.addWidget(self.progressBarA, 1)
-        self.progressBarA.setVisible(False)
-
         self.isWindowReady = False
         self.repoDir = None
         self.timerId = -1
@@ -328,22 +324,6 @@ class MainWindow(QMainWindow):
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
 
-    def showProgress(self, maximum, isBranchA):
-        progressBar = self.progressBarA if isBranchA else self.progressBarB
-        if progressBar:
-            progressBar.setRange(0, maximum)
-            progressBar.setVisible(True)
-
-    def hideProgress(self, isBranchA):
-        progressBar = self.progressBarA if isBranchA else self.progressBarB
-        if progressBar:
-            progressBar.setVisible(False)
-
-    def updateProgress(self, value, isBranchA):
-        progressBar = self.progressBarA if isBranchA else self.progressBarB
-        if progressBar:
-            progressBar.setValue(value)
-
     def closeEvent(self, event):
         self.saveState()
 
@@ -389,10 +369,6 @@ class MainWindow(QMainWindow):
         self.gitViewB = GitView(self)
         self.ui.splitter.addWidget(self.gitViewB)
 
-        self.progressBarB = QProgressBar()
-        self.ui.statusbar.addWidget(self.progressBarB, 1)
-        self.progressBarB.setVisible(False)
-
         self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
         self.gitViewB.setBranchDesc(self.tr("Branch B:"))
         self.gitViewB.setBranchB()
@@ -406,14 +382,11 @@ class MainWindow(QMainWindow):
         self.ui.acCompare.setChecked(True)
 
     def setLogMode(self):
-        self.ui.statusbar.removeWidget(self.progressBarB)
         self.ui.gitViewA.setBranchDesc(self.tr("Branch"))
 
         self.gitViewB.deleteLater()
-        self.progressBarB.deleteLater()
-
         self.gitViewB = None
-        self.progressBarB = None
+
         self.ui.acCompare.setChecked(False)
 
 

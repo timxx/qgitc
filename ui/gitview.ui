@@ -104,6 +104,9 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
+            <widget class="QtWaitingSpinner" name="findSpinner" native="true"/>
+           </item>
+           <item>
             <widget class="QLabel" name="label_3">
              <property name="text">
               <string>Find</string>
