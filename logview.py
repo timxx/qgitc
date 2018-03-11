@@ -461,6 +461,21 @@ class FindData():
         return FIND_NOTFOUND
 
 
+class CheckLocalChangesThread(QThread):
+
+    checkFinished = pyqtSignal(bool, bool)
+
+    def __init__(self, branch, parent=None):
+        super(CheckLocalChangesThread, self).__init__(parent)
+        self._branch = branch
+
+    def run(self):
+        hasLCC = Git.hasLocalChanges(self._branch, True)
+        hasLUC = Git.hasLocalChanges(self._branch)
+
+        self.checkFinished.emit(hasLCC, hasLUC)
+
+
 class LogGraph(QWidget):
 
     def __init__(self, parent=None):
@@ -506,6 +521,8 @@ class LogView(QAbstractScrollArea):
         self.curBranch = ""
         self.preferSha1 = None
         self.delayVisible = False
+
+        self.checkThread = None
 
         self.lineSpace = 5
         self.marginX = 3
@@ -589,6 +606,13 @@ class LogView(QAbstractScrollArea):
         self.curBranch = branch
         self.fetcher.fetch(branch, pattern)
         self.beginFetch.emit()
+
+        if self.checkThread:
+            self.checkThread.terminate()
+            del self.checkThread
+        self.checkThread = CheckLocalChangesThread(self.curBranch, self)
+        self.checkThread.checkFinished.connect(self.__onCheckFinished)
+        self.checkThread.start()
 
     def clear(self):
         self.data.clear()
@@ -680,6 +704,10 @@ class LogView(QAbstractScrollArea):
     def showContextMenu(self, pos):
         if self.curIdx == -1:
             return
+
+        commit = self.getCommit(self.curIdx)
+        self.acCopySummary.setEnabled(
+            not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1])
 
         hasMark = self.marker.hasMark()
         self.acMarkTo.setVisible(hasMark)
@@ -791,7 +819,14 @@ class LogView(QAbstractScrollArea):
             self.findFinished.emit(FIND_NOTFOUND)
 
     def __onLogsAvailable(self, logs):
+        needUpdate = len(self.data) < 3 and len(self.data) > 0
         self.data.extend(logs)
+
+        if needUpdate:
+            if len(self.data) > 2 and self.data[1].sha1 == Git.LCC_SHA1 and not self.data[1].parents:
+                self.data[1].parents = [self.data[2].sha1]
+            elif len(self.data) > 1 and self.data[0].sha1 == Git.LUC_SHA1 and not self.data[0].parents:
+                self.data[0].parents = [self.data[1].sha1]
 
         if self.currentIndex() == -1:
             if self.preferSha1:
@@ -817,6 +852,43 @@ class LogView(QAbstractScrollArea):
             self.viewport().update()
 
         self.endFetch.emit()
+
+    def __onCheckFinished(self, hasLCC, hasLUC):
+        parent_sha1 = self.data[0].sha1 if self.data else None
+
+        if hasLCC:
+            lcc_cmit = Commit()
+            lcc_cmit.sha1 = Git.LCC_SHA1
+            lcc_cmit.comments = self.tr(
+                "Local changes checked in to index but not committed")
+            lcc_cmit.parents = [parent_sha1] if parent_sha1 else None
+            lcc_cmit.children = [Git.LUC_SHA1] if hasLUC else []
+
+            self.data.insert(0, lcc_cmit)
+            parent_sha1 = lcc_cmit.sha1
+
+        if hasLUC:
+            luc_cmit = Commit()
+            luc_cmit.sha1 = Git.LUC_SHA1
+            luc_cmit.comments = self.tr(
+                "Local uncommitted changes, not checked in to index")
+            luc_cmit.parents = [parent_sha1] if parent_sha1 else None
+            luc_cmit.children = []
+
+            self.data.insert(0, luc_cmit)
+
+        # FIXME: modified the graphs directly
+        if self.graphs:
+            self.graphs.clear()
+            self.lanes = Lanes()
+            self.firstFreeLane = 0
+
+        if self.curIdx == 0 and (hasLUC or hasLCC):
+            # force update the diff
+            self.currentIndexChanged.emit(0)
+            self.viewport().update()
+
+        self.checkThread = None
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
@@ -926,8 +998,13 @@ class LogView(QAbstractScrollArea):
                 activeLane = i
                 break
 
-        totalColor = len(GRAPH_COLORS)
-        activeColor = GRAPH_COLORS[activeLane % totalColor]
+        if commit.sha1 == Git.LUC_SHA1:
+            activeColor = Qt.red
+        elif commit.sha1 == Git.LCC_SHA1:
+            activeColor = Qt.green
+        else:
+            totalColor = len(GRAPH_COLORS)
+            activeColor = GRAPH_COLORS[activeLane % totalColor]
 
         w = self.__laneWidth()
         isHead = (commit.sha1 == Git.REV_HEAD)
@@ -1390,16 +1467,17 @@ class LogView(QAbstractScrollArea):
 
             commit = self.data[i]
 
-            # author
-            text = self.authorRe.sub("\\1", commit.author)
-            color = Qt.gray
-            self.__drawTag(painter, rect, color, text)
+            if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
+                # author
+                text = self.authorRe.sub("\\1", commit.author)
+                color = Qt.gray
+                self.__drawTag(painter, rect, color, text)
 
-            # date
-            text = commit.authorDate.split(' ')[0]
-            color = QColor(140, 208, 80)
-            self.__drawTag(painter, rect, color, text)
-            rect.adjust(4, 0, 0, 0)
+                # date
+                text = commit.authorDate.split(' ')[0]
+                color = QColor(140, 208, 80)
+                self.__drawTag(painter, rect, color, text)
+                rect.adjust(4, 0, 0, 0)
 
             # marker
             self.marker.draw(i, painter, rect)
