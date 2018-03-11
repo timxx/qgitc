@@ -111,6 +111,11 @@ class Git():
     REF_MAP = {}
     REV_HEAD = None
 
+    # local uncommitted changes
+    LUC_SHA1 = "0000000000000000000000000000000000000000"
+    # local changes checked
+    LCC_SHA1 = "0000000000000000000000000000000000000001"
+
     @staticmethod
     def run(args):
         return GitProcess(Git.REPO_DIR, args)
@@ -241,9 +246,15 @@ class Git():
 
     @staticmethod
     def commitRawDiff(sha1, filePath=None, gitArgs=None):
-        args = ["diff-tree", "-r", "--root", sha1,
-                "-p", "--textconv", "--submodule",
-                "-C", "--cc", "--no-commit-id", "-U3"]
+        if sha1 == Git.LCC_SHA1:
+            args = ["diff-index", "--cached", "HEAD"]
+        elif sha1 == Git.LUC_SHA1:
+            args = ["diff-files"]
+        else:
+            args = ["diff-tree", "-r", "--root", sha1]
+
+        args.extend(["-p", "--textconv", "--submodule",
+                     "-C", "--cc", "--no-commit-id", "-U3"])
 
         if gitArgs:
             args.extend(gitArgs)
@@ -260,8 +271,13 @@ class Git():
 
     @staticmethod
     def externalDiff(commit, path=None, tool=None):
-        args = ["difftool",
-                "{0}^..{0}".format(commit.sha1)]
+        args = ["difftool"]
+        if commit.sha1 == Git.LUC_SHA1:
+            pass
+        elif commit.sha1 == Git.LCC_SHA1:
+            args.append("--cached")
+        else:
+            args.append("{0}^..{0}".format(commit.sha1))
 
         if tool:
             args.append("--tool={}".format(tool))
@@ -363,11 +379,45 @@ class Git():
         return True if process.returncode == 0 else False
 
     @staticmethod
-    def hasLocalChanges(cached=False):
+    def hasLocalChanges(branch, cached=False):
+        # A remote branch should never have local changes
+        if branch.startswith("remotes/"):
+            return False
+
+        dir = Git.branchDir(branch)
+        # only branch checked out can have local changes
+        if not dir:
+            return False
+
+        # FIXME: the @branch isn't working as expected
+        # and cannot specified here
         args = ["diff", "--quiet"]
         if cached:
             args.append("--cached")
+
         process = Git.run(args)
         process.communicate()
 
         return process.returncode == 1
+
+    @staticmethod
+    def branchDir(branch):
+        """returned the branch directory if it checked out
+        otherwise returned an empty string"""
+
+        args = ["worktree", "list"]
+        data = Git.checkOutput(args)
+        if not data:
+            return ""
+
+        worktree_re = re.compile("(\S+)\s+[a-f0-9]+\s+\[(\S+)\]$")
+        worktrees = data.rstrip(b'\n').decode("utf8").split('\n')
+
+        for wt in worktrees:
+            m = worktree_re.fullmatch(wt)
+            if not m:
+                print("Oops! Wrong format for worktree:", wt)
+            elif m.group(2) == branch:
+                return m.group(1)
+
+        return ""
