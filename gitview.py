@@ -43,7 +43,7 @@ class GitView(QWidget):
 
         self.ui = Ui_GitView()
         self.ui.setupUi(self)
-        self.repo = None
+
         self.pattern = None
         self.branchA = True
         self.findPattern = None
@@ -114,13 +114,13 @@ class GitView(QWidget):
 
         self.ui.cbBranch.completer().activated.connect(self.__onBranchChanged)
 
-    def __updateBranches(self):
+    def __updateBranches(self, activeBranch=None):
         self.ui.cbBranch.clear()
         self.ui.logView.clear()
         self.ui.diffView.clear()
         self.ui.leSha1.clear()
 
-        if not self.repo:
+        if not Git.REPO_DIR:
             return
 
         branches = Git.branches()
@@ -136,10 +136,13 @@ class GitView(QWidget):
             if branch.startswith("remotes/origin/"):
                 if not branch.startswith("remotes/origin/HEAD"):
                     self.ui.cbBranch.addItem(branch)
+                    if activeBranch and activeBranch == branch:
+                        curBranchIdx = self.ui.cbBranch.count() - 1
             elif branch:
                 if branch.startswith("*"):
                     self.ui.cbBranch.addItem(branch.replace("*", "").strip())
-                    curBranchIdx = self.ui.cbBranch.count() - 1
+                    if curBranchIdx == -1:
+                        curBranchIdx = self.ui.cbBranch.count() - 1
                 else:
                     self.ui.cbBranch.addItem(branch.strip())
 
@@ -311,10 +314,8 @@ class GitView(QWidget):
         self.branchA = False
         self.ui.logView.setBranchB()
 
-    def setRepo(self, repo):
-        if self.repo != repo:
-            self.repo = repo
-            self.__updateBranches()
+    def reloadBranches(self, activeBranch=None):
+        self.__updateBranches(activeBranch)
 
     def setCurrentBranch(self, branch):
         index = self.ui.cbBranch.findText(branch)
@@ -322,6 +323,13 @@ class GitView(QWidget):
             index = self.ui.cbBranch.findText(branch, Qt.MatchEndsWith)
         if index != -1:
             self.ui.cbBranch.setCurrentIndex(index)
+
+    def currentBranch(self):
+        # use currentIndex to get the real branch
+        index = self.ui.cbBranch.currentIndex()
+        if index != -1:
+            return self.ui.cbBranch.itemText(index)
+        return ""
 
     def filterPath(self, path):
         if not path:
