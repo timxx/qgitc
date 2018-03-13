@@ -610,9 +610,11 @@ class LogView(QAbstractScrollArea):
         if self.checkThread:
             self.checkThread.terminate()
             del self.checkThread
-        self.checkThread = CheckLocalChangesThread(self.curBranch, self)
-        self.checkThread.checkFinished.connect(self.__onCheckFinished)
-        self.checkThread.start()
+
+        if not pattern:
+            self.checkThread = CheckLocalChangesThread(self.curBranch, self)
+            self.checkThread.checkFinished.connect(self.__onCheckFinished)
+            self.checkThread.start()
 
     def clear(self):
         self.data.clear()
