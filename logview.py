@@ -827,7 +827,7 @@ class LogView(QAbstractScrollArea):
         if needUpdate:
             if len(self.data) > 2 and self.data[1].sha1 == Git.LCC_SHA1 and not self.data[1].parents:
                 self.data[1].parents = [self.data[2].sha1]
-            elif len(self.data) > 1 and self.data[0].sha1 == Git.LUC_SHA1 and not self.data[0].parents:
+            elif len(self.data) > 1 and (self.data[0].sha1 in (Git.LUC_SHA1, Git.LCC_SHA1)) and not self.data[0].parents:
                 self.data[0].parents = [self.data[1].sha1]
 
         if self.currentIndex() == -1:
