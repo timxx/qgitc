@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from Qt.QtGui import *
-from Qt.QtWidgets import *
-from Qt.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 
 
 class FindWidget(QWidget):

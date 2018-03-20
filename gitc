@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from Qt.QtGui import *
-from Qt.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
 
 from ui.mainwindow import *
 from gitview import *
@@ -150,12 +150,9 @@ class MainWindow(QMainWindow):
         self.ui.leRepo.setText(repoDir)
 
     def __onBtnFileSelectClicked(self, checked):
-        path = QFileDialog.getOpenFileName(self,
-                                           self.windowTitle(),
-                                           self.ui.leRepo.text())
-        if QT_VERSION >= 0x050000:
-            path = path[0]
-
+        path, _ = QFileDialog.getOpenFileName(self,
+                                              self.windowTitle(),
+                                              self.ui.leRepo.text())
         if path:
             path = path.replace(self.ui.leRepo.text(), "")
             self.ui.lePattern.setText(path.lstrip("/"))

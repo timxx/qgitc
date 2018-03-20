@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Qt.QtWidgets import QMessageBox, qApp
+from PyQt5.QtWidgets import QMessageBox, qApp
 
 import traceback
 
