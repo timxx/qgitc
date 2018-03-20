@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from Qt.QtGui import *
-from Qt.QtWidgets import *
-from Qt.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtCore import *
 from collections import namedtuple
 
 from common import *
@@ -213,10 +213,7 @@ class DiffView(QWidget):
         self.treeWidget.setHeaderHidden(True)
         self.treeWidget.setRootIsDecorated(False)
         self.treeWidget.header().setStretchLastSection(False)
-        if QT_VERSION >= 0x050000:
-            self.treeWidget.header().setSectionResizeMode(QHeaderView.ResizeToContents)
-        else:
-            self.treeWidget.header().setResizeMode(QHeaderView.ResizeToContents)
+        self.treeWidget.header().setSectionResizeMode(QHeaderView.ResizeToContents)
 
         self.itemDelegate = TreeItemDelegate(self)
         self.treeWidget.setItemDelegate(self.itemDelegate)

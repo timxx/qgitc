@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Qt.QtCore import *
+from PyQt5.QtCore import *
 from git import Git
 
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from Qt.QtWidgets import QDialog, qApp
+from PyQt5.QtWidgets import QDialog, qApp
 from ui.aboutdialog import Ui_AboutDialog
 from common import dataDirPath
 from version import VERSION

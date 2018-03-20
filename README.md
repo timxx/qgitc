@@ -21,8 +21,7 @@ A file conflict viewer for git
 
 - Using source directly
   - Run **gitc** which in the source directory directly.
-  - NOTE: If you want translation other than English or updated the UI files, run **python setup.py build** for the first time. 
-  gitc supports both PyQt4 and PyQt5, the preferred is PyQt5 if you have both. You can specify **QT_BINDING=PyQt4** env to use PyQt4. PS, you need run **QT_BINDING=PyQt4 python setup.py build** to regenerate the ui files for qt4 version before running gitc.
+  - NOTE: If you want translation other than English or updated the UI files, run **python setup.py build** for the first time.
 
 - Using binary
   - Run *python setup.py build_exe*, the binary will be generated in the **build** directory.

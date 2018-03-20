@@ -9,12 +9,9 @@ from distutils.spawn import find_executable, spawn
 from distutils.errors import DistutilsExecError
 from glob import glob
 
-from Qt import uic
-from Qt import QtCore
+from PyQt5 import uic
+from PyQt5 import QtCore
 from version import VERSION
-
-
-IS_QT5 = QtCore.QT_VERSION >= 0x050000
 
 
 class CustomBuild(build):
@@ -48,9 +45,8 @@ class BuildQt(Command):
             pyFile.close()
 
     def compile_ts(self):
-        lrelease_bin = "lrelease-qt5" if IS_QT5 else "lrelease-qt4"
-        lrelease = find_executable(lrelease_bin) or \
-            find_executable("lrelease")
+        lrelease = find_executable(
+            "lrelease-qt5") or find_executable("lrelease")
         if not lrelease:
             raise DistutilsExecError("Missing lrelease")
 
@@ -69,10 +65,9 @@ class UpdateTs(Command):
         pass
 
     def run(self):
-        lupdate_bin = "pylupdate5" if IS_QT5 else "pylupdate4"
-        lupdate = find_executable(lupdate_bin)
+        lupdate = find_executable("pylupdate5")
         if not lupdate:
-            raise DistutilsExecError("Missing %s" % lupdate_bin)
+            raise DistutilsExecError("Missing pylupdate5")
 
         path = os.path.realpath("data/translations/gitc.pro")
         spawn([lupdate, path])
@@ -98,14 +93,13 @@ class BuildExe(Command):
             dirName = "exe.%s-%s" % (distutils.util.get_platform(),
                                      sys.version[0:3])
             baseDir = "build\\" + dirName
-            qtDir = "PyQt5" if IS_QT5 else "PyQt4"
             files = [baseDir + "\\Qt*.dll",
-                     baseDir + "\\%s\\*.exe" % qtDir]
+                     baseDir + "\\PyQt5\\*.exe"]
             for pattern in files:
                 for file in glob(pattern):
                     os.remove(file)
 
-            baseDir += "\\" + qtDir
+            baseDir += "\\PyQt5"
             dirs = ["doc", "examples", "include", "mkspecs",
                     "uic"]
 
@@ -114,24 +108,12 @@ class BuildExe(Command):
                 if os.path.exists(fullPath):
                     shutil.rmtree(fullPath)
 
-            if IS_QT5:
-                # TODO:
-                files = []
-            else:
-                files = ["QtWebKit4.dll", "QtDesigner4.dll",
-                         "QtDeclarative4.dll", "QtDesignerComponents4.dll",
-                         "QtScript4.dll", "QtCLucene4.dll",
-                         "QtScriptTools4.dll", "QtHelp4.dll",
-                         "QtTest4.dll"]
+            # TODO:
+            files = []
             for file in files:
                 fullPath = baseDir + "\\" + file
                 if os.path.exists(fullPath):
                     os.remove(fullPath)
-
-                if not IS_QT5:
-                    fullPath = fullPath.replace("4.dll", ".pyd")
-                    if os.path.exists(fullPath):
-                        os.remove(fullPath)
 
 
 setup(name='gitc',

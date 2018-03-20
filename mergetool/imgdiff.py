@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 
-try:
-    from PyQt5.QtCore import *
-    from PyQt5.QtGui import *
-    from PyQt5.QtWidgets import *
-except ImportError:
-    from PyQt4.QtCore import *
-    from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 
 import sys
 import argparse
@@ -14,13 +10,10 @@ import argparse
 
 def selectImage(parent):
     filter = "Images (*.png *.xpm *.jpg *.gif *.svg)"
-    f = QFileDialog.getOpenFileName(parent,
+    f, _ = QFileDialog.getOpenFileName(parent,
                                     parent.tr("Select Image"),
                                     filter=filter)
-    if QT_VERSION >= 0x050000:
-        return f[0]
-    else:
-        return f
+    return f
 
 
 class NewDiffDlg(QDialog):
