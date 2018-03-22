@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 24))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 22))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -156,7 +156,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "gitc"))
-        self.label.setText(_translate("MainWindow", "Repositories:"))
+        self.label.setText(_translate("MainWindow", "Repository:"))
         self.cbPatternType.setItemText(0, _translate("MainWindow", "File Path"))
         self.cbPatternType.setItemText(1, _translate("MainWindow", "Commit Pattern"))
         self.cbPatternType.setItemText(2, _translate("MainWindow", "Author"))

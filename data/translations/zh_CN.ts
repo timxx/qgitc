@@ -47,37 +47,37 @@
         <translation>查看此文件日志(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="372"/>
+        <location filename="../../diffview.py" line="369"/>
         <source>Author: </source>
         <translation>作者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="377"/>
+        <location filename="../../diffview.py" line="374"/>
         <source>Committer: </source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="383"/>
+        <location filename="../../diffview.py" line="380"/>
         <source>Parent: </source>
         <translation>父提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="420"/>
+        <location filename="../../diffview.py" line="417"/>
         <source>Comments</source>
         <translation>记录信息</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="389"/>
+        <location filename="../../diffview.py" line="386"/>
         <source>Child: </source>
         <translation>子提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="356"/>
+        <location filename="../../diffview.py" line="353"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="360"/>
+        <location filename="../../diffview.py" line="357"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
@@ -155,17 +155,17 @@
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="250"/>
+        <location filename="../../gitview.py" line="253"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="281"/>
+        <location filename="../../gitview.py" line="284"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="283"/>
+        <location filename="../../gitview.py" line="286"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -218,12 +218,12 @@
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="864"/>
+        <location filename="../../logview.py" line="866"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="875"/>
+        <location filename="../../logview.py" line="877"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
@@ -237,7 +237,7 @@
     </message>
     <message>
         <location filename="../../ui/mainwindow.ui" line="36"/>
-        <source>Repositories:</source>
+        <source>Repository:</source>
         <translation>仓库：</translation>
     </message>
     <message>
@@ -296,82 +296,82 @@
         <translation>编辑(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="175"/>
+        <location filename="../../ui/mainwindow.ui" line="174"/>
         <source>&amp;Quit</source>
         <translation>退出(&amp;Q)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="178"/>
+        <location filename="../../ui/mainwindow.ui" line="177"/>
         <source>Ctrl+Q</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="188"/>
+        <location filename="../../ui/mainwindow.ui" line="186"/>
         <source>&amp;About gitc</source>
         <translation>关于gitc(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="198"/>
+        <location filename="../../ui/mainwindow.ui" line="195"/>
         <source>&amp;Preferences...</source>
         <translation>首选项(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="203"/>
+        <location filename="../../ui/mainwindow.ui" line="200"/>
         <source>Ignore whitespace changes</source>
         <translation>忽略空白改动</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="211"/>
+        <location filename="../../ui/mainwindow.ui" line="208"/>
         <source>&amp;Visualize whitespace</source>
         <translation>显示空白字符(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="219"/>
+        <location filename="../../ui/mainwindow.ui" line="216"/>
         <source>At &amp;end of line</source>
         <translation>行末(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="227"/>
+        <location filename="../../ui/mainwindow.ui" line="224"/>
         <source>&amp;All</source>
         <translation>全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="235"/>
+        <location filename="../../ui/mainwindow.ui" line="232"/>
         <source>&amp;None</source>
         <translation>无(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="245"/>
+        <location filename="../../ui/mainwindow.ui" line="241"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="248"/>
+        <location filename="../../ui/mainwindow.ui" line="244"/>
         <source>Ctrl+C</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="258"/>
+        <location filename="../../ui/mainwindow.ui" line="253"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="261"/>
+        <location filename="../../ui/mainwindow.ui" line="256"/>
         <source>Ctrl+A</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="271"/>
+        <location filename="../../ui/mainwindow.ui" line="265"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="274"/>
+        <location filename="../../ui/mainwindow.ui" line="268"/>
         <source>Ctrl+F</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="282"/>
+        <location filename="../../ui/mainwindow.ui" line="276"/>
         <source>&amp;Compare Mode</source>
         <translation>比较模式(&amp;C)</translation>
     </message>
@@ -386,22 +386,22 @@
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="165"/>
+        <location filename="../../gitc" line="162"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="372"/>
+        <location filename="../../gitc" line="362"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="373"/>
+        <location filename="../../gitc" line="363"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="385"/>
+        <location filename="../../gitc" line="380"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -416,12 +416,12 @@
         <translation>提交者</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="293"/>
+        <location filename="../../ui/mainwindow.ui" line="287"/>
         <source>Show &amp;graph</source>
         <translation>显示分支图(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../ui/mainwindow.ui" line="298"/>
+        <location filename="../../ui/mainwindow.ui" line="292"/>
         <source>About &amp;Qt</source>
         <translation>关于&amp;Qt</translation>
     </message>
@@ -537,22 +537,22 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="906"/>
+        <location filename="../../diffview.py" line="903"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="911"/>
+        <location filename="../../diffview.py" line="908"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="916"/>
+        <location filename="../../diffview.py" line="913"/>
         <source>Copy &amp;All</source>
         <translation>复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="919"/>
+        <location filename="../../diffview.py" line="916"/>
         <source>&amp;Select All</source>
         <translation>全选(&amp;S)</translation>
     </message>
@@ -710,17 +710,17 @@
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="267"/>
+        <location filename="../../preferences.py" line="262"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="273"/>
+        <location filename="../../preferences.py" line="268"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="287"/>
+        <location filename="../../preferences.py" line="282"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
@@ -781,7 +781,7 @@
 <context>
     <name>app</name>
     <message>
-        <location filename="../../gitc" line="455"/>
+        <location filename="../../gitc" line="450"/>
         <source>Not in merge state, now quit!</source>
         <translation>此分支不在合并状态，程序将退出！</translation>
     </message>
