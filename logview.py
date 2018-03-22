@@ -1372,7 +1372,7 @@ class LogView(QAbstractScrollArea):
             if findPattern.search(commit.author):
                 return True
 
-            if findPattern.search(commit.commiter):
+            if findPattern.search(commit.committer):
                 return True
 
             if findPattern.search(commit.sha1):
@@ -1381,7 +1381,7 @@ class LogView(QAbstractScrollArea):
             if findPattern.search(commit.authorDate):
                 return True
 
-            if findPattern.search(commit.commiterDate):
+            if findPattern.search(commit.committerDate):
                 return True
 
             for p in commit.parents:
