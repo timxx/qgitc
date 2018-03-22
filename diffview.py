@@ -22,6 +22,7 @@ diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 
 sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
 email_re = re.compile("[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+url_re = re.compile("(https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=]+")
 
 diff_encoding = "utf-8"
 cr_char = "^M"
@@ -529,6 +530,7 @@ class Link():
     Sha1 = 0
     BugId = 1
     Email = 2
+    Url = 3
 
     def __init__(self, start, end, linkType, lineType):
         self.start = start
@@ -672,7 +674,8 @@ class TextLine():
                 self._layout.setTextOption(self._defOption)
 
             patterns = {Link.Sha1: sha1_re,
-                        Link.Email: email_re}
+                        Link.Email: email_re,
+                        Link.Url: url_re}
             if self._patterns:
                 patterns.update(self._patterns)
             self.__findLinks(patterns)
@@ -719,6 +722,7 @@ class TextLine():
             if patterns:
                 patterns[Link.Sha1] = sha1_re
                 patterns[Link.Email] = email_re
+                patterns[Link.Url] = url_re
                 self.__findLinks(patterns)
             self.rehighlight()
         else:
@@ -1712,6 +1716,8 @@ class PatchViewer(QAbstractScrollArea):
             url = "mailto:" + link.data
         elif link.type == Link.BugId:
             url = self.bugUrl + link.data
+        else:
+            url = link.data
 
         if url:
             QDesktopServices.openUrl(QUrl(url))
