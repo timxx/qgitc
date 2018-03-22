@@ -371,8 +371,8 @@ class DiffView(QWidget):
             item = LineItem(TextLine.Author, content)
             items.append(item)
 
-            content = self.__toBytes(self.tr("Committer: ") + commit.commiter +
-                                     " " + commit.commiterDate)
+            content = self.__toBytes(self.tr("Committer: ") + commit.committer +
+                                     " " + commit.committerDate)
             item = LineItem(TextLine.Author, content)
             items.append(item)
 

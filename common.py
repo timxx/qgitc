@@ -26,17 +26,17 @@ class Commit():
         self.author = ""
         self.authorDate = ""
         self.committer = ""
-        self.commiterDate = ""
+        self.committerDate = ""
         self.parents = []
         self.children = None
 
     def __str__(self):
         return "Commit: {0}\n"  \
                "Author: {1} {2}\n"  \
-               "Commiter: {3} {4}\n\n"    \
+               "Committer: {3} {4}\n\n"    \
                "{5}".format(self.sha1,
                             self.author, self.authorDate,
-                            self.commiter, self.commiterDate,
+                            self.committer, self.committerDate,
                             self.comments)
 
     @classmethod
@@ -51,8 +51,8 @@ class Commit():
         commit.comments = parts[1].strip("\n")
         commit.author = parts[2]
         commit.authorDate = parts[3]
-        commit.commiter = parts[4]
-        commit.commiterDate = parts[5]
+        commit.committer = parts[4]
+        commit.committerDate = parts[5]
         commit.parents = [x for x in parts[6].split(" ") if x]
 
         return commit
