@@ -33,7 +33,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Repositories:</string>
+          <string>Repository:</string>
          </property>
         </widget>
        </item>
@@ -110,7 +110,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -168,8 +168,7 @@
   <action name="acQuit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Quit</string>
@@ -181,8 +180,7 @@
   <action name="acAbout">
    <property name="icon">
     <iconset theme="help-about">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;About gitc</string>
@@ -191,8 +189,7 @@
   <action name="acPreferences">
    <property name="icon">
     <iconset theme="preferences-system">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Preferences...</string>
@@ -238,8 +235,7 @@
   <action name="acCopy">
    <property name="icon">
     <iconset theme="edit-copy">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Copy</string>
@@ -251,8 +247,7 @@
   <action name="acSelectAll">
    <property name="icon">
     <iconset theme="edit-select-all">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Select &amp;All</string>
@@ -264,8 +259,7 @@
   <action name="acFind">
    <property name="icon">
     <iconset theme="edit-find">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>&amp;Find</string>
