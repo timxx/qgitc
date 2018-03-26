@@ -93,25 +93,51 @@ class BuildExe(Command):
             dirName = "exe.%s-%s" % (distutils.util.get_platform(),
                                      sys.version[0:3])
             baseDir = "build\\" + dirName
-            files = [baseDir + "\\Qt*.dll",
-                     baseDir + "\\PyQt5\\*.exe"]
-            for pattern in files:
-                for file in glob(pattern):
-                    os.remove(file)
+            qtDir = "lib\\PyQt5\\Qt"
 
-            baseDir += "\\PyQt5"
-            dirs = ["doc", "examples", "include", "mkspecs",
-                    "uic"]
-
+            dirs = ["imageformats", "platforms",
+                    qtDir + "\\resources",
+                    qtDir + "\\qml",
+                    qtDir + "\\translations\\qtwebengine_locales"
+                    ]
             for dir in dirs:
                 fullPath = baseDir + "\\" + dir
                 if os.path.exists(fullPath):
                     shutil.rmtree(fullPath)
 
-            # TODO:
-            files = []
-            for file in files:
-                fullPath = baseDir + "\\" + file
+            binFiles = ["Qt5WebEngineCore.dll",
+                        "Qt5WebChannel.dll",
+                        "Qt5WebEngine.dll",
+                        "Qt5WebEngineWidgets.dll",
+                        "QtWebEngineProcess.exe",
+                        "Qt5Designer.dll",
+                        "Qt5Qml.dll",
+                        "Qt5Quick.dll",
+                        "Qt5QuickTemplates2.dll",
+                        "Qt5QuickParticles.dll",
+                        "Qt5QuickControls2.dll",
+                        "Qt5QuickTest.dll",
+                        "Qt5QuickWidgets.dll",
+                        "Qt5Bluetooth.dll",
+                        "Qt5Sql.dll",
+                        "Qt5Sensors.dll",
+                        "Qt5Test.dll",
+                        "Qt5Bluetooth.dll",
+                        "Qt5DBus.dll",
+                        "Qt5Help.dll",
+                        "Qt5Location.dll",
+                        "Qt5Multimedia.dll",
+                        "Qt5MultimediaWidgets.dll",
+                        "Qt5Positioning.dll",
+                        "Qt5SerialPort.dll",
+                        "Qt5WebSockets.dll",
+                        "Qt5Xml.dll",
+                        "Qt5XmlPatterns.dll",
+                        ]
+
+            binDir = baseDir + "\\" + qtDir + "\\bin"
+            for file in binFiles:
+                fullPath = binDir + "\\" + file
                 if os.path.exists(fullPath):
                     os.remove(fullPath)
 
