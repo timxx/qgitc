@@ -600,6 +600,14 @@ class LogView(QAbstractScrollArea):
         self.bugUrl = url
 
     def setBugPattern(self, pattern):
+        if not pattern:
+            self.bugRe = None
+            return
+
+        # ensure the pattern has one group at least
+        if pattern[0] != '(' or pattern[-1] != ')':
+            pattern = '(' + pattern + ')'
+
         self.bugRe = re.compile(pattern)
 
     def showLogs(self, branch, pattern=None):
@@ -903,7 +911,10 @@ class LogView(QAbstractScrollArea):
         if not self.bugUrl or not self.bugRe:
             return text
 
-        return self.bugRe.sub('<a href="{0}\\1">\\1</a>'.format(self.bugUrl), text)
+        if self.bugRe.groups == 1:
+            return self.bugRe.sub('<a href="{0}\\1">\\1</a>'.format(self.bugUrl), text)
+        else:
+            return self.bugRe.sub('<a href="{0}\\2">\\1</a>'.format(self.bugUrl), text)
 
     def __mailTo(self, author, email):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))
