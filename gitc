@@ -423,6 +423,17 @@ app = None
 sys.excepthook = ExceptHandler
 
 
+def setAppUserId(appId):
+    if os.name != "nt":
+        return
+
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(appId)
+    except:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -436,6 +447,8 @@ def main():
                         help="Merge mode, for helping resolve conflicts")
 
     args = parser.parse_args()
+
+    setAppUserId("appid.gitc.xyz")
 
     repoDir = Git.repoTopLevelDir(os.getcwd())
     filterFile = args.file
