@@ -521,6 +521,7 @@ class LogView(QAbstractScrollArea):
         self.curBranch = ""
         self.preferSha1 = None
         self.delayVisible = False
+        self.delayUpdateParents = False
 
         self.checkThread = None
 
@@ -627,10 +628,10 @@ class LogView(QAbstractScrollArea):
     def clear(self):
         self.data.clear()
         self.curIdx = -1
-        self.graphs.clear()
-        self.lanes = Lanes()
-        self.firstFreeLane = 0
+        self.__resetGraphs()
         self.marker.clear()
+        self.delayVisible = False
+        self.delayUpdateParents = False
         self.clearFindData()
         self.updateGeometries()
         self.viewport().update()
@@ -829,14 +830,17 @@ class LogView(QAbstractScrollArea):
             self.findFinished.emit(FIND_NOTFOUND)
 
     def __onLogsAvailable(self, logs):
-        needUpdate = len(self.data) < 3 and len(self.data) > 0
         self.data.extend(logs)
 
-        if needUpdate:
-            if len(self.data) > 2 and self.data[1].sha1 == Git.LCC_SHA1 and not self.data[1].parents:
+        if self.delayUpdateParents and len(self.data) > 2:
+            if self.data[1].sha1 == Git.LCC_SHA1:
                 self.data[1].parents = [self.data[2].sha1]
-            elif len(self.data) > 1 and (self.data[0].sha1 in (Git.LUC_SHA1, Git.LCC_SHA1)) and not self.data[0].parents:
+            elif self.data[0].sha1 in (Git.LUC_SHA1, Git.LCC_SHA1):
                 self.data[0].parents = [self.data[1].sha1]
+
+            self.__resetGraphs()
+            self.viewport().update()
+            self.delayUpdateParents = False
 
         if self.currentIndex() == -1:
             if self.preferSha1:
@@ -865,32 +869,35 @@ class LogView(QAbstractScrollArea):
     def __onCheckFinished(self, hasLCC, hasLUC):
         parent_sha1 = self.data[0].sha1 if self.data else None
 
+        self.delayUpdateParents = False
         if hasLCC:
             lcc_cmit = Commit()
             lcc_cmit.sha1 = Git.LCC_SHA1
             lcc_cmit.comments = self.tr(
                 "Local changes checked in to index but not committed")
-            lcc_cmit.parents = [parent_sha1] if parent_sha1 else None
+            lcc_cmit.parents = [parent_sha1] if parent_sha1 else []
             lcc_cmit.children = [Git.LUC_SHA1] if hasLUC else []
 
             self.data.insert(0, lcc_cmit)
             parent_sha1 = lcc_cmit.sha1
+            self.delayUpdateParents = len(lcc_cmit.parents) == 0
 
         if hasLUC:
             luc_cmit = Commit()
             luc_cmit.sha1 = Git.LUC_SHA1
             luc_cmit.comments = self.tr(
                 "Local uncommitted changes, not checked in to index")
-            luc_cmit.parents = [parent_sha1] if parent_sha1 else None
+            luc_cmit.parents = [parent_sha1] if parent_sha1 else []
             luc_cmit.children = []
 
             self.data.insert(0, luc_cmit)
+            self.delayUpdateParents = self.delayUpdateParents or len(
+                luc_cmit.parents) == 0
 
         # FIXME: modified the graphs directly
-        if self.graphs:
-            self.graphs.clear()
-            self.lanes = Lanes()
-            self.firstFreeLane = 0
+        if self.graphs and (hasLUC or hasLCC) and not self.delayUpdateParents:
+            self.__resetGraphs()
+            self.viewport().update()
 
         if self.curIdx == 0 and (hasLUC or hasLCC):
             # force update the diff
@@ -898,6 +905,11 @@ class LogView(QAbstractScrollArea):
             self.viewport().update()
 
         self.checkThread = None
+
+    def __resetGraphs(self):
+        self.graphs.clear()
+        self.lanes = Lanes()
+        self.firstFreeLane = 0
 
     def __sha1Url(self, sha1):
         if not self.sha1Url:
