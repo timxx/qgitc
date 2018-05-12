@@ -858,8 +858,7 @@ class LogView(QAbstractScrollArea):
         elif self.curIdx == -1:
             self.setCurrentIndex(0)
 
-        if len(self.data) < self.__linesPerPage():
-            self.viewport().update()
+        self.viewport().update()
 
         self.endFetch.emit()
 
