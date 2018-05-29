@@ -1170,7 +1170,7 @@ class PatchViewer(QAbstractScrollArea):
 
     def clearCache(self):
         self._canClearCache = True
-        if len(self._textLines) == len(self._lineItems):
+        if not self._textLines or (len(self._textLines) == len(self._lineItems)):
             self._lineItems = None
 
     def mouseMoveEvent(self, event):

@@ -379,6 +379,18 @@ class Git():
         return True if process.returncode == 0 else False
 
     @staticmethod
+    def undoMerge(path):
+        """undo a merge on the @path"""
+        if not path:
+            return False
+
+        args = ["checkout", "-m", path]
+        process = Git.run(args)
+        process.communicate()
+
+        return process.returncode == 0
+
+    @staticmethod
     def hasLocalChanges(branch, cached=False):
         # A remote branch should never have local changes
         if branch.startswith("remotes/"):
