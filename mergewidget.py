@@ -72,8 +72,12 @@ class MergeWidget(QWidget):
 
     def __setupMenu(self):
         self.menu = QMenu()
-        self.menu.addAction(self.tr("&Resolve"),
-                            self.__onMenuResolve)
+        self.acResolve = self.menu.addAction(
+            self.tr("&Resolve"),
+            self.__onMenuResolve)
+        self.acUndoMerge = self.menu.addAction(
+            self.tr("&Undo merge"),
+            self.__onMenuUndoMerge)
         self.menu.addSeparator()
 
         self.menu.addAction(self.tr("Use &ours"),
@@ -147,6 +151,19 @@ class MergeWidget(QWidget):
 
     def __onMenuResolve(self):
         self.__onResolveClicked()
+
+    def __onMenuUndoMerge(self):
+        index = self.view.currentIndex()
+        if index.data(StateRole) != STATE_RESOLVED:
+            return
+
+        if Git.undoMerge(index.data()):
+            index = self.proxyModel.mapToSource(index)
+            item = self.model.itemFromIndex(index)
+            item.setData(STATE_CONFLICT, StateRole)
+            item.setIcon(self.iconConflict)
+            self.resolvedCount -= 1
+            self.__updateStatus()
 
     def __onMenuUseOurs(self):
         index = self.view.currentIndex()
@@ -291,6 +308,10 @@ class MergeWidget(QWidget):
                                     text)
 
     def contextMenuEvent(self, event):
+        index = self.view.currentIndex()
+        enabled = index.data(StateRole) == STATE_RESOLVED
+        self.acResolve.setEnabled(not enabled)
+        self.acUndoMerge.setEnabled(enabled)
         self.menu.exec(event.globalPos())
 
     def updateList(self):
