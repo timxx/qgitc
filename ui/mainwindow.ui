@@ -37,30 +37,6 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <widget class="QComboBox" name="cbPatternType">
-         <item>
-          <property name="text">
-           <string>File Path</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Commit Pattern</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Author</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>Committer</string>
-          </property>
-         </item>
-        </widget>
-       </item>
        <item row="0" column="1">
         <widget class="QLineEdit" name="leRepo"/>
        </item>
@@ -72,16 +48,19 @@
         </widget>
        </item>
        <item row="1" column="1">
-        <widget class="QLineEdit" name="lePattern">
+        <widget class="QLineEdit" name="leOpts">
+         <property name="toolTip">
+          <string>See the GIT-LOG options for more information.</string>
+         </property>
          <property name="placeholderText">
-          <string>Type keyword here and press Enter to filter</string>
+          <string>Type the log options here and press Enter to filter</string>
          </property>
         </widget>
        </item>
-       <item row="1" column="2">
-        <widget class="QPushButton" name="btnFileSelect">
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>&amp;Choose...</string>
+          <string>Filter:</string>
          </property>
         </widget>
        </item>
@@ -304,9 +283,7 @@
  <tabstops>
   <tabstop>leRepo</tabstop>
   <tabstop>btnRepoBrowse</tabstop>
-  <tabstop>cbPatternType</tabstop>
-  <tabstop>lePattern</tabstop>
-  <tabstop>btnFileSelect</tabstop>
+  <tabstop>leOpts</tabstop>
  </tabstops>
  <resources/>
  <connections/>
