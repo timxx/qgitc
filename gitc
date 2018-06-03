@@ -17,6 +17,7 @@ from excepthandler import ExceptHandler
 import os
 import sys
 import argparse
+import shlex
 
 
 class MainWindow(QMainWindow):
@@ -52,11 +53,8 @@ class MainWindow(QMainWindow):
             self.__onAcPreferencesTriggered)
 
         self.ui.btnRepoBrowse.clicked.connect(self.__onBtnRepoBrowseClicked)
-        self.ui.btnFileSelect.clicked.connect(self.__onBtnFileSelectClicked)
 
         self.ui.leRepo.textChanged.connect(self.__onRepoChanged)
-        self.ui.cbPatternType.currentIndexChanged.connect(
-            self.__onPatternTypeChanged)
 
         self.ui.acIgnoreNone.triggered.connect(
             self.__onAcIgnoreNoneTriggered)
@@ -83,8 +81,8 @@ class MainWindow(QMainWindow):
         self.ui.acVisualizeWhitespace.triggered.connect(
             self.__onAcVisualizeWhitespaceTriggered)
 
-        self.ui.lePattern.returnPressed.connect(
-            self.__onPatternReturnPressed)
+        self.ui.leOpts.returnPressed.connect(
+            self.__onOptsReturnPressed)
 
         self.ui.acAbout.triggered.connect(
             self.__onAboutTriggered)
@@ -149,14 +147,6 @@ class MainWindow(QMainWindow):
 
         self.ui.leRepo.setText(repoDir)
 
-    def __onBtnFileSelectClicked(self, checked):
-        path, _ = QFileDialog.getOpenFileName(self,
-                                              self.windowTitle(),
-                                              self.ui.leRepo.text())
-        if path:
-            path = path.replace(self.ui.leRepo.text(), "")
-            self.ui.lePattern.setText(path.lstrip("/"))
-
     def __onRepoChanged(self, repoDir):
         if not Git.repoTopLevelDir(repoDir):
             msg = self.tr("'{0}' is not a git repository")
@@ -180,12 +170,6 @@ class MainWindow(QMainWindow):
         self.ui.gitViewA.reloadBranches(branch)
         if self.gitViewB:
             self.gitViewB.reloadBranches()
-
-    def __onPatternTypeChanged(self, index):
-        self.ui.btnFileSelect.setEnabled(index == 0)
-        pattern = self.ui.lePattern.text().strip()
-        self.filterPattern(pattern, self.ui.gitViewA)
-        self.filterPattern(pattern, self.gitViewB)
 
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
@@ -231,10 +215,10 @@ class MainWindow(QMainWindow):
         else:
             self.setLogMode()
 
-    def __onPatternReturnPressed(self):
-        pattern = self.ui.lePattern.text().strip()
-        self.filterPattern(pattern, self.ui.gitViewA)
-        self.filterPattern(pattern, self.gitViewB)
+    def __onOptsReturnPressed(self):
+        opts = self.ui.leOpts.text().strip()
+        self.filterOpts(opts, self.ui.gitViewA)
+        self.filterOpts(opts, self.gitViewB)
 
     def __onCopyTriggered(self):
         fw = qApp.focusWidget()
@@ -297,19 +281,12 @@ class MainWindow(QMainWindow):
 
         return True
 
-    def filterPattern(self, pattern, gitView):
+    def filterOpts(self, opts, gitView):
         if not gitView:
             return
 
-        index = self.ui.cbPatternType.currentIndex()
-        if index == 0:
-            gitView.filterPath(pattern)
-        elif index == 1:
-            gitView.filterCommit(pattern)
-        elif index == 2:
-            gitView.filterAuthor(pattern)
-        elif index == 3:
-            gitView.filterCommitter(pattern)
+        args = shlex.split(opts)
+        gitView.filterLog(args)
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
@@ -349,11 +326,8 @@ class MainWindow(QMainWindow):
             self.timerId = self.startTimer(50)
 
     def setFilterFile(self, filePath):
-        self.ui.lePattern.setText(filePath)
-        if self.ui.cbPatternType.currentIndex() != 0:
-            self.ui.cbPatternType.setCurrentIndex(0)
-        else:
-            self.__onPatternTypeChanged(0)
+        self.ui.leOpts.setText(filePath)
+        self.__onOptsReturnPressed()
 
     def setCompareMode(self):
         self.gitViewB = GitView(self)
@@ -363,9 +337,9 @@ class MainWindow(QMainWindow):
         self.gitViewB.setBranchDesc(self.tr("Branch B:"))
         self.gitViewB.setBranchB()
 
-        pattern = self.ui.lePattern.text().strip()
-        if pattern:
-            self.filterPattern(pattern, self.gitViewB)
+        opts = self.ui.leOpts.text().strip()
+        if opts:
+            self.filterOpts(opts, self.gitViewB)
 
         branch = self.ui.gitViewA.currentBranch()
         if branch.startswith("remotes/origin/"):

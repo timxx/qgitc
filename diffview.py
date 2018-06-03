@@ -172,7 +172,7 @@ class DiffFetcher(DataFetcher):
 
         if filePath:
             git_args.append("--")
-            git_args.append(filePath)
+            git_args.extend(filePath)
 
         return git_args
 

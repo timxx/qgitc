@@ -44,7 +44,7 @@ class GitView(QWidget):
         self.ui = Ui_GitView()
         self.ui.setupUi(self)
 
-        self.pattern = None
+        self.logArgs = None
         self.branchA = True
         self.findPattern = None
         self.findNext = True
@@ -176,7 +176,7 @@ class GitView(QWidget):
 
         self.ui.logView.showLogs(
             branch,
-            self.pattern)
+            self.logArgs)
 
     def __onCommitChanged(self, index):
         if self.ui.logView.cancelFindCommit(False):
@@ -293,20 +293,6 @@ class GitView(QWidget):
         else:
             self.ui.logView.switchToCommit(sha1)
 
-    def __filterLog(self, pattern):
-        if pattern != self.pattern:
-            self.pattern = pattern
-            index = self.ui.cbBranch.currentIndex()
-            preSha1 = None
-            curIdx = self.ui.logView.currentIndex()
-            if curIdx != -1:
-                preSha1 = self.ui.logView.getCommit(curIdx).sha1
-
-            self.__onBranchChanged(index)
-
-            if preSha1:
-                self.ui.logView.switchToCommit(preSha1)
-
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
 
@@ -331,45 +317,28 @@ class GitView(QWidget):
             return self.ui.cbBranch.itemText(index)
         return ""
 
-    def filterPath(self, path):
-        if not path:
-            newPattern = None
-        else:
-            newPattern = path
+    def filterLog(self, args):
+        paths = []
+        # FIXME: file args should always the last one
+        for arg in args:
+            if not arg.startswith("-"):
+                paths.append(arg)
 
-        self.ui.diffView.setFilterPath(path)
-        self.ui.logView.setFilterPath(path)
-        self.__filterLog(newPattern)
+        self.ui.diffView.setFilterPath(paths)
+        self.ui.logView.setFilterPath(paths)
 
-    def filterCommit(self, pattern):
-        if not pattern:
-            newPattern = None
-        else:
-            newPattern = "--grep={0}".format(pattern)
+        if args != self.logArgs:
+            self.logArgs = args
+            index = self.ui.cbBranch.currentIndex()
+            preSha1 = None
+            curIdx = self.ui.logView.currentIndex()
+            if curIdx != -1:
+                preSha1 = self.ui.logView.getCommit(curIdx).sha1
 
-        self.ui.diffView.setFilterPath(None)
-        self.ui.logView.setFilterPath(None)
-        self.__filterLog(newPattern)
+            self.__onBranchChanged(index)
 
-    def filterAuthor(self, author):
-        if not author:
-            newPattern = None
-        else:
-            newPattern = "--author={0}".format(author)
-
-        self.ui.diffView.setFilterPath(None)
-        self.ui.logView.setFilterPath(None)
-        self.__filterLog(newPattern)
-
-    def filterCommitter(self, committer):
-        if not committer:
-            newPattern = None
-        else:
-            newPattern = "--committer={0}".format(committer)
-
-        self.ui.diffView.setFilterPath(None)
-        self.ui.logView.setFilterPath(None)
-        self.__filterLog(newPattern)
+            if preSha1:
+                self.ui.logView.switchToCommit(preSha1)
 
     def saveState(self, settings, isBranchA):
         state = self.ui.splitter.saveState()

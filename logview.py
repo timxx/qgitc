@@ -48,17 +48,15 @@ class LogsFetcher(DataFetcher):
 
     def makeArgs(self, args):
         branch = args[0]
-        pattern = args[1]
+        logArgs = args[1]
 
         git_args = ["log", "-z", "--topo-order",
                     "--parents",
                     "--no-color",
                     "--pretty=format:{0}".format(log_fmt),
                     branch]
-        if pattern:
-            if not pattern.startswith("-"):
-                git_args.append("--")
-            git_args.append(pattern)
+        if logArgs:
+            git_args.extend(logArgs)
         else:
             git_args.append("--boundary")
 
@@ -611,16 +609,16 @@ class LogView(QAbstractScrollArea):
 
         self.bugRe = re.compile(pattern)
 
-    def showLogs(self, branch, pattern=None):
+    def showLogs(self, branch, args=None):
         self.curBranch = branch
-        self.fetcher.fetch(branch, pattern)
+        self.fetcher.fetch(branch, args)
         self.beginFetch.emit()
 
         if self.checkThread:
             self.checkThread.terminate()
             del self.checkThread
 
-        if not pattern:
+        if not args:
             self.checkThread = CheckLocalChangesThread(self.curBranch, self)
             self.checkThread.checkFinished.connect(self.__onCheckFinished)
             self.checkThread.start()
@@ -1346,7 +1344,7 @@ class LogView(QAbstractScrollArea):
 
             if self.filterPath:
                 args.append("--")
-                args.append(self.filterPath)
+                args.extend(self.filterPath)
 
             process = QProcess()
             process.setWorkingDirectory(Git.REPO_DIR)
