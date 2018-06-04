@@ -285,7 +285,8 @@ class MainWindow(QMainWindow):
         if not gitView:
             return
 
-        args = shlex.split(opts)
+        # don't knonw if cygwin works or not
+        args = shlex.split(opts, posix=sys.platform != "win32")
         gitView.filterLog(args)
 
     def showMessage(self, msg, timeout=5000):
