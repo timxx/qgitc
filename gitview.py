@@ -171,7 +171,7 @@ class GitView(QWidget):
         # the local changes and diffs
         if not branch.startswith("remotes/"):
             branchDir = Git.branchDir(branch)
-            if branchDir:
+            if branchDir and os.path.exists(branchDir):
                 Git.REPO_DIR = branchDir
 
         self.ui.logView.showLogs(
