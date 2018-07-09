@@ -5,14 +5,13 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
 
 
-class ColorWidget(QWidget):
+class ColorWidget(QPushButton):
 
     def __init__(self, parent=None):
         super(ColorWidget, self).__init__(parent)
         self.color = QColor(Qt.black)
 
-        self.setFocusPolicy(Qt.StrongFocus)
-        self.setCursor(Qt.PointingHandCursor)
+        self.clicked.connect(self._onClicked)
 
     def setColor(self, color):
         self.color = color
@@ -22,16 +21,14 @@ class ColorWidget(QWidget):
         return self.color
 
     def paintEvent(self, event):
-        painter = QStylePainter(self)
+        super(ColorWidget, self).paintEvent(event)
 
-        painter.fillRect(self.rect(), self.color)
+        painter = QPainter(self)
+        rc = self.rect().adjusted(5, 5, -5, -5)
+        painter.fillRect(rc, self.color)
+        painter.drawRect(rc)
 
-        if self.hasFocus():
-            option = QStyleOptionFocusRect()
-            option.initFrom(self)
-            painter.drawPrimitive(QStyle.PE_FrameFocusRect, option)
-
-    def mouseReleaseEvent(self, event):
+    def _onClicked(self, checked):
         colorDlg = QColorDialog(self.color, self)
         if colorDlg.exec() != QDialog.Accepted:
             return
