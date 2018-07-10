@@ -21,7 +21,6 @@ class FindWidget(QWidget):
         self.setFocusProxy(self._leFind)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
-        self.resize(150, self._leFind.minimumSize().height())
         self.__updateButtons(False)
 
     def __setupUi(self):
@@ -53,18 +52,6 @@ class FindWidget(QWidget):
 
     def showAnimate(self):
         # TODO: make it animate
-        if isinstance(self.parent(), QAbstractScrollArea):
-            viewport = self.parent().viewport()
-        else:
-            viewport = self.parent()
-        pos = viewport.geometry().topLeft()
-        pos = viewport.mapToGlobal(pos)
-
-        offset = viewport.width() - self.width()
-        pos.setX(pos.x() + offset)
-        self.move(pos)
-        self._leFind.setFocus()
-        self._leFind.selectAll()
         self.show()
 
     def hideAnimate(self):
@@ -82,3 +69,20 @@ class FindWidget(QWidget):
 
     def focusOutEvent(self, event):
         self.hideAnimate()
+
+    def sizeHint(self):
+        return QSize(150, self._leFind.minimumSize().height())
+
+    def showEvent(self, event):
+        if isinstance(self.parent(), QAbstractScrollArea):
+            viewport = self.parent().viewport()
+        else:
+            viewport = self.parent()
+        pos = viewport.geometry().topLeft()
+        pos = viewport.mapToGlobal(pos)
+
+        offset = viewport.width() - self.width()
+        pos.setX(pos.x() + offset)
+        self.move(pos)
+        self._leFind.setFocus()
+        self._leFind.selectAll()
