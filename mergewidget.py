@@ -195,36 +195,37 @@ class MergeWidget(QWidget):
                 text = text.replace("(m)odified", "modified")
             text = text.replace("(d)eleted", "deleted")
             text = text.replace("(a)bort", "abort")
-            r = QMessageBox.question(self,
-                                     qApp.applicationName(),
-                                     text,
-                                     self.tr("Use &created") if isCreated
+
+            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text)
+            msgBox.addButton(self.tr("Use &created") if isCreated
                                      else self.tr("Use &modified"),
-                                     self.tr("&Deleted file"),
-                                     self.tr("&Abort"))
-            if r == 0:
+                             QMessageBox.AcceptRole)
+            msgBox.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
+            msgBox.addButton(QMessageBox.Abort)
+            r = msgBox.exec()
+            if r == QMessageBox.AcceptRole:
                 if isCreated:
                     self.process.write(b"c\n")
                 else:
                     self.process.write(b"m\n")
-            elif r == 1:
+            elif r == QMessageBox.RejectRole:
                 self.process.write(b"d\n")
-            else:  # r == 2:
+            else:  # r == QMessageBox.Abort:
                 self.process.write(b"a\n")
         elif b'Symbolic link merge conflict for' in data:
             text = data.data().decode("utf-8")
             text = text.replace("(l)ocal", "local")
             text = text.replace("(r)emote", "remote")
             text = text.replace("(a)bort", "abort")
-            r = QMessageBox.question(self,
-                                     qApp.applicationName(),
-                                     text,
-                                     self.tr("Use &local"),
-                                     self.tr("Use &remote"),
-                                     self.tr("&Abort"))
-            if r == 0:
+
+            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text)
+            msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
+            msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
+            msgBox.addButton(QMessageBox.Abort)
+            r = msgBox.exec()
+            if r == QMessageBox.AcceptRole:
                 self.process.write(b"l\n")
-            elif r == 1:
+            elif r == QMessageBox.RejectRole:
                 self.process.write(b"r\n")
             else:
                 self.process.write(b"a\n")
