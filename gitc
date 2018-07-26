@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
 
         self.mergeWidget = None
         if mergeMode:
-            self.mergeWidget = MergeWidget(self)
+            self.mergeWidget = MergeWidget()
             self.mergeWidget.show()
             self.setCompareMode()
             # not allowed changed in this mode
@@ -294,8 +294,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.saveState()
-
         super(MainWindow, self).closeEvent(event)
+        qApp.quit()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

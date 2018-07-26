@@ -20,11 +20,8 @@ class MergeWidget(QWidget):
     resolveFinished = pyqtSignal(int)
 
     def __init__(self, parent=None):
-        super(MergeWidget, self).__init__(parent,
-                                          Qt.Tool | Qt.CustomizeWindowHint
-                                          | Qt.WindowTitleHint)
+        super(MergeWidget, self).__init__(parent)
         self.setWindowTitle(self.tr("Conflict List"))
-        self.resize(450, 700)
 
         self.resolvedCount = 0
         self.iconResolved = self.__makeTextIcon(chr(0x2714), Qt.green)
@@ -314,6 +311,9 @@ class MergeWidget(QWidget):
         self.acResolve.setEnabled(not enabled)
         self.acUndoMerge.setEnabled(enabled)
         self.menu.exec(event.globalPos())
+
+    def sizeHint(self):
+        return QSize(500, 700)
 
     def updateList(self):
         files = Git.conflictFiles()
