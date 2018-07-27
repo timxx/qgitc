@@ -82,6 +82,11 @@ class MergeWidget(QWidget):
         self.menu.addAction(self.tr("Use &theirs"),
                             self.__onMenuUseTheirs)
 
+        self.menu.addSeparator()
+        self.menu.addAction(self.tr("&Copy Path"),
+                            self.__onMenuCopyPath,
+                            QKeySequence("Ctrl+C"))
+
     def __setupSignals(self):
         self.btnResolve.clicked.connect(self.__onResolveClicked)
         self.view.doubleClicked.connect(self.__onItemDoubleClicked)
@@ -177,6 +182,14 @@ class MergeWidget(QWidget):
         if index.data(StateRole) == STATE_CONFLICT:
             if Git.resolveBy(False, index.data()):
                 self.__resolvedIndex(index)
+
+    def __onMenuCopyPath(self):
+        index = self.view.currentIndex()
+        if not index.isValid():
+            return
+
+        path = index.data(Qt.DisplayRole)
+        qApp.clipboard().setText(path)
 
     def __onResolveReadyRead(self):
         data = self.process.readAllStandardOutput()
