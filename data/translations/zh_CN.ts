@@ -187,12 +187,12 @@
     <message>
         <location filename="../../ui/gitview.ui" line="174"/>
         <source>↑</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <location filename="../../ui/gitview.ui" line="184"/>
         <source>↓</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
 </context>
 <context>
@@ -391,17 +391,17 @@
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="336"/>
+        <location filename="../../gitc" line="337"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="337"/>
+        <location filename="../../gitc" line="338"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../gitc" line="354"/>
+        <location filename="../../gitc" line="355"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -444,114 +444,119 @@
 <context>
     <name>MergeWidget</name>
     <message>
-        <location filename="../../mergewidget.py" line="26"/>
+        <location filename="../../mergewidget.py" line="24"/>
         <source>Conflict List</source>
         <translation>冲突列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="58"/>
+        <location filename="../../mergewidget.py" line="55"/>
         <source>Click to refresh the list</source>
         <translation>点击以刷新列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="59"/>
+        <location filename="../../mergewidget.py" line="56"/>
         <source>Continuous resolve</source>
         <translation>持续解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="60"/>
+        <location filename="../../mergewidget.py" line="57"/>
         <source>Resolve</source>
         <translation>解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="75"/>
+        <location filename="../../mergewidget.py" line="72"/>
         <source>&amp;Resolve</source>
         <translation>解决冲突(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="83"/>
+        <location filename="../../mergewidget.py" line="80"/>
         <source>Use &amp;ours</source>
         <translation>使用我们的(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="85"/>
+        <location filename="../../mergewidget.py" line="82"/>
         <source>Use &amp;theirs</source>
         <translation>使用他们的(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="125"/>
+        <location filename="../../mergewidget.py" line="127"/>
         <source>You are resolving this file, please close it first.</source>
         <translation>您正在处理此文件的冲突，请先关闭它。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="143"/>
+        <location filename="../../mergewidget.py" line="145"/>
         <source>You can&apos;t refresh before close the merge window.</source>
         <translation>您不能在合并窗口打开时刷新列表。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="198"/>
+        <location filename="../../mergewidget.py" line="210"/>
         <source>Use &amp;created</source>
         <translation>使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="198"/>
+        <location filename="../../mergewidget.py" line="210"/>
         <source>Use &amp;modified</source>
         <translation>使用修改的(&amp;)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="198"/>
+        <location filename="../../mergewidget.py" line="213"/>
         <source>&amp;Deleted file</source>
         <translation>删除文件(&amp;D)</translation>
     </message>
     <message>
         <location filename="../../mergewidget.py" line="219"/>
         <source>&amp;Abort</source>
-        <translation>终止(&amp;A)</translation>
+        <translation type="obsolete">终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="219"/>
+        <location filename="../../mergewidget.py" line="232"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="219"/>
+        <location filename="../../mergewidget.py" line="233"/>
         <source>Use &amp;remote</source>
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="259"/>
+        <location filename="../../mergewidget.py" line="270"/>
         <source>All resolved!</source>
         <translation>冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="291"/>
+        <location filename="../../mergewidget.py" line="302"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="304"/>
+        <location filename="../../mergewidget.py" line="315"/>
         <source>Unknown merge tool, please check your configuration.</source>
         <translation>未知合并工具，请检查配置是否正确。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="340"/>
+        <location filename="../../mergewidget.py" line="354"/>
         <source>This file is already resolved.</source>
         <translation>此文件冲突已处理完。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="345"/>
+        <location filename="../../mergewidget.py" line="359"/>
         <source>Please resolve current conflicts before start a new one.</source>
         <translation>请先处理完当前文件冲突再处理新文件的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="286"/>
+        <location filename="../../mergewidget.py" line="297"/>
         <source>All filter conflicts are resolved, please clear the filter to resolve the rest.</source>
         <translation>已解决掉过滤的全部冲突，请清除过滤以解决其它的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="78"/>
+        <location filename="../../mergewidget.py" line="75"/>
         <source>&amp;Undo merge</source>
         <translation>重置冲突(&amp;U)</translation>
+    </message>
+    <message>
+        <location filename="../../mergewidget.py" line="86"/>
+        <source>&amp;Copy Path</source>
+        <translation>复制路径(&amp;C)</translation>
     </message>
 </context>
 <context>
@@ -801,7 +806,7 @@
 <context>
     <name>app</name>
     <message>
-        <location filename="../../gitc" line="437"/>
+        <location filename="../../gitc" line="438"/>
         <source>Not in merge state, now quit!</source>
         <translation>此分支不在合并状态，程序将退出！</translation>
     </message>
