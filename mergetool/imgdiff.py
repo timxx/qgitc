@@ -119,6 +119,7 @@ class ImageViewer(QWidget):
         self.lePath = QLineEdit(self)
         self.btnBrowse = QPushButton("...", self)
         self.btnBrowse.setFixedWidth(30)
+        self.orgImage = QPixmap()
 
         hlayout = QHBoxLayout()
         hlayout.addWidget(self.lbName)
@@ -143,8 +144,8 @@ class ImageViewer(QWidget):
             self.__onBtnBrowseClicked)
 
     def __onPathChanged(self, path):
-        pixmap = QPixmap(path)
-        self.viewer.setPixmap(pixmap)
+        self.orgImage = QPixmap(path)
+        self.viewer.setPixmap(self.orgImage)
 
     def __onBtnBrowseClicked(self, checked=False):
         f = selectImage(self)
@@ -158,20 +159,26 @@ class ImageViewer(QWidget):
         if isinstance(image, str):
             self.lePath.setText(image)
         elif isinstance(image, QPixmap):
+            self.orgImage = image
             self.viewer.setPixmap(image)
         elif isinstance(image, QImage):
-            self.viewer.setPixmap(QPixmap.fromImage(image))
+            self.orgImage = QPixmap.fromImage(image)
+            self.viewer.setPixmap(self.orgImage)
 
     def setBrowseEnabled(self, enabled=True):
         self.lePath.setReadOnly(not enabled)
         self.btnBrowse.setVisible(enabled)
 
     def scaleImage(self, factor):
-        pixmap = self.viewer.pixmap()
+        pixmap = self.orgImage
         if not pixmap.isNull():
+            # firstly, restore the default image
+            self.viewer.setPixmap(pixmap)
             if isinstance(factor, QSize):
                 self.scrollArea.setWidgetResizable(False)
                 self.viewer.resize(factor)
+                if pixmap.width() > factor.width() or pixmap.height() > factor.height():
+                    self.viewer.setPixmap(pixmap.scaled(factor, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             else:
                 if factor == 1.0:
                     self.scrollArea.setWidgetResizable(True)
@@ -180,7 +187,7 @@ class ImageViewer(QWidget):
                 self.viewer.resize(factor * pixmap.size())
 
     def getImage(self):
-        return self.viewer.pixmap()
+        return self.orgImage
 
     def imagePath(self):
         return self.lePath.text().strip()
@@ -192,6 +199,12 @@ class ImageViewer(QWidget):
 class ImgDiff(QWidget):
 
     dataChanged = pyqtSignal()
+
+    ID_All = 0
+    ID_ImageA = 1
+    ID_ImageB = 2
+    ID_ImageC = 3
+    ID_ImageO = 4
 
     def __init__(self, parent=None):
         super(ImgDiff, self).__init__(parent)
@@ -267,20 +280,41 @@ class ImgDiff(QWidget):
         elif base in "cC":
             self.imageC.setName("C (Base):")
 
-    def normalSize(self):
+    def normalSize(self, target=ID_All):
         factor = 1.0
-        self.imageA.scaleImage(factor)
-        self.imageB.scaleImage(factor)
-        if self.imageC:
-            self.imageC.scaleImage(factor)
-        if self.imageO:
-            self.imageO.scaleImage(factor)
 
-    def fitWindow(self):
-        self.__fitImageView(self.imageA)
-        self.__fitImageView(self.imageB)
-        self.__fitImageView(self.imageC)
-        self.__fitImageView(self.imageO)
+        if target == ImgDiff.ID_ImageA:
+            self.imageA.scaleImage(factor)
+        elif target == ImgDiff.ID_ImageB:
+            self.imageB.scaleImage(factor)
+        elif target == ImgDiff.ID_ImageC:
+            if self.imageC:
+                self.imageC.scaleImage(factor)
+        elif target == ImgDiff.ID_ImageO:
+            if self.imageO:
+                self.imageO.scaleImage(factor)
+        else:
+            self.imageA.scaleImage(factor)
+            self.imageB.scaleImage(factor)
+            if self.imageC:
+                self.imageC.scaleImage(factor)
+            if self.imageO:
+                self.imageO.scaleImage(factor)
+
+    def fitWindow(self, target=ID_All):
+        if target == ImgDiff.ID_ImageA:
+            self.__fitImageView(self.imageA)
+        elif target == ImgDiff.ID_ImageB:
+            self.__fitImageView(self.imageB)
+        elif target == ImgDiff.ID_ImageC:
+            self.__fitImageView(self.imageC)
+        elif target == ImgDiff.ID_ImageO:
+            self.__fitImageView(self.imageO)
+        else:
+            self.__fitImageView(self.imageA)
+            self.__fitImageView(self.imageB)
+            self.__fitImageView(self.imageC)
+            self.__fitImageView(self.imageO)
 
     def hasOutput(self):
         return not self.imageO is None
@@ -465,6 +499,10 @@ class DiffWindow(QMainWindow):
     def __onDataChanged(self):
         self._resolved = False
         self.acSave.setEnabled(True)
+        if self._fitWindow:
+            self._diffView.fitWindow(ImgDiff.ID_ImageO)
+        else:
+            self._diffView.normalSize(ImgDiff.ID_ImageO)
 
     def resizeEvent(self, event):
         super(DiffWindow, self).resizeEvent(event)
