@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 
 import sys
 import argparse
+import shutil
 
 
 def selectImage(parent):
@@ -176,6 +177,9 @@ class ImageViewer(QWidget):
     def getImage(self):
         return self.viewer.pixmap()
 
+    def imagePath(self):
+        return self.lePath.text().strip()
+
     def viewSize(self):
         return self.scrollArea.size()
 
@@ -299,6 +303,26 @@ class ImgDiff(QWidget):
             return self.imageO.getImage()
         return None
 
+    def getImageAPath(self):
+        if self.imageA:
+            return self.imageA.imagePath()
+        return ""
+
+    def getImageBPath(self):
+        if self.imageB:
+            return self.imageB.imagePath()
+        return ""
+
+    def getImageCPath(self):
+        if self.imageC:
+            return self.imageC.imagePath()
+        return ""
+
+    def getImageOPath(self):
+        if self.imageO:
+            return self.imageO.imagePath()
+        return ""
+
     def setOutputImage(self, image):
         if self.imageO:
             self.imageO.setImage(image)
@@ -316,6 +340,7 @@ class DiffWindow(QMainWindow):
 
         self._fitWindow = True
         self._resolved = False
+        self._targetPath = ""
 
         self.__setupMenu()
 
@@ -374,9 +399,7 @@ class DiffWindow(QMainWindow):
                                      self.windowTitle(),
                                      self.tr(
                                          "Output file changed, do you want to save?"),
-                                     QMessageBox.Yes,
-                                     QMessageBox.No,
-                                     QMessageBox.Cancel)
+                                     QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
             if r == QMessageBox.Yes:
                 self.__onMenuSave()
             elif r == QMessageBox.Cancel:
@@ -393,10 +416,13 @@ class DiffWindow(QMainWindow):
             self.mergeMenu.setEnabled(self._diffView.hasOutput())
 
     def __onMenuSave(self):
-        image = self._diffView.getImageO()
-        if not image.isNull():
+        if self._targetPath:
             filePath = self._diffView.outputFile()
-            self._resolved = image.save(filePath)
+            try:
+                shutil.copy2(self._targetPath, filePath)
+                self._resolved = True
+            except:
+                self._resolved = False
             self.acSave.setEnabled(not self._resolved)
         else:
             print("Empty image!!!")
@@ -419,14 +445,17 @@ class DiffWindow(QMainWindow):
     def __onMenuChooseA(self):
         image = self._diffView.getImageA()
         self._diffView.setOutputImage(image)
+        self._targetPath = self._diffView.getImageAPath()
 
     def __onMenuChooseB(self):
         image = self._diffView.getImageB()
         self._diffView.setOutputImage(image)
+        self._targetPath = self._diffView.getImageBPath()
 
     def __onMenuChooseC(self):
         image = self._diffView.getImageC()
         self._diffView.setOutputImage(image)
+        self._targetPath = self._diffView.getImageCPath()
 
     def __onDataChanged(self):
         self._resolved = False
