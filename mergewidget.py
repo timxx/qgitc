@@ -191,7 +191,15 @@ class MergeWidget(QWidget):
         path = index.data(Qt.DisplayRole)
         qApp.clipboard().setText(path)
 
+    def __onReadyRead(self):
+        # FIXME: since git might not flush all output at one time
+        # delay some time to read all data for "Deleted merge"
+        QTimer.singleShot(50, self.__onResolveReadyRead)
+
     def __onResolveReadyRead(self):
+        if not self.process or not self.process.bytesAvailable():
+            return
+
         data = self.process.readAllStandardOutput()
         # seems no options to control this buggy prompt
         if b'Continue merging other unresolved paths [y/n]?' in data:
@@ -206,7 +214,7 @@ class MergeWidget(QWidget):
             text = text.replace("(d)eleted", "deleted")
             text = text.replace("(a)bort", "abort")
 
-            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text)
+            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
             msgBox.addButton(self.tr("Use &created") if isCreated
                                      else self.tr("Use &modified"),
                              QMessageBox.AcceptRole)
@@ -228,7 +236,7 @@ class MergeWidget(QWidget):
             text = text.replace("(r)emote", "remote")
             text = text.replace("(a)bort", "abort")
 
-            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text)
+            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
             msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
@@ -244,7 +252,7 @@ class MergeWidget(QWidget):
             self.process.write(b"n\n")
         elif b'?' in data:
             # TODO: might have other prompt need yes no
-            print(data)
+            print("unhandled prompt", data)
 
     def __onResolveFinished(self, exitCode, exitStatus):
         if exitCode == 0:
@@ -378,7 +386,7 @@ class MergeWidget(QWidget):
 
         # subprocess is not suitable here
         self.process = QProcess(self)
-        self.process.readyReadStandardOutput.connect(self.__onResolveReadyRead)
+        self.process.readyReadStandardOutput.connect(self.__onReadyRead)
         self.process.readyReadStandardError.connect(self.__onResolveError)
         self.process.finished.connect(self.__onResolveFinished)
         self.process.setWorkingDirectory(Git.REPO_DIR)
