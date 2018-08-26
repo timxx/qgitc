@@ -298,7 +298,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.saveState()
         super(MainWindow, self).closeEvent(event)
-        qApp.quit()
+        QTimer.singleShot(0, qApp.quit)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
