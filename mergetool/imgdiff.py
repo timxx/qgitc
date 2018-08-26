@@ -7,13 +7,14 @@ from PyQt5.QtWidgets import *
 import sys
 import argparse
 import shutil
+import os
 
 
 def selectImage(parent):
     filter = "Images (*.png *.xpm *.jpg *.gif *.svg)"
     f, _ = QFileDialog.getOpenFileName(parent,
-                                    parent.tr("Select Image"),
-                                    filter=filter)
+                                       parent.tr("Select Image"),
+                                       filter=filter)
     return f
 
 
@@ -22,7 +23,7 @@ class NewDiffDlg(QDialog):
     def __init__(self, parent=None):
         super(NewDiffDlg, self).__init__(parent)
         self.setWindowTitle(self.tr("New Image Diff"))
-        self.resize(580, 150)
+        self.resize(dpiScaled(QSize(580, 150)))
 
         rc = qApp.desktop().screenGeometry()
         x = (rc.width() - self.width()) / 2
@@ -118,7 +119,7 @@ class ImageViewer(QWidget):
         self.lbName = QLabel(self)
         self.lePath = QLineEdit(self)
         self.btnBrowse = QPushButton("...", self)
-        self.btnBrowse.setFixedWidth(30)
+        self.btnBrowse.setFixedWidth(dpiScaled(30))
         self.orgImage = QPixmap()
 
         hlayout = QHBoxLayout()
@@ -178,7 +179,8 @@ class ImageViewer(QWidget):
                 self.scrollArea.setWidgetResizable(False)
                 self.viewer.resize(factor)
                 if pixmap.width() > factor.width() or pixmap.height() > factor.height():
-                    self.viewer.setPixmap(pixmap.scaled(factor, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                    self.viewer.setPixmap(pixmap.scaled(
+                        factor, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             else:
                 if factor == 1.0:
                     self.scrollArea.setWidgetResizable(True)
@@ -563,4 +565,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    # FIXME: find a better way to import
+    sys.path += [os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))]
+    from stylehelper import dpiScaled
     main(sys.argv)
