@@ -215,9 +215,10 @@ class MergeWidget(QWidget):
             text = text.replace("(d)eleted", "deleted")
             text = text.replace("(a)bort", "abort")
 
-            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
+            msgBox = QMessageBox(
+                QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
             msgBox.addButton(self.tr("Use &created") if isCreated
-                                     else self.tr("Use &modified"),
+                             else self.tr("Use &modified"),
                              QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
@@ -237,7 +238,8 @@ class MergeWidget(QWidget):
             text = text.replace("(r)emote", "remote")
             text = text.replace("(a)bort", "abort")
 
-            msgBox = QMessageBox(QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
+            msgBox = QMessageBox(
+                QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
             msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)

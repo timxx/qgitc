@@ -1513,7 +1513,8 @@ class LogView(QAbstractScrollArea):
                 painter.fillRect(rect, palette.highlight())
                 if self.hasFocus():
                     painter.setPen(QPen(Qt.DotLine))
-                    painter.drawRect(rect.adjusted(0, 0, dpiScaled(-1), dpiScaled(-1)))
+                    painter.drawRect(rect.adjusted(
+                        0, 0, dpiScaled(-1), dpiScaled(-1)))
                 painter.setPen(palette.color(QPalette.HighlightedText))
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
