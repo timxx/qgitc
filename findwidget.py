@@ -3,6 +3,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from stylehelper import dpiScaled
 
 
 class FindWidget(QWidget):
@@ -71,7 +72,7 @@ class FindWidget(QWidget):
         self.hideAnimate()
 
     def sizeHint(self):
-        return QSize(150, self._leFind.minimumSize().height())
+        return QSize(dpiScaled(150), self._leFind.minimumSize().height())
 
     def showEvent(self, event):
         if isinstance(self.parent(), QAbstractScrollArea):

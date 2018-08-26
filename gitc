@@ -13,6 +13,7 @@ from common import dataDirPath
 from aboutdialog import AboutDialog
 from mergewidget import MergeWidget
 from excepthandler import ExceptHandler
+from stylehelper import dpiScaled
 
 import os
 import sys
@@ -27,6 +28,8 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.resize(dpiScaled(QSize(800, 600)))
 
         self.gitViewB = None
 
