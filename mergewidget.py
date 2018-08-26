@@ -4,6 +4,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from git import Git
+from stylehelper import dpiScaled
 
 
 STATE_CONFLICT = 0
@@ -94,13 +95,13 @@ class MergeWidget(QWidget):
         self.leFilter.textChanged.connect(self.__onFilterChanged)
 
     def __makeTextIcon(self, text, color):
-        img = QPixmap(32, 32)
+        img = QPixmap(dpiScaled(QSize(32, 32)))
         img.fill(Qt.transparent)
 
         painter = QPainter(img)
         painter.setPen(color)
         font = QFont()
-        font.setPixelSize(32)
+        font.setPixelSize(dpiScaled(32))
         painter.setFont(font)
         painter.drawText(img.rect(), Qt.AlignCenter, text)
         painter = None
@@ -334,7 +335,7 @@ class MergeWidget(QWidget):
         self.menu.exec(event.globalPos())
 
     def sizeHint(self):
-        return QSize(500, 700)
+        return dpiScaled(QSize(500, 700))
 
     def updateList(self):
         files = Git.conflictFiles()

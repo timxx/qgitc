@@ -3,6 +3,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
+from stylehelper import dpiScaled
 
 
 class ColorWidget(QPushButton):
@@ -24,7 +25,8 @@ class ColorWidget(QPushButton):
         super(ColorWidget, self).paintEvent(event)
 
         painter = QPainter(self)
-        rc = self.rect().adjusted(5, 5, -5, -5)
+        offset = dpiScaled(5)
+        rc = self.rect().adjusted(offset, offset, -offset, -offset)
         painter.fillRect(rc, self.color)
         painter.drawRect(rc)
 

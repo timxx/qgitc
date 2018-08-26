@@ -7,6 +7,7 @@ from PyQt5.QtCore import *
 from ui.preferences import *
 from mergetool import MergeTool
 from comboboxitemdelegate import ComboBoxItemDelegate
+from stylehelper import dpiScaled
 
 
 class ToolTableModel(QAbstractTableModel):
@@ -155,6 +156,8 @@ class Preferences(QDialog):
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
         self.settings = settings
+
+        self.resize(dpiScaled(QSize(529, 316)))
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
