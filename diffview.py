@@ -915,6 +915,9 @@ class PatchViewer(QAbstractScrollArea):
         self.acCopy = action
 
         self.menu.addAction(self.tr("Copy &All"), self.__onCopyAll)
+        self.acCopyLink = self.menu.addAction(
+            self.tr("Copy &Link"), self.__onCopyLink)
+
         self.menu.addSeparator()
 
         action = self.menu.addAction(
@@ -1309,6 +1312,7 @@ class PatchViewer(QAbstractScrollArea):
 
         self.acOpenCommit.setVisible(canVisible)
         self.acCopy.setEnabled(self.cursor.hasSelection())
+        self.acCopyLink.setEnabled(self.currentLink is not None)
 
         self.menu.exec(event.globalPos())
 
@@ -1501,6 +1505,15 @@ class PatchViewer(QAbstractScrollArea):
 
     def __onCopyAll(self):
         self.__doCopy(False)
+
+    def __onCopyLink(self):
+        url = self.__makeLinkUrl(self.currentLink)
+        if url:
+            clipboard = QApplication.clipboard()
+            mimeData = QMimeData()
+            mimeData.setText(url)
+            mimeData.setUrls([QUrl(url)])
+            clipboard.setMimeData(mimeData)
 
     def __onSelectAll(self):
         if not self.hasTextLines():
@@ -1705,6 +1718,20 @@ class PatchViewer(QAbstractScrollArea):
             self.viewport().setCursor(Qt.PointingHandCursor)
         else:
             self.viewport().setCursor(Qt.IBeamCursor)
+
+    def __makeLinkUrl(self, link):
+        if link.type == Link.Sha1:
+            sett = qApp.instance().settings()
+            url = sett.commitUrl()
+            url += link.data
+        elif link.type == Link.Email:
+            url = "mailto:" + link.data
+        elif link.type == Link.BugId:
+            url = self.bugUrl + link.data
+        else:
+            url = link.data
+
+        return url
 
     def __openLink(self, link):
         url = None
