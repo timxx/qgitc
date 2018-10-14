@@ -87,6 +87,8 @@ class MergeWidget(QWidget):
         self.menu.addAction(self.tr("&Copy Path"),
                             self.__onMenuCopyPath,
                             QKeySequence("Ctrl+C"))
+        self.menu.addAction(self.tr("Copy &Windows Path"),
+                            self.__onMenuCopyWinPath)
 
     def __setupSignals(self):
         self.btnResolve.clicked.connect(self.__onResolveClicked)
@@ -184,13 +186,19 @@ class MergeWidget(QWidget):
             if Git.resolveBy(False, index.data()):
                 self.__resolvedIndex(index)
 
-    def __onMenuCopyPath(self):
+    def __doCopyPath(self, asWin=False):
         index = self.view.currentIndex()
         if not index.isValid():
             return
 
         path = index.data(Qt.DisplayRole)
-        qApp.clipboard().setText(path)
+        qApp.clipboard().setText(path if not asWin else path.replace('/', '\\'))
+
+    def __onMenuCopyPath(self):
+        self.__doCopyPath()
+
+    def __onMenuCopyWinPath(self):
+        self.__doCopyPath(True)
 
     def __onReadyRead(self):
         # FIXME: since git might not flush all output at one time
