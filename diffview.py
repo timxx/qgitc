@@ -198,6 +198,8 @@ class DiffView(QWidget):
                               self.__onExternalDiff)
         self.twMenu.addAction(self.tr("&Copy path"),
                               self.__onCopyPath)
+        self.twMenu.addAction(self.tr("Copy &Windows path"),
+                              self.__onCopyWinPath)
         self.twMenu.addSeparator()
         self.twMenu.addAction(self.tr("&Log this file"),
                               self.__onFilterPath)
@@ -269,13 +271,22 @@ class DiffView(QWidget):
         tool = self.__diffToolForFile(filePath)
         Git.externalDiff(self.commit, filePath, tool)
 
-    def __onCopyPath(self):
+    def __doCopyPath(self, asWin=False):
         item = self.treeWidget.currentItem()
         if not item:
             return
 
         clipboard = QApplication.clipboard()
-        clipboard.setText(item.text(0))
+        if not asWin:
+            clipboard.setText(item.text(0))
+        else:
+            clipboard.setText(item.text(0).replace('/', '\\'))
+
+    def __onCopyPath(self):
+        self.__doCopyPath()
+
+    def __onCopyWinPath(self):
+        self.__doCopyPath(True)
 
     def __onFilterPath(self):
         item = self.treeWidget.currentItem()
