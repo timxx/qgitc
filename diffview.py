@@ -22,7 +22,7 @@ diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 
 sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
 email_re = re.compile("[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
-url_re = re.compile("(https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=()]+")
+url_re = re.compile("((https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=()]+)")
 
 diff_encoding = "utf-8"
 cr_char = "^M"
