@@ -413,6 +413,9 @@ def setAppUserId(appId):
 
 
 def main():
+    os.unsetenv("QT_SCALE_FACTOR")
+    os.unsetenv("QT_AUTO_SCREEN​_SCALE_FACTOR")
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-r", "--repo",
