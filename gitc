@@ -46,6 +46,9 @@ class MainWindow(QMainWindow):
             self.ui.leRepo.setReadOnly(True)
             self.ui.acCompare.setEnabled(False)
 
+        self.ui.cbSubmodule.setVisible(False)
+        self.ui.lbSubmodule.setVisible(False)
+
         self.__setupSignals()
         self.__setupMenus()
 
@@ -109,6 +112,8 @@ class MainWindow(QMainWindow):
         # application
         qApp.focusChanged.connect(self.__updateEditMenu)
 
+        self.ui.cbSubmodule.currentIndexChanged.connect(self.__onSubmoduleChanged)
+
     def __setupMenus(self):
         acGroup = QActionGroup(self)
         acGroup.addAction(self.ui.acIgnoreNone)
@@ -151,6 +156,8 @@ class MainWindow(QMainWindow):
         self.ui.leRepo.setText(repoDir)
 
     def __onRepoChanged(self, repoDir):
+        self.ui.cbSubmodule.clear()
+
         if not Git.repoTopLevelDir(repoDir):
             msg = self.tr("'{0}' is not a git repository")
             self.ui.statusbar.showMessage(
@@ -160,12 +167,22 @@ class MainWindow(QMainWindow):
             repoDir = None
             # clear
             Git.REPO_DIR = None
+            Git.REPO_TOP_DIR = None
             Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
             Git.REPO_DIR = repoDir
+            Git.REPO_TOP_DIR = repoDir
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
+
+        submodules = self.__getSubmodules(repoDir)
+        hasSubmodule = len(submodules) > 0
+        self.ui.cbSubmodule.setVisible(hasSubmodule)
+        self.ui.lbSubmodule.setVisible(hasSubmodule)
+
+        for submodule in submodules:
+            self.ui.cbSubmodule.addItem(submodule)
 
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
@@ -244,6 +261,42 @@ class MainWindow(QMainWindow):
 
     def __onRequestResolve(self, filePath):
         self.setFilterFile(filePath)
+
+    def __onSubmoduleChanged(self, index):
+        newRepo = Git.REPO_TOP_DIR
+        if index > 0:
+            newRepo = os.path.join(Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
+        if os.path.normpath(newRepo) == os.path.normpath(Git.REPO_DIR):
+            return
+
+        Git.REPO_DIR = newRepo
+        self.ui.gitViewA.reloadBranches()
+        if self.gitViewB:
+            self.gitViewB.reloadBranches()
+
+    def __getSubmodules(self, repoPath):
+        if not repoPath:
+            return []
+
+        submodules = []
+
+        # FIXME: improve performance
+        # some projects may not use submodule or subtree
+        targetDir = os.path.normpath(repoPath)
+        for root, subdirs, files in os.walk(targetDir, topdown=True):
+            if root == targetDir:
+                continue
+            if ".git" in subdirs or ".git" in files:
+                dir = root.replace(targetDir + os.sep, "")
+                if dir:
+                    submodules.append(dir)
+            # ignore all '.dir'
+            subdirs[:] = [d for d in subdirs if not d.startswith(".")]
+
+        if submodules:
+            submodules.insert(0, '.')
+
+        return submodules
 
     def saveState(self):
         sett = qApp.instance().settings()
