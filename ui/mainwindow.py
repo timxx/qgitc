@@ -2,11 +2,12 @@
 
 # Form implementation generated from reading ui file 'ui/mainwindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.2
+# Created by: PyQt5 UI code generator 5.12
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -27,21 +28,27 @@ class Ui_MainWindow(object):
         self.gridLayout_2 = QtWidgets.QGridLayout(self.gridFrame)
         self.gridLayout_2.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.gridLayout_2.setObjectName("gridLayout_2")
+        self.leRepo = QtWidgets.QLineEdit(self.gridFrame)
+        self.leRepo.setObjectName("leRepo")
+        self.gridLayout_2.addWidget(self.leRepo, 0, 2, 1, 1)
+        self.leOpts = QtWidgets.QLineEdit(self.gridFrame)
+        self.leOpts.setObjectName("leOpts")
+        self.gridLayout_2.addWidget(self.leOpts, 2, 2, 1, 1)
+        self.label_2 = QtWidgets.QLabel(self.gridFrame)
+        self.label_2.setObjectName("label_2")
+        self.gridLayout_2.addWidget(self.label_2, 2, 0, 1, 1)
+        self.btnRepoBrowse = QtWidgets.QPushButton(self.gridFrame)
+        self.btnRepoBrowse.setObjectName("btnRepoBrowse")
+        self.gridLayout_2.addWidget(self.btnRepoBrowse, 0, 3, 1, 1)
         self.label = QtWidgets.QLabel(self.gridFrame)
         self.label.setObjectName("label")
         self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-        self.leRepo = QtWidgets.QLineEdit(self.gridFrame)
-        self.leRepo.setObjectName("leRepo")
-        self.gridLayout_2.addWidget(self.leRepo, 0, 1, 1, 1)
-        self.btnRepoBrowse = QtWidgets.QPushButton(self.gridFrame)
-        self.btnRepoBrowse.setObjectName("btnRepoBrowse")
-        self.gridLayout_2.addWidget(self.btnRepoBrowse, 0, 2, 1, 1)
-        self.leOpts = QtWidgets.QLineEdit(self.gridFrame)
-        self.leOpts.setObjectName("leOpts")
-        self.gridLayout_2.addWidget(self.leOpts, 1, 1, 1, 1)
-        self.label_2 = QtWidgets.QLabel(self.gridFrame)
-        self.label_2.setObjectName("label_2")
-        self.gridLayout_2.addWidget(self.label_2, 1, 0, 1, 1)
+        self.lbSubmodule = QtWidgets.QLabel(self.gridFrame)
+        self.lbSubmodule.setObjectName("lbSubmodule")
+        self.gridLayout_2.addWidget(self.lbSubmodule, 1, 0, 1, 1)
+        self.cbSubmodule = QtWidgets.QComboBox(self.gridFrame)
+        self.cbSubmodule.setObjectName("cbSubmodule")
+        self.gridLayout_2.addWidget(self.cbSubmodule, 1, 2, 1, 1)
         self.verticalLayout.addWidget(self.gridFrame)
         self.splitter = QtWidgets.QSplitter(self.centralwidget)
         self.splitter.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -53,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -147,11 +154,12 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "gitc"))
-        self.label.setText(_translate("MainWindow", "Repository:"))
-        self.btnRepoBrowse.setText(_translate("MainWindow", "&Browse..."))
         self.leOpts.setToolTip(_translate("MainWindow", "See the GIT-LOG options for more information."))
         self.leOpts.setPlaceholderText(_translate("MainWindow", "Type the log options here and press Enter to filter"))
         self.label_2.setText(_translate("MainWindow", "Filter:"))
+        self.btnRepoBrowse.setText(_translate("MainWindow", "&Browse..."))
+        self.label.setText(_translate("MainWindow", "Repository:"))
+        self.lbSubmodule.setText(_translate("MainWindow", "Submodule:"))
         self.menuFile.setTitle(_translate("MainWindow", "&File"))
         self.menu_Help.setTitle(_translate("MainWindow", "&Help"))
         self.menu_Settings.setTitle(_translate("MainWindow", "&Settings"))
@@ -176,5 +184,6 @@ class Ui_MainWindow(object):
         self.acCompare.setText(_translate("MainWindow", "&Compare Mode"))
         self.acShowGraph.setText(_translate("MainWindow", "Show &graph"))
         self.acAboutQt.setText(_translate("MainWindow", "About &Qt"))
+
 
 from gitview import GitView

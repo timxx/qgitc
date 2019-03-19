@@ -2,11 +2,12 @@
 
 # Form implementation generated from reading ui file 'ui/aboutdialog.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.2
+# Created by: PyQt5 UI code generator 5.12
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_AboutDialog(object):
     def setupUi(self, AboutDialog):
@@ -56,4 +57,5 @@ class Ui_AboutDialog(object):
         AboutDialog.setWindowTitle(_translate("AboutDialog", "About gitc"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabAbout), _translate("AboutDialog", "&About"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLicense), _translate("AboutDialog", "&License"))
+
 
