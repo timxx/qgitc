@@ -21,6 +21,39 @@ import argparse
 import shlex
 
 
+class FindSubmoduleThread(QThread):
+    def __init__(self, repoDir, parent=None):
+        super(FindSubmoduleThread, self).__init__(parent)
+
+        self._repoDir = os.path.normcase(os.path.normpath(repoDir))
+        self._submodules = []
+
+    @property
+    def submodules(self):
+        if self.isFinished():
+            return self._submodules
+        return []
+
+    def run(self):
+        self._submodules.clear()
+        submodules = []
+        # some projects may not use submodule or subtree
+        for root, subdirs, files in os.walk(self._repoDir, topdown=True):
+            if os.path.normcase(root) == self._repoDir:
+                continue
+            if ".git" in subdirs or ".git" in files:
+                dir = root.replace(self._repoDir + os.sep, "")
+                if dir:
+                    submodules.append(dir)
+            # ignore all '.dir'
+            subdirs[:] = [d for d in subdirs if not d.startswith(".")]
+
+        if submodules:
+            submodules.insert(0, '.')
+
+        self._submodules = submodules
+
+
 class MainWindow(QMainWindow):
 
     def __init__(self, mergeMode=False, parent=None):
@@ -36,6 +69,7 @@ class MainWindow(QMainWindow):
         self.isWindowReady = False
         self.repoDir = None
         self.timerId = -1
+        self.findSubmoduleThread = None
 
         self.mergeWidget = None
         if mergeMode:
@@ -157,6 +191,8 @@ class MainWindow(QMainWindow):
 
     def __onRepoChanged(self, repoDir):
         self.ui.cbSubmodule.clear()
+        self.ui.cbSubmodule.setVisible(False)
+        self.ui.lbSubmodule.setVisible(False)
 
         if not Git.repoTopLevelDir(repoDir):
             msg = self.tr("'{0}' is not a git repository")
@@ -176,13 +212,16 @@ class MainWindow(QMainWindow):
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
 
-        submodules = self.__getSubmodules(repoDir)
-        hasSubmodule = len(submodules) > 0
-        self.ui.cbSubmodule.setVisible(hasSubmodule)
-        self.ui.lbSubmodule.setVisible(hasSubmodule)
+        if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
+            self.findSubmoduleThread.terminate()
 
-        for submodule in submodules:
-            self.ui.cbSubmodule.addItem(submodule)
+        if repoDir:
+            self.ui.leRepo.setDisabled(True)
+            self.ui.btnRepoBrowse.setDisabled(True)
+            self.findSubmoduleThread = FindSubmoduleThread(repoDir, self)
+            self.findSubmoduleThread.finished.connect(
+                self.__onFindSubmoduleFinished)
+            self.findSubmoduleThread.start()
 
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
@@ -266,7 +305,7 @@ class MainWindow(QMainWindow):
         newRepo = Git.REPO_TOP_DIR
         if index > 0:
             newRepo = os.path.join(Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
-        if os.path.normpath(newRepo) == os.path.normpath(Git.REPO_DIR):
+        if os.path.normcase(os.path.normpath(newRepo)) == os.path.normcase(os.path.normpath(Git.REPO_DIR)):
             return
 
         Git.REPO_DIR = newRepo
@@ -274,29 +313,15 @@ class MainWindow(QMainWindow):
         if self.gitViewB:
             self.gitViewB.reloadBranches()
 
-    def __getSubmodules(self, repoPath):
-        if not repoPath:
-            return []
-
-        submodules = []
-
-        # FIXME: improve performance
-        # some projects may not use submodule or subtree
-        targetDir = os.path.normpath(repoPath)
-        for root, subdirs, files in os.walk(targetDir, topdown=True):
-            if root == targetDir:
-                continue
-            if ".git" in subdirs or ".git" in files:
-                dir = root.replace(targetDir + os.sep, "")
-                if dir:
-                    submodules.append(dir)
-            # ignore all '.dir'
-            subdirs[:] = [d for d in subdirs if not d.startswith(".")]
-
-        if submodules:
-            submodules.insert(0, '.')
-
-        return submodules
+    def __onFindSubmoduleFinished(self):
+        submodules = self.findSubmoduleThread.submodules
+        for submodule in submodules:
+            self.ui.cbSubmodule.addItem(submodule)
+        self.ui.leRepo.setEnabled(True)
+        self.ui.btnRepoBrowse.setEnabled(True)
+        hasSubmodule = len(submodules) > 0
+        self.ui.cbSubmodule.setVisible(hasSubmodule)
+        self.ui.lbSubmodule.setVisible(hasSubmodule)
 
     def saveState(self):
         sett = qApp.instance().settings()
