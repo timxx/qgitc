@@ -309,9 +309,11 @@ class MainWindow(QMainWindow):
             return
 
         Git.REPO_DIR = newRepo
-        self.ui.gitViewA.reloadBranches()
+        self.ui.gitViewA.reloadBranches(
+            self.ui.gitViewA.currentBranch())
         if self.gitViewB:
-            self.gitViewB.reloadBranches()
+            self.gitViewB.reloadBranches(
+                self.gitViewB.currentBranch())
 
     def __onFindSubmoduleFinished(self):
         submodules = self.findSubmoduleThread.submodules
