@@ -152,6 +152,8 @@ class GitView(QWidget):
                     if curBranchIdx == -1 and (not activeBranch or activeBranch == pure_branch):
                         curBranchIdx = self.ui.cbBranch.count() - 1
                 else:
+                    if branch.startswith("+ "):
+                        branch = branch[2:]
                     self.ui.cbBranch.addItem(branch.strip())
 
         if curBranchIdx != -1:
