@@ -3,7 +3,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from git import Git
+from gitutils import Git
 from stylehelper import dpiScaled
 
 

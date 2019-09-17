@@ -6,7 +6,7 @@ from PyQt5.QtCore import *
 from collections import namedtuple
 
 from common import *
-from git import Git
+from gitutils import Git
 from findwidget import FindWidget
 from datafetcher import DataFetcher
 

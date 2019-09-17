@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5.QtCore import *
-from git import Git
+from gitutils import Git
 
 
 class DataFetcher(QObject):

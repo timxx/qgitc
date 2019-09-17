@@ -6,7 +6,7 @@ from PyQt5.QtCore import *
 
 from ui.gitview import *
 from common import *
-from git import Git
+from gitutils import Git
 from stylehelper import dpiScaled
 
 import re

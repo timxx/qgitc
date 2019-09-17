@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
 from common import *
-from git import *
+from gitutils import *
 from datafetcher import DataFetcher
 from stylehelper import dpiScaled
 
