@@ -7,7 +7,7 @@ from ui.mainwindow import *
 from gitview import *
 from preferences import *
 from settings import *
-from git import Git
+from gitutils import Git
 from diffview import PatchViewer
 from common import dataDirPath
 from aboutdialog import AboutDialog
