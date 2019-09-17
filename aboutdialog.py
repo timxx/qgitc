@@ -33,7 +33,7 @@ class AboutDialog(QDialog, Ui_AboutDialog):
         about += "<center><a href=https://github.com/timxx/gitc>"
         about += self.tr("Visit project host")
         about += "</a></center><br/>"
-        about += "<center>Copyright © 2016-2018 Weitian Leung</center>"
+        about += "<center>Copyright © 2016-2019 Weitian Leung</center>"
 
         self.tbAbout.setHtml(about)
 
