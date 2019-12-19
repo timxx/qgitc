@@ -1209,6 +1209,7 @@ class PatchViewer(QAbstractScrollArea):
         n = textLine.lineNo()
         offset = textLine.offsetForPos(self.mapToContents(event.pos()))
         self.cursor.selectTo(n, offset)
+        self.wordPattern = None
         self.__updateSelection()
 
     def mousePressEvent(self, event):
