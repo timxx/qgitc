@@ -204,7 +204,8 @@ class MainWindow(QMainWindow):
             # clear
             Git.REPO_DIR = None
             Git.REPO_TOP_DIR = None
-            Git.REF_MAP.clear()
+            if Git.REF_MAP:
+                Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
             Git.REPO_DIR = repoDir
