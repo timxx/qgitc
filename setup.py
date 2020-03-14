@@ -38,7 +38,7 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        return # tempory disabled
+        return  # tempory disabled
         # uic.compileUiDir doesn't works on Windows
         for uiFile in glob("gitc/*.ui"):
             name = os.path.basename(uiFile)
@@ -53,7 +53,7 @@ class BuildQt(Command):
         if not lrelease:
             raise DistutilsExecError("Missing lrelease")
 
-        path = os.path.realpath("data/translations/gitc.pro")
+        path = os.path.realpath("gitc/data/translations/gitc.pro")
         spawn([lrelease, path])
 
 
@@ -72,7 +72,7 @@ class UpdateTs(Command):
         if not lupdate:
             raise DistutilsExecError("Missing pylupdate5")
 
-        path = os.path.realpath("data/translations/gitc.pro")
+        path = os.path.realpath("gitc/data/translations/gitc.pro")
         spawn([lupdate, path])
 
 
@@ -90,10 +90,10 @@ setup(name="gitc",
       keywords="git conflict viewer",
       url="https://github.com/timxx/gitc",
       packages=find_packages(),
-      #package_data={"gitc": ["data/icons/*",
-      #                       "data/licenses/Apache-2.0.html",
-      #                       "data/translations/*.qm"
-      #                       ]},
+      package_data={"gitc": ["data/icons/gitc.*",
+                             "data/licenses/Apache-2.0.html",
+                             "data/translations/*.qm"
+                             ]},
       license="Apache",
       python_requires='>=3.0',
       entry_points={
