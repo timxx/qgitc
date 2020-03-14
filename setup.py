@@ -39,8 +39,8 @@ class BuildQt(Command):
 
     def compile_ui(self):
         # uic.compileUiDir doesn't works on Windows
-        for uiFile in glob("ui/*.ui"):
-            pyFile = codecs.open(uiFile[:-3] + ".py", "w+", encoding="utf-8")
+        for uiFile in glob("*.ui"):
+            pyFile = codecs.open("ui_" + uiFile[:-3] + ".py", "w+", encoding="utf-8")
             uic.compileUi(uiFile, pyFile)
             pyFile.close()
 

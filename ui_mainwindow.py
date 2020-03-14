@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/mainwindow.ui'
+# Form implementation generated from reading ui file 'mainwindow.ui'
 #
-# Created by: PyQt5 UI code generator 5.12
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -184,6 +185,4 @@ class Ui_MainWindow(object):
         self.acCompare.setText(_translate("MainWindow", "&Compare Mode"))
         self.acShowGraph.setText(_translate("MainWindow", "Show &graph"))
         self.acAboutQt.setText(_translate("MainWindow", "About &Qt"))
-
-
 from gitview import GitView

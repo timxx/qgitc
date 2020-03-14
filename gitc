@@ -3,7 +3,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-from ui.mainwindow import *
+from ui_mainwindow import *
 from gitview import *
 from preferences import *
 from settings import *

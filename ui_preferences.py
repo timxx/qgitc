@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui/preferences.ui'
+# Form implementation generated from reading ui file 'preferences.ui'
 #
-# Created by: PyQt5 UI code generator 5.12
+# Created by: PyQt5 UI code generator 5.14.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -278,6 +279,4 @@ class Ui_Preferences(object):
         self.btnAdd.setText(_translate("Preferences", "&Add"))
         self.btnDelete.setText(_translate("Preferences", "&Delete"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), _translate("Preferences", "&Tools"))
-
-
 from colorwidget import ColorWidget
