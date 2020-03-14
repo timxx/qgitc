@@ -1,19 +1,19 @@
-FORMS = ../../gitview.ui \
-    ../../mainwindow.ui \
-    ../../preferences.ui \
-    ../../aboutdialog.ui
+FORMS = ../../gitc/gitview.ui \
+    ../../gitc/mainwindow.ui \
+    ../../gitc/preferences.ui \
+    ../../gitc/aboutdialog.ui
 
-SOURCES = ../../gitc \
-    ../../colorwidget.py \
-    ../../common.py \
-    ../../diffview.py \
-    ../../findwidget.py \
-    ../../gitutils.py \
-    ../../gitview.py \
-    ../../logview.py \
-    ../../preferences.py \
-    ../../settings.py \
-    ../../aboutdialog.py \
-    ../../mergewidget.py
+SOURCES = ../../gitc/main.py \
+    ../../gitc/colorwidget.py \
+    ../../gitc/common.py \
+    ../../gitc/diffview.py \
+    ../../gitc/findwidget.py \
+    ../../gitc/gitutils.py \
+    ../../gitc/gitview.py \
+    ../../gitc/logview.py \
+    ../../gitc/preferences.py \
+    ../../gitc/settings.py \
+    ../../gitc/aboutdialog.py \
+    ../../gitc/mergewidget.py
 
 TRANSLATIONS = zh_CN.ts

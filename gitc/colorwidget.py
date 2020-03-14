@@ -3,7 +3,7 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import Qt
-from stylehelper import dpiScaled
+from .stylehelper import dpiScaled
 
 
 class ColorWidget(QPushButton):

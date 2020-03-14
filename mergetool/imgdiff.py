@@ -4,6 +4,11 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+try:
+    from gitc.stylehelper import dpiScaled
+except ImportError:
+    pass
+
 import sys
 import argparse
 import shutil
@@ -539,7 +544,7 @@ class DiffWindow(QMainWindow):
         self._diffView.setBase(base)
 
 
-def main(argv):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output",
                         help="Output file for merging.")
@@ -553,7 +558,7 @@ def main(argv):
 
     args = parser.parse_args()
 
-    app = QApplication(argv)
+    app = QApplication(sys.argv)
 
     window = DiffWindow()
     window.diff(args.imageA, args.imageB, args.imageC, args.output)
@@ -565,7 +570,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    # FIXME: find a better way to import
+    # for local run only
     sys.path += [os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))]
-    from stylehelper import dpiScaled
-    main(sys.argv)
+    from gitc.stylehelper import dpiScaled
+    main()

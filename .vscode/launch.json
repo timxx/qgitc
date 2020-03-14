@@ -8,7 +8,7 @@
             "name": "Python: Gitc (Integrated Terminal)",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceRoot}/gitc",
+            "program": "${workspaceRoot}/gitc.py",
             "console": "integratedTerminal"
         },
         {

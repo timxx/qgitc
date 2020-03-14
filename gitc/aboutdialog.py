@@ -2,10 +2,10 @@
 
 from PyQt5.QtWidgets import QDialog, qApp
 from PyQt5.QtCore import QSize
-from ui_aboutdialog import Ui_AboutDialog
-from common import dataDirPath
-from version import VERSION
-from stylehelper import dpiScaled
+from .ui_aboutdialog import Ui_AboutDialog
+from .common import dataDirPath
+from .version import VERSION
+from .stylehelper import dpiScaled
 
 
 class AboutDialog(QDialog, Ui_AboutDialog):
