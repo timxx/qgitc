@@ -2,7 +2,7 @@ import sys
 import os
 import codecs
 
-from setuptools import setup
+from setuptools import (setup, find_packages)
 from distutils.core import Command
 from distutils.command.build import build
 from distutils.spawn import find_executable, spawn
@@ -11,14 +11,14 @@ from glob import glob
 
 from PyQt5 import uic
 from PyQt5 import QtCore
-from version import VERSION
+from gitc.version import VERSION
 
 
 class CustomBuild(build):
 
     def get_sub_commands(self):
         subCommands = super(CustomBuild, self).get_sub_commands()
-        subCommands.append("build_qt")
+        subCommands.insert(0, "build_qt")
         return subCommands
 
 
@@ -38,9 +38,12 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
+        return # tempory disabled
         # uic.compileUiDir doesn't works on Windows
-        for uiFile in glob("*.ui"):
-            pyFile = codecs.open("ui_" + uiFile[:-3] + ".py", "w+", encoding="utf-8")
+        for uiFile in glob("gitc/*.ui"):
+            name = os.path.basename(uiFile)
+            pyFile = codecs.open(
+                "gitc/ui_" + name[:-3] + ".py", "w+", encoding="utf-8")
             uic.compileUi(uiFile, pyFile)
             pyFile.close()
 
@@ -73,81 +76,35 @@ class UpdateTs(Command):
         spawn([lupdate, path])
 
 
-class BuildExe(Command):
-    description = "Build exe by cx_Freeze"
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        spawn([sys.executable, "cxfreeze-setup.py", "build_exe"])
-        # remove the unused files
-        if sys.platform == "win32":
-            import shutil
-            import distutils.util
-
-            dirName = "exe.%s-%s" % (distutils.util.get_platform(),
-                                     sys.version[0:3])
-            baseDir = "build\\" + dirName
-            qtDir = "lib\\PyQt5\\Qt"
-
-            dirs = ["imageformats", "platforms",
-                    qtDir + "\\resources",
-                    qtDir + "\\qml",
-                    qtDir + "\\translations\\qtwebengine_locales"
-                    ]
-            for dir in dirs:
-                fullPath = baseDir + "\\" + dir
-                if os.path.exists(fullPath):
-                    shutil.rmtree(fullPath)
-
-            binFiles = ["Qt5WebEngineCore.dll",
-                        "Qt5WebChannel.dll",
-                        "Qt5WebEngine.dll",
-                        "Qt5WebEngineWidgets.dll",
-                        "QtWebEngineProcess.exe",
-                        "Qt5Designer.dll",
-                        "Qt5Qml.dll",
-                        "Qt5Quick.dll",
-                        "Qt5QuickTemplates2.dll",
-                        "Qt5QuickParticles.dll",
-                        "Qt5QuickControls2.dll",
-                        "Qt5QuickTest.dll",
-                        "Qt5QuickWidgets.dll",
-                        "Qt5Bluetooth.dll",
-                        "Qt5Sql.dll",
-                        "Qt5Sensors.dll",
-                        "Qt5Test.dll",
-                        "Qt5Bluetooth.dll",
-                        "Qt5DBus.dll",
-                        "Qt5Help.dll",
-                        "Qt5Location.dll",
-                        "Qt5Multimedia.dll",
-                        "Qt5MultimediaWidgets.dll",
-                        "Qt5Positioning.dll",
-                        "Qt5SerialPort.dll",
-                        "Qt5WebSockets.dll",
-                        "Qt5Xml.dll",
-                        "Qt5XmlPatterns.dll",
-                        ]
-
-            binDir = baseDir + "\\" + qtDir + "\\bin"
-            for file in binFiles:
-                fullPath = binDir + "\\" + file
-                if os.path.exists(fullPath):
-                    os.remove(fullPath)
+with open("README.md", "r") as f:
+    long_description = f.read()
 
 
-setup(name='gitc',
+setup(name="gitc",
       version=VERSION,
+      author="Weitian Leung",
+      author_email="weitianleung@gmail.com",
       description='A file conflict viewer for git',
+      long_description_content_type="text/markdown",
+      long_description=long_description,
+      keywords="git conflict viewer",
+      url="https://github.com/timxx/gitc",
+      packages=find_packages(),
+      #package_data={"gitc": ["data/icons/*",
+      #                       "data/licenses/Apache-2.0.html",
+      #                       "data/translations/*.qm"
+      #                       ]},
+      license="Apache",
+      python_requires='>=3.0',
+      entry_points={
+          "console_scripts": [
+              "gitc=gitc.main:main",
+              "imgdiff=mergetool.imgdiff:main"
+          ]
+      },
+      install_requires=["PyQt5"],
       cmdclass=dict(build=CustomBuild,
                     build_qt=BuildQt,
-                    build_exe=BuildExe,
                     update_ts=UpdateTs
                     )
       )

@@ -145,10 +145,7 @@ def decodeDiffData(data, preferEncoding="utf-8"):
 
 def appDirPath():
     # qApp.applicationDirPath not works as expected
-    if getattr(sys, "frozen", False):
-        path = os.path.realpath(sys.executable)
-    else:
-        path = os.path.realpath(__file__)
+    path = os.path.realpath(__file__)
     return os.path.dirname(path)
 
 

@@ -4,10 +4,10 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from common import *
-from gitutils import *
-from datafetcher import DataFetcher
-from stylehelper import dpiScaled
+from .common import *
+from .gitutils import *
+from .datafetcher import DataFetcher
+from .stylehelper import dpiScaled
 
 import re
 import bisect

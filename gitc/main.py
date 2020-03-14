@@ -1,19 +1,19 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
-from ui_mainwindow import *
-from gitview import *
-from preferences import *
-from settings import *
-from gitutils import Git
-from diffview import PatchViewer
-from common import dataDirPath
-from aboutdialog import AboutDialog
-from mergewidget import MergeWidget
-from excepthandler import ExceptHandler
-from stylehelper import dpiScaled
+from .ui_mainwindow import *
+from .gitview import *
+from .preferences import *
+from .settings import *
+from .gitutils import Git
+from .diffview import PatchViewer
+from .common import dataDirPath
+from .aboutdialog import AboutDialog
+from .mergewidget import MergeWidget
+from .excepthandler import ExceptHandler
+from .stylehelper import dpiScaled
 
 import os
 import sys
@@ -509,7 +509,7 @@ def unsetEnv(varnames):
 
 
 def main():
-    unsetEnv(["QT_SCALE_FACTOR", "QT_AUTO_SCREEN​_SCALE_FACTOR"])
+    unsetEnv(["QT_SCALE_FACTOR", "QT_AUTO_SCREEN_SCALE_FACTOR"])
 
     parser = argparse.ArgumentParser()
 

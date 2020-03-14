@@ -4,10 +4,10 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from ui_preferences import *
-from mergetool import MergeTool
-from comboboxitemdelegate import ComboBoxItemDelegate
-from stylehelper import dpiScaled
+from .ui_preferences import *
+from .mergetool import MergeTool
+from .comboboxitemdelegate import ComboBoxItemDelegate
+from .stylehelper import dpiScaled
 
 
 class ToolTableModel(QAbstractTableModel):

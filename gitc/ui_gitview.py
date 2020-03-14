@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gitview.ui'
+# Form implementation generated from reading ui file 'gitc/gitview.ui'
 #
 # Created by: PyQt5 UI code generator 5.14.1
 #
@@ -137,6 +137,6 @@ class Ui_GitView(object):
         self.tbPrev.setText(_translate("GitView", "↑"))
         self.tbNext.setToolTip(_translate("GitView", "Find next"))
         self.tbNext.setText(_translate("GitView", "↓"))
-from diffview import DiffView
-from logview import LogGraph, LogView
-from waitingspinnerwidget import QtWaitingSpinner
+from .diffview import DiffView
+from .logview import LogGraph, LogView
+from .waitingspinnerwidget import QtWaitingSpinner

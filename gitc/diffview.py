@@ -5,10 +5,10 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from collections import namedtuple
 
-from common import *
-from gitutils import Git
-from findwidget import FindWidget
-from datafetcher import DataFetcher
+from .common import *
+from .gitutils import Git
+from .findwidget import FindWidget
+from .datafetcher import DataFetcher
 
 import re
 import bisect

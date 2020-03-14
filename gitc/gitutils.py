@@ -7,7 +7,7 @@ import os
 import bisect
 import re
 
-from common import log_fmt
+from .common import log_fmt
 
 
 class GitProcess():

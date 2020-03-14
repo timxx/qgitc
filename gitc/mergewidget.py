@@ -3,8 +3,8 @@
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from gitutils import Git
-from stylehelper import dpiScaled
+from .gitutils import Git
+from .stylehelper import dpiScaled
 
 
 STATE_CONFLICT = 0

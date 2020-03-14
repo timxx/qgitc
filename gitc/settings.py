@@ -6,7 +6,7 @@ from PyQt5.QtCore import (
 )
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from mergetool import MergeTool
+from .mergetool import MergeTool
 
 import os
 
@@ -48,27 +48,26 @@ class Settings(QSettings):
         self._fixedFont = fixedFont(QApplication.font().pointSize())
 
     def logViewFont(self):
-        font = self.value("lvFont", QApplication.font())
-        return font
+        return self.value("lvFont", QApplication.font(), type=QFont)
 
     def setLogViewFont(self, font):
         self.setValue("lvFont", font)
 
     def diffViewFont(self):
-        font = self.value("dvFont", self._fixedFont)
+        font = self.value("dvFont", self._fixedFont, type=QFont)
         return font
 
     def setDiffViewFont(self, font):
         self.setValue("dvFont", font)
 
     def commitColorA(self):
-        return self.value("colorA", QColor(255, 0, 0))
+        return self.value("colorA", QColor(255, 0, 0), type=QColor)
 
     def setCommitColorA(self, color):
         self.setValue("colorA", color)
 
     def commitColorB(self):
-        return self.value("colorB", QColor(112, 48, 160))
+        return self.value("colorB", QColor(112, 48, 160), type=QColor)
 
     def setCommitColorB(self, color):
         self.setValue("colorB", color)
