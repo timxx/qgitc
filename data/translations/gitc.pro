@@ -1,14 +1,14 @@
-FORMS = ../../ui/gitview.ui \
-    ../../ui/mainwindow.ui \
-    ../../ui/preferences.ui \
-    ../../ui/aboutdialog.ui
+FORMS = ../../gitview.ui \
+    ../../mainwindow.ui \
+    ../../preferences.ui \
+    ../../aboutdialog.ui
 
 SOURCES = ../../gitc \
     ../../colorwidget.py \
     ../../common.py \
     ../../diffview.py \
     ../../findwidget.py \
-    ../../git.py \
+    ../../gitutils.py \
     ../../gitview.py \
     ../../logview.py \
     ../../preferences.py \
