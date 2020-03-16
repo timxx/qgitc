@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtCore import *
 
 from .ui_mainwindow import *
 from .gitview import *
@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
         preferences = Preferences(settings, self)
-        if preferences.exec() == QDialog.Accepted:
+        if preferences.exec_() == QDialog.Accepted:
             preferences.save()
             self.ui.gitViewA.updateSettings()
             if self.gitViewB:
@@ -297,7 +297,7 @@ class MainWindow(QMainWindow):
 
     def __onAboutTriggered(self):
         aboutDlg = AboutDialog(self)
-        aboutDlg.exec()
+        aboutDlg.exec_()
 
     def __onRequestResolve(self, filePath):
         self.setFilterFile(filePath)
@@ -561,10 +561,10 @@ def main():
     else:
         window.showMaximized()
 
-    app.exec()
+    app.exec_()
     app.deleteLater()
 
 
-# tips from http://pyqt.sourceforge.net/Docs/PyQt5/gotchas.html
+# tips from http://pyqt.sourceforge.net/Docs/PySide2/gotchas.html
 if __name__ == "__main__":
     main()

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import Qt
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+from PySide2.QtCore import Qt
 from .stylehelper import dpiScaled
 
 
@@ -32,7 +32,7 @@ class ColorWidget(QPushButton):
 
     def _onClicked(self, checked):
         colorDlg = QColorDialog(self.color, self)
-        if colorDlg.exec() != QDialog.Accepted:
+        if colorDlg.exec_() != QDialog.Accepted:
             return
 
         self.color = colorDlg.currentColor()

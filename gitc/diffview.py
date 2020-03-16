@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
 from collections import namedtuple
 
 from .common import *
@@ -90,7 +90,7 @@ class TreeItemDelegate(QItemDelegate):
 
 class DiffFetcher(DataFetcher):
 
-    diffAvailable = pyqtSignal(list, dict)
+    diffAvailable = Signal(list, dict)
 
     def __init__(self, parent=None):
         super(DiffFetcher, self).__init__(parent)
@@ -178,10 +178,10 @@ class DiffFetcher(DataFetcher):
 
 
 class DiffView(QWidget):
-    requestCommit = pyqtSignal(str, bool, bool)
+    requestCommit = Signal(str, bool, bool)
 
-    beginFetch = pyqtSignal()
-    endFetch = pyqtSignal()
+    beginFetch = Signal()
+    endFetch = Signal()
 
     def __init__(self, parent=None):
         super(DiffView, self).__init__(parent)
@@ -332,7 +332,7 @@ class DiffView(QWidget):
         if item == self.treeWidget.topLevelItem(0):
             return
 
-        self.twMenu.exec(self.treeWidget.mapToGlobal(pos))
+        self.twMenu.exec_(self.treeWidget.mapToGlobal(pos))
 
     def __onDiffAvailable(self, lineItems, fileItems):
         self.__addToTreeWidget(fileItems)
@@ -884,8 +884,8 @@ class ColorSchema():
 
 
 class PatchViewer(QAbstractScrollArea):
-    fileRowChanged = pyqtSignal(int)
-    requestCommit = pyqtSignal(str, bool, bool)
+    fileRowChanged = Signal(int)
+    requestCommit = Signal(str, bool, bool)
 
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
@@ -1326,7 +1326,7 @@ class PatchViewer(QAbstractScrollArea):
         self.acCopy.setEnabled(self.cursor.hasSelection())
         self.acCopyLink.setEnabled(self.currentLink is not None)
 
-        self.menu.exec(event.globalPos())
+        self.menu.exec_(event.globalPos())
 
     def resizeEvent(self, event):
         self.__adjust()

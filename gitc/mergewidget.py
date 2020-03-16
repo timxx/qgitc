@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
 from .gitutils import Git
 from .stylehelper import dpiScaled
 
@@ -17,8 +17,8 @@ StateRole = Qt.UserRole + 1
 
 
 class MergeWidget(QWidget):
-    requestResolve = pyqtSignal(str)
-    resolveFinished = pyqtSignal(int)
+    requestResolve = Signal(str)
+    resolveFinished = Signal(int)
 
     def __init__(self, parent=None):
         super(MergeWidget, self).__init__(parent)
@@ -230,7 +230,7 @@ class MergeWidget(QWidget):
                              QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
-            r = msgBox.exec()
+            r = msgBox.exec_()
             if r == QMessageBox.AcceptRole:
                 if isCreated:
                     self.process.write(b"c\n")
@@ -251,7 +251,7 @@ class MergeWidget(QWidget):
             msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
-            r = msgBox.exec()
+            r = msgBox.exec_()
             if r == QMessageBox.AcceptRole:
                 self.process.write(b"l\n")
             elif r == QMessageBox.RejectRole:
@@ -342,7 +342,7 @@ class MergeWidget(QWidget):
         enabled = index.data(StateRole) == STATE_RESOLVED
         self.acResolve.setEnabled(not enabled)
         self.acUndoMerge.setEnabled(enabled)
-        self.menu.exec(event.globalPos())
+        self.menu.exec_(event.globalPos())
 
     def sizeHint(self):
         return dpiScaled(QSize(500, 700))

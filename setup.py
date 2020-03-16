@@ -9,8 +9,6 @@ from distutils.spawn import find_executable, spawn
 from distutils.errors import DistutilsExecError
 from glob import glob
 
-from PyQt5 import uic
-from PyQt5 import QtCore
 from gitc.version import VERSION
 
 
@@ -39,13 +37,15 @@ class BuildQt(Command):
 
     def compile_ui(self):
         return  # tempory disabled
-        # uic.compileUiDir doesn't works on Windows
+        uic_bin = find_executable("uic")
+        if not uic_bin:
+            raise DistutilsExecError("Missing uic")
+
         for uiFile in glob("gitc/*.ui"):
             name = os.path.basename(uiFile)
-            pyFile = codecs.open(
-                "gitc/ui_" + name[:-3] + ".py", "w+", encoding="utf-8")
-            uic.compileUi(uiFile, pyFile)
-            pyFile.close()
+            pyFile = "gitc/ui_" + name[:-3] + ".py"
+            # "--from-imports" seems no use at all
+            spawn([uic_bin, "-g", "python", "-o", pyFile, uiFile])
 
     def compile_ts(self):
         lrelease = find_executable(
@@ -68,9 +68,9 @@ class UpdateTs(Command):
         pass
 
     def run(self):
-        lupdate = find_executable("pylupdate5")
+        lupdate = find_executable("pyside2-lupdate")
         if not lupdate:
-            raise DistutilsExecError("Missing pylupdate5")
+            raise DistutilsExecError("Missing pyside2-lupdate")
 
         path = os.path.realpath("gitc/data/translations/gitc.pro")
         spawn([lupdate, path])
@@ -102,7 +102,7 @@ setup(name="gitc",
               "imgdiff=mergetool.imgdiff:main"
           ]
       },
-      install_requires=["PyQt5"],
+      install_requires=["PySide2"],
       cmdclass=dict(build=CustomBuild,
                     build_qt=BuildQt,
                     update_ts=UpdateTs

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
 
 from .common import *
 from .gitutils import *
@@ -34,7 +34,7 @@ HALF_LINE_PERCENT = 0.76
 
 class LogsFetcher(DataFetcher):
 
-    logsAvailable = pyqtSignal(list)
+    logsAvailable = Signal(list)
 
     def __init__(self, parent=None):
         super(LogsFetcher, self).__init__(parent)
@@ -462,7 +462,7 @@ class FindData():
 
 class CheckLocalChangesThread(QThread):
 
-    checkFinished = pyqtSignal(bool, bool)
+    checkFinished = Signal(bool, bool)
 
     def __init__(self, branch, parent=None):
         super(CheckLocalChangesThread, self).__init__(parent)
@@ -500,12 +500,12 @@ class LogGraph(QWidget):
 
 
 class LogView(QAbstractScrollArea):
-    currentIndexChanged = pyqtSignal(int)
-    findFinished = pyqtSignal(int)
-    findProgress = pyqtSignal(int)
+    currentIndexChanged = Signal(int)
+    findFinished = Signal(int)
+    findProgress = Signal(int)
 
-    beginFetch = pyqtSignal()
-    endFetch = pyqtSignal()
+    beginFetch = Signal()
+    endFetch = Signal()
 
     def __init__(self, parent=None):
         super(LogView, self).__init__(parent)
@@ -724,7 +724,7 @@ class LogView(QAbstractScrollArea):
         self.acClearMarks.setVisible(hasMark)
 
         globalPos = self.mapToGlobal(pos)
-        self.menu.exec(globalPos)
+        self.menu.exec_(globalPos)
 
     def updateSettings(self):
         settings = QApplication.instance().settings()

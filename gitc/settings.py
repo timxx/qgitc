@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtCore import (
+from PySide2.QtCore import (
     QSettings,
-    pyqtSignal
+    Signal
 )
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 from .mergetool import MergeTool
 
 import os
@@ -35,8 +35,8 @@ def fixedFont(pointSize):
 
 class Settings(QSettings):
 
-    showWhitespaceChanged = pyqtSignal(bool)
-    ignoreWhitespaceChanged = pyqtSignal(int)
+    showWhitespaceChanged = Signal(bool)
+    ignoreWhitespaceChanged = Signal(int)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -48,26 +48,26 @@ class Settings(QSettings):
         self._fixedFont = fixedFont(QApplication.font().pointSize())
 
     def logViewFont(self):
-        return self.value("lvFont", QApplication.font(), type=QFont)
+        return self.value("lvFont", QApplication.font())
 
     def setLogViewFont(self, font):
         self.setValue("lvFont", font)
 
     def diffViewFont(self):
-        font = self.value("dvFont", self._fixedFont, type=QFont)
+        font = self.value("dvFont", self._fixedFont)
         return font
 
     def setDiffViewFont(self, font):
         self.setValue("dvFont", font)
 
     def commitColorA(self):
-        return self.value("colorA", QColor(255, 0, 0), type=QColor)
+        return self.value("colorA", QColor(255, 0, 0))
 
     def setCommitColorA(self, color):
         self.setValue("colorA", color)
 
     def commitColorB(self):
-        return self.value("colorB", QColor(112, 48, 160), type=QColor)
+        return self.value("colorB", QColor(112, 48, 160))
 
     def setCommitColorB(self, color):
         self.setValue("colorB", color)

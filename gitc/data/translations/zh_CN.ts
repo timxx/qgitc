@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE TS><TS version="2.0" language="zh_CN" sourcelanguage="">
+<!DOCTYPE TS><TS version="1.1" language="zh_CN">
 <context>
     <name>AboutDialog</name>
     <message>
@@ -18,12 +18,12 @@
         <translation type="unfinished">许可证(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="31"/>
+        <location filename="../../aboutdialog.py" line="32"/>
         <source>Git file conflicts and logs viewer</source>
         <translation type="unfinished">Git文件冲突、日志查看器</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="34"/>
+        <location filename="../../aboutdialog.py" line="35"/>
         <source>Visit project host</source>
         <translation type="unfinished">访问项目主页</translation>
     </message>
@@ -71,12 +71,12 @@
         <translation type="unfinished">子提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="365"/>
+        <location filename="../../diffview.py" line="367"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation type="unfinished">本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="369"/>
+        <location filename="../../diffview.py" line="371"/>
         <source>Local changes checked in to index but not committed</source>
         <translation type="unfinished">已检入到索引但未提交的本地改动</translation>
     </message>
@@ -144,22 +144,22 @@
         <translation type="unfinished">查找下一条</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="135"/>
+        <location filename="../../gitview.py" line="141"/>
         <source>Can&apos;t get branch</source>
         <translation type="unfinished">获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="263"/>
+        <location filename="../../gitview.py" line="270"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation type="unfinished">找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="294"/>
+        <location filename="../../gitview.py" line="301"/>
         <source>Find reached the end of logs.</source>
         <translation type="unfinished">已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="296"/>
+        <location filename="../../gitview.py" line="304"/>
         <source>Find reached the beginning of logs.</source>
         <translation type="unfinished">已查找到记录首。</translation>
     </message>
@@ -202,7 +202,7 @@
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="576"/>
+        <location filename="../../logview.py" line="577"/>
         <source>&amp;Copy commit summary</source>
         <translation type="unfinished">复制记录摘要(&amp;C)</translation>
     </message>
@@ -222,12 +222,12 @@
         <translation type="unfinished">清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="875"/>
+        <location filename="../../logview.py" line="877"/>
         <source>Local changes checked in to index but not committed</source>
         <translation type="unfinished">已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="887"/>
+        <location filename="../../logview.py" line="889"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation type="unfinished">本地未提交的改动，未检入索引</translation>
     </message>
@@ -355,17 +355,17 @@
         <translation type="unfinished">比较模式(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../main.py" line="176"/>
+        <location filename="../../main.py" line="178"/>
         <source>Choose repository directory</source>
         <translation type="unfinished">选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../main.py" line="186"/>
+        <location filename="../../main.py" line="187"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation type="unfinished">您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../main.py" line="198"/>
+        <location filename="../../main.py" line="199"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation type="unfinished">&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
@@ -473,7 +473,7 @@
         <translation type="unfinished">解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="73"/>
+        <location filename="../../mergewidget.py" line="74"/>
         <source>&amp;Resolve</source>
         <translation type="unfinished">解决冲突(&amp;R)</translation>
     </message>
@@ -488,12 +488,12 @@
         <translation type="unfinished">使用他们的(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="130"/>
+        <location filename="../../mergewidget.py" line="132"/>
         <source>You are resolving this file, please close it first.</source>
         <translation type="unfinished">您正在处理此文件的冲突，请先关闭它。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="148"/>
+        <location filename="../../mergewidget.py" line="150"/>
         <source>You can&apos;t refresh before close the merge window.</source>
         <translation type="unfinished">您不能在合并窗口打开时刷新列表。</translation>
     </message>
@@ -503,7 +503,7 @@
         <translation type="unfinished">使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="228"/>
+        <location filename="../../mergewidget.py" line="229"/>
         <source>Use &amp;modified</source>
         <translation type="unfinished">使用修改的(&amp;)</translation>
     </message>
@@ -528,37 +528,37 @@
         <translation type="unfinished">使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="289"/>
+        <location filename="../../mergewidget.py" line="290"/>
         <source>All resolved!</source>
         <translation type="unfinished">冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="321"/>
+        <location filename="../../mergewidget.py" line="323"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation type="unfinished">已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="334"/>
+        <location filename="../../mergewidget.py" line="336"/>
         <source>Unknown merge tool, please check your configuration.</source>
         <translation type="unfinished">未知合并工具，请检查配置是否正确。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="373"/>
+        <location filename="../../mergewidget.py" line="374"/>
         <source>This file is already resolved.</source>
         <translation type="unfinished">此文件冲突已处理完。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="378"/>
+        <location filename="../../mergewidget.py" line="379"/>
         <source>Please resolve current conflicts before start a new one.</source>
         <translation type="unfinished">请先处理完当前文件冲突再处理新文件的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="316"/>
+        <location filename="../../mergewidget.py" line="318"/>
         <source>All filter conflicts are resolved, please clear the filter to resolve the rest.</source>
         <translation type="unfinished">已解决掉过滤的全部冲突，请清除过滤以解决其它的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="76"/>
+        <location filename="../../mergewidget.py" line="77"/>
         <source>&amp;Undo merge</source>
         <translation type="unfinished">重置冲突(&amp;U)</translation>
     </message>
@@ -576,7 +576,7 @@
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="918"/>
+        <location filename="../../diffview.py" line="919"/>
         <source>&amp;Open commit in browser</source>
         <translation type="unfinished">在浏览器查看此记录(&amp;O)</translation>
     </message>
@@ -591,12 +591,12 @@
         <translation type="unfinished">复制全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="934"/>
+        <location filename="../../diffview.py" line="935"/>
         <source>&amp;Select All</source>
         <translation type="unfinished">全选(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="929"/>
+        <location filename="../../diffview.py" line="930"/>
         <source>Copy &amp;Link</source>
         <translation type="unfinished">复制链接(&amp;L)</translation>
     </message>
@@ -754,17 +754,17 @@
         <translation type="unfinished">删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="265"/>
+        <location filename="../../preferences.py" line="267"/>
         <source>Please select one row at least to delete.</source>
         <translation type="unfinished">请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="271"/>
+        <location filename="../../preferences.py" line="273"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation type="unfinished">您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="285"/>
+        <location filename="../../preferences.py" line="287"/>
         <source>The suffix you specify is already exists.</source>
         <translation type="unfinished">此后缀已经添加过了。</translation>
     </message>
@@ -787,12 +787,12 @@
         <translation type="obsolete">启用</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="54"/>
+        <location filename="../../preferences.py" line="55"/>
         <source>Suffix</source>
         <translation type="unfinished">后缀</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="56"/>
+        <location filename="../../preferences.py" line="58"/>
         <source>Tool</source>
         <translation type="unfinished">工具</translation>
     </message>
@@ -812,12 +812,12 @@
         <translation type="unfinished">合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="27"/>
+        <location filename="../../preferences.py" line="29"/>
         <source>Both</source>
         <translation type="unfinished">Diff和合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="52"/>
+        <location filename="../../preferences.py" line="53"/>
         <source>Scenes</source>
         <translation type="unfinished">场景</translation>
     </message>
@@ -825,7 +825,7 @@
 <context>
     <name>app</name>
     <message>
-        <location filename="../../main.py" line="539"/>
+        <location filename="../../main.py" line="540"/>
         <source>Not in merge state, now quit!</source>
         <translation type="unfinished">此分支不在合并状态，程序将退出！</translation>
     </message>

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtCore import *
+from PySide2.QtCore import *
 from .gitutils import Git
 
 
 class DataFetcher(QObject):
 
-    fetchFinished = pyqtSignal()
+    fetchFinished = Signal()
 
     def __init__(self, parent=None):
         super(DataFetcher, self).__init__(parent)
@@ -63,7 +63,7 @@ class DataFetcher(QObject):
 
     def cancel(self):
         if self._process:
-            self._process.disconnect()
+            self._process.disconnect(self)
             self._process.close()
             self._process = None
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtWidgets import qApp
-from PyQt5.QtCore import *
+from PySide2.QtWidgets import qApp
+from PySide2.QtCore import *
 import sys
 
 

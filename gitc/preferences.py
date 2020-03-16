@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
 
 from .ui_preferences import *
 from .mergetool import MergeTool
@@ -15,7 +15,7 @@ class ToolTableModel(QAbstractTableModel):
     Col_Suffix = 1
     Col_Tool = 2
 
-    suffixExists = pyqtSignal(str)
+    suffixExists = Signal(str)
 
     def __init__(self, parent=None):
         super(ToolTableModel, self).__init__(parent)
