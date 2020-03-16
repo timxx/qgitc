@@ -1,60 +1,82 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gitc/aboutdialog.ui'
-#
-# Created by: PyQt5 UI code generator 5.14.1
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'aboutdialog.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.1
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
-
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QCoreApplication, QMetaObject, QObject, QPoint,
+    QRect, QSize, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QLinearGradient, QPalette, QPainter, QPixmap,
+    QRadialGradient)
+from PySide2.QtWidgets import *
 
 
 class Ui_AboutDialog(object):
     def setupUi(self, AboutDialog):
-        AboutDialog.setObjectName("AboutDialog")
+        if AboutDialog.objectName():
+            AboutDialog.setObjectName(u"AboutDialog")
         AboutDialog.resize(465, 470)
-        self.verticalLayout = QtWidgets.QVBoxLayout(AboutDialog)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.tabWidget = QtWidgets.QTabWidget(AboutDialog)
-        self.tabWidget.setObjectName("tabWidget")
-        self.tabAbout = QtWidgets.QWidget()
-        self.tabAbout.setObjectName("tabAbout")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.tabAbout)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.appIcon = QtWidgets.QLabel(self.tabAbout)
-        self.appIcon.setText("")
-        self.appIcon.setAlignment(QtCore.Qt.AlignCenter)
-        self.appIcon.setObjectName("appIcon")
+        self.verticalLayout = QVBoxLayout(AboutDialog)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.tabWidget = QTabWidget(AboutDialog)
+        self.tabWidget.setObjectName(u"tabWidget")
+        self.tabAbout = QWidget()
+        self.tabAbout.setObjectName(u"tabAbout")
+        self.verticalLayout_3 = QVBoxLayout(self.tabAbout)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.appIcon = QLabel(self.tabAbout)
+        self.appIcon.setObjectName(u"appIcon")
+        self.appIcon.setAlignment(Qt.AlignCenter)
+
         self.verticalLayout_3.addWidget(self.appIcon)
-        self.tbAbout = QtWidgets.QTextBrowser(self.tabAbout)
-        self.tbAbout.setObjectName("tbAbout")
+
+        self.tbAbout = QTextBrowser(self.tabAbout)
+        self.tbAbout.setObjectName(u"tbAbout")
+
         self.verticalLayout_3.addWidget(self.tbAbout)
+
         self.tabWidget.addTab(self.tabAbout, "")
-        self.tabLicense = QtWidgets.QWidget()
-        self.tabLicense.setObjectName("tabLicense")
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.tabLicense)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.tbLicense = QtWidgets.QTextBrowser(self.tabLicense)
-        self.tbLicense.setObjectName("tbLicense")
+        self.tabLicense = QWidget()
+        self.tabLicense.setObjectName(u"tabLicense")
+        self.verticalLayout_2 = QVBoxLayout(self.tabLicense)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.tbLicense = QTextBrowser(self.tabLicense)
+        self.tbLicense.setObjectName(u"tbLicense")
+
         self.verticalLayout_2.addWidget(self.tbLicense)
+
         self.tabWidget.addTab(self.tabLicense, "")
+
         self.verticalLayout.addWidget(self.tabWidget)
-        self.buttonBox = QtWidgets.QDialogButtonBox(AboutDialog)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Close)
+
+        self.buttonBox = QDialogButtonBox(AboutDialog)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Close)
         self.buttonBox.setCenterButtons(True)
-        self.buttonBox.setObjectName("buttonBox")
+
         self.verticalLayout.addWidget(self.buttonBox)
 
+
         self.retranslateUi(AboutDialog)
-        self.tabWidget.setCurrentIndex(0)
         self.buttonBox.accepted.connect(AboutDialog.accept)
         self.buttonBox.rejected.connect(AboutDialog.reject)
-        QtCore.QMetaObject.connectSlotsByName(AboutDialog)
+
+        self.tabWidget.setCurrentIndex(0)
+
+
+        QMetaObject.connectSlotsByName(AboutDialog)
+    # setupUi
 
     def retranslateUi(self, AboutDialog):
-        _translate = QtCore.QCoreApplication.translate
-        AboutDialog.setWindowTitle(_translate("AboutDialog", "About gitc"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabAbout), _translate("AboutDialog", "&About"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLicense), _translate("AboutDialog", "&License"))
+        AboutDialog.setWindowTitle(QCoreApplication.translate("AboutDialog", u"About gitc", None))
+        self.appIcon.setText("")
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabAbout), QCoreApplication.translate("AboutDialog", u"&About", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLicense), QCoreApplication.translate("AboutDialog", u"&License", None))
+    # retranslateUi
+

@@ -1,215 +1,307 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'gitc/preferences.ui'
-#
-# Created by: PyQt5 UI code generator 5.14.1
-#
-# WARNING! All changes made in this file will be lost!
+################################################################################
+## Form generated from reading UI file 'preferences.ui'
+##
+## Created by: Qt User Interface Compiler version 5.14.1
+##
+## WARNING! All changes made in this file will be lost when recompiling UI file!
+################################################################################
 
+from PySide2.QtCore import (QCoreApplication, QMetaObject, QObject, QPoint,
+    QRect, QSize, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QLinearGradient, QPalette, QPainter, QPixmap,
+    QRadialGradient)
+from PySide2.QtWidgets import *
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from .colorwidget import ColorWidget
 
 
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
-        Preferences.setObjectName("Preferences")
+        if Preferences.objectName():
+            Preferences.setObjectName(u"Preferences")
         Preferences.resize(529, 316)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout(Preferences)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.tabWidget = QtWidgets.QTabWidget(Preferences)
-        self.tabWidget.setObjectName("tabWidget")
-        self.tabGeneral = QtWidgets.QWidget()
-        self.tabGeneral.setObjectName("tabGeneral")
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.tabGeneral)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.groupBox_6 = QtWidgets.QGroupBox(self.tabGeneral)
-        self.groupBox_6.setObjectName("groupBox_6")
-        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.groupBox_6)
-        self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.cbEsc = QtWidgets.QCheckBox(self.groupBox_6)
-        self.cbEsc.setObjectName("cbEsc")
+        self.verticalLayout_2 = QVBoxLayout(Preferences)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.tabWidget = QTabWidget(Preferences)
+        self.tabWidget.setObjectName(u"tabWidget")
+        self.tabGeneral = QWidget()
+        self.tabGeneral.setObjectName(u"tabGeneral")
+        self.verticalLayout = QVBoxLayout(self.tabGeneral)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.groupBox_6 = QGroupBox(self.tabGeneral)
+        self.groupBox_6.setObjectName(u"groupBox_6")
+        self.verticalLayout_5 = QVBoxLayout(self.groupBox_6)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.cbEsc = QCheckBox(self.groupBox_6)
+        self.cbEsc.setObjectName(u"cbEsc")
+
         self.verticalLayout_5.addWidget(self.cbEsc)
-        self.cbState = QtWidgets.QCheckBox(self.groupBox_6)
-        self.cbState.setObjectName("cbState")
+
+        self.cbState = QCheckBox(self.groupBox_6)
+        self.cbState.setObjectName(u"cbState")
+
         self.verticalLayout_5.addWidget(self.cbState)
+
+
         self.verticalLayout.addWidget(self.groupBox_6)
-        self.groupBox_5 = QtWidgets.QGroupBox(self.tabGeneral)
-        self.groupBox_5.setObjectName("groupBox_5")
-        self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.groupBox_5)
-        self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.cbShowWhitespace = QtWidgets.QCheckBox(self.groupBox_5)
-        self.cbShowWhitespace.setObjectName("cbShowWhitespace")
+
+        self.groupBox_5 = QGroupBox(self.tabGeneral)
+        self.groupBox_5.setObjectName(u"groupBox_5")
+        self.verticalLayout_6 = QVBoxLayout(self.groupBox_5)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.cbShowWhitespace = QCheckBox(self.groupBox_5)
+        self.cbShowWhitespace.setObjectName(u"cbShowWhitespace")
+
         self.horizontalLayout.addWidget(self.cbShowWhitespace)
-        self.label_10 = QtWidgets.QLabel(self.groupBox_5)
-        self.label_10.setObjectName("label_10")
+
+        self.label_10 = QLabel(self.groupBox_5)
+        self.label_10.setObjectName(u"label_10")
+
         self.horizontalLayout.addWidget(self.label_10)
-        self.sbTabSize = QtWidgets.QSpinBox(self.groupBox_5)
+
+        self.sbTabSize = QSpinBox(self.groupBox_5)
+        self.sbTabSize.setObjectName(u"sbTabSize")
         self.sbTabSize.setMinimum(1)
         self.sbTabSize.setMaximum(8)
-        self.sbTabSize.setProperty("value", 4)
-        self.sbTabSize.setObjectName("sbTabSize")
+        self.sbTabSize.setValue(4)
+
         self.horizontalLayout.addWidget(self.sbTabSize)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+
         self.verticalLayout_6.addLayout(self.horizontalLayout)
-        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.label_11 = QtWidgets.QLabel(self.groupBox_5)
-        self.label_11.setObjectName("label_11")
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.label_11 = QLabel(self.groupBox_5)
+        self.label_11.setObjectName(u"label_11")
+
         self.horizontalLayout_3.addWidget(self.label_11)
-        self.cbIgnoreWhitespace = QtWidgets.QComboBox(self.groupBox_5)
-        self.cbIgnoreWhitespace.setObjectName("cbIgnoreWhitespace")
+
+        self.cbIgnoreWhitespace = QComboBox(self.groupBox_5)
         self.cbIgnoreWhitespace.addItem("")
         self.cbIgnoreWhitespace.addItem("")
         self.cbIgnoreWhitespace.addItem("")
+        self.cbIgnoreWhitespace.setObjectName(u"cbIgnoreWhitespace")
+
         self.horizontalLayout_3.addWidget(self.cbIgnoreWhitespace)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_3.addItem(spacerItem1)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_2)
+
+
         self.verticalLayout_6.addLayout(self.horizontalLayout_3)
+
+
         self.verticalLayout.addWidget(self.groupBox_5)
+
         self.tabWidget.addTab(self.tabGeneral, "")
-        self.tabFonts = QtWidgets.QWidget()
-        self.tabFonts.setObjectName("tabFonts")
-        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.tabFonts)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.groupBox_3 = QtWidgets.QGroupBox(self.tabFonts)
-        self.groupBox_3.setObjectName("groupBox_3")
-        self.gridLayout_3 = QtWidgets.QGridLayout(self.groupBox_3)
-        self.gridLayout_3.setObjectName("gridLayout_3")
-        self.cbSizeLog = QtWidgets.QComboBox(self.groupBox_3)
-        self.cbSizeLog.setObjectName("cbSizeLog")
+        self.tabFonts = QWidget()
+        self.tabFonts.setObjectName(u"tabFonts")
+        self.verticalLayout_4 = QVBoxLayout(self.tabFonts)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.groupBox_3 = QGroupBox(self.tabFonts)
+        self.groupBox_3.setObjectName(u"groupBox_3")
+        self.gridLayout_3 = QGridLayout(self.groupBox_3)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.cbSizeLog = QComboBox(self.groupBox_3)
+        self.cbSizeLog.setObjectName(u"cbSizeLog")
+
         self.gridLayout_3.addWidget(self.cbSizeLog, 1, 1, 1, 1)
-        self.label_6 = QtWidgets.QLabel(self.groupBox_3)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+
+        self.label_6 = QLabel(self.groupBox_3)
+        self.label_6.setObjectName(u"label_6")
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
         self.label_6.setSizePolicy(sizePolicy)
-        self.label_6.setObjectName("label_6")
+
         self.gridLayout_3.addWidget(self.label_6, 0, 0, 1, 1)
-        self.label_7 = QtWidgets.QLabel(self.groupBox_3)
-        self.label_7.setObjectName("label_7")
+
+        self.label_7 = QLabel(self.groupBox_3)
+        self.label_7.setObjectName(u"label_7")
+
         self.gridLayout_3.addWidget(self.label_7, 1, 0, 1, 1)
-        self.cbFamilyLog = QtWidgets.QFontComboBox(self.groupBox_3)
-        self.cbFamilyLog.setObjectName("cbFamilyLog")
+
+        self.cbFamilyLog = QFontComboBox(self.groupBox_3)
+        self.cbFamilyLog.setObjectName(u"cbFamilyLog")
+
         self.gridLayout_3.addWidget(self.cbFamilyLog, 0, 1, 1, 1)
+
+
         self.verticalLayout_4.addWidget(self.groupBox_3)
-        self.groupBox_4 = QtWidgets.QGroupBox(self.tabFonts)
-        self.groupBox_4.setObjectName("groupBox_4")
-        self.gridLayout_4 = QtWidgets.QGridLayout(self.groupBox_4)
-        self.gridLayout_4.setObjectName("gridLayout_4")
-        self.cbFamilyDiff = QtWidgets.QFontComboBox(self.groupBox_4)
-        self.cbFamilyDiff.setObjectName("cbFamilyDiff")
+
+        self.groupBox_4 = QGroupBox(self.tabFonts)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.gridLayout_4 = QGridLayout(self.groupBox_4)
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.cbFamilyDiff = QFontComboBox(self.groupBox_4)
+        self.cbFamilyDiff.setObjectName(u"cbFamilyDiff")
+
         self.gridLayout_4.addWidget(self.cbFamilyDiff, 0, 1, 1, 1)
-        self.label_9 = QtWidgets.QLabel(self.groupBox_4)
-        self.label_9.setObjectName("label_9")
+
+        self.label_9 = QLabel(self.groupBox_4)
+        self.label_9.setObjectName(u"label_9")
+
         self.gridLayout_4.addWidget(self.label_9, 1, 0, 1, 1)
-        self.cbSizeDiff = QtWidgets.QComboBox(self.groupBox_4)
-        self.cbSizeDiff.setObjectName("cbSizeDiff")
+
+        self.cbSizeDiff = QComboBox(self.groupBox_4)
+        self.cbSizeDiff.setObjectName(u"cbSizeDiff")
+
         self.gridLayout_4.addWidget(self.cbSizeDiff, 1, 1, 1, 1)
-        self.label_8 = QtWidgets.QLabel(self.groupBox_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
+
+        self.label_8 = QLabel(self.groupBox_4)
+        self.label_8.setObjectName(u"label_8")
         sizePolicy.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
         self.label_8.setSizePolicy(sizePolicy)
-        self.label_8.setObjectName("label_8")
+
         self.gridLayout_4.addWidget(self.label_8, 0, 0, 1, 1)
+
+
         self.verticalLayout_4.addWidget(self.groupBox_4)
+
         self.tabWidget.addTab(self.tabFonts, "")
-        self.tabSummary = QtWidgets.QWidget()
-        self.tabSummary.setObjectName("tabSummary")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.tabSummary)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.groupBox = QtWidgets.QGroupBox(self.tabSummary)
-        self.groupBox.setObjectName("groupBox")
-        self.gridLayout = QtWidgets.QGridLayout(self.groupBox)
-        self.gridLayout.setObjectName("gridLayout")
+        self.tabSummary = QWidget()
+        self.tabSummary.setObjectName(u"tabSummary")
+        self.verticalLayout_3 = QVBoxLayout(self.tabSummary)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.groupBox = QGroupBox(self.tabSummary)
+        self.groupBox.setObjectName(u"groupBox")
+        self.gridLayout = QGridLayout(self.groupBox)
+        self.gridLayout.setObjectName(u"gridLayout")
         self.colorB = ColorWidget(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.colorB.sizePolicy().hasHeightForWidth())
-        self.colorB.setSizePolicy(sizePolicy)
-        self.colorB.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.colorB.setObjectName("colorB")
+        self.colorB.setObjectName(u"colorB")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.colorB.sizePolicy().hasHeightForWidth())
+        self.colorB.setSizePolicy(sizePolicy1)
+        self.colorB.setFocusPolicy(Qt.StrongFocus)
+
         self.gridLayout.addWidget(self.colorB, 1, 1, 1, 1)
-        self.label_2 = QtWidgets.QLabel(self.groupBox)
-        self.label_2.setObjectName("label_2")
+
+        self.label_2 = QLabel(self.groupBox)
+        self.label_2.setObjectName(u"label_2")
+
         self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
-        self.label = QtWidgets.QLabel(self.groupBox)
-        self.label.setObjectName("label")
+
+        self.label = QLabel(self.groupBox)
+        self.label.setObjectName(u"label")
+
         self.gridLayout.addWidget(self.label, 0, 0, 1, 1)
+
         self.colorA = ColorWidget(self.groupBox)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.colorA.sizePolicy().hasHeightForWidth())
-        self.colorA.setSizePolicy(sizePolicy)
-        self.colorA.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.colorA.setObjectName("colorA")
+        self.colorA.setObjectName(u"colorA")
+        sizePolicy1.setHeightForWidth(self.colorA.sizePolicy().hasHeightForWidth())
+        self.colorA.setSizePolicy(sizePolicy1)
+        self.colorA.setFocusPolicy(Qt.StrongFocus)
+
         self.gridLayout.addWidget(self.colorA, 0, 1, 1, 1)
+
+
         self.verticalLayout_3.addWidget(self.groupBox)
-        self.groupBox_2 = QtWidgets.QGroupBox(self.tabSummary)
-        self.groupBox_2.setObjectName("groupBox_2")
-        self.gridLayout_2 = QtWidgets.QGridLayout(self.groupBox_2)
-        self.gridLayout_2.setObjectName("gridLayout_2")
-        self.label_3 = QtWidgets.QLabel(self.groupBox_2)
-        self.label_3.setObjectName("label_3")
+
+        self.groupBox_2 = QGroupBox(self.tabSummary)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.gridLayout_2 = QGridLayout(self.groupBox_2)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.label_3 = QLabel(self.groupBox_2)
+        self.label_3.setObjectName(u"label_3")
+
         self.gridLayout_2.addWidget(self.label_3, 0, 0, 1, 1)
-        self.label_4 = QtWidgets.QLabel(self.groupBox_2)
-        self.label_4.setObjectName("label_4")
+
+        self.label_4 = QLabel(self.groupBox_2)
+        self.label_4.setObjectName(u"label_4")
+
         self.gridLayout_2.addWidget(self.label_4, 1, 0, 1, 1)
-        self.leBugUrl = QtWidgets.QLineEdit(self.groupBox_2)
-        self.leBugUrl.setObjectName("leBugUrl")
+
+        self.leBugUrl = QLineEdit(self.groupBox_2)
+        self.leBugUrl.setObjectName(u"leBugUrl")
+
         self.gridLayout_2.addWidget(self.leBugUrl, 1, 1, 1, 1)
-        self.leCommitUrl = QtWidgets.QLineEdit(self.groupBox_2)
-        self.leCommitUrl.setObjectName("leCommitUrl")
+
+        self.leCommitUrl = QLineEdit(self.groupBox_2)
+        self.leCommitUrl.setObjectName(u"leCommitUrl")
+
         self.gridLayout_2.addWidget(self.leCommitUrl, 0, 1, 1, 1)
-        self.label_5 = QtWidgets.QLabel(self.groupBox_2)
-        self.label_5.setObjectName("label_5")
+
+        self.label_5 = QLabel(self.groupBox_2)
+        self.label_5.setObjectName(u"label_5")
+
         self.gridLayout_2.addWidget(self.label_5, 2, 0, 1, 1)
-        self.leBugPattern = QtWidgets.QLineEdit(self.groupBox_2)
-        self.leBugPattern.setObjectName("leBugPattern")
+
+        self.leBugPattern = QLineEdit(self.groupBox_2)
+        self.leBugPattern.setObjectName(u"leBugPattern")
+
         self.gridLayout_2.addWidget(self.leBugPattern, 2, 1, 1, 1)
+
+
         self.verticalLayout_3.addWidget(self.groupBox_2)
+
         self.tabWidget.addTab(self.tabSummary, "")
-        self.tabTools = QtWidgets.QWidget()
-        self.tabTools.setObjectName("tabTools")
-        self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.tabTools)
-        self.verticalLayout_7.setObjectName("verticalLayout_7")
-        self.groupBox_7 = QtWidgets.QGroupBox(self.tabTools)
-        self.groupBox_7.setObjectName("groupBox_7")
-        self.verticalLayout_8 = QtWidgets.QVBoxLayout(self.groupBox_7)
-        self.verticalLayout_8.setObjectName("verticalLayout_8")
-        self.label_12 = QtWidgets.QLabel(self.groupBox_7)
-        self.label_12.setObjectName("label_12")
+        self.tabTools = QWidget()
+        self.tabTools.setObjectName(u"tabTools")
+        self.verticalLayout_7 = QVBoxLayout(self.tabTools)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.groupBox_7 = QGroupBox(self.tabTools)
+        self.groupBox_7.setObjectName(u"groupBox_7")
+        self.verticalLayout_8 = QVBoxLayout(self.groupBox_7)
+        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
+        self.label_12 = QLabel(self.groupBox_7)
+        self.label_12.setObjectName(u"label_12")
+
         self.verticalLayout_8.addWidget(self.label_12)
-        self.tableView = QtWidgets.QTableView(self.groupBox_7)
-        self.tableView.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.tableView.setObjectName("tableView")
+
+        self.tableView = QTableView(self.groupBox_7)
+        self.tableView.setObjectName(u"tableView")
+        self.tableView.setSelectionBehavior(QAbstractItemView.SelectRows)
+
         self.verticalLayout_8.addWidget(self.tableView)
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.btnAdd = QtWidgets.QPushButton(self.groupBox_7)
-        self.btnAdd.setObjectName("btnAdd")
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.btnAdd = QPushButton(self.groupBox_7)
+        self.btnAdd.setObjectName(u"btnAdd")
+
         self.horizontalLayout_2.addWidget(self.btnAdd)
-        self.btnDelete = QtWidgets.QPushButton(self.groupBox_7)
-        self.btnDelete.setObjectName("btnDelete")
+
+        self.btnDelete = QPushButton(self.groupBox_7)
+        self.btnDelete.setObjectName(u"btnDelete")
+
         self.horizontalLayout_2.addWidget(self.btnDelete)
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem2)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_3)
+
+
         self.verticalLayout_8.addLayout(self.horizontalLayout_2)
+
+
         self.verticalLayout_7.addWidget(self.groupBox_7)
+
         self.tabWidget.addTab(self.tabTools, "")
+
         self.verticalLayout_2.addWidget(self.tabWidget)
-        self.buttonBox = QtWidgets.QDialogButtonBox(Preferences)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+
+        self.buttonBox = QDialogButtonBox(Preferences)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
         self.verticalLayout_2.addWidget(self.buttonBox)
+
+#if QT_CONFIG(shortcut)
         self.label_10.setBuddy(self.sbTabSize)
         self.label_11.setBuddy(self.cbIgnoreWhitespace)
         self.label_6.setBuddy(self.cbFamilyLog)
@@ -221,62 +313,68 @@ class Ui_Preferences(object):
         self.label_3.setBuddy(self.leCommitUrl)
         self.label_4.setBuddy(self.leBugUrl)
         self.label_5.setBuddy(self.leBugPattern)
+#endif // QT_CONFIG(shortcut)
+        QWidget.setTabOrder(self.btnAdd, self.tableView)
+        QWidget.setTabOrder(self.tableView, self.cbSizeDiff)
+        QWidget.setTabOrder(self.cbSizeDiff, self.colorA)
+        QWidget.setTabOrder(self.colorA, self.colorB)
+        QWidget.setTabOrder(self.colorB, self.leCommitUrl)
+        QWidget.setTabOrder(self.leCommitUrl, self.leBugUrl)
+        QWidget.setTabOrder(self.leBugUrl, self.leBugPattern)
+        QWidget.setTabOrder(self.leBugPattern, self.buttonBox)
+        QWidget.setTabOrder(self.buttonBox, self.cbEsc)
+        QWidget.setTabOrder(self.cbEsc, self.cbState)
+        QWidget.setTabOrder(self.cbState, self.cbShowWhitespace)
+        QWidget.setTabOrder(self.cbShowWhitespace, self.sbTabSize)
+        QWidget.setTabOrder(self.sbTabSize, self.cbIgnoreWhitespace)
+        QWidget.setTabOrder(self.cbIgnoreWhitespace, self.cbFamilyDiff)
+        QWidget.setTabOrder(self.cbFamilyDiff, self.tabWidget)
+        QWidget.setTabOrder(self.tabWidget, self.cbFamilyLog)
+        QWidget.setTabOrder(self.cbFamilyLog, self.cbSizeLog)
 
         self.retranslateUi(Preferences)
-        self.tabWidget.setCurrentIndex(3)
         self.buttonBox.accepted.connect(Preferences.accept)
         self.buttonBox.rejected.connect(Preferences.reject)
-        QtCore.QMetaObject.connectSlotsByName(Preferences)
-        Preferences.setTabOrder(self.btnAdd, self.tableView)
-        Preferences.setTabOrder(self.tableView, self.cbSizeDiff)
-        Preferences.setTabOrder(self.cbSizeDiff, self.colorA)
-        Preferences.setTabOrder(self.colorA, self.colorB)
-        Preferences.setTabOrder(self.colorB, self.leCommitUrl)
-        Preferences.setTabOrder(self.leCommitUrl, self.leBugUrl)
-        Preferences.setTabOrder(self.leBugUrl, self.leBugPattern)
-        Preferences.setTabOrder(self.leBugPattern, self.buttonBox)
-        Preferences.setTabOrder(self.buttonBox, self.cbEsc)
-        Preferences.setTabOrder(self.cbEsc, self.cbState)
-        Preferences.setTabOrder(self.cbState, self.cbShowWhitespace)
-        Preferences.setTabOrder(self.cbShowWhitespace, self.sbTabSize)
-        Preferences.setTabOrder(self.sbTabSize, self.cbIgnoreWhitespace)
-        Preferences.setTabOrder(self.cbIgnoreWhitespace, self.cbFamilyDiff)
-        Preferences.setTabOrder(self.cbFamilyDiff, self.tabWidget)
-        Preferences.setTabOrder(self.tabWidget, self.cbFamilyLog)
-        Preferences.setTabOrder(self.cbFamilyLog, self.cbSizeLog)
+
+        self.tabWidget.setCurrentIndex(3)
+
+
+        QMetaObject.connectSlotsByName(Preferences)
+    # setupUi
 
     def retranslateUi(self, Preferences):
-        _translate = QtCore.QCoreApplication.translate
-        Preferences.setWindowTitle(_translate("Preferences", "Preferences"))
-        self.groupBox_6.setTitle(_translate("Preferences", "Application"))
-        self.cbEsc.setText(_translate("Preferences", "&Quit also via Esc key"))
-        self.cbState.setText(_translate("Preferences", "&Remember window state"))
-        self.groupBox_5.setTitle(_translate("Preferences", "Diff view"))
-        self.cbShowWhitespace.setText(_translate("Preferences", "&Visualize whitespace"))
-        self.label_10.setText(_translate("Preferences", "&Tab size:"))
-        self.label_11.setText(_translate("Preferences", "&Ignore whitespace:"))
-        self.cbIgnoreWhitespace.setItemText(0, _translate("Preferences", "None"))
-        self.cbIgnoreWhitespace.setItemText(1, _translate("Preferences", "At end of line"))
-        self.cbIgnoreWhitespace.setItemText(2, _translate("Preferences", "All"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabGeneral), _translate("Preferences", "&General"))
-        self.groupBox_3.setTitle(_translate("Preferences", "Log view"))
-        self.label_6.setText(_translate("Preferences", "&Family:"))
-        self.label_7.setText(_translate("Preferences", "&Size:"))
-        self.groupBox_4.setTitle(_translate("Preferences", "Diff view"))
-        self.label_9.setText(_translate("Preferences", "S&ize:"))
-        self.label_8.setText(_translate("Preferences", "F&amily:"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabFonts), _translate("Preferences", "&Fonts"))
-        self.groupBox.setTitle(_translate("Preferences", "Color"))
-        self.label_2.setText(_translate("Preferences", "Branch &B:"))
-        self.label.setText(_translate("Preferences", "Branch &A:"))
-        self.groupBox_2.setTitle(_translate("Preferences", "Links"))
-        self.label_3.setText(_translate("Preferences", "C&ommit URL:"))
-        self.label_4.setText(_translate("Preferences", "B&UG URL:"))
-        self.label_5.setText(_translate("Preferences", "BUG &Pattern:"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSummary), _translate("Preferences", "Co&mmit"))
-        self.groupBox_7.setTitle(_translate("Preferences", "Tools"))
-        self.label_12.setText(_translate("Preferences", "You must add the tool to git config mergetool/difftool section to make it works."))
-        self.btnAdd.setText(_translate("Preferences", "&Add"))
-        self.btnDelete.setText(_translate("Preferences", "&Delete"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), _translate("Preferences", "&Tools"))
-from .colorwidget import ColorWidget
+        Preferences.setWindowTitle(QCoreApplication.translate("Preferences", u"Preferences", None))
+        self.groupBox_6.setTitle(QCoreApplication.translate("Preferences", u"Application", None))
+        self.cbEsc.setText(QCoreApplication.translate("Preferences", u"&Quit also via Esc key", None))
+        self.cbState.setText(QCoreApplication.translate("Preferences", u"&Remember window state", None))
+        self.groupBox_5.setTitle(QCoreApplication.translate("Preferences", u"Diff view", None))
+        self.cbShowWhitespace.setText(QCoreApplication.translate("Preferences", u"&Visualize whitespace", None))
+        self.label_10.setText(QCoreApplication.translate("Preferences", u"&Tab size:", None))
+        self.label_11.setText(QCoreApplication.translate("Preferences", u"&Ignore whitespace:", None))
+        self.cbIgnoreWhitespace.setItemText(0, QCoreApplication.translate("Preferences", u"None", None))
+        self.cbIgnoreWhitespace.setItemText(1, QCoreApplication.translate("Preferences", u"At end of line", None))
+        self.cbIgnoreWhitespace.setItemText(2, QCoreApplication.translate("Preferences", u"All", None))
+
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabGeneral), QCoreApplication.translate("Preferences", u"&General", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("Preferences", u"Log view", None))
+        self.label_6.setText(QCoreApplication.translate("Preferences", u"&Family:", None))
+        self.label_7.setText(QCoreApplication.translate("Preferences", u"&Size:", None))
+        self.groupBox_4.setTitle(QCoreApplication.translate("Preferences", u"Diff view", None))
+        self.label_9.setText(QCoreApplication.translate("Preferences", u"S&ize:", None))
+        self.label_8.setText(QCoreApplication.translate("Preferences", u"F&amily:", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabFonts), QCoreApplication.translate("Preferences", u"&Fonts", None))
+        self.groupBox.setTitle(QCoreApplication.translate("Preferences", u"Color", None))
+        self.label_2.setText(QCoreApplication.translate("Preferences", u"Branch &B:", None))
+        self.label.setText(QCoreApplication.translate("Preferences", u"Branch &A:", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("Preferences", u"Links", None))
+        self.label_3.setText(QCoreApplication.translate("Preferences", u"C&ommit URL:", None))
+        self.label_4.setText(QCoreApplication.translate("Preferences", u"B&UG URL:", None))
+        self.label_5.setText(QCoreApplication.translate("Preferences", u"BUG &Pattern:", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSummary), QCoreApplication.translate("Preferences", u"Co&mmit", None))
+        self.groupBox_7.setTitle(QCoreApplication.translate("Preferences", u"Tools", None))
+        self.label_12.setText(QCoreApplication.translate("Preferences", u"You must add the tool to git config mergetool/difftool section to make it works.", None))
+        self.btnAdd.setText(QCoreApplication.translate("Preferences", u"&Add", None))
+        self.btnDelete.setText(QCoreApplication.translate("Preferences", u"&Delete", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
+    # retranslateUi
+

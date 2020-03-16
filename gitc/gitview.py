@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
+from PySide2.QtCore import *
+import PySide2
 
 from .ui_gitview import *
 from .common import *
@@ -10,6 +11,11 @@ from .gitutils import Git
 from .stylehelper import dpiScaled
 
 import re
+
+
+QT_VERSION = (PySide2.__version_info__[0] << 16) + \
+    (PySide2.__version_info__[1] << 8) + \
+    (PySide2.__version_info__[2])
 
 
 class BranchFilterProxyModel(QSortFilterProxyModel):
@@ -36,8 +42,8 @@ class BranchFilterProxyModel(QSortFilterProxyModel):
 
 
 class GitView(QWidget):
-    reqCommit = pyqtSignal()
-    reqFind = pyqtSignal()
+    reqCommit = Signal()
+    reqFind = Signal()
 
     def __init__(self, parent=None):
         super(GitView, self).__init__(parent)

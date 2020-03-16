@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PyQt5.QtWidgets import QStyledItemDelegate, QComboBox
-from PyQt5.QtCore import Qt
+from PySide2.QtWidgets import QStyledItemDelegate, QComboBox
+from PySide2.QtCore import Qt
 
 
 class ComboBoxItemDelegate(QStyledItemDelegate):

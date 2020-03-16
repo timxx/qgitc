@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 try:
     from gitc.stylehelper import dpiScaled
@@ -205,7 +205,7 @@ class ImageViewer(QWidget):
 
 class ImgDiff(QWidget):
 
-    dataChanged = pyqtSignal()
+    dataChanged = Signal()
 
     ID_All = 0
     ID_ImageA = 1
@@ -455,7 +455,7 @@ class DiffWindow(QMainWindow):
 
     def __onMenuOpen(self):
         dlg = NewDiffDlg(self)
-        if dlg.exec() == QDialog.Accepted:
+        if dlg.exec_() == QDialog.Accepted:
             self._diffView.diff(dlg.imageA(), dlg.imageB(),
                                 dlg.imageC(), dlg.imageO())
             self.setBase('A')
@@ -566,7 +566,7 @@ def main():
 
     window.showMaximized()
 
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
