@@ -8,8 +8,8 @@ if not exist "%py_path%" (
 )
 
 set cur_path=%~dp0
-set ico_path=%cur_path%data\icons\gitc.ico
-set gitc_path=%cur_path%gitc
+set ico_path=%cur_path%gitc\data\icons\gitc.ico
+set gitc_path=%cur_path%gitc.py
 
 reg add "HKEY_CLASSES_ROOT\*\shell\gitc" /f /ve /t REG_SZ /d gitc
 reg add "HKEY_CLASSES_ROOT\*\shell\gitc" /f /v Icon /t REG_SZ /d "%ico_path%"
