@@ -423,7 +423,7 @@ class Git():
         if not data:
             return ""
 
-        worktree_re = re.compile("(\S+)\s+[a-f0-9]+\s+\[(\S+)\]$")
+        worktree_re = re.compile(r"(\S+)\s+[a-f0-9]+\s+\[(\S+)\]$")
         worktrees = data.rstrip(b'\n').decode("utf8").split('\n')
 
         for wt in worktrees:

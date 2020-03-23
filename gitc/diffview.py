@@ -17,11 +17,11 @@ import bisect
 LineItem = namedtuple("LineItem", ["type", "content"])
 
 diff_re = re.compile(b"^diff --(git a/(.*) b/(.*)|cc (.*))")
-diff_begin_re = re.compile("^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
-diff_begin_bre = re.compile(b"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
+diff_begin_re = re.compile(r"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
+diff_begin_bre = re.compile(rb"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 
 sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
-email_re = re.compile("[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+email_re = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 url_re = re.compile("((https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=()]+)")
 
 diff_encoding = "utf-8"
