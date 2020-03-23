@@ -20,11 +20,11 @@ A file conflict viewer for git
 ## Build & Run
 
 - Using source directly
-  - Run **gitc** which in the source directory directly.
+  - Run **gitc.py** under project root directory.
   - NOTE: If you want translation other than English or updated the UI files, run **python setup.py build** for the first time.
 
-- Using binary
-  - Run *python setup.py build_exe*, the binary will be generated in the **build** directory.
-  - NOTE: Run *python setup.py build* before *build_exe*
+- Build from source
+  - Run *pip install .* under project root directory to install gitc, and then run *gitc* command.
 
-
+- Install from pypi
+  - pip install gitc
