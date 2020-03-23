@@ -63,7 +63,13 @@ class DataFetcher(QObject):
 
     def cancel(self):
         if self._process:
-            self._process.disconnect(self)
+            # self._process.disconnect(self)
+            QObject.disconnect(self._process,
+                               SIGNAL("readyReadStandardOutput()"),
+                               self.onDataAvailable)
+            QObject.disconnect(self._process,
+                               SIGNAL("finished(int, QProcess::ExitStatus)"),
+                               self.onDataFinished)
             self._process.close()
             self._process = None
 
