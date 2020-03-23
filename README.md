@@ -1,5 +1,7 @@
 # gitc
 
+[![PyPI version](https://img.shields.io/pypi/v/gitc2.svg)](https://pypi.org/project/gitc2)
+[![Python version](https://img.shields.io/pypi/pyversions/gitc2.svg)](https://pypi.org/project/gitc2)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 A file conflict viewer for git
@@ -17,6 +19,12 @@ A file conflict viewer for git
 - [x] Builtin image diff tool for easy finding the difference.
 - [ ] Auto finding which commit cause conflicts.
 
+
+## Requirements
+
+- PySide2
+
+
 ## Build & Run
 
 - Using source directly
@@ -27,4 +35,4 @@ A file conflict viewer for git
   - Run *pip install .* under project root directory to install gitc, and then run *gitc* command.
 
 - Install from pypi
-  - pip install gitc
+  - pip install gitc2
