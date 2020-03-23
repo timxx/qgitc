@@ -80,7 +80,7 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 
-setup(name="gitc",
+setup(name="gitc2",
       version=VERSION,
       author="Weitian Leung",
       author_email="weitianleung@gmail.com",
@@ -103,6 +103,14 @@ setup(name="gitc",
           ]
       },
       install_requires=["PySide2"],
+      classifiers=[
+          "License :: OSI Approved :: Apache Software License",
+          "Operating System :: POSIX",
+          "Operating System :: POSIX :: BSD",
+          "Operating System :: POSIX :: Linux",
+          "Operating System :: Microsoft :: Windows",
+          "Programming Language :: Python :: 3",
+      ],
       cmdclass=dict(build=CustomBuild,
                     build_qt=BuildQt,
                     update_ts=UpdateTs
