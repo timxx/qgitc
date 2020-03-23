@@ -296,8 +296,13 @@ class DiffView(QWidget):
         filePath = item.text(0)
         self.window().setFilterFile(filePath)
 
+    def __isCommentItem(self, item):
+        # operator not implemented LoL
+        # return item and item == self.treeWidget.topLevelItem(0):
+        return item and item.data(0, Qt.UserRole) == 0
+
     def __onTreeItemDoubleClicked(self, item, column):
-        if not item or item == self.treeWidget.topLevelItem(0):
+        if not item or self.__isCommentItem(item):
             return
 
         if not self.commit:
@@ -329,7 +334,7 @@ class DiffView(QWidget):
         if self.treeWidget.topLevelItemCount() < 2:
             return
 
-        if item == self.treeWidget.topLevelItem(0):
+        if self.__isCommentItem(item):
             return
 
         self.twMenu.exec_(self.treeWidget.mapToGlobal(pos))
