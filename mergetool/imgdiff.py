@@ -30,10 +30,12 @@ class NewDiffDlg(QDialog):
         self.setWindowTitle(self.tr("New Image Diff"))
         self.resize(dpiScaled(QSize(580, 150)))
 
-        rc = qApp.desktop().screenGeometry()
-        x = (rc.width() - self.width()) / 2
-        y = (rc.height() - self.height()) / 2
-        self.move(x, y)
+        screen = QApplication.primaryScreen()
+        if screen:
+            rc = screen.availableGeometry()
+            x = (rc.width() - self.width()) / 2
+            y = (rc.height() - self.height()) / 2
+            self.move(x, y)
 
         gridLayout = QGridLayout()
 
