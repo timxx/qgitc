@@ -42,7 +42,7 @@ class Settings(QSettings):
         super(Settings, self).__init__(
             QSettings.NativeFormat,
             QSettings.UserScope,
-            "gitc",
+            "qgitc",
             parent=parent)
 
         self._fixedFont = fixedFont(QApplication.font().pointSize())

@@ -220,12 +220,12 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"gitc", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"QGitc", None))
         self.acQuit.setText(QCoreApplication.translate("MainWindow", u"&Quit", None))
 #if QT_CONFIG(shortcut)
         self.acQuit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Q", None))
 #endif // QT_CONFIG(shortcut)
-        self.acAbout.setText(QCoreApplication.translate("MainWindow", u"&About gitc", None))
+        self.acAbout.setText(QCoreApplication.translate("MainWindow", u"&About QGitc", None))
         self.acPreferences.setText(QCoreApplication.translate("MainWindow", u"&Preferences...", None))
         self.actionIgnore_whitespace_changes.setText(QCoreApplication.translate("MainWindow", u"Ignore whitespace changes", None))
         self.acVisualizeWhitespace.setText(QCoreApplication.translate("MainWindow", u"&Visualize whitespace", None))

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from gitc.main import main
+from qgitc.main import main
 
 
 main()

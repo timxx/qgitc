@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>gitc</string>
+   <string>QGitc</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -172,7 +172,7 @@
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>&amp;About gitc</string>
+    <string>&amp;About QGitc</string>
    </property>
   </action>
   <action name="acPreferences">
