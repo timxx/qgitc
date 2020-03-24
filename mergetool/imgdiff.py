@@ -5,7 +5,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 try:
-    from gitc.stylehelper import dpiScaled
+    from qgitc.stylehelper import dpiScaled
 except ImportError:
     pass
 
@@ -572,5 +572,5 @@ def main():
 if __name__ == "__main__":
     # for local run only
     sys.path += [os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))]
-    from gitc.stylehelper import dpiScaled
+    from qgitc.stylehelper import dpiScaled
     main()

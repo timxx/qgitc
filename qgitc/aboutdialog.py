@@ -26,11 +26,11 @@ class AboutDialog(QDialog, Ui_AboutDialog):
         self.resize(dpiScaled(QSize(465, 470)))
 
     def __initTabs(self):
-        about = "<center><h3>gitc " + VERSION + "</h3></center>"
+        about = "<center><h3>QGitc " + VERSION + "</h3></center>"
         about += "<center>"
         about += self.tr("Git file conflicts and logs viewer")
         about += "</center>"
-        about += "<center><a href=https://github.com/timxx/gitc>"
+        about += "<center><a href=https://github.com/timxx/qgitc>"
         about += self.tr("Visit project host")
         about += "</a></center><br/>"
         about += "<center>Copyright © 2016-2020 Weitian Leung</center>"

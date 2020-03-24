@@ -9,7 +9,7 @@ from distutils.spawn import find_executable, spawn
 from distutils.errors import DistutilsExecError
 from glob import glob
 
-from gitc.version import VERSION
+from qgitc.version import VERSION
 
 
 class CustomBuild(build):
@@ -41,9 +41,9 @@ class BuildQt(Command):
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
-        for uiFile in glob("gitc/*.ui"):
+        for uiFile in glob("qgitc/*.ui"):
             name = os.path.basename(uiFile)
-            pyFile = "gitc/ui_" + name[:-3] + ".py"
+            pyFile = "qgitc/ui_" + name[:-3] + ".py"
             # "--from-imports" seems no use at all
             spawn([uic_bin, "-g", "python", "-o", pyFile, uiFile])
 
@@ -53,7 +53,7 @@ class BuildQt(Command):
         if not lrelease:
             raise DistutilsExecError("Missing lrelease")
 
-        path = os.path.realpath("gitc/data/translations/gitc.pro")
+        path = os.path.realpath("qgitc/data/translations/qgitc.pro")
         spawn([lrelease, path])
 
 
@@ -72,7 +72,7 @@ class UpdateTs(Command):
         if not lupdate:
             raise DistutilsExecError("Missing pyside2-lupdate")
 
-        path = os.path.realpath("gitc/data/translations/gitc.pro")
+        path = os.path.realpath("qgitc/data/translations/qgitc.pro")
         spawn([lupdate, path])
 
 
@@ -80,7 +80,7 @@ with open("README.md", "r") as f:
     long_description = f.read()
 
 
-setup(name="gitc2",
+setup(name="qgitc",
       version=VERSION,
       author="Weitian Leung",
       author_email="weitianleung@gmail.com",
@@ -88,17 +88,17 @@ setup(name="gitc2",
       long_description_content_type="text/markdown",
       long_description=long_description,
       keywords="git conflict viewer",
-      url="https://github.com/timxx/gitc",
+      url="https://github.com/timxx/qgitc",
       packages=find_packages(),
-      package_data={"gitc": ["data/icons/gitc.*",
-                             "data/licenses/Apache-2.0.html",
-                             "data/translations/*.qm"
-                             ]},
+      package_data={"qgitc": ["data/icons/qgitc.*",
+                              "data/licenses/Apache-2.0.html",
+                              "data/translations/*.qm"
+                              ]},
       license="Apache",
       python_requires='>=3.0',
       entry_points={
           "console_scripts": [
-              "gitc=gitc.main:main",
+              "qgitc=qgitc.main:main",
               "imgdiff=mergetool.imgdiff:main"
           ]
       },

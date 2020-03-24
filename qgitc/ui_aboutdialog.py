@@ -74,7 +74,7 @@ class Ui_AboutDialog(object):
     # setupUi
 
     def retranslateUi(self, AboutDialog):
-        AboutDialog.setWindowTitle(QCoreApplication.translate("AboutDialog", u"About gitc", None))
+        AboutDialog.setWindowTitle(QCoreApplication.translate("AboutDialog", u"About QGitc", None))
         self.appIcon.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabAbout), QCoreApplication.translate("AboutDialog", u"&About", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLicense), QCoreApplication.translate("AboutDialog", u"&License", None))

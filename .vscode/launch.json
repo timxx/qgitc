@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Gitc (Integrated Terminal)",
+            "name": "Python: QGitc (Integrated Terminal)",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceRoot}/gitc.py",
+            "program": "${workspaceRoot}/qgitc.py",
             "console": "integratedTerminal"
         },
         {

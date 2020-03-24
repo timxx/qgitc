@@ -453,9 +453,9 @@ class Application(QApplication):
         super(Application, self).__init__(argv)
 
         self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
-        self.setApplicationName("gitc")
+        self.setApplicationName("qgitc")
 
-        iconPath = dataDirPath() + "/icons/gitc.svg"
+        iconPath = dataDirPath() + "/icons/qgitc.svg"
         self.setWindowIcon(QIcon(iconPath))
 
         self.setupTranslator()
@@ -524,7 +524,7 @@ def main():
 
     args = parser.parse_args()
 
-    setAppUserId("appid.gitc.xyz")
+    setAppUserId("appid.qgitc.xyz")
 
     repoDir = Git.repoTopLevelDir(os.getcwd())
     filterFile = args.file
