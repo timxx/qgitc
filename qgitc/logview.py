@@ -1434,7 +1434,10 @@ class LogView(QAbstractScrollArea):
         if self.findProc and forced:
             # disconnect signals in case invalid state changes
             self.findProc.readyReadStandardOutput.disconnect()
-            self.findProc.finished.disconnect()
+            # self.findProc.finished.disconnect()
+            QObject.disconnect(self.findProc,
+                               SIGNAL("finished(int, QProcess::ExitStatus)"),
+                               self.__onFindFinished)
             self.findProc.close()
             self.findProc = None
             return True
