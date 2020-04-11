@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QDialog, qApp
+from PySide2.QtWidgets import QDialog, QApplication
 from PySide2.QtCore import QSize
 from .ui_aboutdialog import Ui_AboutDialog
 from .common import dataDirPath
