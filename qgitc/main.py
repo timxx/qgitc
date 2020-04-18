@@ -19,6 +19,7 @@ import os
 import sys
 import argparse
 import shlex
+import subprocess
 
 
 class FindSubmoduleThread(QThread):
@@ -36,6 +37,17 @@ class FindSubmoduleThread(QThread):
 
     def run(self):
         self._submodules.clear()
+
+        # try git submodule first
+        data = subprocess.check_output(
+            ["git", "submodule", "foreach", "--quiet", "echo $name"],
+            cwd=self._repoDir,
+            universal_newlines=True)
+        if data:
+            self._submodules = data.rstrip().split('\n')
+            self._submodules.insert(0, ".")
+            return
+
         submodules = []
         # some projects may not use submodule or subtree
         for root, subdirs, files in os.walk(self._repoDir, topdown=True):
