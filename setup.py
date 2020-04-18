@@ -37,7 +37,7 @@ class BuildQt(Command):
 
     def compile_ui(self):
         return  # tempory disabled
-        uic_bin = find_executable("uic")
+        uic_bin = find_executable("pyside2-uic") or find_executable("uic")
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
