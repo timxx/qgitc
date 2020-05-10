@@ -96,12 +96,13 @@ class DiffFetcher(DataFetcher):
         super(DiffFetcher, self).__init__(parent)
         self._isDiffContent = False
         self._row = 0
+        self._firstPatch = True
 
     def parse(self, data):
         lineItems = []
         fileItems = {}
 
-        lines = data.rstrip(self.separator).split(self.separator)
+        lines = data.split(self.separator)
         for line in lines:
             match = diff_re.search(line)
             if match:
@@ -111,6 +112,11 @@ class DiffFetcher(DataFetcher):
                 else:
                     fileA = match.group(2)
                     fileB = match.group(3)
+
+                if not self._firstPatch:
+                    lineItems.append(LineItem(TextLine.Diff, b''))
+                    self._row += 1
+                self._firstPatch = False
 
                 fileItems[fileA.decode(diff_encoding)] = self._row
                 # renames, keep new file name only
@@ -145,8 +151,10 @@ class DiffFetcher(DataFetcher):
         if lineItems:
             self.diffAvailable.emit(lineItems, fileItems)
 
-    def setBeginRow(self, row):
+    def reset(self, row):
         self._row = row
+        self._isDiffContent = False
+        self._firstPatch = True
 
     def cancel(self):
         self._isDiffContent = False
@@ -439,7 +447,7 @@ class DiffView(QWidget):
         lineItems = self.__commitToLineItems(commit)
         self.viewer.setData(lineItems)
 
-        self.fetcher.setBeginRow(len(lineItems))
+        self.fetcher.reset(len(lineItems))
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         # FIXME: delay showing the spinner when loading small diff to avoid flicker
         self.beginFetch.emit()
