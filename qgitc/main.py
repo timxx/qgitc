@@ -493,10 +493,6 @@ class Application(QApplication):
             translator = None
 
 
-app = None
-sys.excepthook = ExceptHandler
-
-
 def setAppUserId(appId):
     if os.name != "nt":
         return
@@ -544,13 +540,14 @@ def main():
     if args.repo:
         repoDir = Git.repoTopLevelDir(args.repo)
 
-    global app
     app = Application(sys.argv)
+
+    sys.excepthook = ExceptHandler
 
     if args.merge_mode and not Git.isMergeInProgress():
         QMessageBox.information(None, app.applicationName(),
                                 app.translate("app", "Not in merge state, now quit!"))
-        sys.exit(0)
+        return 0
 
     window = MainWindow(args.merge_mode)
     window.setGeometry(QStyle.alignedRect(
@@ -573,10 +570,8 @@ def main():
     else:
         window.showMaximized()
 
-    app.exec_()
-    app.deleteLater()
+    return app.exec_()
 
 
-# tips from http://pyqt.sourceforge.net/Docs/PySide2/gotchas.html
 if __name__ == "__main__":
     main()
