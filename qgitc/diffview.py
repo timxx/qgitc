@@ -20,6 +20,9 @@ diff_re = re.compile(b"^diff --(git a/(.*) b/(.*)|cc (.*))")
 diff_begin_re = re.compile(r"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 diff_begin_bre = re.compile(rb"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
 
+submodule_re = re.compile(
+    rb"^Submodule (.*) [a-z0-9]{7,}\.{2,3}[a-z0-9]{7,}.*$")
+
 sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
 email_re = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 url_re = re.compile("((https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=()]+)")
@@ -129,6 +132,24 @@ class DiffFetcher(DataFetcher):
                 self._row += 1
                 self._isDiffContent = False
 
+                continue
+
+            match = submodule_re.match(line)
+            if match:
+                if not self._firstPatch:
+                    lineItems.append(LineItem(TextLine.Diff, b''))
+                    self._row += 1
+                self._firstPatch = False
+
+                submodule = match.group(1)
+                lineItems.append(LineItem(TextLine.File, submodule))
+                fileItems[submodule.decode(diff_encoding)] = self._row
+                self._row += 1
+
+                lineItems.append(LineItem(TextLine.FileInfo, line))
+                self._row += 1
+
+                self._isDiffContent = True
                 continue
 
             if self._isDiffContent:
@@ -824,6 +845,8 @@ class DiffTextLine(TextLine):
             tcFormat.setForeground(ColorSchema.Deletion)
         elif text.startswith("-"):
             tcFormat.setForeground(ColorSchema.Deletion)
+        elif text.startswith("  > "):
+            tcFormat.setForeground(ColorSchema.Submodule)
 
         if tcFormat.isValid():
             formats.append(createFormatRange(0, len(text), tcFormat))
@@ -894,6 +917,7 @@ class ColorSchema():
     Whitespace = QColor(Qt.lightGray)
     SelFocus = QColor(173, 214, 255)
     SelNoFocus = QColor(229, 235, 241)
+    Submodule = QColor(0, 160, 0)
 
 
 class PatchViewer(QAbstractScrollArea):
