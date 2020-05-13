@@ -97,7 +97,7 @@ setup(name="qgitc",
       license="Apache",
       python_requires='>=3.0',
       entry_points={
-          "console_scripts": [
+          "gui_scripts": [
               "qgitc=qgitc.main:main",
               "imgdiff=mergetool.imgdiff:main"
           ]

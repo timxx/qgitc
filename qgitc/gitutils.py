@@ -12,7 +12,7 @@ from .common import log_fmt
 
 class GitProcess():
 
-    def __init__(self, repoDir, args):
+    def __init__(self, repoDir, args, text=None):
         startupinfo = None
         if os.name == "nt":
             startupinfo = subprocess.STARTUPINFO()
@@ -22,7 +22,8 @@ class GitProcess():
             cwd=repoDir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            startupinfo=startupinfo)
+            startupinfo=startupinfo,
+            universal_newlines=text)
 
     @property
     def process(self):
