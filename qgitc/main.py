@@ -7,7 +7,7 @@ from .ui_mainwindow import *
 from .gitview import *
 from .preferences import *
 from .settings import *
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 from .diffview import PatchViewer
 from .common import dataDirPath
 from .aboutdialog import AboutDialog
@@ -19,7 +19,6 @@ import os
 import sys
 import argparse
 import shlex
-import subprocess
 
 
 class FindSubmoduleThread(QThread):
@@ -39,11 +38,11 @@ class FindSubmoduleThread(QThread):
         self._submodules.clear()
 
         # try git submodule first
-        data = subprocess.check_output(
-            ["git", "submodule", "foreach", "--quiet", "echo $name"],
-            cwd=self._repoDir,
-            universal_newlines=True)
-        if data:
+        process = GitProcess(self._repoDir,
+                             ["submodule", "foreach", "--quiet", "echo $name"],
+                             True)
+        data = process.communicate()[0]
+        if process.returncode == 0 and data:
             self._submodules = data.rstrip().split('\n')
             self._submodules.insert(0, ".")
             return
