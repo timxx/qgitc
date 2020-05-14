@@ -49,15 +49,22 @@ class FindSubmoduleThread(QThread):
 
         submodules = []
         # some projects may not use submodule or subtree
+        max_level = 5 + self._repoDir.count(os.path.sep)
         for root, subdirs, files in os.walk(self._repoDir, topdown=True):
             if os.path.normcase(root) == self._repoDir:
                 continue
+
             if ".git" in subdirs or ".git" in files:
                 dir = root.replace(self._repoDir + os.sep, "")
                 if dir:
                     submodules.append(dir)
-            # ignore all '.dir'
-            subdirs[:] = [d for d in subdirs if not d.startswith(".")]
+                del subdirs[:]
+
+            if root.count(os.path.sep) >= max_level or root.endswith(".git"):
+                del subdirs[:]
+            else:
+                # ignore all '.dir'
+                subdirs[:] = [d for d in subdirs if not d.startswith(".")]
 
         if submodules:
             submodules.insert(0, '.')
