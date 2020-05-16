@@ -2,18 +2,24 @@
 
 from PySide2.QtGui import *
 from PySide2.QtCore import *
+from PySide2.QtWidgets import (QMainWindow,
+                               QActionGroup,
+                               QStyle,
+                               QLineEdit,
+                               QMessageBox,
+                               QFileDialog,
+                               QDialog)
 
-from .ui_mainwindow import *
-from .gitview import *
-from .preferences import *
-from .settings import *
+from .ui_mainwindow import Ui_MainWindow
+from .gitview import GitView
+from .preferences import Preferences
 from .gitutils import Git, GitProcess
 from .diffview import PatchViewer
-from .common import dataDirPath
 from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
 from .excepthandler import ExceptHandler
 from .stylehelper import dpiScaled
+from .application import Application
 
 import os
 import sys
@@ -463,40 +469,6 @@ class MainWindow(QMainWindow):
         self.gitViewB = None
 
         self.ui.acCompare.setChecked(False)
-
-
-class Application(QApplication):
-
-    def __init__(self, argv):
-        super(Application, self).__init__(argv)
-
-        self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
-        self.setApplicationName("qgitc")
-
-        iconPath = dataDirPath() + "/icons/qgitc.svg"
-        self.setWindowIcon(QIcon(iconPath))
-
-        self.setupTranslator()
-        self._settings = Settings(self)
-
-    def settings(self):
-        return self._settings
-
-    def setupTranslator(self):
-        # the Qt translations
-        dirPath = QLibraryInfo.location(QLibraryInfo.TranslationsPath)
-        translator = QTranslator(self)
-        if translator.load(QLocale.system(), "qt", "_", dirPath):
-            self.installTranslator(translator)
-        else:
-            translator = None
-
-        translator = QTranslator(self)
-        dirPath = dataDirPath() + "/translations"
-        if translator.load(QLocale.system(), "", "", dirPath):
-            self.installTranslator(translator)
-        else:
-            translator = None
 
 
 def setAppUserId(appId):
