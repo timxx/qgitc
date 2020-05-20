@@ -4,6 +4,7 @@ FORMS = ../../gitview.ui \
     ../../aboutdialog.ui
 
 SOURCES = ../../main.py \
+    ../../mainwindow.py \
     ../../colorwidget.py \
     ../../common.py \
     ../../diffview.py \
@@ -14,6 +15,7 @@ SOURCES = ../../main.py \
     ../../preferences.py \
     ../../settings.py \
     ../../aboutdialog.py \
-    ../../mergewidget.py
+    ../../mergewidget.py \
+    ../../blameview.py
 
 TRANSLATIONS = zh_CN.ts
