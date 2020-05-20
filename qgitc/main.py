@@ -20,6 +20,7 @@ from .mergewidget import MergeWidget
 from .excepthandler import ExceptHandler
 from .stylehelper import dpiScaled
 from .application import Application
+from .blameview import BlameWindow
 
 import os
 import sys
@@ -494,52 +495,63 @@ def unsetEnv(varnames):
                 pass
 
 
-def main():
-    unsetEnv(["QT_SCALE_FACTOR", "QT_AUTO_SCREEN_SCALE_FACTOR"])
+def _setup_argument(prog):
+    parser = argparse.ArgumentParser(
+        usage=prog + " [-h] <command> [<args>]")
+    subparsers = parser.add_subparsers(
+        title="The <command> list",
+        dest="cmd", metavar="")
 
-    parser = argparse.ArgumentParser()
+    log_parser = subparsers.add_parser(
+        "log",
+        help="Show commit logs")
+    log_parser.add_argument(
+        "-c", "--compare-mode", action="store_true",
+        help="Compare mode, show two branches for comparing")
+    log_parser.add_argument(
+        "file", metavar="<file>", nargs="?",
+        help="The file to filter.")
 
-    parser.add_argument("-r", "--repo",
-                        help="Init repositories directory, default to current working dir if it is.")
-    parser.add_argument("-f", "--file",
-                        help="Filter file")
-    parser.add_argument("-c", "--compare-mode", action="store_true",
-                        help="Compare mode, show two branches for comparing")
-    parser.add_argument("-m", "--merge-mode", action="store_true",
-                        help="Merge mode, for helping resolve conflicts")
+    mergetool_parser = subparsers.add_parser(
+        "mergetool",
+        help="Run mergetool to resolve merge conflicts.")
 
-    args = parser.parse_args()
+    blame_parser = subparsers.add_parser(
+        "blame",
+        help="Show what revision and author last modified each line of a file.")
+    blame_parser.add_argument(
+        "file", metavar="<file>", nargs="?",
+        help="The file to blame.")
 
-    setAppUserId("appid.qgitc.xyz")
+    return parser.parse_args()
 
-    repoDir = Git.repoTopLevelDir(os.getcwd())
-    filterFile = args.file
 
-    if args.repo:
-        repoDir = Git.repoTopLevelDir(args.repo)
+def _move_center(window):
+    window.setGeometry(QStyle.alignedRect(
+        Qt.LeftToRight, Qt.AlignCenter,
+        window.size(),
+        qApp.desktop().availableGeometry()))
 
-    app = Application(sys.argv)
 
-    sys.excepthook = ExceptHandler
-
-    if args.merge_mode and not Git.isMergeInProgress():
+def _do_log(app, args):
+    merge_mode = args.cmd == "mergetool"
+    if merge_mode and not Git.isMergeInProgress():
         QMessageBox.information(None, app.applicationName(),
                                 app.translate("app", "Not in merge state, now quit!"))
         return 0
 
-    window = MainWindow(args.merge_mode)
-    window.setGeometry(QStyle.alignedRect(
-        Qt.LeftToRight, Qt.AlignCenter,
-        window.size(),
-        app.desktop().availableGeometry()))
+    window = MainWindow(merge_mode)
+    _move_center(window)
 
-    # merge mode will also change to compare view
-    if not args.merge_mode and args.compare_mode:
-        window.setCompareMode()
+    if args.cmd == "log":
+        # merge mode will also change to compare view
+        if args.compare_mode:
+            window.setCompareMode()
 
-    if filterFile:
-        window.setFilterFile(filterFile)
+        if args.file:
+            window.setFilterFile(args.file)
 
+    repoDir = Git.repoTopLevelDir(os.getcwd())
     if repoDir:
         window.setRepoDir(repoDir)
 
@@ -549,6 +561,32 @@ def main():
         window.showMaximized()
 
     return app.exec_()
+
+
+def _do_blame(app, args):
+    window = BlameWindow()
+    _move_center(window)
+    window.showMaximized()
+
+    return app.exec_()
+
+
+def main():
+    unsetEnv(["QT_SCALE_FACTOR", "QT_AUTO_SCREEN_SCALE_FACTOR"])
+
+    args = _setup_argument(os.path.basename(sys.argv[0]))
+
+    setAppUserId("appid.qgitc.xyz")
+    app = Application(sys.argv)
+
+    sys.excepthook = ExceptHandler
+
+    if args.cmd == "blame":
+        return _do_blame(app, args)
+    else:
+        return _do_log(app, args)
+
+    return 0
 
 
 if __name__ == "__main__":
