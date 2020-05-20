@@ -12,6 +12,14 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Python: Blame (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "args": ["blame"],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Attach",
             "type": "python",
             "request": "attach",
