@@ -16,7 +16,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
-            "args": ["blame"],
+            "args": ["blame", "${workspaceRoot}/qgitc/main.py"],
             "console": "integratedTerminal"
         },
         {

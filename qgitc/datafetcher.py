@@ -79,8 +79,12 @@ class DataFetcher(QObject):
         """Implement in subclass"""
         return []
 
+    def reset(self):
+        pass
+
     def fetch(self, *args):
         self.cancel()
+        self.reset()
 
         git_args = self.makeArgs(args)
 
