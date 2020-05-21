@@ -110,7 +110,10 @@ def _do_log(app, args):
 def _do_blame(app, args):
     window = BlameWindow()
     _move_center(window)
-    window.showMaximized()
+    window.show()
+
+    if args.file:
+        window.blame(args.file)
 
     return app.exec_()
 
