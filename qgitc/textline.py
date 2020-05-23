@@ -3,8 +3,11 @@
 from PySide2.QtGui import (
     QTextCharFormat,
     QTextLayout,
-    QTextOption)
-from PySide2.QtCore import QRectF
+    QTextOption,
+    QFontMetrics)
+from PySide2.QtCore import (
+    Qt,
+    QRectF)
 
 from .colorschema import ColorSchema
 
@@ -12,12 +15,14 @@ import bisect
 import re
 
 
-__all__ = ["createFormatRange", "Link", "TextLine"]
+__all__ = ["createFormatRange", "Link", "TextLine", "SourceTextLineBase"]
 
 
 sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
 email_re = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 url_re = re.compile("((https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=()]+)")
+
+cr_char = "^M"
 
 
 def createFormatRange(start, length, fmt):
@@ -59,9 +64,9 @@ class TextLine():
     File = 5
     FileInfo = 6
     Diff = 7
+    Source = 8
 
-    def __init__(self, viewer, type, text):
-        self._viewer = viewer
+    def __init__(self, type, text, font, option):
         self._type = type
         self._text = text
         self._layout = None
@@ -70,15 +75,13 @@ class TextLine():
         self._patterns = None
         self._rehighlight = True
         self._invalidated = True
-        self._font = viewer.defFont
+        self._font = font
 
-        self._defOption = viewer.diffOption \
-            if type == TextLine.Diff \
-            else viewer.defOption
+        self._defOption = option
 
     def __relayout(self):
         self._layout.beginLayout()
-        line = self._layout.createLine()
+        self._layout.createLine()
         self._layout.endLayout()
 
     def __findLinks(self, patterns):
@@ -239,3 +242,88 @@ class TextLine():
 
     def hasCR(self):
         return False
+
+
+class SourceTextLineBase(TextLine):
+
+    def __init__(self, type, text, font, option):
+        self._hasCR = text.endswith('\r')
+        if self._hasCR:
+            text = text[:-1]
+        super().__init__(type, text, font, option)
+
+        self._crWidth = 0
+        self._updateCRWidth()
+
+    def hasCR(self):
+        return self._hasCR
+
+    def setDefOption(self, option):
+        super().setDefOption(option)
+        self._updateCRWidth()
+
+    def setFont(self, font):
+        super().setFont(font)
+        self._updateCRWidth()
+
+    def boundingRect(self):
+        br = super().boundingRect()
+        br.setWidth(br.width() + self._crWidth)
+
+        return br
+
+    def draw(self, painter, pos, selections=None, clip=QRectF()):
+        super().draw(painter, pos, selections, clip)
+
+        if self._hasCR and self._showWhitespaces():
+            br = super().boundingRect()
+            rect = self.boundingRect()
+            rect.setTopLeft(br.topRight())
+            rect.moveTo(rect.topLeft() + pos)
+
+            painter.save()
+            painter.setFont(self._font)
+            painter.setPen(ColorSchema.Whitespace)
+            painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, cr_char)
+            painter.restore()
+
+    def _applyWhitespaces(self, text, formats):
+        tcFormat = QTextCharFormat()
+        tcFormat.setForeground(ColorSchema.Whitespace)
+
+        offset = 0
+        length = len(text)
+        while offset < length:
+            if text[offset].isspace():
+                start = offset
+                offset += 1
+                while offset < length and text[offset].isspace():
+                    offset += 1
+                rg = createFormatRange(start, offset - start, tcFormat)
+                formats.append(rg)
+            else:
+                offset += 1
+
+    def _showWhitespaces(self):
+        flags = self._defOption.flags()
+        return flags & QTextOption.ShowTabsAndSpaces
+
+    def _updateCRWidth(self):
+        if self._hasCR and self._showWhitespaces():
+            fm = QFontMetrics(self._font)
+            self._crWidth = fm.width(cr_char)
+        else:
+            self._crWidth = 0
+
+    def _commonHighlightFormats(self):
+        formats = []
+
+        if self._defOption:
+            if self._defOption.flags() & QTextOption.ShowTabsAndSpaces:
+                self._applyWhitespaces(self.text(), formats)
+
+        linkFmt = self.createLinksFormats()
+        if linkFmt:
+            formats.extend(linkFmt)
+
+        return formats

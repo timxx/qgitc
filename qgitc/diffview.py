@@ -9,7 +9,11 @@ from .common import *
 from .gitutils import Git
 from .findwidget import FindWidget
 from .datafetcher import DataFetcher
-from .textline import (createFormatRange, Link, TextLine)
+from .textline import (
+    createFormatRange,
+    Link,
+    TextLine,
+    SourceTextLineBase)
 from .colorschema import ColorSchema
 
 import re
@@ -25,7 +29,6 @@ submodule_re = re.compile(
     rb"^Submodule (.*) [a-z0-9]{7,}\.{2,3}[a-z0-9]{7,}.*$")
 
 diff_encoding = "utf-8"
-cr_char = "^M"
 
 
 class TreeItemDelegate(QItemDelegate):
@@ -559,53 +562,16 @@ class Cursor():
         self._endPos = pos
 
 
-class DiffTextLine(TextLine):
+class DiffTextLine(SourceTextLineBase):
 
     def __init__(self, viewer, text):
-        self._hasCR = text.endswith('\r')
-        if self._hasCR:
-            text = text[:-1]
-        super(DiffTextLine, self).__init__(viewer, TextLine.Diff, text)
-
-        self._crWidth = 0
-        self.__updateCRWidth()
-
-    def hasCR(self):
-        return self._hasCR
-
-    def setDefOption(self, option):
-        super(DiffTextLine, self).setDefOption(option)
-        self.__updateCRWidth()
-
-    def setFont(self, font):
-        super(DiffTextLine, self).setFont(font)
-        self.__updateCRWidth()
-
-    def boundingRect(self):
-        br = super(DiffTextLine, self).boundingRect()
-        br.setWidth(br.width() + self._crWidth)
-
-        return br
-
-    def draw(self, painter, pos, selections=None, clip=QRectF()):
-        super(DiffTextLine, self).draw(painter, pos, selections, clip)
-
-        if self._hasCR and self.__showWhitespaces():
-            br = super(DiffTextLine, self).boundingRect()
-            rect = self.boundingRect()
-            rect.setTopLeft(br.topRight())
-            rect.moveTo(rect.topLeft() + pos)
-
-            painter.save()
-            painter.setFont(self._font)
-            painter.setPen(ColorSchema.Whitespace)
-            painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, cr_char)
-            painter.restore()
+        super().__init__(TextLine.Diff, text,
+                         viewer.defFont, viewer.diffOption)
 
     def rehighlight(self):
         text = self.text()
 
-        formats = []
+        formats = self._commonHighlightFormats()
         tcFormat = QTextCharFormat()
         if diff_begin_re.search(text) or text.startswith(r"\ No newline "):
             tcFormat.setForeground(ColorSchema.Newline)
@@ -627,50 +593,16 @@ class DiffTextLine(TextLine):
         if tcFormat.isValid():
             formats.append(createFormatRange(0, len(text), tcFormat))
 
-        if self._defOption:
-            if self._defOption.flags() & QTextOption.ShowTabsAndSpaces:
-                self.__applyWhitespaces(text, formats)
-
-        linkFmt = self.createLinksFormats()
-        if linkFmt:
-            formats.extend(linkFmt)
-
         if formats:
             self._layout.setAdditionalFormats(formats)
-
-    def __applyWhitespaces(self, text, formats):
-        tcFormat = QTextCharFormat()
-        tcFormat.setForeground(ColorSchema.Whitespace)
-
-        offset = 0
-        length = len(text)
-        while offset < length:
-            if text[offset].isspace():
-                start = offset
-                offset += 1
-                while offset < length and text[offset].isspace():
-                    offset += 1
-                rg = createFormatRange(start, offset - start, tcFormat)
-                formats.append(rg)
-            else:
-                offset += 1
-
-    def __showWhitespaces(self):
-        flags = self._defOption.flags()
-        return flags & QTextOption.ShowTabsAndSpaces
-
-    def __updateCRWidth(self):
-        if self._hasCR and self.__showWhitespaces():
-            fm = QFontMetrics(self._font)
-            self._crWidth = fm.width(cr_char)
-        else:
-            self._crWidth = 0
 
 
 class InfoTextLine(TextLine):
 
     def __init__(self, viewer, type, text):
-        super(InfoTextLine, self).__init__(viewer, type, text)
+        super(InfoTextLine, self).__init__(
+            type, text,
+            viewer.defFont, viewer.defOption)
 
     def rehighlight(self):
         fmt = QTextCharFormat()
@@ -870,7 +802,8 @@ class PatchViewer(QAbstractScrollArea):
                 item.type == TextLine.FileInfo:
             textLine = InfoTextLine(self, item.type, text)
         else:
-            textLine = TextLine(self, item.type, text)
+            textLine = TextLine(item.type, text,
+                                self.defFont, self.defOption)
 
         textLine.setLineNo(index)
 
