@@ -53,14 +53,19 @@ class SourceViewer(QAbstractScrollArea):
             self._option.setFlags(flags | QTextOption.ShowTabsAndSpaces)
 
         self._lineHeight = fm.height()
+        self._maxWidth = 0
 
     def appendLine(self, line):
         textLine = SourceTextLine(line, self._font, self._option)
         self._lines.append(textLine)
+        self._maxWidth = max(self._maxWidth,
+                             textLine.boundingRect().width())
+        self._adjustScrollbars()
         self.viewport().update()
 
     def clear(self):
         self._lines.clear()
+        self._maxWidth = 0
         self.viewport().update()
 
     def hasTextLines(self):
@@ -82,6 +87,23 @@ class SourceViewer(QAbstractScrollArea):
 
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
+
+    def _adjustScrollbars(self):
+        vScrollBar = self.verticalScrollBar()
+        hScrollBar = self.horizontalScrollBar()
+        if not self.hasTextLines():
+            vScrollBar.setRange(0, 0)
+            hScrollBar.setRange(0, 0)
+            return
+
+        hScrollBar.setRange(0, self._maxWidth - self.viewport().width())
+        hScrollBar.setPageStep(self.viewport().width())
+
+        linesPerPage = self._linesPerPage()
+        totalLines = self.textLineCount()
+
+        vScrollBar.setRange(0, totalLines - linesPerPage)
+        vScrollBar.setPageStep(linesPerPage)
 
     def paintEvent(self, event):
         if not self._lines:
@@ -112,3 +134,6 @@ class SourceViewer(QAbstractScrollArea):
 
             if (offset.y() > viewportRect.height()):
                 break
+
+    def resizeEvent(self, event):
+        self._adjustScrollbars()
