@@ -149,6 +149,7 @@ class RevisionPanel(SourcePanel):
     def __init__(self, viewer):
         super().__init__(viewer, viewer)
         self._lines = []
+        self._revs = []
         self._font = qApp.settings().diffViewFont()
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
@@ -158,6 +159,11 @@ class RevisionPanel(SourcePanel):
         self._space = fm.horizontalAdvance(' ')
         self._digitWidth = fm.horizontalAdvance('9')
 
+        self._activeRev = None
+
+        viewer.textLineClicked.connect(
+            self._onTextLineClicked)
+
     def appendRevision(self, rev):
         if rev.author.isValid():
             text = rev.sha1
@@ -165,11 +171,14 @@ class RevisionPanel(SourcePanel):
                                 self._font, self._option)
         else:
             textLine = None
+        self._revs.append(rev)
         self._lines.append(textLine)
         self.update()
 
     def clear(self):
+        self._revs.clear()
         self._lines.clear()
+        self._activeRev = None
         self.update()
 
     def requestWidth(self, lineCount):
@@ -177,6 +186,27 @@ class RevisionPanel(SourcePanel):
         width += self._digitWidth * len(str(lineCount + 1))
 
         return width
+
+    def _onTextLineClicked(self, textLine):
+        sha1 = self._revs[textLine.lineNo()].sha1
+        self._activeRev = sha1
+
+        lines = []
+        for i in range(len(self._revs)):
+            if self._revs[i].sha1 == sha1:
+                lines.append(i)
+
+        self._viewer.highlightLines(lines)
+        self.update()
+
+    def _drawActiveRev(self, painter, lineNo, y):
+        if self._activeRev and self._revs[lineNo].sha1 == self._activeRev:
+            line = self._lines[lineNo]
+            br = line.boundingRect()
+            fr = QRectF(br)
+            fr.moveTop(fr.top() + y)
+            fr.setLeft(0)
+            painter.fillRect(fr, QColor(192, 237, 197))
 
     def paintEvent(self, event):
         if not self._lines:
@@ -208,6 +238,7 @@ class RevisionPanel(SourcePanel):
         for i in range(startLine, len(self._lines)):
             line = self._lines[i]
             if line:
+                self._drawActiveRev(painter, i, y)
                 line.draw(painter, QPointF(0, y))
 
             lineNumber = str(i + 1)
@@ -225,8 +256,6 @@ class BlameView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._lines = []
-        self._commits = {}
 
         layout = QHBoxLayout(self)
         layout.setMargin(0)
@@ -238,17 +267,12 @@ class BlameView(QWidget):
         layout.addWidget(self._viewer)
 
     def appendLine(self, line):
-        self._lines.append(line)
         self._revPanel.appendRevision(line.header)
         self._viewer.appendLine(line.text)
 
     def clear(self):
-        self._lines.clear()
-        self._commits.clear()
-
-        self._revPanel.update()
-        self._viewer.update()
-
+        self._revPanel.clear()
+        self._viewer.clear()
 
 class BlameWindow(QMainWindow):
 

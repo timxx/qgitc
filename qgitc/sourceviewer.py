@@ -7,13 +7,19 @@ from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
     QTextCharFormat,
-    QTextOption)
+    QTextOption,
+    QBrush,
+    QColor)
 from PySide2.QtCore import (
     Qt,
     QRectF,
-    QPointF)
+    QPointF,
+    Signal)
 
-from .textline import TextLine, SourceTextLineBase
+from .textline import (
+    TextLine,
+    SourceTextLineBase,
+    createFormatRange)
 from .colorschema import ColorSchema
 
 
@@ -44,6 +50,8 @@ class SourcePanel(QWidget):
 
 class SourceViewer(QAbstractScrollArea):
 
+    textLineClicked = Signal(TextLine)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lines = []
@@ -65,6 +73,7 @@ class SourceViewer(QAbstractScrollArea):
 
         self._lineHeight = fm.height()
         self._maxWidth = 0
+        self._highlightLines = []
 
         self._panel = None
 
@@ -73,6 +82,7 @@ class SourceViewer(QAbstractScrollArea):
 
     def appendLine(self, line):
         textLine = SourceTextLine(line, self._font, self._option)
+        textLine.setLineNo(len(self._lines))
         self._lines.append(textLine)
         self._maxWidth = max(self._maxWidth,
                              textLine.boundingRect().width())
@@ -88,6 +98,7 @@ class SourceViewer(QAbstractScrollArea):
     def clear(self):
         self._lines.clear()
         self._maxWidth = 0
+        self._highlightLines.clear()
         self.viewport().update()
 
     def hasTextLines(self):
@@ -95,6 +106,9 @@ class SourceViewer(QAbstractScrollArea):
 
     def textLineCount(self):
         return len(self._lines)
+
+    def textLineAt(self, n):
+        return self._lines[n]
 
     def firstVisibleLine(self):
         return self.verticalScrollBar().value()
@@ -121,6 +135,23 @@ class SourceViewer(QAbstractScrollArea):
     @property
     def lineHeight(self):
         return self._lineHeight
+
+    def textLineForPos(self, pos):
+        if not self.hasTextLines():
+            return None
+
+        n = int(pos.y() / self.lineHeight)
+        n += self.firstVisibleLine()
+
+        if n >= self.textLineCount():
+            n = self.textLineCount() - 1
+
+        return self._lines[n]
+
+    def highlightLines(self, lines):
+        self._highlightLines = lines
+
+        self.viewport().update()
 
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
@@ -165,7 +196,15 @@ class SourceViewer(QAbstractScrollArea):
         for i in range(startLine, endLine):
             textLine = self._lines[i]
 
-            r = textLine.boundingRect().translated(offset)
+            br = textLine.boundingRect()
+            r = br.translated(offset)
+
+            if i in self._highlightLines:
+                fr = QRectF(br)
+                fr.moveTop(fr.top() + r.top())
+                fr.setLeft(0)
+                fr.setRight(viewportRect.width() - offset.x())
+                painter.fillRect(fr, QColor(192, 237, 197))
 
             formats = []
 
@@ -183,3 +222,15 @@ class SourceViewer(QAbstractScrollArea):
             self._panel.setGeometry(rc.left(), rc.top(),
                                     width, rc.height())
         self._adjustScrollbars()
+
+    def mousePressEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        if not self.hasTextLines():
+            return
+
+        textLine = self.textLineForPos(event.pos())
+        if not textLine:
+            return
+
+        self.textLineClicked.emit(textLine)
