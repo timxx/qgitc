@@ -211,7 +211,7 @@ class TextLine():
         x, _ = line.cursorToX(offset)
         return x
 
-    def draw(self, painter, pos, selections=None, clip=QRectF()):
+    def draw(self, painter, pos, selections=[], clip=QRectF()):
         self.ensureLayout()
         self._layout.draw(painter, pos, selections, clip)
 

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from PySide2.QtWidgets import (
-    QAbstractScrollArea)
+    QAbstractScrollArea,
+    QWidget)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -16,7 +17,7 @@ from .textline import TextLine, SourceTextLineBase
 from .colorschema import ColorSchema
 
 
-__all__ = ["SourceViewer"]
+__all__ = ["SourceViewer", "SourcePanel"]
 
 
 class SourceTextLine(SourceTextLineBase):
@@ -29,6 +30,16 @@ class SourceTextLine(SourceTextLineBase):
         formats = self._commonHighlightFormats()
         if formats:
             self._layout.setAdditionalFormats(formats)
+
+
+class SourcePanel(QWidget):
+
+    def __init__(self, viewer, parent=None):
+        super().__init__(parent)
+        self._viewer = viewer
+
+    def requestWidth(self, lineCount):
+        return 0
 
 
 class SourceViewer(QAbstractScrollArea):
@@ -55,11 +66,22 @@ class SourceViewer(QAbstractScrollArea):
         self._lineHeight = fm.height()
         self._maxWidth = 0
 
+        self._panel = None
+
+        self.verticalScrollBar().valueChanged.connect(
+            self._onVScrollBarValueChanged)
+
     def appendLine(self, line):
         textLine = SourceTextLine(line, self._font, self._option)
         self._lines.append(textLine)
         self._maxWidth = max(self._maxWidth,
                              textLine.boundingRect().width())
+
+        if self._panel:
+            self.setViewportMargins(
+                self._panel.requestWidth(self.textLineCount()),
+                0, 0, 0)
+
         self._adjustScrollbars()
         self.viewport().update()
 
@@ -85,6 +107,21 @@ class SourceViewer(QAbstractScrollArea):
 
         return QPointF(-x, -0)
 
+    def setPanel(self, panel):
+        self._panel = panel
+        if panel:
+            width = panel.requestWidth(self.textLineCount())
+            self.setViewportMargins(width, 0, 0, 0)
+            rc = self.viewport().rect()
+            panel.setGeometry(rc.left(), rc.top(),
+                              width, rc.height())
+        else:
+            self.setViewportMargins(0, 0, 0, 0)
+
+    @property
+    def lineHeight(self):
+        return self._lineHeight
+
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
 
@@ -104,6 +141,10 @@ class SourceViewer(QAbstractScrollArea):
 
         vScrollBar.setRange(0, totalLines - linesPerPage)
         vScrollBar.setPageStep(linesPerPage)
+
+    def _onVScrollBarValueChanged(self, value):
+        if self._panel:
+            self._panel.update()
 
     def paintEvent(self, event):
         if not self._lines:
@@ -136,4 +177,9 @@ class SourceViewer(QAbstractScrollArea):
                 break
 
     def resizeEvent(self, event):
+        if self._panel:
+            rc = self.viewport().rect()
+            width = self._panel.requestWidth(self.textLineCount())
+            self._panel.setGeometry(rc.left(), rc.top(),
+                                    width, rc.height())
         self._adjustScrollbars()

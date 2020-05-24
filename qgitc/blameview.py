@@ -12,17 +12,22 @@ from PySide2.QtGui import (
     QFontMetrics,
     QTextOption,
     QTextLayout,
-    QTextFormat)
+    QTextFormat,
+    QColor,
+    QPen)
 from PySide2.QtCore import (
     Qt,
     Signal,
     QRect,
-    QRectF)
+    QRectF,
+    QSize,
+    QPointF)
 
 from datetime import datetime
 from .datafetcher import DataFetcher
 from .stylehelper import dpiScaled
-from .sourceviewer import SourceViewer
+from .sourceviewer import SourceViewer, SourcePanel
+from .textline import TextLine
 
 import sys
 import re
@@ -139,13 +144,81 @@ class BlameFetcher(DataFetcher):
         self._curLine = BlameLine()
 
 
-class LogsWidget(QWidget):
+class RevisionPanel(SourcePanel):
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, viewer):
+        super().__init__(viewer, viewer)
+        self._lines = []
+        self._font = qApp.settings().diffViewFont()
+        self._option = QTextOption()
+        self._option.setWrapMode(QTextOption.NoWrap)
+
+        fm = QFontMetrics(self._font)
+        self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
+        self._space = fm.horizontalAdvance(' ')
+        self._digitWidth = fm.horizontalAdvance('9')
+
+    def appendRevision(self, rev):
+        if rev.author.isValid():
+            text = rev.sha1
+            textLine = TextLine(TextLine.Parent, text,
+                                self._font, self._option)
+        else:
+            textLine = None
+        self._lines.append(textLine)
+        self.update()
+
+    def clear(self):
+        self._lines.clear()
+        self.update()
+
+    def requestWidth(self, lineCount):
+        width = self._sha1Width + self._space * 3
+        width += self._digitWidth * len(str(lineCount + 1))
+
+        return width
 
     def paintEvent(self, event):
+        if not self._lines:
+            return
+
         painter = QPainter(self)
+        onePixel = dpiScaled(1)
+        painter.fillRect(self.rect().adjusted(onePixel, onePixel, 0, 0),
+                         QColor(250, 250, 250))
+
+        eventRect = event.rect()
+        painter.setClipRect(eventRect)
+        painter.setFont(self._font)
+
+        startLine = self._viewer.firstVisibleLine()
+
+        y = 0
+        width = self.width()
+        ascent = QFontMetrics(self._font).ascent()
+
+        x = width - len(str(len(self._lines))) * \
+            self._digitWidth - self._space * 2
+        pen = QPen(Qt.darkGray)
+        oldPen = painter.pen()
+        painter.setPen(pen)
+        painter.drawLine(x, y, x, self.height())
+        painter.setPen(oldPen)
+
+        for i in range(startLine, len(self._lines)):
+            line = self._lines[i]
+            if line:
+                line.draw(painter, QPointF(0, y))
+
+            lineNumber = str(i + 1)
+            x = width - len(lineNumber) * self._digitWidth - self._space
+            painter.setPen(pen)
+            painter.drawText(x, y + ascent, lineNumber)
+            painter.setPen(oldPen)
+
+            y += self._viewer.lineHeight
+            if y > self.height():
+                break
 
 
 class BlameView(QWidget):
@@ -156,22 +229,24 @@ class BlameView(QWidget):
         self._commits = {}
 
         layout = QHBoxLayout(self)
+        layout.setMargin(0)
 
-        self._header = LogsWidget(self)
         self._viewer = SourceViewer(self)
+        self._revPanel = RevisionPanel(self._viewer)
+        self._viewer.setPanel(self._revPanel)
 
-        layout.addWidget(self._header)
         layout.addWidget(self._viewer)
 
     def appendLine(self, line):
         self._lines.append(line)
+        self._revPanel.appendRevision(line.header)
         self._viewer.appendLine(line.text)
 
     def clear(self):
         self._lines.clear()
         self._commits.clear()
 
-        self._header.update()
+        self._revPanel.update()
         self._viewer.update()
 
 
