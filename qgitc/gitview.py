@@ -9,6 +9,7 @@ from .ui_gitview import *
 from .common import *
 from .gitutils import Git
 from .stylehelper import dpiScaled
+from .events import BlameEvent
 
 import re
 
@@ -113,6 +114,7 @@ class GitView(QWidget):
         self.ui.logView.endFetch.connect(self.__onEndFetch)
 
         self.ui.diffView.requestCommit.connect(self.__onRequestCommit)
+        self.ui.diffView.requestBlame.connect(self.__onRequestBlame)
         self.ui.diffView.beginFetch.connect(self.__onBeginFetch)
         self.ui.diffView.endFetch.connect(self.__onEndFetch)
 
@@ -308,6 +310,16 @@ class GitView(QWidget):
             self.ui.logView.switchToNearCommit(sha1, goNext)
         else:
             self.ui.logView.switchToCommit(sha1)
+
+    def __onRequestBlame(self, filePath, toParent):
+        sha1 = None
+        if toParent:
+            idx = self.ui.logView.currentIndex()
+            if idx != -1:
+                commit = self.ui.logView.getCommit(idx)
+                sha1 = commit.parents[0] if commit.parents else None
+        QCoreApplication.postEvent(qApp,
+                                   BlameEvent(filePath, sha1))
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
