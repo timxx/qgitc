@@ -199,6 +199,7 @@ class DiffFetcher(DataFetcher):
 
 class DiffView(QWidget):
     requestCommit = Signal(str, bool, bool)
+    requestBlame = Signal(str, bool)
 
     beginFetch = Signal()
     endFetch = Signal()
@@ -223,6 +224,10 @@ class DiffView(QWidget):
         self.twMenu.addSeparator()
         self.twMenu.addAction(self.tr("&Log this file"),
                               self.__onFilterPath)
+        self.twMenu.addAction(self.tr("&Blame this file"),
+                              self.__onBlameFile)
+        self.twMenu.addAction(self.tr("Blame parent commit"),
+                              self.__onBlameParentCommit)
 
         self.splitter = QSplitter(self)
         self.splitter.addWidget(self.viewer)
@@ -251,6 +256,7 @@ class DiffView(QWidget):
 
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
         self.viewer.requestCommit.connect(self.requestCommit)
+        self.viewer.requestBlame.connect(self.requestBlame)
 
         sett = qApp.instance().settings()
         sett.ignoreWhitespaceChanged.connect(
@@ -315,6 +321,20 @@ class DiffView(QWidget):
 
         filePath = item.text(0)
         self.window().setFilterFile(filePath)
+
+    def __onBlameFile(self):
+        item = self.treeWidget.currentItem()
+        if not item:
+            return
+
+        self.requestBlame.emit(item.text(0), False)
+
+    def __onBlameParentCommit(self):
+        item = self.treeWidget.currentItem()
+        if not item:
+            return
+
+        self.requestBlame.emit(item.text(0), True)
 
     def __isCommentItem(self, item):
         # operator not implemented LoL
@@ -618,6 +638,7 @@ class InfoTextLine(TextLine):
 class PatchViewer(QAbstractScrollArea):
     fileRowChanged = Signal(int)
     requestCommit = Signal(str, bool, bool)
+    requestBlame = Signal(str, bool)
 
     def __init__(self, parent=None):
         super(PatchViewer, self).__init__(parent)
