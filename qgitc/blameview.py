@@ -6,13 +6,16 @@ from PySide2.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
-    QPlainTextEdit)
+    QLabel,
+    QPlainTextEdit,
+    QSplitter)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
     QTextOption,
     QTextLayout,
     QTextFormat,
+    QTextCursor,
     QColor,
     QPen)
 from PySide2.QtCore import (
@@ -28,6 +31,7 @@ from .datafetcher import DataFetcher
 from .stylehelper import dpiScaled
 from .sourceviewer import SourceViewer, SourcePanel
 from .textline import TextLine
+from .gitutils import Git
 
 import sys
 import re
@@ -119,13 +123,13 @@ class BlameFetcher(DataFetcher):
             elif line.startswith(b"summary "):
                 self._curLine.header.summary = _decode(line[8:])
             elif line.startswith(b"previous "):
-                self._curLine.header.previous = _decode(line.split(b' ')[1][:ABBREV_N])
+                self._curLine.header.previous = _decode(line.split(b' ')[1])
             elif line.startswith(b"filename "):
                 pass
             else:
                 m = line_begin_re.match(line)
                 if m:
-                    self._curLine.header.sha1 = _decode(m.group(1)[:ABBREV_N])
+                    self._curLine.header.sha1 = _decode(m.group(1))
                     self._curLine.header.oldLineNo = int(m.group(2))
                     self._curLine.header.newLineNo = int(m.group(3))
                     if m.group(5):
@@ -145,6 +149,8 @@ class BlameFetcher(DataFetcher):
 
 
 class RevisionPanel(SourcePanel):
+
+    revisionActivated = Signal(BlameHeader)
 
     def __init__(self, viewer):
         super().__init__(viewer, viewer)
@@ -166,7 +172,7 @@ class RevisionPanel(SourcePanel):
 
     def appendRevision(self, rev):
         if rev.author.isValid():
-            text = rev.sha1
+            text = rev.sha1[:ABBREV_N]
             textLine = TextLine(TextLine.Parent, text,
                                 self._font, self._option)
         else:
@@ -188,16 +194,24 @@ class RevisionPanel(SourcePanel):
         return width
 
     def _onTextLineClicked(self, textLine):
-        sha1 = self._revs[textLine.lineNo()].sha1
+        rev = self._revs[textLine.lineNo()]
+        sha1 = rev.sha1
+        if sha1 == self._activeRev:
+            return
+
         self._activeRev = sha1
 
         lines = []
         for i in range(len(self._revs)):
             if self._revs[i].sha1 == sha1:
+                if self._revs[i].author.isValid():
+                    rev = self._revs[i]
                 lines.append(i)
 
         self._viewer.highlightLines(lines)
         self.update()
+
+        self.revisionActivated.emit(rev)
 
     def _drawActiveRev(self, painter, lineNo, y):
         if self._activeRev and self._revs[lineNo].sha1 == self._activeRev:
@@ -252,19 +266,87 @@ class RevisionPanel(SourcePanel):
                 break
 
 
+class CommitPanel(QPlainTextEdit):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setReadOnly(True)
+
+        self._bodyCache = {}
+
+    def showRevision(self, rev):
+        self.clear()
+        text = self.tr("Commit: ") + rev.sha1
+        self.appendPlainText(text)
+
+        text = self.tr("Author: ") + rev.author.name + " " + \
+            rev.author.mail + " " + rev.author.time
+        self.appendPlainText(text)
+
+        text = self.tr("Committer: ") + rev.committer.name + " " + \
+            rev.committer.mail + " " + rev.committer.time
+        self.appendPlainText(text)
+
+        self.appendPlainText("")
+        self.appendPlainText(rev.summary)
+
+        if rev.sha1 in self._bodyCache:
+            text = self._bodyCache[rev.sha1]
+        else:
+            args = ["show", "-s", "--pretty=format:%b", rev.sha1]
+            data = Git.checkOutput(args)
+            text = _decode(data) if data else None
+            self._bodyCache[rev.sha1] = text
+        if text:
+            self.appendPlainText("")
+            self.appendPlainText(text)
+
+        self.moveCursor(QTextCursor.Start)
+
+    def clearCache(self):
+        self._bodyCache.clear()
+
+
 class BlameView(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        layout = QHBoxLayout(self)
+        mainLayout = QVBoxLayout(self)
+        mainLayout.setMargin(0)
+
+        sourceWidget = QWidget(self)
+        layout = QVBoxLayout(sourceWidget)
         layout.setMargin(0)
+
+        hdrLayout = QHBoxLayout()
+        self._lbHeader = QLabel(self)
+        hdrLayout.addWidget(self._lbHeader)
+        layout.addLayout(hdrLayout)
 
         self._viewer = SourceViewer(self)
         self._revPanel = RevisionPanel(self._viewer)
         self._viewer.setPanel(self._revPanel)
-
         layout.addWidget(self._viewer)
+
+        self._commitPanel = CommitPanel(self)
+
+        vSplitter = QSplitter(Qt.Vertical, self)
+        vSplitter.addWidget(sourceWidget)
+        vSplitter.addWidget(self._commitPanel)
+
+        height = vSplitter.sizeHint().height()
+        sizes = [height * 4 / 5, height * 1 / 5]
+        vSplitter.setSizes(sizes)
+
+        mainLayout.addWidget(vSplitter)
+
+        self._fetcher = BlameFetcher(self)
+        self._fetcher.lineAvailable.connect(
+            self.appendLine)
+
+        self._revPanel.revisionActivated.connect(
+            self._commitPanel.showRevision)
 
     def appendLine(self, line):
         self._revPanel.appendRevision(line.header)
@@ -273,6 +355,16 @@ class BlameView(QWidget):
     def clear(self):
         self._revPanel.clear()
         self._viewer.clear()
+        self._commitPanel.clearCache()
+
+    def blame(self, file, sha1=None):
+        self.clear()
+        self._fetcher.fetch(file, sha1)
+        text = file
+        if sha1:
+            text += " --- " + sha1
+        self._lbHeader.setText(text)
+
 
 class BlameWindow(QMainWindow):
 
@@ -280,13 +372,15 @@ class BlameWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle(self.tr("QGitc Blame"))
 
-        self._view = BlameView(self)
-        self.setCentralWidget(self._view)
+        centralWidget = QWidget(self)
+        layout = QVBoxLayout(centralWidget)
+        margin = dpiScaled(5)
+        layout.setContentsMargins(margin, margin, margin, margin)
 
-        self._fetcher = BlameFetcher(self)
-        self._fetcher.lineAvailable.connect(
-            self._view.appendLine)
+        self._view = BlameView(self)
+        layout.addWidget(self._view)
+
+        self.setCentralWidget(centralWidget)
 
     def blame(self, file, sha1=None):
-        self._view.clear()
-        self._fetcher.fetch(file, sha1)
+        self._view.blame(file, sha1)
