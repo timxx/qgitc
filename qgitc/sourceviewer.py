@@ -21,6 +21,7 @@ from .textline import (
     SourceTextLineBase,
     createFormatRange)
 from .colorschema import ColorSchema
+from .stylehelper import dpiScaled
 
 
 __all__ = ["SourceViewer", "SourcePanel"]
@@ -76,6 +77,7 @@ class SourceViewer(QAbstractScrollArea):
         self._highlightLines = []
 
         self._panel = None
+        self._onePixel = dpiScaled(1)
 
         self.verticalScrollBar().valueChanged.connect(
             self._onVScrollBarValueChanged)
@@ -87,11 +89,7 @@ class SourceViewer(QAbstractScrollArea):
         self._maxWidth = max(self._maxWidth,
                              textLine.boundingRect().width())
 
-        if self._panel:
-            self.setViewportMargins(
-                self._panel.requestWidth(self.textLineCount()),
-                0, 0, 0)
-
+        self._updatePanelGeo()
         self._adjustScrollbars()
         self.viewport().update()
 
@@ -124,11 +122,7 @@ class SourceViewer(QAbstractScrollArea):
     def setPanel(self, panel):
         self._panel = panel
         if panel:
-            width = panel.requestWidth(self.textLineCount())
-            self.setViewportMargins(width, 0, 0, 0)
-            rc = self.viewport().rect()
-            panel.setGeometry(rc.left(), rc.top(),
-                              width, rc.height())
+            self._updatePanelGeo()
         else:
             self.setViewportMargins(0, 0, 0, 0)
 
@@ -177,6 +171,16 @@ class SourceViewer(QAbstractScrollArea):
         if self._panel:
             self._panel.update()
 
+    def _updatePanelGeo(self):
+        if self._panel:
+            rc = self.rect()
+            width = self._panel.requestWidth(self.textLineCount())
+            self.setViewportMargins(width + self._onePixel, 0, 0, 0)
+            self._panel.setGeometry(rc.left() + self._onePixel,
+                                    rc.top() + self._onePixel,
+                                    width,
+                                    self.viewport().height())
+
     def paintEvent(self, event):
         if not self._lines:
             return
@@ -216,11 +220,8 @@ class SourceViewer(QAbstractScrollArea):
                 break
 
     def resizeEvent(self, event):
-        if self._panel:
-            rc = self.viewport().rect()
-            width = self._panel.requestWidth(self.textLineCount())
-            self._panel.setGeometry(rc.left(), rc.top(),
-                                    width, rc.height())
+        if event.oldSize().height() != event.size().height():
+            self._updatePanelGeo()
         self._adjustScrollbars()
 
     def mousePressEvent(self, event):

@@ -188,7 +188,7 @@ class RevisionPanel(SourcePanel):
         self.update()
 
     def requestWidth(self, lineCount):
-        width = self._sha1Width + self._space * 3
+        width = self._sha1Width + self._space * 4
         width += self._digitWidth * len(str(lineCount + 1))
 
         return width
@@ -213,13 +213,13 @@ class RevisionPanel(SourcePanel):
 
         self.revisionActivated.emit(rev)
 
-    def _drawActiveRev(self, painter, lineNo, y):
+    def _drawActiveRev(self, painter, lineNo, x, y):
         if self._activeRev and self._revs[lineNo].sha1 == self._activeRev:
             line = self._lines[lineNo]
             br = line.boundingRect()
             fr = QRectF(br)
             fr.moveTop(fr.top() + y)
-            fr.setLeft(0)
+            fr.moveLeft(x)
             painter.fillRect(fr, QColor(192, 237, 197))
 
     def paintEvent(self, event):
@@ -252,8 +252,8 @@ class RevisionPanel(SourcePanel):
         for i in range(startLine, len(self._lines)):
             line = self._lines[i]
             if line:
-                self._drawActiveRev(painter, i, y)
-                line.draw(painter, QPointF(0, y))
+                self._drawActiveRev(painter, i, self._space, y)
+                line.draw(painter, QPointF(self._space, y))
 
             lineNumber = str(i + 1)
             x = width - len(lineNumber) * self._digitWidth - self._space
