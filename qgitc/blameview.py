@@ -384,3 +384,7 @@ class BlameView(QWidget):
         if sha1:
             text += " --- " + sha1
         self._lbHeader.setText(text)
+
+    @property
+    def viewer(self):
+        return self._viewer

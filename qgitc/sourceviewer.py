@@ -111,6 +111,19 @@ class SourceViewer(QAbstractScrollArea):
     def firstVisibleLine(self):
         return self.verticalScrollBar().value()
 
+    @property
+    def currentLineNo(self):
+        return self.firstVisibleLine()
+
+    def gotoLine(self, lineNo):
+        if lineNo < 0 or lineNo >= self.textLineCount():
+            return
+
+        vScrollBar = self.verticalScrollBar()
+        if vScrollBar.value() != lineNo:
+            vScrollBar.setValue(lineNo)
+            self.viewport().update()
+
     def contentOffset(self):
         if not self.hasTextLines():
             return QPointF(0, 0)
