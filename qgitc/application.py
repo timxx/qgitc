@@ -10,7 +10,7 @@ from PySide2.QtCore import (Qt,
 from .common import dataDirPath
 from .settings import Settings
 from .events import BlameEvent
-from .blameview import BlameWindow
+from .blamewindow import BlameWindow
 
 
 class Application(QApplication):
