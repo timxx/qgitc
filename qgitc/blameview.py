@@ -2,7 +2,6 @@
 
 from PySide2.QtWidgets import (
     QAbstractScrollArea,
-    QMainWindow,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
@@ -13,7 +12,6 @@ from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
     QTextOption,
-    QTextLayout,
     QTextFormat,
     QTextCursor,
     QColor,
@@ -23,7 +21,6 @@ from PySide2.QtCore import (
     Signal,
     QRect,
     QRectF,
-    QSize,
     QPointF)
 
 from datetime import datetime
@@ -37,7 +34,7 @@ import sys
 import re
 
 
-__all__ = ["BlameView", "BlameWindow"]
+__all__ = ["BlameView"]
 
 line_begin_re = re.compile(rb"(^[a-z0-9]{40}) (\d+) (\d+)( (\d+))?$")
 ABBREV_N = 4
@@ -387,23 +384,3 @@ class BlameView(QWidget):
         if sha1:
             text += " --- " + sha1
         self._lbHeader.setText(text)
-
-
-class BlameWindow(QMainWindow):
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle(self.tr("QGitc Blame"))
-
-        centralWidget = QWidget(self)
-        layout = QVBoxLayout(centralWidget)
-        margin = dpiScaled(5)
-        layout.setContentsMargins(margin, margin, margin, margin)
-
-        self._view = BlameView(self)
-        layout.addWidget(self._view)
-
-        self.setCentralWidget(centralWidget)
-
-    def blame(self, file, sha1=None):
-        self._view.blame(file, sha1)
