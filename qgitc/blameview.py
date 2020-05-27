@@ -30,7 +30,7 @@ from datetime import datetime
 from .datafetcher import DataFetcher
 from .stylehelper import dpiScaled
 from .sourceviewer import SourceViewer, SourcePanel
-from .textline import TextLine
+from .textline import TextLine, Link
 from .gitutils import Git
 
 import sys
@@ -40,7 +40,7 @@ import re
 __all__ = ["BlameView", "BlameWindow"]
 
 line_begin_re = re.compile(rb"(^[a-z0-9]{40}) (\d+) (\d+)( (\d+))?$")
-ABBREV_N = 8
+ABBREV_N = 4
 
 
 class AuthorInfo:
@@ -162,21 +162,35 @@ class RevisionPanel(SourcePanel):
 
         fm = QFontMetrics(self._font)
         self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
+        self._dateWidth = fm.horizontalAdvance("2020-05-27")
         self._space = fm.horizontalAdvance(' ')
         self._digitWidth = fm.horizontalAdvance('9')
 
         self._activeRev = None
+        self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
 
         viewer.textLineClicked.connect(
             self._onTextLineClicked)
 
     def appendRevision(self, rev):
-        if rev.author.isValid():
-            text = rev.sha1[:ABBREV_N]
+        if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
+            text = rev.sha1[:ABBREV_N] + " "
+            if rev.author.isValid():
+                text += rev.author.time.split(" ")[0]
+            else:
+                # Get from the previous
+                for i in range(len(self._revs), 0, -1):
+                    r = self._revs[i - 1]
+                    if r.sha1 == rev.sha1 and r.author.isValid():
+                        text += r.author.time.split(" ")[0]
+                        break
+
             textLine = TextLine(TextLine.Parent, text,
                                 self._font, self._option)
+            textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
         else:
             textLine = None
+
         self._revs.append(rev)
         self._lines.append(textLine)
         self.update()
@@ -188,7 +202,8 @@ class RevisionPanel(SourcePanel):
         self.update()
 
     def requestWidth(self, lineCount):
-        width = self._sha1Width + self._space * 4
+        width = self._sha1Width + self._space * 5
+        width += self._dateWidth
         width += self._digitWidth * len(str(lineCount + 1))
 
         return width
@@ -249,11 +264,19 @@ class RevisionPanel(SourcePanel):
         painter.drawLine(x, y, x, self.height())
         painter.setPen(oldPen)
 
+        x_hline = (self._space + self._sha1Width) / 2
         for i in range(startLine, len(self._lines)):
             line = self._lines[i]
             if line:
                 self._drawActiveRev(painter, i, self._space, y)
                 line.draw(painter, QPointF(self._space, y))
+            else:
+                if self._activeRev and self._revs[i].sha1 == self._activeRev:
+                    painter.setPen(Qt.darkGreen)
+                else:
+                    painter.setPen(pen)
+                painter.drawLine(x_hline, y, x_hline, y + self._viewer.lineHeight)
+                painter.setPen(oldPen)
 
             lineNumber = str(i + 1)
             x = width - len(lineNumber) * self._digitWidth - self._space
