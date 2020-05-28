@@ -2,7 +2,8 @@
 
 from PySide2.QtWidgets import (
     QAbstractScrollArea,
-    QWidget)
+    QWidget,
+    QApplication)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -12,9 +13,12 @@ from PySide2.QtGui import (
     QColor)
 from PySide2.QtCore import (
     Qt,
+    QRect,
     QRectF,
+    QPoint,
     QPointF,
-    Signal)
+    Signal,
+    QElapsedTimer)
 
 from .textline import (
     TextLine,
@@ -22,6 +26,7 @@ from .textline import (
     createFormatRange)
 from .colorschema import ColorSchema
 from .stylehelper import dpiScaled
+from .textcursor import TextCursor
 
 
 __all__ = ["SourceViewer", "SourcePanel"]
@@ -79,6 +84,9 @@ class SourceViewer(QAbstractScrollArea):
         self._panel = None
         self._onePixel = dpiScaled(1)
 
+        self._cursor = TextCursor()
+        self._clickTimer = QElapsedTimer()
+
         self.verticalScrollBar().valueChanged.connect(
             self._onVScrollBarValueChanged)
 
@@ -132,6 +140,11 @@ class SourceViewer(QAbstractScrollArea):
 
         return QPointF(-x, -0)
 
+    def mapToContents(self, pos):
+        x = pos.x() + self.horizontalScrollBar().value()
+        y = pos.y() + 0
+        return QPoint(x, y)
+
     def setPanel(self, panel):
         self._panel = panel
         if panel:
@@ -159,6 +172,15 @@ class SourceViewer(QAbstractScrollArea):
         self._highlightLines = lines
 
         self.viewport().update()
+
+    def selectAll(self):
+        if not self.hasTextLines():
+            return
+
+        self._cursor.moveTo(0, 0)
+        lastLine = self.textLineCount() - 1
+        self._cursor.selectTo(lastLine, len(self.textLineAt(lastLine).text()))
+        self._invalidateSelection()
 
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
@@ -194,6 +216,59 @@ class SourceViewer(QAbstractScrollArea):
                                     width,
                                     self.viewport().height())
 
+    def _invalidateSelection(self):
+        if not self._cursor.hasSelection():
+            return
+
+        begin = self._cursor.beginLine()
+        end = self._cursor.endLine()
+
+        x = 0
+        y = (begin - self.firstVisibleLine()) * self.lineHeight
+        w = self.viewport().width()
+        h = (end - begin + 1) * self.lineHeight
+
+        rect = QRect(x, y, w, h)
+        # offset for some odd fonts LoL
+        offset = int(self.lineHeight / 2)
+        rect.adjust(0, -offset, 0, offset)
+        self.viewport().update(rect)
+
+    def _selectionFormatRange(self, lineIndex):
+        if not self._cursor.within(lineIndex):
+            return None
+
+        textLine = self.textLineAt(lineIndex)
+        start = 0
+        end = len(textLine.text())
+
+        if self._cursor.beginLine() == lineIndex:
+            start = self._cursor.beginPos()
+        if self._cursor.endLine() == lineIndex:
+            end = self._cursor.endPos()
+
+        fmt = QTextCharFormat()
+        if self.hasFocus():
+            fmt.setBackground(QBrush(ColorSchema.SelFocus))
+        else:
+            fmt.setBackground(QBrush(ColorSchema.SelNoFocus))
+
+        return createFormatRange(start, end - start, fmt)
+
+    def _isLetter(self, char):
+            if char >= 'a' and char <= 'z':
+                return True
+            if char >= 'A' and char <= 'Z':
+                return True
+
+            if char == '_':
+                return True
+
+            if char.isdigit():
+                return True
+
+            return False
+
     def paintEvent(self, event):
         if not self._lines:
             return
@@ -225,6 +300,11 @@ class SourceViewer(QAbstractScrollArea):
 
             formats = []
 
+            # selection
+            selectionRg = self._selectionFormatRange(i)
+            if selectionRg:
+                formats.append(selectionRg)
+
             textLine.draw(painter, offset, formats, QRectF(eventRect))
 
             offset.setY(offset.y() + r.height())
@@ -243,8 +323,94 @@ class SourceViewer(QAbstractScrollArea):
         if not self.hasTextLines():
             return
 
+        self._invalidateSelection()
+
+        textLine = self.textLineForPos(event.pos())
+        if not textLine:
+            return
+
+        tripleClick = False
+        if self._clickTimer.isValid():
+            tripleClick = not self._clickTimer.hasExpired(
+                QApplication.doubleClickInterval())
+            self._clickTimer.invalidate()
+
+        if tripleClick:
+            self._cursor.moveTo(textLine.lineNo(), 0)
+            self._cursor.selectTo(textLine.lineNo(), len(textLine.text()))
+            self._invalidateSelection()
+        else:
+            offset = textLine.offsetForPos(self.mapToContents(event.pos()))
+            self._cursor.moveTo(textLine.lineNo(), offset)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        if not self.hasTextLines() or \
+            self._cursor.hasSelection():
+            return
+
         textLine = self.textLineForPos(event.pos())
         if not textLine:
             return
 
         self.textLineClicked.emit(textLine)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() != Qt.LeftButton:
+            return
+        if not self.hasTextLines():
+            return
+
+        self._clickTimer.restart()
+        self._invalidateSelection()
+        self._cursor.clear()
+
+        textLine = self.textLineForPos(event.pos())
+        if not textLine:
+            return
+
+        offset = textLine.offsetForPos(self.mapToContents(event.pos()))
+        begin = offset
+        end = offset
+
+        # find the word
+        content = textLine.text()
+        if offset < len(content) and self._isLetter(content[offset]):
+            for i in range(offset - 1, -1, -1):
+                if self._isLetter(content[i]):
+                    begin = i
+                    continue
+                break
+
+            for i in range(offset + 1, len(content)):
+                if self._isLetter(content[i]):
+                    end = i
+                    continue
+                break
+
+        end += 1
+        word = content[begin:end]
+        if word:
+            self._cursor.moveTo(textLine.lineNo(), begin)
+            self._cursor.selectTo(textLine.lineNo(), end)
+            self._invalidateSelection()
+
+    def mouseMoveEvent(self, event):
+        if self._clickTimer.isValid():
+            self._clickTimer.invalidate()
+
+        if not self.hasTextLines():
+            return
+
+        textLine = self.textLineForPos(event.pos())
+        if not textLine:
+            return
+
+        self._invalidateSelection()
+
+        n = textLine.lineNo()
+        offset = textLine.offsetForPos(self.mapToContents(event.pos()))
+        self._cursor.selectTo(n, offset)
+
+        self._invalidateSelection()
