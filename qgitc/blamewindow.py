@@ -50,6 +50,10 @@ class BlameWindow(QMainWindow):
         editMenu.addAction(self.tr("&Go To Line..."),
                            self._onGotoLine,
                            QKeySequence("Ctrl+G"))
+        editMenu.addSeparator()
+        editMenu.addAction(self.tr("Select &All"),
+                           self._onSelectAll,
+                           QKeySequence("Ctrl+A"))
 
     def _onGotoLine(self):
         gotoDialog = GotoDialog(self)
@@ -62,6 +66,9 @@ class BlameWindow(QMainWindow):
             return
 
         viewer.gotoLine(gotoDialog.lineNo - 1)
+
+    def _onSelectAll(self):
+        self._view.viewer.selectAll()
 
     def blame(self, file, sha1=None):
         self._view.blame(file, sha1)
