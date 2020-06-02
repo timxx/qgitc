@@ -9,6 +9,12 @@ class TextCursor():
     def __init__(self):
         self.clear()
 
+    def __eq__(self, other):
+        return self._beginLine == other._beginLine and \
+            self._beginPos == other._beginPos and \
+            self._endLine == other._endLine and \
+            self._endPos == other._endPos
+
     def clear(self):
         self._beginLine = -1
         self._beginPos = -1

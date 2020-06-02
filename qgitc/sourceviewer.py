@@ -28,8 +28,10 @@ from .colorschema import ColorSchema
 from .stylehelper import dpiScaled
 from .textcursor import TextCursor
 
+import re
 
-__all__ = ["SourceViewer", "SourcePanel"]
+
+__all__ = ["SourceViewer", "SourcePanel", "FindFlags"]
 
 
 class SourceTextLine(SourceTextLineBase):
@@ -42,6 +44,14 @@ class SourceTextLine(SourceTextLineBase):
         formats = self._commonHighlightFormats()
         if formats:
             self._layout.setAdditionalFormats(formats)
+
+
+class FindFlags:
+
+    Backward = 0x01
+    CaseSenitively = 0x02
+    WholeWords = 0x04
+    UseRegExp = 0x08
 
 
 class SourcePanel(QWidget):
@@ -80,6 +90,7 @@ class SourceViewer(QAbstractScrollArea):
         self._lineHeight = fm.height()
         self._maxWidth = 0
         self._highlightLines = []
+        self._highlightFind = []
 
         self._panel = None
         self._onePixel = dpiScaled(1)
@@ -173,6 +184,10 @@ class SourceViewer(QAbstractScrollArea):
 
         self.viewport().update()
 
+    def highlightFindResult(self, result):
+        self._highlightFind = result
+        self.viewport().update()
+
     def selectAll(self):
         if not self.hasTextLines():
             return
@@ -181,6 +196,114 @@ class SourceViewer(QAbstractScrollArea):
         lastLine = self.textLineCount() - 1
         self._cursor.selectTo(lastLine, len(self.textLineAt(lastLine).text()))
         self._invalidateSelection()
+
+    def select(self, cursor):
+        if not cursor.isValid():
+            return
+
+        self._cursor.moveTo(cursor.beginLine(), cursor.beginPos())
+        self._cursor.selectTo(cursor.endLine(), cursor.endPos())
+        self.ensureCursorVisible()
+        self.viewport().update()
+
+    def ensureCursorVisible(self):
+        if not self.hasTextLines():
+            return
+        if not self._cursor.isValid():
+            return
+
+        startLine = self.firstVisibleLine()
+        endLine = startLine + self._linesPerPage()
+        endLine = min(self.textLineCount(), endLine)
+
+        lineNo = self._cursor.beginLine()
+        if lineNo < startLine or lineNo >= endLine:
+            self.verticalScrollBar().setValue(lineNo)
+
+        hbar = self.horizontalScrollBar()
+
+        start = self._cursor.beginPos()
+        end = self._cursor.endPos()
+        if start > end:
+            start, end = end, start
+
+        textLine = self.textLineAt(lineNo)
+        x1 = textLine.offsetToX(start)
+        x2 = textLine.offsetToX(end)
+
+        viewWidth = self.viewport().width()
+        offset = hbar.value()
+
+        if x1 < offset or x2 > (offset + viewWidth):
+            hbar.setValue(x1)
+
+    def findAll(self, text, flags=0):
+        result = []
+        if not self.hasTextLines():
+            return result
+
+        exp = text
+        exp_flags = re.IGNORECASE
+
+        if not (flags & FindFlags.UseRegExp):
+            exp = re.escape(text)
+        if flags & FindFlags.CaseSenitively:
+            exp_flags = 0
+        if flags & FindFlags.WholeWords:
+            exp = r'\b' + text + r'\b'
+
+        pattern = re.compile(exp, exp_flags)
+
+        for i in range(0, self.textLineCount()):
+            text = self.textLineAt(i).text()
+            if not text:
+                continue
+
+            iter = pattern.finditer(text)
+            for m in iter:
+                tc = TextCursor()
+                tc.moveTo(i, m.start())
+                tc.selectTo(i, m.end())
+                result.append(tc)
+
+        return result
+
+    @property
+    def selectedText(self):
+        # TODO: move to TextCursor
+        if not self._cursor.hasSelection():
+            return None
+        beginLine = self._cursor.beginLine()
+        beginPos = self._cursor.beginPos()
+        endPos = self._cursor.endPos()
+
+        text = None
+        if self._cursor.hasMultiLines():
+            endLine = self._cursor.endLine()
+            textLine = self.textLineAt(beginLine)
+            text = textLine.text()[beginPos:]
+
+            text += '\n'
+            if textLine.hasCR():
+                text += '\r'
+
+            for i in range(beginLine + 1, endLine):
+                textLine = self.textLineAt(i)
+                text += textLine.text()
+                text += '\n'
+                if textLine.hasCR():
+                    text += '\r'
+
+            textLine = self.textLineAt(endLine)
+            text += textLine.text()[:endPos]
+        else:
+            text = self.textLineAt(beginLine).text()[beginPos:endPos]
+
+        return text
+
+    @property
+    def textCursor(self):
+        return self._cursor
 
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
@@ -248,26 +371,43 @@ class SourceViewer(QAbstractScrollArea):
             end = self._cursor.endPos()
 
         fmt = QTextCharFormat()
-        if self.hasFocus():
+        if qApp.applicationState() == Qt.ApplicationActive:
             fmt.setBackground(QBrush(ColorSchema.SelFocus))
         else:
             fmt.setBackground(QBrush(ColorSchema.SelNoFocus))
 
         return createFormatRange(start, end - start, fmt)
 
+    def _findResultFormatRange(self, lineIndex):
+        if not self._highlightFind:
+            return None
+
+        result = []
+        fmt = QTextCharFormat()
+        fmt.setBackground(ColorSchema.FindResult)
+
+        for r in self._highlightFind:
+            if r.beginLine() == lineIndex:
+                rg = createFormatRange(r.beginPos(), r.endPos() - r.beginPos(), fmt)
+                result.append(rg)
+            elif r.beginLine() > lineIndex:
+                break
+
+        return result
+
     def _isLetter(self, char):
-            if char >= 'a' and char <= 'z':
-                return True
-            if char >= 'A' and char <= 'Z':
-                return True
+        if char >= 'a' and char <= 'z':
+            return True
+        if char >= 'A' and char <= 'Z':
+            return True
 
-            if char == '_':
-                return True
+        if char == '_':
+            return True
 
-            if char.isdigit():
-                return True
+        if char.isdigit():
+            return True
 
-            return False
+        return False
 
     def paintEvent(self, event):
         if not self._lines:
@@ -299,6 +439,11 @@ class SourceViewer(QAbstractScrollArea):
                 painter.fillRect(fr, QColor(192, 237, 197))
 
             formats = []
+
+            # find result
+            findRg = self._findResultFormatRange(i)
+            if findRg:
+                formats.extend(findRg)
 
             # selection
             selectionRg = self._selectionFormatRange(i)

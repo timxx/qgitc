@@ -18,3 +18,4 @@ class ColorSchema():
     SelFocus = QColor(173, 214, 255)
     SelNoFocus = QColor(229, 235, 241)
     Submodule = QColor(0, 160, 0)
+    FindResult = QColor(246, 185, 77)

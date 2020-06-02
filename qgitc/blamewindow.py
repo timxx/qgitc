@@ -13,6 +13,7 @@ from PySide2.QtGui import (
 from .blameview import BlameView
 from .stylehelper import dpiScaled
 from .gotodialog import GotoDialog
+from .findwidget import FindWidget
 
 
 __all__ = ["BlameWindow"]
@@ -35,6 +36,8 @@ class BlameWindow(QMainWindow):
         self.setCentralWidget(centralWidget)
         self._setupMenuBar()
 
+        self._findWidget = None
+
     def _setupMenuBar(self):
         self._setupFileMenu()
         self._setupEditMenu()
@@ -54,6 +57,10 @@ class BlameWindow(QMainWindow):
         editMenu.addAction(self.tr("Select &All"),
                            self._onSelectAll,
                            QKeySequence("Ctrl+A"))
+        editMenu.addSeparator()
+        editMenu.addAction(self.tr("&Find"),
+                           self.showFindWidget,
+                           QKeySequence("Ctrl+F"))
 
     def _onGotoLine(self):
         gotoDialog = GotoDialog(self)
@@ -69,6 +76,52 @@ class BlameWindow(QMainWindow):
 
     def _onSelectAll(self):
         self._view.viewer.selectAll()
+
+    def _onFindFind(self, text):
+        viewer = self._view.viewer
+        findResult = viewer.findAll(text)
+
+        curFindIndex = 0
+        textCursor = viewer.textCursor
+        if textCursor.isValid() and textCursor.hasSelection() and not textCursor.hasMultiLines():
+            for i in range(0, len(findResult)):
+                r = findResult[i]
+                if r == textCursor:
+                    curFindIndex = i
+                    break
+
+        viewer.highlightFindResult(findResult)
+        if findResult:
+            viewer.select(findResult[curFindIndex])
+
+        self._findWidget.updateFindResult(findResult, curFindIndex)
+
+    def _onFindCursorChanged(self, cursor):
+        self._view.viewer.select(cursor)
+
+    def _onFindHidden(self):
+        self._view.viewer.highlightFindResult([])
+
+    def showFindWidget(self):
+        if not self._findWidget:
+            self._findWidget = FindWidget(
+                self._view.viewer.viewport(), self)
+            self._findWidget.find.connect(
+                self._onFindFind)
+            self._findWidget.cursorChanged.connect(
+                self._onFindCursorChanged)
+            self._findWidget.afterHidden.connect(
+                self._onFindHidden)
+
+        text = self._view.viewer.selectedText
+        if text:
+            text = text.lstrip('\n')
+            index = text.find('\n')
+            if index != -1:
+                text = text[:index]
+            self._findWidget.setText(text)
+
+        self._findWidget.showAnimate()
 
     def blame(self, file, sha1=None):
         self._view.blame(file, sha1)

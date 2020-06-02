@@ -824,7 +824,7 @@ class PatchViewer(QAbstractScrollArea):
 
     def executeFind(self):
         if not self.findWidget:
-            self.findWidget = FindWidget(self)
+            self.findWidget = FindWidget(self.viewport(), self)
             self.findWidget.find.connect(self.__onFind)
             self.findWidget.findNext.connect(self.__onFindNext)
             self.findWidget.findPrevious.connect(self.__onFindPrevious)
