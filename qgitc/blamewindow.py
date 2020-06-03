@@ -9,6 +9,8 @@ from PySide2.QtWidgets import (
 
 from PySide2.QtGui import (
     QKeySequence)
+from PySide2.QtCore import (
+    Qt)
 
 from .blameview import BlameView
 from .stylehelper import dpiScaled
@@ -125,3 +127,12 @@ class BlameWindow(QMainWindow):
 
     def blame(self, file, sha1=None):
         self._view.blame(file, sha1)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            sett = qApp.instance().settings()
+            if sett.quitViaEsc():
+                self.close()
+                return
+
+        super().keyPressEvent(event)
