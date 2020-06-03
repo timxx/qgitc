@@ -307,6 +307,10 @@ class CommitPanel(QPlainTextEdit):
             rev.committer.mail + " " + rev.committer.time
         self.appendPlainText(text)
 
+        if rev.previous:
+            text = self.tr("Previous: ") + rev.previous
+            self.appendPlainText(text)
+
         self.appendPlainText("")
         self.appendPlainText(rev.summary)
 
