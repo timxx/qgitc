@@ -126,7 +126,7 @@ class FindWidget(QWidget):
     def setText(self, text):
         self._leFind.setText(text)
 
-    def updateFindResult(self, result, curIndex):
+    def updateFindResult(self, result, curIndex=0):
         self._findResult = result
         self._curIndex = curIndex
 
@@ -142,7 +142,7 @@ class FindWidget(QWidget):
         # FIXME: control by caller?
         self.blockSignals(True)
         self._leFind.setText("")
-        self._findResult.clear()
+        self.updateFindResult([])
         self.blockSignals(False)
         self.afterHidden.emit()
 

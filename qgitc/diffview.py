@@ -585,7 +585,6 @@ class PatchViewer(QAbstractScrollArea):
         self.highlightPattern = None
         self.highlightField = FindField.Comments
         self.wordPattern = None
-        self.findPattern = None
 
         self.cursor = TextCursor()
         self.tripleClickTimer = QElapsedTimer()
@@ -826,8 +825,10 @@ class PatchViewer(QAbstractScrollArea):
         if not self.findWidget:
             self.findWidget = FindWidget(self.viewport(), self)
             self.findWidget.find.connect(self.__onFind)
-            self.findWidget.findNext.connect(self.__onFindNext)
-            self.findWidget.findPrevious.connect(self.__onFindPrevious)
+            self.findWidget.cursorChanged.connect(
+                self.__onFindCursorChanged)
+            self.findWidget.afterHidden.connect(
+                self.__onFindHidden)
 
         if self.cursor.hasSelection():
             # first line only
@@ -1221,101 +1222,63 @@ class PatchViewer(QAbstractScrollArea):
 
     def __onFind(self, text):
         if not self.hasTextLines():
-            self.findWidget.updateFindStatus(False)
+            self.findWidget.updateFindResult([])
             return
 
         self.highlightPattern = None
-        self.cursor.clear()
         self.viewport().update()
 
         if not text:
-            self.findPattern = None
-            self.findWidget.updateFindStatus(True)
+            self.findWidget.updateFindResult([])
             return
 
         # text only for now
         textRe = re.compile(re.escape(text))
-        found = False
+        result = []
 
         for i in range(0, self.textLineCount()):
-            if self.__findTextLine(i, textRe):
-                found = True
-                break
+            t = self.textLineAt(i).text()
+            if not t:
+                continue
 
-        self.findPattern = textRe
-        self.findWidget.updateFindStatus(found)
+            iter = textRe.finditer(t)
+            for m in iter:
+                tc = TextCursor()
+                tc.moveTo(i, m.start())
+                tc.selectTo(i, m.end())
+                result.append(tc)
 
-    def __onFindNext(self):
-        if not self.findPattern:
+        if result:
+            self.highlightPattern = textRe
+            self.highlightField = FindField.All
+
+            self.viewport().update()
+
+        curIndex = 0
+        if self.cursor.isValid() and self.cursor.hasSelection() \
+                and not self.cursor.hasMultiLines():
+            for i in range(0, len(result)):
+                r = result[i]
+                if r == self.cursor:
+                    curIndex = i
+                    break
+
+        self.findWidget.updateFindResult(result, curIndex)
+
+    def __onFindCursorChanged(self, cursor):
+        if not cursor.isValid():
             return
 
-        beginLine = 0
-        if self.cursor.hasSelection():
-            curLine = self.cursor.endLine()
-            offset = self.cursor.endPos()
-            beginLine = curLine + 1
+        self.cursor.moveTo(cursor.beginLine(), cursor.beginPos())
+        self.cursor.selectTo(cursor.endLine(), cursor.endPos())
 
-            if self.__findTextLine(curLine, self.findPattern, pos=offset):
-                self.findWidget.updateFindStatus(True)
-                return
+        self.ensureVisible(cursor.beginLine(),
+                           cursor.beginPos(),
+                           cursor.endPos())
+        self.viewport().update()
 
-        for i in range(beginLine, self.textLineCount()):
-            if self.__findTextLine(i, self.findPattern):
-                self.findWidget.updateFindStatus(True)
-                break
-
-        # never set find status to NotFound
-
-    def __onFindPrevious(self):
-        if not self.findPattern:
-            return
-
-        beginLine = self.textLineCount() - 1
-        if self.cursor.hasSelection():
-            curLine = self.cursor.beginLine()
-            offset = self.cursor.beginPos()
-            beginLine = curLine - 1
-
-            if self.__findTextLine(curLine, self.findPattern, endPos=offset, reverse=True):
-                self.findWidget.updateFindStatus(True)
-                return
-
-        for i in range(beginLine, -1, -1):
-            if self.__findTextLine(i, self.findPattern, reverse=True):
-                self.findWidget.updateFindStatus(True)
-                break
-
-        # never set find status to NotFound
-
-    def __findTextLine(self, lineNo, findPattern, pos=0, endPos=-1, reverse=False):
-        text = self.textLineAt(lineNo).text()
-        if endPos == -1:
-            endPos = len(text)
-
-        mo = None
-        if reverse:
-            iter = findPattern.finditer(text, pos=pos, endpos=endPos)
-            if not iter:
-                return False
-            for mo in iter:
-                pass
-        else:
-            mo = findPattern.search(text, pos=pos, endpos=endPos)
-
-        if mo:
-            self.__setFindResult(findPattern, lineNo, mo.start(), mo.end())
-            return True
-
-        return False
-
-    def __setFindResult(self, textRe, lineNo, start, end):
-        self.highlightPattern = textRe
-        self.highlightField = FindField.All
-
-        self.cursor.moveTo(lineNo, start)
-        self.cursor.selectTo(lineNo, end)
-
-        self.ensureVisible(lineNo, start, end)
+    def __onFindHidden(self):
+        self.highlightPattern = None
         self.viewport().update()
 
     def __makeContent(self, lineNo, begin=None, end=None):
