@@ -56,6 +56,7 @@ class Link():
 
 class TextLine():
 
+    Text = -1
     Author = 0
     Parent = 1
     Child = 2
@@ -88,14 +89,24 @@ class TextLine():
         if self.isInfoType():
             return
 
+        links = TextLine.findLinks(
+            self._text,
+            patterns,
+            self._type)
+        if links:
+            self._links.extend(links)
+
+    @staticmethod
+    def findLinks(text, patterns, lineType=Text):
+        links = []
         foundLinks = []
         for linkType, pattern in patterns.items():
             # only find email if item is author
             if linkType != Link.Email and \
-                    self._type == TextLine.Author:
+                    lineType == TextLine.Author:
                 continue
 
-            matches = pattern.finditer(self._text)
+            matches = pattern.finditer(text)
             for m in matches:
                 found = False
                 i = bisect.bisect_left(foundLinks, (m.start(), m.end()))
@@ -109,11 +120,20 @@ class TextLine():
                 if found:
                     continue
 
-                link = Link(m.start(), m.end(), linkType, self._type)
+                link = Link(m.start(), m.end(), linkType, lineType)
                 link.setData(m.group(0 if pattern.groups == 0 else 1))
 
-                self._links.append(link)
+                links.append(link)
                 bisect.insort(foundLinks, (m.start(), m.end()))
+
+        return links
+
+    @staticmethod
+    def builtinPatterns():
+        patterns = {Link.Sha1: sha1_re,
+                    Link.Email: email_re,
+                    Link.Url: url_re}
+        return patterns
 
     def createLinksFormats(self):
         if not self._links:
@@ -179,9 +199,7 @@ class TextLine():
             if self._defOption:
                 self._layout.setTextOption(self._defOption)
 
-            patterns = {Link.Sha1: sha1_re,
-                        Link.Email: email_re,
-                        Link.Url: url_re}
+            patterns = TextLine.builtinPatterns()
             if self._patterns:
                 patterns.update(self._patterns)
             self.__findLinks(patterns)
