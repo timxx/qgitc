@@ -15,7 +15,9 @@ from PySide2.QtGui import (
     QTextFormat,
     QTextCursor,
     QColor,
-    QPen)
+    QPen,
+    QSyntaxHighlighter,
+    QTextCharFormat)
 from PySide2.QtCore import (
     Qt,
     Signal,
@@ -29,6 +31,7 @@ from .stylehelper import dpiScaled
 from .sourceviewer import SourceViewer, SourcePanel
 from .textline import TextLine, Link
 from .gitutils import Git
+from .colorschema import ColorSchema
 
 import sys
 import re
@@ -294,16 +297,38 @@ class RevisionPanel(SourcePanel):
                 break
 
 
+class CommitSyntaxHighlighter(QSyntaxHighlighter):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._linkFmt = QTextCharFormat()
+        self._linkFmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
+        self._linkFmt.setForeground(ColorSchema.Link)
+
+        self._patterns = TextLine.builtinPatterns()
+
+    def highlightBlock(self, text):
+        if not text:
+            return
+
+        links = TextLine.findLinks(text, self._patterns)
+        for link in links:
+            self.setFormat(link.start, link.end - link.start, self._linkFmt)
+
 class CommitPanel(QPlainTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setReadOnly(True)
+        self.setFont(qApp.settings().diffViewFont())
 
+        self._highlighter = CommitSyntaxHighlighter(self.document())
         self._bodyCache = {}
 
     def showRevision(self, rev):
         self.clear()
+
         text = self.tr("Commit: ") + rev.sha1
         self.appendPlainText(text)
 
