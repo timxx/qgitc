@@ -162,6 +162,7 @@ class RevisionPanel(SourcePanel):
         self._dateWidth = fm.horizontalAdvance("2020-05-27")
         self._space = fm.horizontalAdvance(' ')
         self._digitWidth = fm.horizontalAdvance('9')
+        self._nameWidth = 0
 
         self._activeRev = None
         self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
@@ -174,12 +175,18 @@ class RevisionPanel(SourcePanel):
             text = rev.sha1[:ABBREV_N] + " "
             if rev.author.isValid():
                 text += rev.author.time.split(" ")[0]
+                text += " " + rev.author.name
+
+                fm = QFontMetrics(self._font)
+                width = fm.horizontalAdvance(rev.author.name)
+                self._nameWidth = max(width, self._nameWidth)
             else:
                 # Get from the previous
                 for i in range(len(self._revs), 0, -1):
                     r = self._revs[i - 1]
                     if r.sha1 == rev.sha1 and r.author.isValid():
                         text += r.author.time.split(" ")[0]
+                        text += " " + r.author.name
                         break
 
             textLine = TextLine(TextLine.Parent, text,
@@ -199,8 +206,9 @@ class RevisionPanel(SourcePanel):
         self.update()
 
     def requestWidth(self, lineCount):
-        width = self._sha1Width + self._space * 5
+        width = self._sha1Width + self._space * 6
         width += self._dateWidth
+        width += self._nameWidth
         width += self._digitWidth * len(str(lineCount + 1))
 
         return width
