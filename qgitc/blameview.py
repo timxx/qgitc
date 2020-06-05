@@ -158,6 +158,7 @@ class BlameFetcher(DataFetcher):
 class RevisionPanel(SourcePanel):
 
     revisionActivated = Signal(BlameHeader)
+    linkActivated = Signal(Link)
 
     def __init__(self, viewer):
         super().__init__(viewer, viewer)
@@ -176,6 +177,12 @@ class RevisionPanel(SourcePanel):
 
         self._activeRev = None
         self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
+
+        self._mousePressed = False
+        self._clickOnLink = False
+        self._link = None
+
+        self.setMouseTracking(True)
 
         viewer.textLineClicked.connect(
             self._onTextLineClicked)
@@ -201,6 +208,7 @@ class RevisionPanel(SourcePanel):
 
             textLine = TextLine(TextLine.Text, text,
                                 self._font, self._option)
+            textLine.setLineNo(len(self._lines))
             textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
         else:
             textLine = None
@@ -229,7 +237,10 @@ class RevisionPanel(SourcePanel):
         return width
 
     def _onTextLineClicked(self, textLine):
-        rev = self._revs[textLine.lineNo()]
+        self._updateActiveRev(textLine.lineNo())
+
+    def _updateActiveRev(self, lineNo):
+        rev = self._revs[lineNo]
         sha1 = rev.sha1
         if sha1 == self._activeRev:
             return
@@ -256,6 +267,34 @@ class RevisionPanel(SourcePanel):
             fr.moveTop(fr.top() + y)
             fr.moveLeft(x)
             painter.fillRect(fr, QColor(192, 237, 197))
+
+    def _lineNoForPosition(self, pos):
+        if not self._lines:
+            return -1
+
+        n = int(pos.y() / self._viewer.lineHeight)
+        n += self._viewer.firstVisibleLine()
+        if n >= len(self._lines):
+            n = len(self._lines) - 1
+
+        return n
+
+    def _lineForPosition(self, pos):
+        lineNo = self._lineNoForPosition(pos)
+        if lineNo != -1:
+            return self._lines[lineNo]
+        return None
+
+    def _linkForPosition(self, pos):
+        line = self._lineForPosition(pos)
+        if not line:
+            return None
+
+        offset = line.offsetForPos(pos)
+        link = line.hitTest(offset)
+        if link:
+            link.setData(self._revs[line.lineNo()].sha1)
+        return link
 
     def paintEvent(self, event):
         if not self._lines:
@@ -307,6 +346,37 @@ class RevisionPanel(SourcePanel):
             y += self._viewer.lineHeight
             if y > self.height():
                 break
+
+    def mouseMoveEvent(self, event):
+        self._link = self._linkForPosition(event.pos())
+        self._clickOnLink = False
+        self._mousePressed = False
+
+        cursorShape = Qt.PointingHandCursor if self._link \
+            else Qt.ArrowCursor
+        self.setCursor(cursorShape)
+
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._clickOnLink = self._link is not None
+
+        self._mousePressed = True
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if self._link and self._clickOnLink:
+                self.linkActivated.emit(self._link)
+            elif self._mousePressed:
+                lineNo = self._lineNoForPosition(event.pos())
+                if lineNo != -1:
+                    self._updateActiveRev(lineNo)
+
+        self._clickOnLink = False
+        self._mousePressed = False
+        super().mouseReleaseEvent(event)
 
 
 class CommitBlockData(QTextBlockUserData):
@@ -480,6 +550,8 @@ class BlameView(QWidget):
         self._revPanel.revisionActivated.connect(
             self._commitPanel.showRevision)
         self._commitPanel.linkActivated.connect(
+            self._onLinkActivated)
+        self._revPanel.linkActivated.connect(
             self._onLinkActivated)
 
     def _onLinkActivated(self, link):
