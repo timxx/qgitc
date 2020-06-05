@@ -56,16 +56,16 @@ class Link():
 
 class TextLine():
 
-    Text = -1
-    Author = 0
-    Parent = 1
-    Child = 2
-    Branch = 3
-    Comments = 4
-    File = 5
-    FileInfo = 6
-    Diff = 7
-    Source = 8
+    Text = 0
+    Author = 1
+    Parent = 2
+    Child = 3
+    Branch = 4
+    Comments = 5
+    File = 6
+    FileInfo = 7
+    Diff = 8
+    Source = 9
 
     def __init__(self, type, text, font, option):
         self._type = type
