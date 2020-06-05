@@ -199,7 +199,7 @@ class RevisionPanel(SourcePanel):
                         text += " " + r.author.name
                         break
 
-            textLine = TextLine(TextLine.Parent, text,
+            textLine = TextLine(TextLine.Text, text,
                                 self._font, self._option)
             textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
         else:
