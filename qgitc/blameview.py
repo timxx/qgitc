@@ -17,13 +17,16 @@ from PySide2.QtGui import (
     QColor,
     QPen,
     QSyntaxHighlighter,
-    QTextCharFormat)
+    QTextCharFormat,
+    QTextBlockUserData,
+    QDesktopServices)
 from PySide2.QtCore import (
     Qt,
     Signal,
     QRect,
     QRectF,
-    QPointF)
+    QPointF,
+    QUrl)
 
 from datetime import datetime
 from .datafetcher import DataFetcher
@@ -67,6 +70,8 @@ class BlameHeader:
         self.committer = AuthorInfo()
         self.summary = None
         self.previous = None
+        self.prevFileName = None
+        self.filename = None
 
 
 class BlameLine:
@@ -123,9 +128,11 @@ class BlameFetcher(DataFetcher):
             elif line.startswith(b"summary "):
                 self._curLine.header.summary = _decode(line[8:])
             elif line.startswith(b"previous "):
-                self._curLine.header.previous = _decode(line.split(b' ')[1])
+                parts = line.split(b' ')
+                self._curLine.header.previous = _decode(parts[1])
+                self._curLine.header.prevFileName = _decode(parts[2])
             elif line.startswith(b"filename "):
-                pass
+                self._curLine.header.filename = _decode(line[9:])
             else:
                 m = line_begin_re.match(line)
                 if m:
@@ -202,10 +209,15 @@ class RevisionPanel(SourcePanel):
         self._lines.append(textLine)
         self.update()
 
+    @property
+    def revisions(self):
+        return self._revs
+
     def clear(self):
         self._revs.clear()
         self._lines.clear()
         self._activeRev = None
+        self._nameWidth = 0
         self.update()
 
     def requestWidth(self, lineCount):
@@ -297,6 +309,13 @@ class RevisionPanel(SourcePanel):
                 break
 
 
+class CommitBlockData(QTextBlockUserData):
+
+    def __init__(self, links):
+        super().__init__()
+        self.links = links
+
+
 class CommitSyntaxHighlighter(QSyntaxHighlighter):
 
     def __init__(self, parent=None):
@@ -315,16 +334,22 @@ class CommitSyntaxHighlighter(QSyntaxHighlighter):
         links = TextLine.findLinks(text, self._patterns)
         for link in links:
             self.setFormat(link.start, link.end - link.start, self._linkFmt)
+        if links:
+            self.setCurrentBlockUserData(CommitBlockData(links))
 
 class CommitPanel(QPlainTextEdit):
+
+    linkActivated = Signal(Link)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setReadOnly(True)
         self.setFont(qApp.settings().diffViewFont())
+        self.viewport().setMouseTracking(True)
 
         self._highlighter = CommitSyntaxHighlighter(self.document())
         self._bodyCache = {}
+        self._clickOnLink = False
 
     def showRevision(self, rev):
         self.clear()
@@ -360,8 +385,55 @@ class CommitPanel(QPlainTextEdit):
 
         self.moveCursor(QTextCursor.Start)
 
-    def clearCache(self):
+    def clear(self):
+        super().clear()
         self._bodyCache.clear()
+
+    def _linkForPosition(self, pos):
+        cursor = self.cursorForPosition(pos)
+        if cursor.isNull():
+            return None
+
+        if cursor.atBlockEnd():
+            rc = self.cursorRect(cursor)
+            if pos.x() > rc.right():
+                return None
+
+        block = cursor.block()
+        blockData = block.userData()
+        if not blockData:
+            return None
+
+        pos = cursor.position() - block.position()
+        for link in blockData.links:
+            if link.hitTest(pos):
+                return link
+
+        return None
+
+    def mouseMoveEvent(self, event):
+        self._link = self._linkForPosition(event.pos())
+        self._clickOnLink = False
+
+        cursorShape = Qt.PointingHandCursor if self._link \
+            else Qt.IBeamCursor
+        self.viewport().setCursor(cursorShape)
+
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._clickOnLink = self._link is not None
+
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and \
+                self._link and self._clickOnLink:
+            self.linkActivated.emit(self._link)
+
+        self._clickOnLink = False
+        super().mouseReleaseEvent(event)
 
 
 class BlameView(QWidget):
@@ -398,12 +470,44 @@ class BlameView(QWidget):
 
         mainLayout.addWidget(vSplitter)
 
+        self._file = None
+        self._sha1 = None
+
         self._fetcher = BlameFetcher(self)
         self._fetcher.lineAvailable.connect(
             self.appendLine)
 
         self._revPanel.revisionActivated.connect(
             self._commitPanel.showRevision)
+        self._commitPanel.linkActivated.connect(
+            self._onLinkActivated)
+
+    def _onLinkActivated(self, link):
+        url = None
+        if link.type == Link.Sha1:
+            if self._sha1 != link.data:
+                file = self._findFileBySHA1(link.data)
+                self.blame(file, link.data)
+        elif link.type == Link.Email:
+            url = "mailto:" + link.data
+        elif link.type == Link.BugId:
+            pass
+        else:
+            url = link.data
+
+        if url:
+            QDesktopServices.openUrl(QUrl(url))
+
+    def _findFileBySHA1(self, sha1):
+        if not sha1:
+            return self._file
+
+        for rev in self._revPanel.revisions:
+            if rev.filename and rev.sha1 == sha1:
+                return rev.filename
+            if rev.prevFileName and rev.previous == sha1:
+                return rev.prevFileName
+        return self._file
 
     def appendLine(self, line):
         self._revPanel.appendRevision(line.header)
@@ -412,7 +516,7 @@ class BlameView(QWidget):
     def clear(self):
         self._revPanel.clear()
         self._viewer.clear()
-        self._commitPanel.clearCache()
+        self._commitPanel.clear()
 
     def blame(self, file, sha1=None):
         self.clear()
@@ -421,6 +525,9 @@ class BlameView(QWidget):
         if sha1:
             text += " --- " + sha1
         self._lbHeader.setText(text)
+
+        self._file = file
+        self._sha1 = sha1
 
     @property
     def viewer(self):
