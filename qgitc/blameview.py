@@ -7,7 +7,8 @@ from PySide2.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
-    QSplitter)
+    QSplitter,
+    QToolTip)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -19,14 +20,17 @@ from PySide2.QtGui import (
     QSyntaxHighlighter,
     QTextCharFormat,
     QTextBlockUserData,
-    QDesktopServices)
+    QDesktopServices,
+    QCursor)
 from PySide2.QtCore import (
     Qt,
     Signal,
     QRect,
     QRectF,
     QPointF,
-    QUrl)
+    QPoint,
+    QUrl,
+    QTimer)
 
 from datetime import datetime
 from .datafetcher import DataFetcher
@@ -145,7 +149,7 @@ class BlameFetcher(DataFetcher):
     def makeArgs(self, args):
         file = args[0]
         sha1 = args[1]
-        blameArgs = ["blame", "--porcelain", file]
+        blameArgs = ["blame", "--line-porcelain", file]
         if sha1:
             blameArgs.append(sha1)
 
@@ -178,33 +182,30 @@ class RevisionPanel(SourcePanel):
         self._activeRev = None
         self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
 
-        self._mousePressed = False
+        self._mousePressedPos = QPoint()
         self._clickOnLink = False
         self._link = None
+
+        self._hoveredLine = -1
+        self._tooltipTimer = QTimer(self)
+        self._tooltipTimer.setSingleShot(True)
 
         self.setMouseTracking(True)
 
         viewer.textLineClicked.connect(
             self._onTextLineClicked)
+        self._tooltipTimer.timeout.connect(
+            self._updateToolTip)
 
     def appendRevision(self, rev):
         if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
             text = rev.sha1[:ABBREV_N] + " "
-            if rev.author.isValid():
-                text += rev.author.time.split(" ")[0]
-                text += " " + rev.author.name
+            text += rev.author.time.split(" ")[0]
+            text += " " + rev.author.name
 
-                fm = QFontMetrics(self._font)
-                width = fm.horizontalAdvance(rev.author.name)
-                self._nameWidth = max(width, self._nameWidth)
-            else:
-                # Get from the previous
-                for i in range(len(self._revs), 0, -1):
-                    r = self._revs[i - 1]
-                    if r.sha1 == rev.sha1 and r.author.isValid():
-                        text += r.author.time.split(" ")[0]
-                        text += " " + r.author.name
-                        break
+            fm = QFontMetrics(self._font)
+            width = fm.horizontalAdvance(rev.author.name)
+            self._nameWidth = max(width, self._nameWidth)
 
             textLine = TextLine(TextLine.Text, text,
                                 self._font, self._option)
@@ -250,8 +251,6 @@ class RevisionPanel(SourcePanel):
         lines = []
         for i in range(len(self._revs)):
             if self._revs[i].sha1 == sha1:
-                if self._revs[i].author.isValid():
-                    rev = self._revs[i]
                 lines.append(i)
 
         self._viewer.highlightLines(lines)
@@ -295,6 +294,21 @@ class RevisionPanel(SourcePanel):
         if link:
             link.setData(self._revs[line.lineNo()].sha1)
         return link
+
+    def _updateToolTip(self):
+        if self._hoveredLine == -1:
+            QToolTip.hideText()
+            return
+
+        rev = self._revs[self._hoveredLine]
+        text = self.tr("Commit: ") + rev.sha1 + "\n"
+        text += self.tr("Author: ") + rev.author.name + \
+            " " + rev.author.time + "\n"
+        text += self.tr("Committer: ") + rev.committer.name + \
+            " " + rev.author.time + "\n\n"
+        text += rev.summary
+
+        QToolTip.showText(QCursor.pos(), text)
 
     def paintEvent(self, event):
         if not self._lines:
@@ -350,11 +364,23 @@ class RevisionPanel(SourcePanel):
     def mouseMoveEvent(self, event):
         self._link = self._linkForPosition(event.pos())
         self._clickOnLink = False
-        self._mousePressed = False
+
+        # Buggy tooltip cause mouseMove
+        if event.pos() != self._mousePressedPos:
+            self._mousePressedPos = QPoint()
 
         cursorShape = Qt.PointingHandCursor if self._link \
             else Qt.ArrowCursor
         self.setCursor(cursorShape)
+
+        if event.button() == Qt.NoButton:
+            lineNo = self._lineNoForPosition(event.pos())
+            if lineNo != self._hoveredLine:
+                self._hoveredLine = lineNo
+                if lineNo != -1:
+                    self._tooltipTimer.start(500)
+                else:
+                    self._updateToolTip()
 
         super().mouseMoveEvent(event)
 
@@ -362,21 +388,25 @@ class RevisionPanel(SourcePanel):
         if event.button() == Qt.LeftButton:
             self._clickOnLink = self._link is not None
 
-        self._mousePressed = True
+        self._mousePressedPos = event.pos()
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             if self._link and self._clickOnLink:
                 self.linkActivated.emit(self._link)
-            elif self._mousePressed:
+            elif not self._mousePressedPos.isNull():
                 lineNo = self._lineNoForPosition(event.pos())
                 if lineNo != -1:
                     self._updateActiveRev(lineNo)
 
         self._clickOnLink = False
-        self._mousePressed = False
+        self._mousePressedPos = QPoint()
         super().mouseReleaseEvent(event)
+
+    def leaveEvent(self, event):
+        self._tooltipTimer.stop()
+        super().leaveEvent(event)
 
 
 class CommitBlockData(QTextBlockUserData):
