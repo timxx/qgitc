@@ -8,7 +8,10 @@ from PySide2.QtWidgets import (
     QLabel,
     QPlainTextEdit,
     QSplitter,
-    QToolTip)
+    QToolTip,
+    QToolButton,
+    QSpacerItem,
+    QSizePolicy)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -437,6 +440,7 @@ class CommitSyntaxHighlighter(QSyntaxHighlighter):
         if links:
             self.setCurrentBlockUserData(CommitBlockData(links))
 
+
 class CommitPanel(QPlainTextEdit):
 
     linkActivated = Signal(Link)
@@ -536,6 +540,98 @@ class CommitPanel(QPlainTextEdit):
         super().mouseReleaseEvent(event)
 
 
+class HeaderWidget(QWidget):
+
+    def __init__(self, view=None):
+        super().__init__(view)
+
+        self._view = view
+        self._histories = []
+        self._curIndex = 0
+        self._blockAdd = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._btnPrev = QToolButton(self)
+        layout.addWidget(self._btnPrev)
+
+        self._btnNext = QToolButton(self)
+        layout.addWidget(self._btnNext)
+
+        self._lbFile = QLabel(self)
+        layout.addWidget(self._lbFile)
+
+        self._lbSHA1 = QLabel(self)
+        layout.addWidget(self._lbSHA1)
+        layout.addSpacerItem(QSpacerItem(
+            0, 0,
+            QSizePolicy.Expanding,
+            QSizePolicy.Fixed))
+
+        self._btnPrev.setText("🡰")
+        self._btnNext.setText("🡲")
+
+        self._btnPrev.clicked.connect(
+            self._onPrevious)
+        self._btnNext.clicked.connect(
+            self._onNext
+            )
+
+        self._updateInfo()
+
+    def _updateInfo(self):
+        if not self._histories:
+            file = ""
+            sha1 = ""
+        else:
+            file, sha1 = self._histories[self._curIndex]
+            if sha1 is None:
+                sha1 = ""
+
+        self._lbSHA1.setText(sha1)
+        self._lbFile.setText(file)
+
+        enablePrev = False
+        enableNext = False
+
+        total = len(self._histories)
+        if total > 1:
+            if self._curIndex != 0:
+                enablePrev = True
+            if self._curIndex != total - 1:
+                enableNext = True
+        self._btnPrev.setEnabled(enablePrev)
+        self._btnNext.setEnabled(enableNext)
+
+    def _blameCurrent(self):
+        self._blockAdd = True
+        file, sha1 = self._histories[self._curIndex]
+        self._view.blame(file, sha1)
+        self._blockAdd = False
+
+    def _onPrevious(self):
+        self._curIndex -= 1
+        self._updateInfo()
+        self._blameCurrent()
+
+    def _onNext(self):
+        self._curIndex += 1
+        self._updateInfo()
+        self._blameCurrent()
+
+    def clear(self):
+        self._histories.clear()
+        self._updateInfo()
+
+    def addBlameInfo(self, file, sha1):
+        if self._blockAdd:
+            return
+
+        self._curIndex = len(self._histories)
+        self._histories.append((file, sha1))
+        self._updateInfo()
+
 class BlameView(QWidget):
 
     def __init__(self, parent=None):
@@ -548,10 +644,8 @@ class BlameView(QWidget):
         layout = QVBoxLayout(sourceWidget)
         layout.setMargin(0)
 
-        hdrLayout = QHBoxLayout()
-        self._lbHeader = QLabel(self)
-        hdrLayout.addWidget(self._lbHeader)
-        layout.addLayout(hdrLayout)
+        self._headerWidget = HeaderWidget(self)
+        layout.addWidget(self._headerWidget)
 
         self._viewer = SourceViewer(self)
         self._revPanel = RevisionPanel(self._viewer)
@@ -623,13 +717,11 @@ class BlameView(QWidget):
     def blame(self, file, sha1=None):
         self.clear()
         self._fetcher.fetch(file, sha1)
-        text = file
-        if sha1:
-            text += " --- " + sha1
-        self._lbHeader.setText(text)
 
         self._file = file
         self._sha1 = sha1
+
+        self._headerWidget.addBlameInfo(file, sha1)
 
     @property
     def viewer(self):
