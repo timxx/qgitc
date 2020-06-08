@@ -82,6 +82,7 @@ class TextViewer(QAbstractScrollArea):
         self._lines.clear()
         self._maxWidth = 0
         self._highlightLines.clear()
+        self._cursor.clear()
         self.viewport().update()
 
     def hasTextLines(self):
@@ -198,7 +199,7 @@ class TextViewer(QAbstractScrollArea):
 
     def findAll(self, text, flags=0):
         result = []
-        if not self.hasTextLines():
+        if not text or not self.hasTextLines():
             return result
 
         exp = text

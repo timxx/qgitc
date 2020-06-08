@@ -126,6 +126,10 @@ class FindWidget(QWidget):
     def setText(self, text):
         self._leFind.setText(text)
 
+    @property
+    def text(self):
+        return self._leFind.text()
+
     def updateFindResult(self, result, curIndex=0):
         self._findResult = result
         self._curIndex = curIndex
