@@ -230,6 +230,8 @@ class RevisionPanel(SourcePanel):
         self._lines.clear()
         self._activeRev = None
         self._nameWidth = 0
+        self._tooltipTimer.stop()
+        QToolTip.hideText()
         self.update()
 
     def requestWidth(self, lineCount):
@@ -311,7 +313,7 @@ class RevisionPanel(SourcePanel):
             " " + rev.author.time + "\n\n"
         text += rev.summary
 
-        QToolTip.showText(QCursor.pos(), text)
+        QToolTip.showText(QCursor.pos(), text, self, self.rect())
 
     def paintEvent(self, event):
         if not self._lines:
@@ -366,11 +368,11 @@ class RevisionPanel(SourcePanel):
 
     def mouseMoveEvent(self, event):
         self._link = self._linkForPosition(event.pos())
-        self._clickOnLink = False
 
         # Buggy tooltip cause mouseMove
         if event.pos() != self._mousePressedPos:
             self._mousePressedPos = QPoint()
+            self._clickOnLink = False
 
         cursorShape = Qt.PointingHandCursor if self._link \
             else Qt.ArrowCursor
@@ -380,6 +382,7 @@ class RevisionPanel(SourcePanel):
             lineNo = self._lineNoForPosition(event.pos())
             if lineNo != self._hoveredLine:
                 self._hoveredLine = lineNo
+                QToolTip.hideText()
                 if lineNo != -1:
                     self._tooltipTimer.start(500)
                 else:
@@ -409,6 +412,7 @@ class RevisionPanel(SourcePanel):
 
     def leaveEvent(self, event):
         self._tooltipTimer.stop()
+        QToolTip.hideText()
         super().leaveEvent(event)
 
 
