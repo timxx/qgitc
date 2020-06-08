@@ -40,6 +40,11 @@ class BlameWindow(QMainWindow):
 
         self._findWidget = None
 
+        self._view.blameFileAboutToChange.connect(
+            self._onBlameFileAboutToChange)
+        self._view.blameFileChanged.connect(
+            self._onBlameFileChanged)
+
     def _setupMenuBar(self):
         self._setupFileMenu()
         self._setupEditMenu()
@@ -103,6 +108,15 @@ class BlameWindow(QMainWindow):
 
     def _onFindHidden(self):
         self._view.viewer.highlightFindResult([])
+
+    def _onBlameFileAboutToChange(self, file):
+        if self._findWidget and self._findWidget.isVisible():
+            self._findWidget.updateFindResult([])
+
+    def _onBlameFileChanged(self, file):
+        if self._findWidget and self._findWidget.isVisible():
+            # redo a find
+            self._onFindFind(self._findWidget.text)
 
     def showFindWidget(self):
         if not self._findWidget:

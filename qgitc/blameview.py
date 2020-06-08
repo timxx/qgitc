@@ -638,6 +638,9 @@ class HeaderWidget(QWidget):
 
 class BlameView(QWidget):
 
+    blameFileAboutToChange = Signal(str)
+    blameFileChanged = Signal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -674,6 +677,8 @@ class BlameView(QWidget):
         self._fetcher = BlameFetcher(self)
         self._fetcher.lineAvailable.connect(
             self.appendLine)
+        self._fetcher.fetchFinished.connect(
+            self._onFetchFinished)
 
         self._revPanel.revisionActivated.connect(
             self._commitPanel.showRevision)
@@ -698,6 +703,9 @@ class BlameView(QWidget):
         if url:
             QDesktopServices.openUrl(QUrl(url))
 
+    def _onFetchFinished(self):
+        self.blameFileChanged.emit(self._file)
+
     def _findFileBySHA1(self, sha1):
         if not sha1:
             return self._file
@@ -719,6 +727,7 @@ class BlameView(QWidget):
         self._commitPanel.clear()
 
     def blame(self, file, sha1=None):
+        self.blameFileAboutToChange.emit(file)
         self.clear()
         self._fetcher.fetch(file, sha1)
 
