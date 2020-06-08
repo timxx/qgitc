@@ -54,9 +54,9 @@ class FindWidget(QWidget):
         hlayout.addWidget(self._tbNext)
         hlayout.addWidget(self._tbClose)
 
-        self._tbPrev.setText('∧')
-        self._tbNext.setText('∨')
-        self._tbClose.setText('X')
+        self._tbPrev.setText('🡩')
+        self._tbNext.setText('🡫')
+        self._tbClose.setText('⨉')
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self.find)
