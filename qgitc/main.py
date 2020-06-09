@@ -97,10 +97,6 @@ def _do_log(app, args):
         if args.file:
             window.setFilterFile(args.file)
 
-    repoDir = Git.repoTopLevelDir(os.getcwd())
-    if repoDir:
-        window.setRepoDir(repoDir)
-
     if window.restoreState():
         window.show()
     else:

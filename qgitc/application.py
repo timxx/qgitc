@@ -9,9 +9,12 @@ from PySide2.QtCore import (Qt,
 
 from .common import dataDirPath
 from .settings import Settings
-from .events import BlameEvent
+from .events import BlameEvent, ShowCommitEvent
 from .blamewindow import BlameWindow
 from .mainwindow import MainWindow
+from .gitutils import Git
+
+import os
 
 
 class Application(QApplication):
@@ -33,6 +36,9 @@ class Application(QApplication):
 
         self._logWindow = None
         self._blameWindow = None
+
+        repoDir = Git.repoTopLevelDir(os.getcwd())
+        Git.REPO_DIR = repoDir
 
     def settings(self):
         return self._settings
@@ -71,10 +77,16 @@ class Application(QApplication):
         return window
 
     def event(self, event):
-        if event.type() == BlameEvent.Type:
+        type = event.type()
+        if type == BlameEvent.Type:
             window = self.getWindow(Application.BlameWindow)
             window.blame(event.filePath, event.sha1)
-            window.showMaximized()
+            self._ensureVisible(window)
+            return True
+        elif type == ShowCommitEvent.Type:
+            window = self.getWindow(Application.LogWindow)
+            window.showCommit(event.sha1)
+            self._ensureVisible(window)
             return True
 
         return super().event(event)
@@ -84,3 +96,11 @@ class Application(QApplication):
 
     def _onBlameWindowDestroyed(self, obj):
         self._blameWindow = None
+
+    def _ensureVisible(self, window):
+        if window.isVisible():
+            return
+        if window.restoreState():
+            window.show()
+        else:
+            window.showMaximized()

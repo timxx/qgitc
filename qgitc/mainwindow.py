@@ -91,8 +91,6 @@ class MainWindow(QMainWindow):
         self.gitViewB = None
 
         self.isWindowReady = False
-        self.repoDir = None
-        self.timerId = -1
         self.findSubmoduleThread = None
 
         self.mergeWidget = None
@@ -410,21 +408,8 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).showEvent(event)
         if not self.isWindowReady:
             self.isWindowReady = True
-
-    def timerEvent(self, event):
-        if event.timerId() != self.timerId:
-            return
-
-        if self.isWindowReady:
-            if self.repoDir:
-                self.ui.leRepo.setText(self.repoDir)
-            self.killTimer(self.timerId)
-            self.timerId = -1
-
-    def setRepoDir(self, repoDir):
-        self.repoDir = repoDir
-        if self.timerId == -1:
-            self.timerId = self.startTimer(50)
+            if Git.REPO_DIR:
+                self.ui.leRepo.setText(Git.REPO_DIR)
 
     def setFilterFile(self, filePath):
         if not filePath.startswith("-- "):
@@ -470,3 +455,12 @@ class MainWindow(QMainWindow):
             # not allowed changed in this mode
             self.ui.leRepo.setReadOnly(True)
             self.ui.acCompare.setEnabled(False)
+
+    def showCommit(self, sha1):
+        if not sha1:
+            return
+
+        # Ugly code
+        self.ui.gitViewA.ui.logView.switchToCommit(sha1, True)
+        if self.gitViewB:
+            self.gitViewB.ui.logView.switchToCommit(sha1, True)

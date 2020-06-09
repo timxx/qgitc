@@ -674,7 +674,7 @@ class LogView(QAbstractScrollArea):
             self.__ensureChildren(index)
             self.currentIndexChanged.emit(index)
 
-    def switchToCommit(self, sha1):
+    def switchToCommit(self, sha1, delay=False):
         # ignore if sha1 same as current's
         if self.curIdx != -1 and self.curIdx < len(self.data):
             commit = self.data[self.curIdx]
@@ -685,7 +685,7 @@ class LogView(QAbstractScrollArea):
         index = self.findCommitIndex(sha1)
         if index != -1:
             self.setCurrentIndex(index)
-        elif self.fetcher.isLoading():
+        elif self.fetcher.isLoading() or delay:
             self.preferSha1 = sha1
             return True
 
@@ -881,6 +881,9 @@ class LogView(QAbstractScrollArea):
             parent_sha1 = lcc_cmit.sha1
             self.delayUpdateParents = len(lcc_cmit.parents) == 0
 
+            if self.curIdx > 0:
+                self.curIdx += 1
+
         if hasLUC:
             luc_cmit = Commit()
             luc_cmit.sha1 = Git.LUC_SHA1
@@ -892,6 +895,9 @@ class LogView(QAbstractScrollArea):
             self.data.insert(0, luc_cmit)
             self.delayUpdateParents = self.delayUpdateParents or len(
                 luc_cmit.parents) == 0
+
+            if self.curIdx > 0:
+                self.curIdx += 1
 
         # FIXME: modified the graphs directly
         if self.graphs and (hasLUC or hasLCC) and not self.delayUpdateParents:
