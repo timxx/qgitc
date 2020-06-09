@@ -43,7 +43,7 @@ from .sourceviewer import SourceViewer, SourcePanel
 from .textline import TextLine, Link
 from .gitutils import Git
 from .colorschema import ColorSchema
-from .events import BlameEvent
+from .events import BlameEvent, ShowCommitEvent
 
 import sys
 import re
@@ -333,6 +333,10 @@ class RevisionPanel(SourcePanel):
     def _onMenuShowCommitLog(self):
         if self._hoveredLine == -1:
             return
+
+        rev = self._revs[self._hoveredLine]
+        event = ShowCommitEvent(rev.sha1)
+        qApp.postEvent(qApp, event)
 
     def _onMenuBlamePrevCommit(self):
         if self._hoveredLine == -1:

@@ -142,6 +142,9 @@ class BlameWindow(QMainWindow):
     def blame(self, file, sha1=None):
         self._view.blame(file, sha1)
 
+    def restoreState(self):
+        return False
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             sett = qApp.instance().settings()
