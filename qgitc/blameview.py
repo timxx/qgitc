@@ -509,6 +509,7 @@ class CommitPanel(QPlainTextEdit):
         self._highlighter = CommitSyntaxHighlighter(self.document())
         self._bodyCache = {}
         self._clickOnLink = False
+        self._link = None
 
     def showRevision(self, rev):
         self.clear()
@@ -547,6 +548,8 @@ class CommitPanel(QPlainTextEdit):
     def clear(self):
         super().clear()
         self._bodyCache.clear()
+        self._clickOnLink = False
+        self._link = None
 
     def _linkForPosition(self, pos):
         cursor = self.cursorForPosition(pos)
