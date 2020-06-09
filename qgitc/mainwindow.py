@@ -76,8 +76,11 @@ class FindSubmoduleThread(QThread):
 
 
 class MainWindow(QMainWindow):
+    LogMode = 1
+    CompareMode = 2
+    MergeMode = 3
 
-    def __init__(self, mergeMode=False, parent=None):
+    def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
 
         self.ui = Ui_MainWindow()
@@ -93,13 +96,6 @@ class MainWindow(QMainWindow):
         self.findSubmoduleThread = None
 
         self.mergeWidget = None
-        if mergeMode:
-            self.mergeWidget = MergeWidget()
-            self.mergeWidget.show()
-            self.setCompareMode()
-            # not allowed changed in this mode
-            self.ui.leRepo.setReadOnly(True)
-            self.ui.acCompare.setEnabled(False)
 
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
@@ -292,9 +288,9 @@ class MainWindow(QMainWindow):
 
     def __onAcCompareTriggered(self, checked):
         if checked:
-            self.setCompareMode()
+            self.setMode(MainWindow.CompareMode)
         else:
-            self.setLogMode()
+            self.setMode(MainWindow.LogMode)
 
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
@@ -437,31 +433,40 @@ class MainWindow(QMainWindow):
             self.ui.leOpts.setText(filePath)
         self.__onOptsReturnPressed()
 
-    def setCompareMode(self):
-        self.gitViewB = GitView(self)
-        self.ui.splitter.addWidget(self.gitViewB)
+    def setMode(self, mode):
+        if mode == MainWindow.LogMode:
+            self.ui.gitViewA.setBranchDesc(self.tr("Branch"))
 
-        self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
-        self.gitViewB.setBranchDesc(self.tr("Branch B:"))
-        self.gitViewB.setBranchB()
+            if self.gitViewB:
+                self.gitViewB.deleteLater()
+                self.gitViewB = None
 
-        opts = self.ui.leOpts.text().strip()
-        if opts:
-            self.filterOpts(opts, self.gitViewB)
+            self.ui.acCompare.setChecked(False)
+        elif mode == MainWindow.CompareMode:
+            self.gitViewB = GitView(self)
+            self.ui.splitter.addWidget(self.gitViewB)
 
-        branch = self.ui.gitViewA.currentBranch()
-        if branch.startswith("remotes/origin/"):
-            branch = branch[15:]
-        else:
-            branch = "remotes/origin/" + branch
+            self.ui.gitViewA.setBranchDesc(self.tr("Branch A:"))
+            self.gitViewB.setBranchDesc(self.tr("Branch B:"))
+            self.gitViewB.setBranchB()
 
-        self.gitViewB.reloadBranches(branch)
-        self.ui.acCompare.setChecked(True)
+            opts = self.ui.leOpts.text().strip()
+            if opts:
+                self.filterOpts(opts, self.gitViewB)
 
-    def setLogMode(self):
-        self.ui.gitViewA.setBranchDesc(self.tr("Branch"))
+            branch = self.ui.gitViewA.currentBranch()
+            if branch.startswith("remotes/origin/"):
+                branch = branch[15:]
+            else:
+                branch = "remotes/origin/" + branch
 
-        self.gitViewB.deleteLater()
-        self.gitViewB = None
-
-        self.ui.acCompare.setChecked(False)
+            self.gitViewB.reloadBranches(branch)
+            self.ui.acCompare.setChecked(True)
+        elif mode == MainWindow.MergeMode:
+            self.mergeWidget = MergeWidget()
+            self.mergeWidget.show()
+            if not self.gitViewB:
+                self.setMode(MainWindow.CompareMode)
+            # not allowed changed in this mode
+            self.ui.leRepo.setReadOnly(True)
+            self.ui.acCompare.setEnabled(False)

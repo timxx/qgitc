@@ -11,7 +11,8 @@ from PySide2.QtWidgets import (
     QToolTip,
     QToolButton,
     QSpacerItem,
-    QSizePolicy)
+    QSizePolicy,
+    QMenu)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -42,6 +43,7 @@ from .sourceviewer import SourceViewer, SourcePanel
 from .textline import TextLine, Link
 from .gitutils import Git
 from .colorschema import ColorSchema
+from .events import BlameEvent
 
 import sys
 import re
@@ -193,6 +195,8 @@ class RevisionPanel(SourcePanel):
         self._tooltipTimer = QTimer(self)
         self._tooltipTimer.setSingleShot(True)
 
+        self._menu = None
+
         self.setMouseTracking(True)
 
         viewer.textLineClicked.connect(
@@ -241,6 +245,17 @@ class RevisionPanel(SourcePanel):
         width += self._digitWidth * len(str(lineCount + 1))
 
         return width
+
+    def getFileBySHA1(self, sha1):
+        if not sha1:
+            return None
+
+        for rev in self._revs:
+            if rev.filename and rev.sha1 == sha1:
+                return rev.filename
+            if rev.prevFileName and rev.previous == sha1:
+                return rev.prevFileName
+        return None
 
     def _onTextLineClicked(self, textLine):
         self._updateActiveRev(textLine.lineNo())
@@ -315,6 +330,22 @@ class RevisionPanel(SourcePanel):
 
         QToolTip.showText(QCursor.pos(), text, self, self.rect())
 
+    def _onMenuShowCommitLog(self):
+        if self._hoveredLine == -1:
+            return
+
+    def _onMenuBlamePrevCommit(self):
+        if self._hoveredLine == -1:
+            return
+
+        rev = self._revs[self._hoveredLine]
+        if rev.previous:
+            pass
+
+        file = self.getFileBySHA1(rev.previous)
+        event = BlameEvent(file, rev.previous)
+        qApp.postEvent(qApp, event)
+
     def paintEvent(self, event):
         if not self._lines:
             return
@@ -353,7 +384,8 @@ class RevisionPanel(SourcePanel):
                     painter.setPen(Qt.darkGreen)
                 else:
                     painter.setPen(pen)
-                painter.drawLine(x_hline, y, x_hline, y + self._viewer.lineHeight)
+                painter.drawLine(x_hline, y, x_hline, y +
+                                 self._viewer.lineHeight)
                 painter.setPen(oldPen)
 
             lineNumber = str(i + 1)
@@ -414,6 +446,25 @@ class RevisionPanel(SourcePanel):
         self._tooltipTimer.stop()
         QToolTip.hideText()
         super().leaveEvent(event)
+
+    def contextMenuEvent(self, event):
+        self._tooltipTimer.stop()
+        if self._hoveredLine == -1:
+            return
+
+        if not self._menu:
+            self._menu = QMenu(self)
+            self._menu.addAction(
+                self.tr("Show commit log"),
+                self._onMenuShowCommitLog)
+            action = self._menu.addAction(
+                self.tr("Blame previous commit"),
+                self._onMenuBlamePrevCommit)
+            self._acBlamePrevCommit = action
+
+        rev = self._revs[self._hoveredLine]
+        self._acBlamePrevCommit.setEnabled(rev.previous is not None)
+        self._menu.exec_(event.globalPos())
 
 
 class CommitBlockData(QTextBlockUserData):
@@ -579,8 +630,7 @@ class HeaderWidget(QWidget):
         self._btnPrev.clicked.connect(
             self._onPrevious)
         self._btnNext.clicked.connect(
-            self._onNext
-            )
+            self._onNext)
 
         self._updateInfo()
 
@@ -635,6 +685,7 @@ class HeaderWidget(QWidget):
         self._curIndex = len(self._histories)
         self._histories.append((file, sha1))
         self._updateInfo()
+
 
 class BlameView(QWidget):
 
@@ -707,15 +758,8 @@ class BlameView(QWidget):
         self.blameFileChanged.emit(self._file)
 
     def _findFileBySHA1(self, sha1):
-        if not sha1:
-            return self._file
-
-        for rev in self._revPanel.revisions:
-            if rev.filename and rev.sha1 == sha1:
-                return rev.filename
-            if rev.prevFileName and rev.previous == sha1:
-                return rev.prevFileName
-        return self._file
+        file = self._revPanel.getFileBySHA1(sha1)
+        return file if file else self._file
 
     def appendLine(self, line):
         self._revPanel.appendRevision(line.header)

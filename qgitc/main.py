@@ -84,13 +84,15 @@ def _do_log(app, args):
                                 app.translate("app", "Not in merge state, now quit!"))
         return 0
 
-    window = MainWindow(merge_mode)
+    window = app.getWindow(Application.LogWindow)
+    if merge_mode:
+        window.setMode(MainWindow.MergeMode)
     _move_center(window)
 
     if args.cmd == "log":
         # merge mode will also change to compare view
         if args.compare_mode:
-            window.setCompareMode()
+            window.setMode(MainWindow.CompareMode)
 
         if args.file:
             window.setFilterFile(args.file)
@@ -108,7 +110,7 @@ def _do_log(app, args):
 
 
 def _do_blame(app, args):
-    window = BlameWindow()
+    window = app.getWindow(Application.BlameWindow)
     _move_center(window)
     window.showMaximized()
 

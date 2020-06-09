@@ -11,9 +11,13 @@ from .common import dataDirPath
 from .settings import Settings
 from .events import BlameEvent
 from .blamewindow import BlameWindow
+from .mainwindow import MainWindow
 
 
 class Application(QApplication):
+
+    LogWindow = 1
+    BlameWindow = 2
 
     def __init__(self, argv):
         super(Application, self).__init__(argv)
@@ -27,6 +31,7 @@ class Application(QApplication):
         self.setupTranslator()
         self._settings = Settings(self)
 
+        self._logWindow = None
         self._blameWindow = None
 
     def settings(self):
@@ -48,19 +53,34 @@ class Application(QApplication):
         else:
             translator = None
 
-    def event(self, event):
-        if event.type() == BlameEvent.Type:
+    def getWindow(self, type):
+        window = None
+        if type == Application.LogWindow:
+            if not self._logWindow:
+                self._logWindow = MainWindow()
+                self._logWindow.destroyed.connect(
+                    self._onLogWindowDestroyed)
+            window = self._logWindow
+        elif type == Application.BlameWindow:
             if not self._blameWindow:
                 self._blameWindow = BlameWindow()
-                # is it necessary?
                 self._blameWindow.destroyed.connect(
                     self._onBlameWindowDestroyed)
+            window = self._blameWindow
 
-            self._blameWindow.blame(event.filePath, event.sha1)
-            self._blameWindow.showMaximized()
+        return window
+
+    def event(self, event):
+        if event.type() == BlameEvent.Type:
+            window = self.getWindow(Application.BlameWindow)
+            window.blame(event.filePath, event.sha1)
+            window.showMaximized()
             return True
 
         return super().event(event)
+
+    def _onLogWindowDestroyed(self, obj):
+        self._logWindow = None
 
     def _onBlameWindowDestroyed(self, obj):
         self._blameWindow = None
