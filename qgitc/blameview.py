@@ -8,7 +8,6 @@ from PySide2.QtWidgets import (
     QLabel,
     QPlainTextEdit,
     QSplitter,
-    QToolTip,
     QToolButton,
     QSpacerItem,
     QSizePolicy,
@@ -33,8 +32,7 @@ from PySide2.QtCore import (
     QRectF,
     QPointF,
     QPoint,
-    QUrl,
-    QTimer)
+    QUrl)
 
 from datetime import datetime
 from .datafetcher import DataFetcher
@@ -193,8 +191,6 @@ class RevisionPanel(SourcePanel):
         self._link = None
 
         self._hoveredLine = -1
-        self._tooltipTimer = QTimer(self)
-        self._tooltipTimer.setSingleShot(True)
 
         self._menu = None
 
@@ -202,25 +198,21 @@ class RevisionPanel(SourcePanel):
 
         viewer.textLineClicked.connect(
             self._onTextLineClicked)
-        self._tooltipTimer.timeout.connect(
-            self._updateToolTip)
 
     def appendRevision(self, rev):
+        text = rev.sha1[:ABBREV_N]
         if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
-            text = rev.sha1[:ABBREV_N] + " "
-            text += rev.author.time.split(" ")[0]
+            text += " " + rev.author.time.split(" ")[0]
             text += " " + rev.author.name
 
             fm = QFontMetrics(self._font)
             width = fm.horizontalAdvance(rev.author.name)
             self._nameWidth = max(width, self._nameWidth)
 
-            textLine = TextLine(TextLine.Text, text,
-                                self._font, self._option)
-            textLine.setLineNo(len(self._lines))
-            textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
-        else:
-            textLine = None
+        textLine = TextLine(TextLine.Text, text,
+                            self._font, self._option)
+        textLine.setLineNo(len(self._lines))
+        textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
 
         self._revs.append(rev)
         self._lines.append(textLine)
@@ -235,8 +227,6 @@ class RevisionPanel(SourcePanel):
         self._lines.clear()
         self._activeRev = None
         self._nameWidth = 0
-        self._tooltipTimer.stop()
-        QToolTip.hideText()
         self.update()
 
     def requestWidth(self, lineCount):
@@ -306,30 +296,24 @@ class RevisionPanel(SourcePanel):
         return None
 
     def _linkForPosition(self, pos):
+        # left margin
+        if pos.x() < self._space:
+            return None
+
         line = self._lineForPosition(pos)
         if not line:
             return None
 
-        offset = line.offsetForPos(pos)
+        relPos = QPoint(pos.x() - self._space, pos.y())
+        br = line.boundingRect()
+        if br.right() < relPos.x():
+            return None
+
+        offset = line.offsetForPos(relPos)
         link = line.hitTest(offset)
         if link:
             link.setData(self._revs[line.lineNo()].sha1)
         return link
-
-    def _updateToolTip(self):
-        if self._hoveredLine == -1:
-            QToolTip.hideText()
-            return
-
-        rev = self._revs[self._hoveredLine]
-        text = self.tr("Commit: ") + rev.sha1 + "\n"
-        text += self.tr("Author: ") + rev.author.name + \
-            " " + rev.author.time + "\n"
-        text += self.tr("Committer: ") + rev.committer.name + \
-            " " + rev.author.time + "\n\n"
-        text += rev.summary
-
-        QToolTip.showText(QCursor.pos(), text, self, self.rect())
 
     def _onMenuShowCommitLog(self):
         if self._hoveredLine == -1:
@@ -378,20 +362,10 @@ class RevisionPanel(SourcePanel):
         painter.drawLine(x, y, x, self.height())
         painter.setPen(oldPen)
 
-        x_hline = (self._space + self._sha1Width) / 2
         for i in range(startLine, len(self._lines)):
             line = self._lines[i]
-            if line:
-                self._drawActiveRev(painter, i, self._space, y)
-                line.draw(painter, QPointF(self._space, y))
-            else:
-                if self._activeRev and self._revs[i].sha1 == self._activeRev:
-                    painter.setPen(Qt.darkGreen)
-                else:
-                    painter.setPen(pen)
-                painter.drawLine(x_hline, y, x_hline, y +
-                                 self._viewer.lineHeight)
-                painter.setPen(oldPen)
+            self._drawActiveRev(painter, i, self._space, y)
+            line.draw(painter, QPointF(self._space, y))
 
             lineNumber = str(i + 1)
             x = width - len(lineNumber) * self._digitWidth - self._space
@@ -419,11 +393,6 @@ class RevisionPanel(SourcePanel):
             lineNo = self._lineNoForPosition(event.pos())
             if lineNo != self._hoveredLine:
                 self._hoveredLine = lineNo
-                QToolTip.hideText()
-                if lineNo != -1:
-                    self._tooltipTimer.start(500)
-                else:
-                    self._updateToolTip()
 
         super().mouseMoveEvent(event)
 
@@ -447,13 +416,7 @@ class RevisionPanel(SourcePanel):
         self._mousePressedPos = QPoint()
         super().mouseReleaseEvent(event)
 
-    def leaveEvent(self, event):
-        self._tooltipTimer.stop()
-        QToolTip.hideText()
-        super().leaveEvent(event)
-
     def contextMenuEvent(self, event):
-        self._tooltipTimer.stop()
         if self._hoveredLine == -1:
             return
 
