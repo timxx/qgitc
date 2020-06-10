@@ -22,7 +22,8 @@ from PySide2.QtCore import (
 
 from .textline import (
     TextLine,
-    createFormatRange)
+    createFormatRange,
+    Link)
 from .colorschema import ColorSchema
 from .textcursor import TextCursor
 
@@ -43,6 +44,7 @@ class FindFlags:
 class TextViewer(QAbstractScrollArea):
 
     textLineClicked = Signal(TextLine)
+    linkActivated = Signal(Link)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,6 +61,11 @@ class TextViewer(QAbstractScrollArea):
 
         self._cursor = TextCursor()
         self._clickTimer = QElapsedTimer()
+
+        self.viewport().setMouseTracking(True)
+
+        self._clickOnLink = False
+        self._link = None
 
     def updateFont(self, font):
         self._font = font
@@ -83,6 +90,9 @@ class TextViewer(QAbstractScrollArea):
         self._maxWidth = 0
         self._highlightLines.clear()
         self._cursor.clear()
+        self._clickOnLink = False
+        self._link = None
+        self.viewport().setCursor(Qt.IBeamCursor)
         self.viewport().update()
 
     def hasTextLines(self):
@@ -412,6 +422,7 @@ class TextViewer(QAbstractScrollArea):
         if not self.hasTextLines():
             return
 
+        self._clickOnLink = self._link is not None
         self._invalidateSelection()
 
         textLine = self.textLineForPos(event.pos())
@@ -435,6 +446,11 @@ class TextViewer(QAbstractScrollArea):
     def mouseReleaseEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
+
+        if self._link and self._clickOnLink:
+            self.linkActivated.emit(self._link)
+
+        self._clickOnLink = False
         if not self.hasTextLines() or \
             self._cursor.hasSelection():
             return
@@ -489,6 +505,8 @@ class TextViewer(QAbstractScrollArea):
         if self._clickTimer.isValid():
             self._clickTimer.invalidate()
 
+        self._clickOnLink = False
+        self._link = None
         if not self.hasTextLines():
             return
 
@@ -496,10 +514,19 @@ class TextViewer(QAbstractScrollArea):
         if not textLine:
             return
 
-        self._invalidateSelection()
-
-        n = textLine.lineNo()
         offset = textLine.offsetForPos(self.mapToContents(event.pos()))
-        self._cursor.selectTo(n, offset)
+        if event.buttons() == Qt.LeftButton:
+            self._invalidateSelection()
 
-        self._invalidateSelection()
+            n = textLine.lineNo()
+            self._cursor.selectTo(n, offset)
+
+            self._invalidateSelection()
+        elif event.buttons() == Qt.NoButton:
+            x = event.pos().x() + self.horizontalScrollBar().value()
+            if textLine.boundingRect().right() >= x:
+                self._link = textLine.hitTest(offset)
+
+        cursorShape = Qt.PointingHandCursor if self._link \
+            else Qt.IBeamCursor
+        self.viewport().setCursor(cursorShape)
