@@ -44,6 +44,7 @@ from .textline import TextLine, Link
 from .gitutils import Git
 from .colorschema import ColorSchema
 from .events import BlameEvent, ShowCommitEvent
+from .waitingspinnerwidget import QtWaitingSpinner
 
 import sys
 import re
@@ -621,6 +622,9 @@ class HeaderWidget(QWidget):
         self._btnNext = QToolButton(self)
         layout.addWidget(self._btnNext)
 
+        self._waitingSpinner = QtWaitingSpinner(self)
+        layout.addWidget(self._waitingSpinner)
+
         self._lbFile = QLabel(self)
         layout.addWidget(self._lbFile)
 
@@ -638,6 +642,11 @@ class HeaderWidget(QWidget):
             self._onPrevious)
         self._btnNext.clicked.connect(
             self._onNext)
+
+        height = self._lbFile.height() // 6
+        self._waitingSpinner.setLineLength(height)
+        self._waitingSpinner.setInnerRadius(height)
+        self._waitingSpinner.setNumberOfLines(14)
 
         self._updateInfo()
 
@@ -692,6 +701,12 @@ class HeaderWidget(QWidget):
         self._curIndex = len(self._histories)
         self._histories.append((file, sha1))
         self._updateInfo()
+
+    def notifyFecthingStarted(self):
+        self._waitingSpinner.start()
+
+    def notifyFecthingFinished(self):
+        self._waitingSpinner.stop()
 
 
 class BlameView(QWidget):
@@ -763,6 +778,7 @@ class BlameView(QWidget):
 
     def _onFetchFinished(self):
         self.blameFileChanged.emit(self._file)
+        self._headerWidget.notifyFecthingFinished()
 
     def _findFileBySHA1(self, sha1):
         file = self._revPanel.getFileBySHA1(sha1)
@@ -778,6 +794,7 @@ class BlameView(QWidget):
         self._commitPanel.clear()
 
     def blame(self, file, sha1=None):
+        self._headerWidget.notifyFecthingStarted()
         self.blameFileAboutToChange.emit(file)
         self.clear()
         self._fetcher.fetch(file, sha1)
