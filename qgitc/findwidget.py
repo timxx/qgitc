@@ -118,6 +118,8 @@ class FindWidget(QWidget):
 
     def showAnimate(self):
         # TODO: make it animate
+        self._leFind.setFocus()
+        self._leFind.selectAll()
         self.show()
 
     def hideAnimate(self):
