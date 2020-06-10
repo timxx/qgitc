@@ -147,9 +147,12 @@ class BlameWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
-            sett = qApp.instance().settings()
-            if sett.quitViaEsc():
-                self.close()
-                return
+            if self._findWidget and self._findWidget.isVisible():
+                self._findWidget.hideAnimate()
+            else:
+                sett = qApp.instance().settings()
+                if sett.quitViaEsc():
+                    self.close()
+                    return
 
         super().keyPressEvent(event)
