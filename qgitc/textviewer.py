@@ -115,6 +115,11 @@ class TextViewer(QAbstractScrollArea):
         if lineNo < 0 or lineNo >= self.textLineCount():
             return
 
+        # central the lineNo in view
+        halfOfPage = self._linesPerPage() // 2
+        if lineNo > halfOfPage:
+            lineNo -= halfOfPage
+
         vScrollBar = self.verticalScrollBar()
         if vScrollBar.value() != lineNo:
             vScrollBar.setValue(lineNo)
@@ -188,6 +193,9 @@ class TextViewer(QAbstractScrollArea):
 
         lineNo = self._cursor.beginLine()
         if lineNo < startLine or lineNo >= endLine:
+            halfOfPage = self._linesPerPage() // 2
+            if lineNo > halfOfPage:
+                lineNo -= halfOfPage
             self.verticalScrollBar().setValue(lineNo)
 
         hbar = self.horizontalScrollBar()
