@@ -43,6 +43,7 @@ from .gitutils import Git
 from .colorschema import ColorSchema
 from .events import BlameEvent, ShowCommitEvent
 from .waitingspinnerwidget import QtWaitingSpinner
+from .textviewer import TextViewer
 
 import sys
 import re
@@ -435,70 +436,33 @@ class RevisionPanel(SourcePanel):
         self._menu.exec_(event.globalPos())
 
 
-class CommitBlockData(QTextBlockUserData):
-
-    def __init__(self, links):
-        super().__init__()
-        self.links = links
-
-
-class CommitSyntaxHighlighter(QSyntaxHighlighter):
+class CommitPanel(TextViewer):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self._linkFmt = QTextCharFormat()
-        self._linkFmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
-        self._linkFmt.setForeground(ColorSchema.Link)
-
-        self._patterns = TextLine.builtinPatterns()
-
-    def highlightBlock(self, text):
-        if not text:
-            return
-
-        links = TextLine.findLinks(text, self._patterns)
-        for link in links:
-            self.setFormat(link.start, link.end - link.start, self._linkFmt)
-        if links:
-            self.setCurrentBlockUserData(CommitBlockData(links))
-
-
-class CommitPanel(QPlainTextEdit):
-
-    linkActivated = Signal(Link)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setReadOnly(True)
-        self.setFont(qApp.settings().diffViewFont())
-        self.viewport().setMouseTracking(True)
-
-        self._highlighter = CommitSyntaxHighlighter(self.document())
+        self.updateFont(qApp.settings().diffViewFont())
         self._bodyCache = {}
-        self._clickOnLink = False
-        self._link = None
 
     def showRevision(self, rev):
         self.clear()
 
         text = self.tr("Commit: ") + rev.sha1
-        self.appendPlainText(text)
+        self.appendLine(text)
 
         text = self.tr("Author: ") + rev.author.name + " " + \
             rev.author.mail + " " + rev.author.time
-        self.appendPlainText(text)
+        self.appendLine(text)
 
         text = self.tr("Committer: ") + rev.committer.name + " " + \
             rev.committer.mail + " " + rev.committer.time
-        self.appendPlainText(text)
+        self.appendLine(text)
 
         if rev.previous:
             text = self.tr("Previous: ") + rev.previous
-            self.appendPlainText(text)
+            self.appendLine(text)
 
-        self.appendPlainText("")
-        self.appendPlainText(rev.summary)
+        self.appendLine("")
+        self.appendLine(rev.summary)
 
         if rev.sha1 in self._bodyCache:
             text = self._bodyCache[rev.sha1]
@@ -508,62 +472,12 @@ class CommitPanel(QPlainTextEdit):
             text = _decode(data) if data else None
             self._bodyCache[rev.sha1] = text
         if text:
-            self.appendPlainText("")
-            self.appendPlainText(text)
-
-        self.moveCursor(QTextCursor.Start)
+            self.appendLine("")
+            self.appendLine(text)
 
     def clear(self):
         super().clear()
         self._bodyCache.clear()
-        self._clickOnLink = False
-        self._link = None
-
-    def _linkForPosition(self, pos):
-        cursor = self.cursorForPosition(pos)
-        if cursor.isNull():
-            return None
-
-        if cursor.atBlockEnd():
-            rc = self.cursorRect(cursor)
-            if pos.x() > rc.right():
-                return None
-
-        block = cursor.block()
-        blockData = block.userData()
-        if not blockData:
-            return None
-
-        pos = cursor.position() - block.position()
-        for link in blockData.links:
-            if link.hitTest(pos):
-                return link
-
-        return None
-
-    def mouseMoveEvent(self, event):
-        self._link = self._linkForPosition(event.pos())
-        self._clickOnLink = False
-
-        cursorShape = Qt.PointingHandCursor if self._link \
-            else Qt.IBeamCursor
-        self.viewport().setCursor(cursorShape)
-
-        super().mouseMoveEvent(event)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._clickOnLink = self._link is not None
-
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton and \
-                self._link and self._clickOnLink:
-            self.linkActivated.emit(self._link)
-
-        self._clickOnLink = False
-        super().mouseReleaseEvent(event)
 
 
 class HeaderWidget(QWidget):
