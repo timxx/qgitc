@@ -66,6 +66,7 @@ def _setup_argument(prog):
     blame_parser.add_argument(
         "--line-number", "-l",
         metavar="N", type=int,
+        default=0,
         help="Goto the specify line number when opening a file.")
     blame_parser.add_argument(
         "--sha1", "-s",
