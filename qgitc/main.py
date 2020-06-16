@@ -64,7 +64,15 @@ def _setup_argument(prog):
         "blame",
         help="Show what revision and author last modified each line of a file.")
     blame_parser.add_argument(
-        "file", metavar="<file>", nargs="?",
+        "--line-number", "-l",
+        metavar="N", type=int,
+        help="Goto the specify line number when opening a file.")
+    blame_parser.add_argument(
+        "--sha1", "-s",
+        metavar="SHA-1",
+        help="Blame parent commit with SHA-1.")
+    blame_parser.add_argument(
+        "file", metavar="<file>",
         help="The file to blame.")
 
     return parser.parse_args()
@@ -110,8 +118,7 @@ def _do_blame(app, args):
     _move_center(window)
     window.showMaximized()
 
-    if args.file:
-        window.blame(args.file)
+    window.blame(args.file, args.sha1, args.line_number)
 
     return app.exec_()
 

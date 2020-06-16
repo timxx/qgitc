@@ -139,8 +139,8 @@ class BlameWindow(QMainWindow):
 
         self._findWidget.showAnimate()
 
-    def blame(self, file, sha1=None):
-        self._view.blame(file, sha1)
+    def blame(self, file, sha1=None, lineNo=0):
+        self._view.blame(file, sha1, lineNo)
 
     def restoreState(self):
         return False

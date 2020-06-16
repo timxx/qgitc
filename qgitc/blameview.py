@@ -333,7 +333,7 @@ class RevisionPanel(SourcePanel):
             pass
 
         file = self.getFileBySHA1(rev.previous)
-        event = BlameEvent(file, rev.previous)
+        event = BlameEvent(file, rev.previous, self._hoveredLine + 1)
         qApp.postEvent(qApp, event)
 
     def paintEvent(self, event):
@@ -623,6 +623,7 @@ class BlameView(QWidget):
 
         self._file = None
         self._sha1 = None
+        self._lineNo = -1
         self._bugUrl = qApp.settings().bugUrl()
 
         self._fetcher = BlameFetcher(self)
@@ -660,6 +661,9 @@ class BlameView(QWidget):
     def _onFetchFinished(self):
         self.blameFileChanged.emit(self._file)
         self._headerWidget.notifyFecthingFinished()
+        if self._lineNo > 0:
+            self._viewer.gotoLine(self._lineNo - 1)
+            self._lineNo = -1
 
     def _findFileBySHA1(self, sha1):
         file = self._revPanel.getFileBySHA1(sha1)
@@ -674,7 +678,7 @@ class BlameView(QWidget):
         self._viewer.clear()
         self._commitPanel.clear()
 
-    def blame(self, file, sha1=None):
+    def blame(self, file, sha1=None, lineNo=0):
         self._headerWidget.notifyFecthingStarted()
         self.blameFileAboutToChange.emit(file)
         self.clear()
@@ -682,6 +686,7 @@ class BlameView(QWidget):
 
         self._file = file
         self._sha1 = sha1
+        self._lineNo = lineNo
 
         self._headerWidget.addBlameInfo(file, sha1)
 
