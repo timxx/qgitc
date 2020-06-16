@@ -99,6 +99,9 @@ class Application(QApplication):
 
     def _ensureVisible(self, window):
         if window.isVisible():
+            if window.isMinimized():
+                window.setWindowState(window.windowState() & ~Qt.WindowMinimized)
+            window.activateWindow()
             return
         if window.restoreState():
             window.show()
