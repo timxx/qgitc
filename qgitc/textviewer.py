@@ -146,7 +146,8 @@ class TextViewer(QAbstractScrollArea):
         if not self.hasTextLines():
             return None
 
-        n = int(pos.y() / self.lineHeight)
+        y = max(0, pos.y())
+        n = int(y / self.lineHeight)
         n += self.firstVisibleLine()
 
         if n >= self.textLineCount():
