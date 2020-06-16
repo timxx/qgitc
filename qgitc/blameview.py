@@ -623,6 +623,7 @@ class BlameView(QWidget):
 
         self._file = None
         self._sha1 = None
+        self._bugUrl = qApp.settings().bugUrl()
 
         self._fetcher = BlameFetcher(self)
         self._fetcher.lineAvailable.connect(
@@ -636,6 +637,8 @@ class BlameView(QWidget):
             self._onLinkActivated)
         self._revPanel.linkActivated.connect(
             self._onLinkActivated)
+        self._viewer.linkActivated.connect(
+            self._onLinkActivated)
 
     def _onLinkActivated(self, link):
         url = None
@@ -646,7 +649,8 @@ class BlameView(QWidget):
         elif link.type == Link.Email:
             url = "mailto:" + link.data
         elif link.type == Link.BugId:
-            pass
+            if self._bugUrl:
+                url = self._bugUrl + link.data
         else:
             url = link.data
 

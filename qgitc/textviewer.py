@@ -67,6 +67,9 @@ class TextViewer(QAbstractScrollArea):
         self._clickOnLink = False
         self._link = None
 
+        pattern = qApp.settings().bugPattern()
+        self._bugPattern = re.compile(pattern) if pattern else None
+
     def updateFont(self, font):
         self._font = font
         fm = QFontMetrics(self._font)
@@ -78,6 +81,9 @@ class TextViewer(QAbstractScrollArea):
     def appendLine(self, line):
         textLine = self.toTextLine(line)
         textLine.setLineNo(len(self._lines))
+        if self._bugPattern:
+            patterns = {Link.BugId: self._bugPattern}
+            textLine.setCustomLinkPatterns(patterns)
         self._lines.append(textLine)
         self._maxWidth = max(self._maxWidth,
                              textLine.boundingRect().width())
