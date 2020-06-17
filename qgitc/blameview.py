@@ -51,42 +51,29 @@ import re
 
 __all__ = ["BlameView"]
 
-line_begin_re = re.compile(rb"(^[a-z0-9]{40}) (\d+) (\d+)( (\d+))?$")
 ABBREV_N = 4
 
 
-class AuthorInfo:
-
-    def __init__(self):
-        self.name = None
-        self.mail = None
-        self.time = None
-
-    def isValid(self):
-        return self.name and \
-            self.mail and \
-            self.time
-
-
-class BlameHeader:
+class BlameLine:
 
     def __init__(self):
         self.sha1 = None
         self.oldLineNo = 0
         self.newLineNo = 0
         self.groupLines = 0
-        self.author = AuthorInfo()
-        self.committer = AuthorInfo()
+
+        self.author = None
+        self.authorMail = None
+        self.authorTime = None
+
+        self.committer = None
+        self.committerMail = None
+        self.committerTime = None
+
         self.summary = None
         self.previous = None
         self.prevFileName = None
         self.filename = None
-
-
-class BlameLine:
-
-    def __init__(self):
-        self.header = BlameHeader()
         self.text = None
 
 
@@ -110,46 +97,54 @@ class BlameFetcher(DataFetcher):
         self._curLine = BlameLine()
 
     def parse(self, data):
-        lines = data.split(self.separator)
+        lines = data.rstrip(self.separator).split(self.separator)
         for line in lines:
-            if line.startswith(b"\t"):
+            if line[0] == 9:  # \t
                 self._curLine.text = _decode(line[1:])
                 self.lineAvailable.emit(self._curLine)
                 self._curLine = BlameLine()
-            elif line.startswith(b"author "):
-                self._curLine.header.author.name = _decode(line[7:])
-            elif line.startswith(b"author-mail "):
-                self._curLine.header.author.mail = _decode(line[12:])
-            elif line.startswith(b"author-time "):
-                self._curLine.header.author.time = _timeStr(line[12:])
-            elif line.startswith(b"author-tz "):
-                assert(self._curLine.header.author.time is not None)
-                self._curLine.header.author.time += _decode(line[9:])
-            elif line.startswith(b"committer "):
-                self._curLine.header.committer.name = _decode(line[10:])
-            elif line.startswith(b"committer-mail "):
-                self._curLine.header.committer.mail = _decode(line[15:])
-            elif line.startswith(b"committer-time "):
-                self._curLine.header.committer.time = _timeStr(line[15:])
-            elif line.startswith(b"committer-tz "):
-                assert(self._curLine.header.committer.time is not None)
-                self._curLine.header.committer.time += _decode(line[12:])
-            elif line.startswith(b"summary "):
-                self._curLine.header.summary = _decode(line[8:])
-            elif line.startswith(b"previous "):
+            elif line[0] == 97 and line[1] == 117:  # author
+                if line[6] == 32:  # "author "
+                    self._curLine.author = _decode(line[7:])
+                elif line[7] == 109:  # "author-mail "
+                    self._curLine.authorMail = _decode(line[12:])
+                elif line[8] == 105:  # "author-time "
+                    self._curLine.authorTime = _timeStr(line[12:])
+                elif line[8] == 122:  # "author-tz "
+                    assert(self._curLine.authorTime is not None)
+                    self._curLine.authorTime += _decode(line[9:])
+                else:
+                    print("Invalid line:", line)
+            elif line[0] == 99 and line[1] == 111:  # committer
+                if line[9] == 32:  # "committer "
+                    self._curLine.committer = _decode(line[10:])
+                elif line[10] == 109:  # "committer-mail "
+                    self._curLine.committerMail = _decode(line[15:])
+                elif line[11] == 105:  # "committer-time "
+                    self._curLine.committerTime = _timeStr(line[15:])
+                elif line[11] == 122:  # "committer-tz "
+                    assert(self._curLine.committerTime is not None)
+                    self._curLine.committerTime += _decode(line[12:])
+                else:
+                    print("Invalid line:", line)
+            elif line[0] == 115:  # "summary "
+                self._curLine.summary = _decode(line[8:])
+            elif line[0] == 112:  # "previous "
                 parts = line.split(b' ')
-                self._curLine.header.previous = _decode(parts[1])
-                self._curLine.header.prevFileName = _decode(parts[2])
-            elif line.startswith(b"filename "):
-                self._curLine.header.filename = _decode(line[9:])
+                self._curLine.previous = _decode(parts[1])
+                self._curLine.prevFileName = _decode(parts[2])
+            elif line[0] == 102 and line[1] == 105:  # "filename "
+                self._curLine.filename = _decode(line[9:])
             else:
-                m = line_begin_re.match(line)
-                if m:
-                    self._curLine.header.sha1 = _decode(m.group(1))
-                    self._curLine.header.oldLineNo = int(m.group(2))
-                    self._curLine.header.newLineNo = int(m.group(3))
-                    if m.group(5):
-                        self._curLine.groupLines = int(m.group(5))
+                parts = line.split(b' ')
+                if len(parts) < 3 or len(parts) > 4:
+                    print("Invalid line:", line)
+                else:
+                    self._curLine.sha1 = _decode(parts[0])
+                    self._curLine.oldLineNo = int(parts[1])
+                    self._curLine.newLineNo = int(parts[2])
+                    if len(parts) == 4:
+                        self._curLine.groupLines = int(parts[3])
 
     def makeArgs(self, args):
         file = args[0]
@@ -166,7 +161,7 @@ class BlameFetcher(DataFetcher):
 
 class RevisionPanel(SourcePanel):
 
-    revisionActivated = Signal(BlameHeader)
+    revisionActivated = Signal(BlameLine)
     linkActivated = Signal(Link)
 
     def __init__(self, viewer):
@@ -203,11 +198,11 @@ class RevisionPanel(SourcePanel):
     def appendRevision(self, rev):
         text = rev.sha1[:ABBREV_N]
         if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
-            text += " " + rev.author.time.split(" ")[0]
-            text += " " + rev.author.name
+            text += " " + rev.authorTime.split(" ")[0]
+            text += " " + rev.author
 
             fm = QFontMetrics(self._font)
-            width = fm.horizontalAdvance(rev.author.name)
+            width = fm.horizontalAdvance(rev.author)
             self._nameWidth = max(width, self._nameWidth)
 
         textLine = TextLine(TextLine.Text, text,
@@ -449,12 +444,12 @@ class CommitPanel(TextViewer):
         text = self.tr("Commit: ") + rev.sha1
         self.appendLine(text)
 
-        text = self.tr("Author: ") + rev.author.name + " " + \
-            rev.author.mail + " " + rev.author.time
+        text = self.tr("Author: ") + rev.author + " " + \
+            rev.authorMail + " " + rev.authorTime
         self.appendLine(text)
 
-        text = self.tr("Committer: ") + rev.committer.name + " " + \
-            rev.committer.mail + " " + rev.committer.time
+        text = self.tr("Committer: ") + rev.committer + " " + \
+            rev.committerMail + " " + rev.committerTime
         self.appendLine(text)
 
         if rev.previous:
@@ -672,7 +667,7 @@ class BlameView(QWidget):
         return file if file else self._file
 
     def appendLine(self, line):
-        self._revPanel.appendRevision(line.header)
+        self._revPanel.appendRevision(line)
         self._viewer.appendLine(line.text)
 
     def clear(self):
