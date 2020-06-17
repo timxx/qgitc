@@ -328,7 +328,7 @@ class RevisionPanel(SourcePanel):
             pass
 
         file = self.getFileBySHA1(rev.previous)
-        event = BlameEvent(file, rev.previous, self._hoveredLine + 1)
+        event = BlameEvent(file, rev.previous, rev.oldLineNo)
         qApp.postEvent(qApp, event)
 
     def paintEvent(self, event):
