@@ -444,7 +444,7 @@ class CommitPanel(TextViewer):
         self._bodyCache = {}
 
     def showRevision(self, rev):
-        self.clear()
+        super().clear()
 
         text = self.tr("Commit: ") + rev.sha1
         self.appendLine(text)
@@ -473,7 +473,9 @@ class CommitPanel(TextViewer):
             self._bodyCache[rev.sha1] = text
         if text:
             self.appendLine("")
-            self.appendLine(text)
+            text = text.rstrip('\n')
+            for line in text.split('\n'):
+                self.appendLine(line)
 
     def clear(self):
         super().clear()
