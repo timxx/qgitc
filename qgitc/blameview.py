@@ -37,7 +37,7 @@ from PySide2.QtCore import (
 from datetime import datetime
 from .datafetcher import DataFetcher
 from .stylehelper import dpiScaled
-from .sourceviewer import SourceViewer, SourcePanel
+from .sourceviewer import SourceViewer
 from .textline import TextLine, Link
 from .gitutils import Git
 from .colorschema import ColorSchema
@@ -135,6 +135,8 @@ class BlameFetcher(DataFetcher):
                 self._curLine.prevFileName = _decode(parts[2])
             elif line[0] == 102 and line[1] == 105:  # "filename "
                 self._curLine.filename = _decode(line[9:])
+            elif line[0] == 98 and line[1] == 111:  # boundary
+                pass
             else:
                 parts = line.split(b' ')
                 if len(parts) < 3 or len(parts) > 4:
@@ -159,13 +161,14 @@ class BlameFetcher(DataFetcher):
         self._curLine = BlameLine()
 
 
-class RevisionPanel(SourcePanel):
+class RevisionPanel(QWidget):
 
     revisionActivated = Signal(BlameLine)
     linkActivated = Signal(Link)
 
     def __init__(self, viewer):
-        super().__init__(viewer, viewer)
+        super().__init__(viewer)
+        self._viewer = viewer
         self._lines = []
         self._revs = []
         self._font = qApp.settings().diffViewFont()
@@ -177,7 +180,13 @@ class RevisionPanel(SourcePanel):
         self._dateWidth = fm.horizontalAdvance("2020-05-27")
         self._space = fm.horizontalAdvance(' ')
         self._digitWidth = fm.horizontalAdvance('9')
-        self._nameWidth = 0
+        self._maxNameWidth = 12 * fm.horizontalAdvance('W')
+
+        width = self._sha1Width + self._space * 6
+        width += self._dateWidth
+        width += self._maxNameWidth
+        width += self._digitWidth * 6
+        self.resize(width, viewer.height())
 
         self._activeRev = None
         self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
@@ -201,10 +210,6 @@ class RevisionPanel(SourcePanel):
             text += " " + rev.authorTime.split(" ")[0]
             text += " " + rev.author
 
-            fm = QFontMetrics(self._font)
-            width = fm.horizontalAdvance(rev.author)
-            self._nameWidth = max(width, self._nameWidth)
-
         textLine = TextLine(TextLine.Text, text,
                             self._font, self._option)
         textLine.setLineNo(len(self._lines))
@@ -222,16 +227,7 @@ class RevisionPanel(SourcePanel):
         self._revs.clear()
         self._lines.clear()
         self._activeRev = None
-        self._nameWidth = 0
         self.update()
-
-    def requestWidth(self, lineCount):
-        width = self._sha1Width + self._space * 6
-        width += self._dateWidth
-        width += self._nameWidth
-        width += self._digitWidth * len(str(lineCount + 1))
-
-        return width
 
     def getFileBySHA1(self, sha1):
         if not sha1:
@@ -332,36 +328,46 @@ class RevisionPanel(SourcePanel):
         qApp.postEvent(qApp, event)
 
     def paintEvent(self, event):
-        if not self._lines:
-            return
-
         painter = QPainter(self)
-        onePixel = dpiScaled(1)
-        painter.fillRect(self.rect().adjusted(onePixel, onePixel, 0, 0),
-                         QColor(250, 250, 250))
 
         eventRect = event.rect()
         painter.setClipRect(eventRect)
         painter.setFont(self._font)
 
-        startLine = self._viewer.firstVisibleLine()
+        onePixel = dpiScaled(1)
+        painter.fillRect(self.rect().adjusted(onePixel, onePixel, 0, 0),
+                         QColor(250, 250, 250))
 
         y = 0
         width = self.width()
-        ascent = QFontMetrics(self._font).ascent()
 
-        x = width - len(str(len(self._lines))) * \
-            self._digitWidth - self._space * 2
+        digitCount = max(3, len(str(len(self._lines))))
+        x = width - digitCount * self._digitWidth - self._space * 2
         pen = QPen(Qt.darkGray)
         oldPen = painter.pen()
         painter.setPen(pen)
         painter.drawLine(x, y, x, self.height())
         painter.setPen(oldPen)
 
+        maxLineWidth = x - self._space
+
+        if not self._lines:
+            return
+
+        startLine = self._viewer.firstVisibleLine()
+        ascent = QFontMetrics(self._font).ascent()
+
         for i in range(startLine, len(self._lines)):
             line = self._lines[i]
+
+            lineClipRect = QRectF(0, y, maxLineWidth, self._viewer.lineHeight)
+            painter.save()
+            painter.setClipRect(lineClipRect)
+
             self._drawActiveRev(painter, i, self._space, y)
             line.draw(painter, QPointF(self._space, y))
+
+            painter.restore()
 
             lineNumber = str(i + 1)
             x = width - len(lineNumber) * self._digitWidth - self._space
