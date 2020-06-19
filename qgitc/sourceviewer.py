@@ -16,7 +16,7 @@ from .stylehelper import dpiScaled
 from .textviewer import TextViewer
 
 
-__all__ = ["SourceViewer", "SourcePanel"]
+__all__ = ["SourceViewer"]
 
 
 class SourceTextLine(SourceTextLineBase):
@@ -29,16 +29,6 @@ class SourceTextLine(SourceTextLineBase):
         formats = self._commonHighlightFormats()
         if formats:
             self._layout.setAdditionalFormats(formats)
-
-
-class SourcePanel(QWidget):
-
-    def __init__(self, viewer, parent=None):
-        super().__init__(parent)
-        self._viewer = viewer
-
-    def requestWidth(self, lineCount):
-        return 0
 
 
 class SourceViewer(TextViewer):
@@ -66,10 +56,6 @@ class SourceViewer(TextViewer):
     def toTextLine(self, text):
         return SourceTextLine(text, self._font, self._option)
 
-    def appendLine(self, line):
-        super().appendLine(line)
-        self._updatePanelGeo()
-
     def setPanel(self, panel):
         self._panel = panel
         if panel:
@@ -84,7 +70,7 @@ class SourceViewer(TextViewer):
     def _updatePanelGeo(self):
         if self._panel:
             rc = self.rect()
-            width = self._panel.requestWidth(self.textLineCount())
+            width = self._panel.width()
             self.setViewportMargins(width + self._onePixel, 0, 0, 0)
             self._panel.setGeometry(rc.left() + self._onePixel,
                                     rc.top() + self._onePixel,
