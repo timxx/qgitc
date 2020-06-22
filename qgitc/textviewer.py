@@ -18,7 +18,8 @@ from PySide2.QtCore import (
     QPoint,
     QPointF,
     Signal,
-    QElapsedTimer)
+    QElapsedTimer,
+    QTimer)
 
 from .textline import (
     TextLine,
@@ -48,7 +49,15 @@ class TextViewer(QAbstractScrollArea):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._lines = []
+        # raw text lines
+        self._lines = None
+        # TextLine instances
+        self._textLines = {}
+        self._inReading = False
+
+        self._convertIndex = 0
+        self._convertTimer = QTimer(self)
+        self._convertTimer.timeout.connect(self._onConvertEvent)
 
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
@@ -79,25 +88,50 @@ class TextViewer(QAbstractScrollArea):
         return TextLine(TextLine.Text, text, self._font, self._option)
 
     def appendLine(self, line):
-        textLine = self.toTextLine(line)
-        textLine.setLineNo(len(self._lines))
-        if self._bugPattern:
-            patterns = {Link.BugId: self._bugPattern}
-            textLine.setCustomLinkPatterns(patterns)
-        self._lines.append(textLine)
-        self._maxWidth = max(self._maxWidth,
-                             textLine.boundingRect().width())
+        self.appendLines([line])
 
-        self._adjustScrollbars()
+    def appendLines(self, lines):
+        if self._lines:
+            self._lines.extend(lines)
+        elif self._inReading:
+            self._lines = lines
+        else:
+            for line in lines:
+                textLine = self.toTextLine(line)
+                lineNo = len(self._textLines)
+                textLine.setLineNo(lineNo)
+                self._textLines[lineNo] = textLine
+
+        if not self._convertTimer.isActive():
+            self._convertTimer.start(0)
+
         self.viewport().update()
 
+    def beginReading(self):
+        """ Call before reading lines to TextViewer """
+        self._inReading = True
+
+    def endReading(self):
+        """ Call after reading finished """
+        self._inReading = False
+        if self._lines and \
+                len(self._lines) == len(self._textLines):
+            self._lines = None
+
     def clear(self):
-        self._lines.clear()
+        self._lines = None
+        self._textLines.clear()
+        self._inReading = False
         self._maxWidth = 0
         self._highlightLines.clear()
         self._cursor.clear()
         self._clickOnLink = False
         self._link = None
+
+        self._convertIndex = 0
+        self._convertTimer.stop()
+
+        self._adjustScrollbars()
         self.viewport().setCursor(Qt.IBeamCursor)
         self.viewport().update()
 
@@ -105,10 +139,38 @@ class TextViewer(QAbstractScrollArea):
         return self.textLineCount() > 0
 
     def textLineCount(self):
-        return len(self._lines)
+        if self._lines:
+            return len(self._lines)
+
+        return len(self._textLines)
 
     def textLineAt(self, n):
-        return self._lines[n]
+        if n < 0:
+            return None
+
+        # n already converted
+        if n in self._textLines:
+            return self._textLines[n]
+
+        # all converted but no match
+        if not self._lines:
+            return None
+
+        # convert one
+        if n >= len(self._lines):
+            return None
+
+        textLine = self.toTextLine(self._lines[n])
+        textLine.setLineNo(n)
+
+        self._textLines[n] = textLine
+        # free the memory
+        self._lines[n] = None
+        if not self._inReading and \
+                len(self._lines) == len(self._textLines):
+            self._lines = None
+
+        return textLine
 
     def firstVisibleLine(self):
         return self.verticalScrollBar().value()
@@ -159,7 +221,7 @@ class TextViewer(QAbstractScrollArea):
         if n >= self.textLineCount():
             n = self.textLineCount() - 1
 
-        return self._lines[n]
+        return self.textLineAt(n)
 
     def highlightLines(self, lines):
         self._highlightLines = lines
@@ -380,8 +442,27 @@ class TextViewer(QAbstractScrollArea):
 
         return False
 
+    def _onConvertEvent(self):
+        textLine = self.textLineAt(self._convertIndex)
+        self._convertIndex += 1
+
+        if not self._inReading and self._convertIndex >= self.textLineCount():
+            self._convertTimer.stop()
+            self._convertIndex = 0
+
+        needAdjust = self._inReading
+        if textLine:
+            width = textLine.boundingRect().width()
+            if width > self._maxWidth:
+                self._maxWidth = width
+                needAdjust = True
+
+        if needAdjust:
+            self._adjustScrollbars()
+
+
     def paintEvent(self, event):
-        if not self._lines:
+        if not self.hasTextLines():
             return
 
         painter = QPainter(self.viewport())
@@ -397,7 +478,7 @@ class TextViewer(QAbstractScrollArea):
         painter.setClipRect(eventRect)
 
         for i in range(startLine, endLine):
-            textLine = self._lines[i]
+            textLine = self.textLineAt(i)
 
             br = textLine.boundingRect()
             r = br.translated(offset)
