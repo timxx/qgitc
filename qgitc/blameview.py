@@ -90,18 +90,19 @@ def _decode(data):
 
 class BlameFetcher(DataFetcher):
 
-    lineAvailable = Signal(BlameLine)
+    dataAvailable = Signal(BlameLine)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._curLine = BlameLine()
 
     def parse(self, data):
+        results = []
         lines = data.rstrip(self.separator).split(self.separator)
         for line in lines:
             if line[0] == 9:  # \t
                 self._curLine.text = _decode(line[1:])
-                self.lineAvailable.emit(self._curLine)
+                results.append(self._curLine)
                 self._curLine = BlameLine()
             elif line[0] == 97 and line[1] == 117:  # author
                 if line[6] == 32:  # "author "
@@ -147,6 +148,8 @@ class BlameFetcher(DataFetcher):
                     self._curLine.newLineNo = int(parts[2])
                     if len(parts) == 4:
                         self._curLine.groupLines = int(parts[3])
+
+        self.dataAvailable.emit(results)
 
     def makeArgs(self, args):
         file = args[0]
@@ -630,8 +633,8 @@ class BlameView(QWidget):
         self._bugUrl = qApp.settings().bugUrl()
 
         self._fetcher = BlameFetcher(self)
-        self._fetcher.lineAvailable.connect(
-            self.appendLine)
+        self._fetcher.dataAvailable.connect(
+            self._onFetchDataAvailable)
         self._fetcher.fetchFinished.connect(
             self._onFetchFinished)
 
@@ -661,20 +664,27 @@ class BlameView(QWidget):
         if url:
             QDesktopServices.openUrl(QUrl(url))
 
+    def _onFetchDataAvailable(self, lines):
+        texts = []
+        for line in lines:
+            texts.append(line.text)
+            # to save memory as revision panel no need text
+            line.text = None
+            self._revPanel.appendRevision(line)
+
+        self._viewer.appendLines(texts)
+
     def _onFetchFinished(self):
         self.blameFileChanged.emit(self._file)
         self._headerWidget.notifyFecthingFinished()
         if self._lineNo > 0:
             self._viewer.gotoLine(self._lineNo - 1)
             self._lineNo = -1
+        self._viewer.endReading()
 
     def _findFileBySHA1(self, sha1):
         file = self._revPanel.getFileBySHA1(sha1)
         return file if file else self._file
-
-    def appendLine(self, line):
-        self._revPanel.appendRevision(line)
-        self._viewer.appendLine(line.text)
 
     def clear(self):
         self._revPanel.clear()
@@ -685,6 +695,7 @@ class BlameView(QWidget):
         self._headerWidget.notifyFecthingStarted()
         self.blameFileAboutToChange.emit(file)
         self.clear()
+        self._viewer.beginReading()
         self._fetcher.fetch(file, sha1)
 
         self._file = file
