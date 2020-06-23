@@ -352,6 +352,10 @@ class TextViewer(QAbstractScrollArea):
     def textCursor(self):
         return self._cursor
 
+    def updateLinkData(self, link, lineNo):
+        """ Implement in subclass"""
+        pass
+
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
 
@@ -622,6 +626,8 @@ class TextViewer(QAbstractScrollArea):
             x = event.pos().x() + self.horizontalScrollBar().value()
             if textLine.boundingRect().right() >= x:
                 self._link = textLine.hitTest(offset)
+                if self._link:
+                    self.updateLinkData(self._link, textLine.lineNo())
 
         cursorShape = Qt.PointingHandCursor if self._link \
             else Qt.IBeamCursor
