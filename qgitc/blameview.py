@@ -11,7 +11,8 @@ from PySide2.QtWidgets import (
     QToolButton,
     QSpacerItem,
     QSizePolicy,
-    QMenu)
+    QMenu,
+    QFrame)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -164,19 +165,15 @@ class BlameFetcher(DataFetcher):
         self._curLine = BlameLine()
 
 
-class RevisionPanel(QWidget):
+class RevisionPanel(TextViewer):
 
     revisionActivated = Signal(BlameLine)
-    linkActivated = Signal(Link)
 
     def __init__(self, viewer):
         super().__init__(viewer)
+        self.updateFont(qApp.settings().diffViewFont())
         self._viewer = viewer
-        self._lines = []
         self._revs = []
-        self._font = qApp.settings().diffViewFont()
-        self._option = QTextOption()
-        self._option.setWrapMode(QTextOption.NoWrap)
 
         fm = QFontMetrics(self._font)
         self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
@@ -194,41 +191,49 @@ class RevisionPanel(QWidget):
         self._activeRev = None
         self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
 
-        self._mousePressedPos = QPoint()
-        self._clickOnLink = False
-        self._link = None
-
         self._hoveredLine = -1
-
         self._menu = None
-
-        self.setMouseTracking(True)
 
         viewer.textLineClicked.connect(
             self._onTextLineClicked)
 
-    def appendRevision(self, rev):
-        text = rev.sha1[:ABBREV_N]
-        if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
-            text += " " + rev.authorTime.split(" ")[0]
-            text += " " + rev.author
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setFrameShape(QFrame.NoFrame)
 
-        textLine = TextLine(TextLine.Text, text,
-                            self._font, self._option)
-        textLine.setLineNo(len(self._lines))
+    def toTextLine(self, text):
+        textLine = super().toTextLine(text)
+        textLine.useBuiltinPatterns = False
         textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
+        return textLine
 
-        self._revs.append(rev)
-        self._lines.append(textLine)
+    def appendRevisions(self, revs):
+        texts = []
+        for rev in revs:
+            text = rev.sha1[:ABBREV_N]
+            if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
+                text += " " + rev.authorTime.split(" ")[0]
+                text += " " + rev.author
+
+            texts.append(text)
+            self._revs.append(rev)
+
+        self.appendLines(texts)
         self.update()
+
+    def updateLinkData(self, link, lineNo):
+        link.setData(self._revs[lineNo].sha1)
+
+    def firstVisibleLine(self):
+        return self._viewer.firstVisibleLine()
 
     @property
     def revisions(self):
         return self._revs
 
     def clear(self):
+        super().clear()
         self._revs.clear()
-        self._lines.clear()
         self._activeRev = None
         self.update()
 
@@ -266,49 +271,12 @@ class RevisionPanel(QWidget):
 
     def _drawActiveRev(self, painter, lineNo, x, y):
         if self._activeRev and self._revs[lineNo].sha1 == self._activeRev:
-            line = self._lines[lineNo]
+            line = self.textLineAt(lineNo)
             br = line.boundingRect()
             fr = QRectF(br)
             fr.moveTop(fr.top() + y)
             fr.moveLeft(x)
             painter.fillRect(fr, QColor(192, 237, 197))
-
-    def _lineNoForPosition(self, pos):
-        if not self._lines:
-            return -1
-
-        n = int(pos.y() / self._viewer.lineHeight)
-        n += self._viewer.firstVisibleLine()
-        if n >= len(self._lines):
-            n = len(self._lines) - 1
-
-        return n
-
-    def _lineForPosition(self, pos):
-        lineNo = self._lineNoForPosition(pos)
-        if lineNo != -1:
-            return self._lines[lineNo]
-        return None
-
-    def _linkForPosition(self, pos):
-        # left margin
-        if pos.x() < self._space:
-            return None
-
-        line = self._lineForPosition(pos)
-        if not line:
-            return None
-
-        relPos = QPoint(pos.x() - self._space, pos.y())
-        br = line.boundingRect()
-        if br.right() < relPos.x():
-            return None
-
-        offset = line.offsetForPos(relPos)
-        link = line.hitTest(offset)
-        if link:
-            link.setData(self._revs[line.lineNo()].sha1)
-        return link
 
     def _onMenuShowCommitLog(self):
         if self._hoveredLine == -1:
@@ -331,7 +299,7 @@ class RevisionPanel(QWidget):
         qApp.postEvent(qApp, event)
 
     def paintEvent(self, event):
-        painter = QPainter(self)
+        painter = QPainter(self.viewport())
 
         eventRect = event.rect()
         painter.setClipRect(eventRect)
@@ -344,7 +312,8 @@ class RevisionPanel(QWidget):
         y = 0
         width = self.width()
 
-        digitCount = max(3, len(str(len(self._lines))))
+        textLineCount = self.textLineCount()
+        digitCount = max(3, len(str(textLineCount)))
         x = width - digitCount * self._digitWidth - self._space * 2
         pen = QPen(Qt.darkGray)
         oldPen = painter.pen()
@@ -354,14 +323,14 @@ class RevisionPanel(QWidget):
 
         maxLineWidth = x - self._space
 
-        if not self._lines:
+        if not self.hasTextLines():
             return
 
-        startLine = self._viewer.firstVisibleLine()
+        startLine = self.firstVisibleLine()
         ascent = QFontMetrics(self._font).ascent()
 
-        for i in range(startLine, len(self._lines)):
-            line = self._lines[i]
+        for i in range(startLine, textLineCount):
+            line = self.textLineAt(i)
 
             lineClipRect = QRectF(0, y, maxLineWidth, self._viewer.lineHeight)
             painter.save()
@@ -382,48 +351,12 @@ class RevisionPanel(QWidget):
             if y > self.height():
                 break
 
-    def mouseMoveEvent(self, event):
-        self._link = self._linkForPosition(event.pos())
-
-        # Buggy tooltip cause mouseMove
-        if event.pos() != self._mousePressedPos:
-            self._mousePressedPos = QPoint()
-            self._clickOnLink = False
-
-        cursorShape = Qt.PointingHandCursor if self._link \
-            else Qt.ArrowCursor
-        self.setCursor(cursorShape)
-
-        if event.button() == Qt.NoButton:
-            lineNo = self._lineNoForPosition(event.pos())
-            if lineNo != self._hoveredLine:
-                self._hoveredLine = lineNo
-
-        super().mouseMoveEvent(event)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._clickOnLink = self._link is not None
-
-        self._mousePressedPos = event.pos()
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            if self._link and self._clickOnLink:
-                self.linkActivated.emit(self._link)
-            elif not self._mousePressedPos.isNull():
-                lineNo = self._lineNoForPosition(event.pos())
-                if lineNo != -1:
-                    self._updateActiveRev(lineNo)
-
-        self._clickOnLink = False
-        self._mousePressedPos = QPoint()
-        super().mouseReleaseEvent(event)
-
     def contextMenuEvent(self, event):
-        if self._hoveredLine == -1:
+        textLine = self.textLineForPos(event.pos())
+        if not textLine:
             return
+
+        self._hoveredLine = textLine.lineNo()
 
         if not self._menu:
             self._menu = QMenu(self)
@@ -438,6 +371,10 @@ class RevisionPanel(QWidget):
         rev = self._revs[self._hoveredLine]
         self._acBlamePrevCommit.setEnabled(rev.previous is not None)
         self._menu.exec_(event.globalPos())
+
+    def update(self):
+        self.viewport().update()
+        super().update()
 
 
 class CommitPanel(TextViewer):
@@ -670,8 +607,8 @@ class BlameView(QWidget):
             texts.append(line.text)
             # to save memory as revision panel no need text
             line.text = None
-            self._revPanel.appendRevision(line)
 
+        self._revPanel.appendRevisions(lines)
         self._viewer.appendLines(texts)
 
     def _onFetchFinished(self):
@@ -681,6 +618,7 @@ class BlameView(QWidget):
             self._viewer.gotoLine(self._lineNo - 1)
             self._lineNo = -1
         self._viewer.endReading()
+        self._revPanel.endReading()
 
     def _findFileBySHA1(self, sha1):
         file = self._revPanel.getFileBySHA1(sha1)
@@ -696,6 +634,7 @@ class BlameView(QWidget):
         self.blameFileAboutToChange.emit(file)
         self.clear()
         self._viewer.beginReading()
+        self._revPanel.beginReading()
         self._fetcher.fetch(file, sha1)
 
         self._file = file

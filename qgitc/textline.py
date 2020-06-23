@@ -79,13 +79,14 @@ class TextLine():
         self._font = font
 
         self._defOption = option
+        self._useBuiltinPatterns = True
 
-    def __relayout(self):
+    def _relayout(self):
         self._layout.beginLayout()
         self._layout.createLine()
         self._layout.endLayout()
 
-    def __findLinks(self, patterns):
+    def _findLinks(self, patterns):
         if self.isInfoType():
             return
 
@@ -199,10 +200,11 @@ class TextLine():
             if self._defOption:
                 self._layout.setTextOption(self._defOption)
 
-            patterns = TextLine.builtinPatterns()
+            patterns = TextLine.builtinPatterns() if \
+                self._useBuiltinPatterns else {}
             if self._patterns:
                 patterns.update(self._patterns)
-            self.__findLinks(patterns)
+            self._findLinks(patterns)
 
         if self._rehighlight:
             self.rehighlight()
@@ -211,7 +213,7 @@ class TextLine():
             self._invalidated = True
 
         if self._invalidated:
-            self.__relayout()
+            self._relayout()
             self._invalidated = False
 
     def boundingRect(self):
@@ -247,7 +249,7 @@ class TextLine():
                 patterns[Link.Sha1] = sha1_re
                 patterns[Link.Email] = email_re
                 patterns[Link.Url] = url_re
-                self.__findLinks(patterns)
+                self._findLinks(patterns)
             self.rehighlight()
         else:
             self._rehighlight = True
@@ -260,6 +262,14 @@ class TextLine():
 
     def hasCR(self):
         return False
+
+    @property
+    def useBuiltinPatterns(self):
+        return self._useBuiltinPatterns
+
+    @useBuiltinPatterns.setter
+    def useBuiltinPatterns(self, value):
+        self._useBuiltinPatterns = value
 
 
 class SourceTextLineBase(TextLine):
