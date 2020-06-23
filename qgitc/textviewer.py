@@ -3,14 +3,16 @@
 from PySide2.QtWidgets import (
     QAbstractScrollArea,
     QWidget,
-    QApplication)
+    QApplication,
+    QMenu)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
     QTextCharFormat,
     QTextOption,
     QBrush,
-    QColor)
+    QColor,
+    QKeySequence)
 from PySide2.QtCore import (
     Qt,
     QRect,
@@ -19,7 +21,8 @@ from PySide2.QtCore import (
     QPointF,
     Signal,
     QElapsedTimer,
-    QTimer)
+    QTimer,
+    QMimeData)
 
 from .textline import (
     TextLine,
@@ -68,7 +71,7 @@ class TextViewer(QAbstractScrollArea):
         self._highlightLines = []
         self._highlightFind = []
 
-        self._cursor = TextCursor()
+        self._cursor = TextCursor(self)
         self._clickTimer = QElapsedTimer()
 
         self.viewport().setMouseTracking(True)
@@ -78,6 +81,8 @@ class TextViewer(QAbstractScrollArea):
 
         pattern = qApp.settings().bugPattern()
         self._bugPattern = re.compile(pattern) if pattern else None
+
+        self._contextMenu = None
 
     def updateFont(self, font):
         self._font = font
@@ -317,36 +322,17 @@ class TextViewer(QAbstractScrollArea):
 
     @property
     def selectedText(self):
-        # TODO: move to TextCursor
-        if not self._cursor.hasSelection():
-            return None
-        beginLine = self._cursor.beginLine()
-        beginPos = self._cursor.beginPos()
-        endPos = self._cursor.endPos()
+        return self._cursor.selectedText()
 
-        text = None
-        if self._cursor.hasMultiLines():
-            endLine = self._cursor.endLine()
-            textLine = self.textLineAt(beginLine)
-            text = textLine.text()[beginPos:]
+    def copy(self):
+        text = self._cursor.selectedText()
+        if not text:
+            return
 
-            text += '\n'
-            if textLine.hasCR():
-                text += '\r'
-
-            for i in range(beginLine + 1, endLine):
-                textLine = self.textLineAt(i)
-                text += textLine.text()
-                text += '\n'
-                if textLine.hasCR():
-                    text += '\r'
-
-            textLine = self.textLineAt(endLine)
-            text += textLine.text()[:endPos]
-        else:
-            text = self.textLineAt(beginLine).text()[beginPos:endPos]
-
-        return text
+        clipboard = QApplication.clipboard()
+        mimeData = QMimeData()
+        mimeData.setText(text)
+        clipboard.setMimeData(mimeData)
 
     @property
     def textCursor(self):
@@ -355,6 +341,22 @@ class TextViewer(QAbstractScrollArea):
     def updateLinkData(self, link, lineNo):
         """ Implement in subclass"""
         pass
+
+    @property
+    def contextMenu(self):
+        if not self._contextMenu:
+            self._contextMenu = QMenu(self)
+            self._acCopy = self._contextMenu.addAction(
+                self.tr("&Copy"),
+                self.copy,
+                QKeySequence("Ctrl+C"))
+            self._contextMenu.addSeparator()
+            self._acSelectAll = self._contextMenu.addAction(
+                self.tr("Select &All"),
+                self.selectAll,
+                QKeySequence("Ctrl+A"))
+
+        return self._contextMenu
 
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
@@ -463,7 +465,6 @@ class TextViewer(QAbstractScrollArea):
 
         if needAdjust:
             self._adjustScrollbars()
-
 
     def paintEvent(self, event):
         if not self.hasTextLines():
@@ -632,3 +633,8 @@ class TextViewer(QAbstractScrollArea):
         cursorShape = Qt.PointingHandCursor if self._link \
             else Qt.IBeamCursor
         self.viewport().setCursor(cursorShape)
+
+    def contextMenuEvent(self, event):
+        menu = self.contextMenu
+        self._acCopy.setEnabled(self._cursor.hasSelection())
+        menu.exec_(event.globalPos())
