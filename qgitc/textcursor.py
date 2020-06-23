@@ -6,8 +6,9 @@ __all__ = ["TextCursor"]
 
 class TextCursor():
 
-    def __init__(self):
+    def __init__(self, viewer=None):
         self.clear()
+        self._viewer = viewer
 
     def __eq__(self, other):
         return self._beginLine == other._beginLine and \
@@ -81,3 +82,34 @@ class TextCursor():
     def selectTo(self, line, pos):
         self._endLine = line
         self._endPos = pos
+
+    def selectedText(self):
+        if not self._viewer or not self.hasSelection():
+            return None
+
+        beginLine = self.beginLine()
+        beginPos = self.beginPos()
+        endLine = self.endLine()
+        endPos = self.endPos()
+
+        # only one line
+        if beginLine == endLine:
+            textLine = self._viewer.textLineAt(beginLine)
+            text = textLine.text()[beginPos:endPos]
+        else:
+            # first line
+            textLine = self._viewer.textLineAt(beginLine)
+            text = textLine.text()[beginPos:]
+            text += ('\r\n' if textLine.hasCR() else '\n')
+
+            # middle lines
+            for i in range(beginLine + 1, endLine):
+                textLine = self._viewer.textLineAt(i)
+                text += textLine.text()
+                text += ('\r\n' if textLine.hasCR() else '\n')
+
+            # last line
+            textLine = self._viewer.textLineAt(endLine)
+            text += textLine.text()[:endPos]
+
+        return text

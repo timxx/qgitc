@@ -646,3 +646,7 @@ class BlameView(QWidget):
     @property
     def viewer(self):
         return self._viewer
+
+    @property
+    def commitPanel(self):
+        return self._commitPanel

@@ -60,14 +60,17 @@ class BlameWindow(QMainWindow):
         editMenu.addAction(self.tr("&Go To Line..."),
                            self._onGotoLine,
                            QKeySequence("Ctrl+G"))
+        editMenu.addAction(self.tr("&Find"),
+                           self.showFindWidget,
+                           QKeySequence("Ctrl+F"))
+        editMenu.addSeparator()
+        editMenu.addAction(self.tr("&Copy"),
+                           self._onCopy,
+                           QKeySequence("Ctrl+C"))
         editMenu.addSeparator()
         editMenu.addAction(self.tr("Select &All"),
                            self._onSelectAll,
                            QKeySequence("Ctrl+A"))
-        editMenu.addSeparator()
-        editMenu.addAction(self.tr("&Find"),
-                           self.showFindWidget,
-                           QKeySequence("Ctrl+F"))
 
     def _onGotoLine(self):
         gotoDialog = GotoDialog(self)
@@ -81,8 +84,17 @@ class BlameWindow(QMainWindow):
 
         viewer.gotoLine(gotoDialog.lineNo - 1)
 
+    def _onCopy(self):
+        if qApp.focusWidget() == self._view.commitPanel:
+            self._view.commitPanel.copy()
+        else:
+            self._view.viewer.copy()
+
     def _onSelectAll(self):
-        self._view.viewer.selectAll()
+        if qApp.focusWidget() == self._view.commitPanel:
+            self._view.commitPanel.selectAll()
+        else:
+            self._view.viewer.selectAll()
 
     def _onFindFind(self, text):
         viewer = self._view.viewer
