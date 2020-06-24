@@ -92,6 +92,12 @@ class TextViewer(QAbstractScrollArea):
     def toTextLine(self, text):
         return TextLine(TextLine.Text, text, self._font, self._option)
 
+    def initTextLine(self, textLine, lineNo):
+        textLine.setLineNo(lineNo)
+        if textLine.useBuiltinPatterns and self._bugPattern:
+            patterns = {Link.BugId: self._bugPattern}
+            textLine.setCustomLinkPatterns(patterns)
+
     def appendLine(self, line):
         self.appendLines([line])
 
@@ -104,7 +110,7 @@ class TextViewer(QAbstractScrollArea):
             for line in lines:
                 textLine = self.toTextLine(line)
                 lineNo = len(self._textLines)
-                textLine.setLineNo(lineNo)
+                self.initTextLine(textLine, lineNo)
                 self._textLines[lineNo] = textLine
 
         if not self._convertTimer.isActive():
@@ -166,7 +172,7 @@ class TextViewer(QAbstractScrollArea):
             return None
 
         textLine = self.toTextLine(self._lines[n])
-        textLine.setLineNo(n)
+        self.initTextLine(textLine, n)
 
         self._textLines[n] = textLine
         # free the memory
