@@ -100,6 +100,9 @@ class TextLine():
     @staticmethod
     def findLinks(text, patterns, lineType=Text):
         links = []
+        if not text or not patterns:
+            return links
+
         foundLinks = []
         for linkType, pattern in patterns.items():
             # only find email if item is author
