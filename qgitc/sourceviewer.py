@@ -63,6 +63,10 @@ class SourceViewer(TextViewer):
         else:
             self.setViewportMargins(0, 0, 0, 0)
 
+    @property
+    def panel(self):
+        return self._panel
+
     def _onVScrollBarValueChanged(self, value):
         if self._panel:
             self._panel.update()
