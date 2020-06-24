@@ -377,6 +377,89 @@ class RevisionPanel(TextViewer):
         super().update()
 
 
+class BlameSourceViewer(SourceViewer):
+
+    revisionActivated = Signal(BlameLine)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._panel = RevisionPanel(self)
+        self._updatePanelGeo()
+
+        self._panel.revisionActivated.connect(
+            self.revisionActivated)
+        self._panel.linkActivated.connect(
+            self.linkActivated)
+
+        self._curIndexForMenu = -1
+
+    def clear(self):
+        super().clear()
+        self._panel.clear()
+
+    def beginReading(self):
+        super().beginReading()
+        self._panel.beginReading()
+
+    def endReading(self):
+        super().endReading()
+        self._panel.endReading()
+
+    def createContextMenu(self):
+        menu = super().createContextMenu()
+        menu.addSeparator()
+        menu.addAction(
+            self.tr("Show commit log"),
+            self._onMenuShowCommitLog)
+        self._acBlamePrev = menu.addAction(
+            self.tr("Blame previous commit"),
+            self._onMenuBlamePrevCommit)
+        return menu
+
+    def updateContextMenu(self, pos):
+        super().updateContextMenu(pos)
+
+        enabled = False
+        textLine = self.textLineForPos(pos)
+        if textLine:
+            self._curIndexForMenu = textLine.lineNo()
+            rev = self._panel.revisions[textLine.lineNo()]
+            enabled = rev.previous is not None
+        else:
+            self._curIndexForMenu = -1
+        self._acBlamePrev.setEnabled(enabled)
+
+    def appendBlameLines(self, lines):
+        texts = []
+        for line in lines:
+            texts.append(line.text)
+            # to save memory as revision panel no need text
+            line.text = None
+
+        self._panel.appendRevisions(lines)
+        self.appendLines(texts)
+
+    def _onMenuShowCommitLog(self):
+        if self._curIndexForMenu == -1:
+            return
+
+        rev = self._panel.revisions[self._curIndexForMenu]
+        event = ShowCommitEvent(rev.sha1)
+        qApp.postEvent(qApp, event)
+
+    def _onMenuBlamePrevCommit(self):
+        if self._curIndexForMenu == -1:
+            return
+
+        rev = self._panel.revisions[self._curIndexForMenu]
+        if rev.previous:
+            pass
+
+        file = self._panel.getFileBySHA1(rev.previous)
+        event = BlameEvent(file, rev.previous, rev.oldLineNo)
+        qApp.postEvent(qApp, event)
+
+
 class CommitPanel(TextViewer):
 
     def __init__(self, parent=None):
@@ -547,9 +630,7 @@ class BlameView(QWidget):
         self._headerWidget = HeaderWidget(self)
         layout.addWidget(self._headerWidget)
 
-        self._viewer = SourceViewer(self)
-        self._revPanel = RevisionPanel(self._viewer)
-        self._viewer.setPanel(self._revPanel)
+        self._viewer = BlameSourceViewer(self)
         layout.addWidget(self._viewer)
 
         self._commitPanel = CommitPanel(self)
@@ -575,14 +656,12 @@ class BlameView(QWidget):
         self._fetcher.fetchFinished.connect(
             self._onFetchFinished)
 
-        self._revPanel.revisionActivated.connect(
-            self._commitPanel.showRevision)
         self._commitPanel.linkActivated.connect(
-            self._onLinkActivated)
-        self._revPanel.linkActivated.connect(
             self._onLinkActivated)
         self._viewer.linkActivated.connect(
             self._onLinkActivated)
+        self._viewer.revisionActivated.connect(
+            self._commitPanel.showRevision)
 
     def _onLinkActivated(self, link):
         url = None
@@ -602,14 +681,7 @@ class BlameView(QWidget):
             QDesktopServices.openUrl(QUrl(url))
 
     def _onFetchDataAvailable(self, lines):
-        texts = []
-        for line in lines:
-            texts.append(line.text)
-            # to save memory as revision panel no need text
-            line.text = None
-
-        self._revPanel.appendRevisions(lines)
-        self._viewer.appendLines(texts)
+        self._viewer.appendBlameLines(lines)
 
     def _onFetchFinished(self):
         self.blameFileChanged.emit(self._file)
@@ -618,14 +690,12 @@ class BlameView(QWidget):
             self._viewer.gotoLine(self._lineNo - 1)
             self._lineNo = -1
         self._viewer.endReading()
-        self._revPanel.endReading()
 
     def _findFileBySHA1(self, sha1):
-        file = self._revPanel.getFileBySHA1(sha1)
+        file = self._viewer.panel.getFileBySHA1(sha1)
         return file if file else self._file
 
     def clear(self):
-        self._revPanel.clear()
         self._viewer.clear()
         self._commitPanel.clear()
 
@@ -634,7 +704,6 @@ class BlameView(QWidget):
         self.blameFileAboutToChange.emit(file)
         self.clear()
         self._viewer.beginReading()
-        self._revPanel.beginReading()
         self._fetcher.fetch(file, sha1)
 
         self._file = file

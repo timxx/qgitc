@@ -342,21 +342,28 @@ class TextViewer(QAbstractScrollArea):
         """ Implement in subclass"""
         pass
 
+    def createContextMenu(self):
+        menu = QMenu(self)
+        self._acCopy = menu.addAction(
+            self.tr("&Copy"),
+            self.copy,
+            QKeySequence("Ctrl+C"))
+        menu.addSeparator()
+        self._acSelectAll = menu.addAction(
+            self.tr("Select &All"),
+            self.selectAll,
+            QKeySequence("Ctrl+A"))
+
+        return menu
+
     @property
     def contextMenu(self):
         if not self._contextMenu:
-            self._contextMenu = QMenu(self)
-            self._acCopy = self._contextMenu.addAction(
-                self.tr("&Copy"),
-                self.copy,
-                QKeySequence("Ctrl+C"))
-            self._contextMenu.addSeparator()
-            self._acSelectAll = self._contextMenu.addAction(
-                self.tr("Select &All"),
-                self.selectAll,
-                QKeySequence("Ctrl+A"))
-
+            self._contextMenu = self.createContextMenu()
         return self._contextMenu
+
+    def updateContextMenu(self, pos):
+        self._acCopy.setEnabled(self._cursor.hasSelection())
 
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
@@ -636,5 +643,5 @@ class TextViewer(QAbstractScrollArea):
 
     def contextMenuEvent(self, event):
         menu = self.contextMenu
-        self._acCopy.setEnabled(self._cursor.hasSelection())
+        self.updateContextMenu(event.pos())
         menu.exec_(event.globalPos())
