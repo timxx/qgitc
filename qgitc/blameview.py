@@ -196,6 +196,8 @@ class RevisionPanel(TextViewer):
 
         viewer.textLineClicked.connect(
             self._onTextLineClicked)
+        self.textLineClicked.connect(
+            self._onTextLineClicked)
 
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
