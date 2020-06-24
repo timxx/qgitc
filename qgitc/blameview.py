@@ -250,6 +250,10 @@ class RevisionPanel(TextViewer):
                 return rev.prevFileName
         return None
 
+    def setActiveRevByLineNumber(self, lineNo):
+        if lineNo >= 0 and lineNo < len(self._revs):
+            self._updateActiveRev(lineNo)
+
     def _onTextLineClicked(self, textLine):
         self._updateActiveRev(textLine.lineNo())
 
@@ -690,6 +694,7 @@ class BlameView(QWidget):
         self._headerWidget.notifyFecthingFinished()
         if self._lineNo > 0:
             self._viewer.gotoLine(self._lineNo - 1)
+            self._viewer.panel.setActiveRevByLineNumber(self._lineNo - 1)
             self._lineNo = -1
         self._viewer.endReading()
 
