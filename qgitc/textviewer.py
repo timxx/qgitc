@@ -371,6 +371,12 @@ class TextViewer(QAbstractScrollArea):
     def updateContextMenu(self, pos):
         self._acCopy.setEnabled(self._cursor.hasSelection())
 
+    def drawLineBackground(self, painter, textLine, lineRect):
+        pass
+
+    def textLineFormatRange(self, textLine):
+        return None
+
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
 
@@ -501,12 +507,17 @@ class TextViewer(QAbstractScrollArea):
             br = textLine.boundingRect()
             r = br.translated(offset)
 
-            if i in self._highlightLines:
+            def lineRect():
                 fr = QRectF(br)
                 fr.moveTop(fr.top() + r.top())
                 fr.setLeft(0)
                 fr.setRight(viewportRect.width() - offset.x())
-                painter.fillRect(fr, QColor(192, 237, 197))
+                return fr
+
+            if i in self._highlightLines:
+                painter.fillRect(lineRect(), QColor(192, 237, 197))
+            else:
+                self.drawLineBackground(painter, textLine, lineRect())
 
             formats = []
 
@@ -514,6 +525,11 @@ class TextViewer(QAbstractScrollArea):
             findRg = self._findResultFormatRange(i)
             if findRg:
                 formats.extend(findRg)
+
+            # TextLine format
+            textLineRg = self.textLineFormatRange(textLine)
+            if textLineRg:
+                formats.extend(textLineRg)
 
             # selection
             selectionRg = self._selectionFormatRange(i)
@@ -524,7 +540,7 @@ class TextViewer(QAbstractScrollArea):
 
             offset.setY(offset.y() + r.height())
 
-            if (offset.y() > viewportRect.height()):
+            if offset.y() > viewportRect.height():
                 break
 
     def resizeEvent(self, event):
