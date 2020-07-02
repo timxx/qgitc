@@ -22,8 +22,7 @@ __all__ = ["SourceViewer"]
 class SourceTextLine(SourceTextLineBase):
 
     def __init__(self, text, font, option):
-        super().__init__(TextLine.Source, text,
-                         font, option)
+        super().__init__(text, font, option)
 
     def rehighlight(self):
         formats = self._commonHighlightFormats()

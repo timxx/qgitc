@@ -84,6 +84,12 @@ class TreeItemDelegate(QItemDelegate):
         self.pattern = pattern
 
 
+class DiffType:
+    File = 0
+    FileInfo = 1
+    Diff = 2
+
+
 class DiffFetcher(DataFetcher):
 
     diffAvailable = Signal(list, dict)
@@ -98,6 +104,9 @@ class DiffFetcher(DataFetcher):
         lineItems = []
         fileItems = {}
 
+        if data[-1] == ord(self.separator):
+            data = data[:-1]
+
         lines = data.split(self.separator)
         for line in lines:
             match = diff_re.search(line)
@@ -110,17 +119,17 @@ class DiffFetcher(DataFetcher):
                     fileB = match.group(3)
 
                 if not self._firstPatch:
-                    lineItems.append(LineItem(TextLine.Diff, b''))
+                    lineItems.append(LineItem(DiffType.Diff, b''))
                     self._row += 1
                 self._firstPatch = False
 
                 fileItems[fileA.decode(diff_encoding)] = self._row
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
-                    lineItems.append(LineItem(TextLine.File, fileB))
+                    lineItems.append(LineItem(DiffType.File, fileB))
                     fileItems[fileB.decode(diff_encoding)] = self._row
                 else:
-                    lineItems.append(LineItem(TextLine.File, fileA))
+                    lineItems.append(LineItem(DiffType.File, fileA))
 
                 self._row += 1
                 self._isDiffContent = False
@@ -130,34 +139,34 @@ class DiffFetcher(DataFetcher):
             match = submodule_re.match(line)
             if match:
                 if not self._firstPatch:
-                    lineItems.append(LineItem(TextLine.Diff, b''))
+                    lineItems.append(LineItem(DiffType.Diff, b''))
                     self._row += 1
                 self._firstPatch = False
 
                 submodule = match.group(1)
-                lineItems.append(LineItem(TextLine.File, submodule))
+                lineItems.append(LineItem(DiffType.File, submodule))
                 fileItems[submodule.decode(diff_encoding)] = self._row
                 self._row += 1
 
-                lineItems.append(LineItem(TextLine.FileInfo, line))
+                lineItems.append(LineItem(DiffType.FileInfo, line))
                 self._row += 1
 
                 self._isDiffContent = True
                 continue
 
             if self._isDiffContent:
-                itemType = TextLine.Diff
+                itemType = DiffType.Diff
             elif diff_begin_bre.search(line):
                 self._isDiffContent = True
-                itemType = TextLine.Diff
+                itemType = DiffType.Diff
             elif line.startswith(b"--- ") or line.startswith(b"+++ "):
                 continue
             elif not line:  # ignore the empty info line
                 continue
             else:
-                itemType = TextLine.FileInfo
+                itemType = DiffType.FileInfo
 
-            if itemType != TextLine.Diff:
+            if itemType != DiffType.Diff:
                 line = line.rstrip(b'\r')
             lineItems.append(LineItem(itemType, line))
             self._row += 1
@@ -403,59 +412,44 @@ class DiffView(QWidget):
             item.setData(0, Qt.UserRole, args[1])
             self.treeWidget.addTopLevelItem(item)
 
-    def __toBytes(self, string):
-        return string.encode("utf-8")
-
     def __commitDesc(self, sha1):
         if sha1 == Git.LUC_SHA1:
-            subject = self.__toBytes(
-                self.tr("Local uncommitted changes, not checked in to index")
-            )
+            subject = self.tr("Local uncommitted changes, not checked in to index")
         elif sha1 == Git.LCC_SHA1:
-            subject = self.__toBytes(
-                self.tr("Local changes checked in to index but not committed")
-            )
+            subject = self.tr("Local changes checked in to index but not committed")
         else:
-            subject = Git.commitSubject(sha1)
+            subject = Git.commitSubject(sha1).decode("utf-8")
 
-        return b" (" + subject + b")"
+        return " (" + subject + ")"
 
-    def __commitToLineItems(self, commit):
-        items = []
-
+    def __commitToTextLines(self, commit):
         if not commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
-            content = self.__toBytes(self.tr("Author: ") + commit.author +
-                                     " " + commit.authorDate)
-            item = LineItem(TextLine.Author, content)
-            items.append(item)
+            content = self.tr("Author: ") + commit.author + \
+                                     " " + commit.authorDate
+            self.viewer.addAuthorLine(content)
 
-            content = self.__toBytes(self.tr("Committer: ") + commit.committer +
-                                     " " + commit.committerDate)
-            item = LineItem(TextLine.Author, content)
-            items.append(item)
+            content = self.tr("Committer: ") + commit.committer + \
+                                     " " + commit.committerDate
+            self.viewer.addAuthorLine(content)
 
         for parent in commit.parents:
-            content = self.__toBytes(self.tr("Parent: ") + parent)
+            content = self.tr("Parent: ") + parent
             content += self.__commitDesc(parent)
-            item = LineItem(TextLine.Parent, content)
-            items.append(item)
+            self.viewer.addSHA1Line(content, True)
 
         for child in commit.children:
-            content = self.__toBytes(self.tr("Child: ") + child)
+            content = self.tr("Child: ") + child
             content += self.__commitDesc(child)
-            items.append(LineItem(TextLine.Child, content))
+            self.viewer.addSHA1Line(content, False)
 
-        items.append(LineItem(TextLine.Comments, b""))
+        self.viewer.addNormalTextLine("", False)
 
         comments = commit.comments.split('\n')
         for comment in comments:
             content = comment if not comment else "    " + comment
-            item = LineItem(TextLine.Comments, self.__toBytes(content))
-            items.append(item)
+            self.viewer.addNormalTextLine(content)
 
-        items.append(LineItem(TextLine.Comments, b""))
-
-        return items
+        self.viewer.addNormalTextLine("", False)
 
     def __diffToolForFile(self, filePath):
         tools = qApp.instance().settings().mergeToolList()
@@ -472,16 +466,15 @@ class DiffView(QWidget):
         self.clear()
         self.commit = commit
 
-        self.viewer.beginReading()
         self.__addToTreeWidget(self.tr("Comments"), 0)
 
         item = self.treeWidget.topLevelItem(0)
         self.treeWidget.setCurrentItem(item)
 
-        lineItems = self.__commitToLineItems(commit)
-        self.viewer.appendLines(lineItems)
+        self.__commitToTextLines(commit)
 
-        self.fetcher.resetRow(len(lineItems))
+        self.viewer.beginReading()
+        self.fetcher.resetRow(self.viewer.textLineCount())
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         # FIXME: delay showing the spinner when loading small diff to avoid flicker
         self.beginFetch.emit()
@@ -514,8 +507,7 @@ class DiffView(QWidget):
 class DiffTextLine(SourceTextLineBase):
 
     def __init__(self, viewer, text):
-        super().__init__(TextLine.Diff, text,
-                         viewer._font, viewer._option)
+        super().__init__(text, viewer._font, viewer._option)
 
     def rehighlight(self):
         text = self.text()
@@ -550,8 +542,19 @@ class InfoTextLine(TextLine):
 
     def __init__(self, viewer, type, text):
         super(InfoTextLine, self).__init__(
-            type, text,
-            viewer._font, viewer._infoLineOption)
+            text, viewer._font, viewer._infoLineOption)
+        self._type = type
+        self.useBuiltinPatterns = False
+
+    def _findLinks(self, patterns):
+        # do nothing
+        pass
+
+    def isFileInfo(self):
+        return self._type == DiffType.FileInfo
+
+    def isFile(self):
+        return self._type == DiffType.File
 
     def rehighlight(self):
         fmt = QTextCharFormat()
@@ -562,6 +565,28 @@ class InfoTextLine(TextLine):
         formats.append(fmtRg)
 
         self._layout.setAdditionalFormats(formats)
+
+
+class AuthorTextLine(TextLine):
+
+    def __init__(self, viewer, text):
+        super().__init__(text, viewer._font, viewer._infoLineOption)
+        self.useBuiltinPatterns = False
+        patterns = TextLine.builtinPatterns()
+        self.setCustomLinkPatterns({Link.Email: patterns[Link.Email]})
+
+
+class Sha1TextLine(TextLine):
+
+    def __init__(self, viewer, text, isParent):
+        super().__init__(text, viewer._font, viewer._infoLineOption)
+        self._isParent = isParent
+        self.useBuiltinPatterns = False
+        patterns = TextLine.builtinPatterns()
+        self.setCustomLinkPatterns({Link.Sha1: patterns[Link.Sha1]})
+
+    def isParent(self):
+        return self._isParent
 
 
 class PatchViewer(SourceViewer):
@@ -616,7 +641,7 @@ class PatchViewer(SourceViewer):
             pattern = {Link.BugId: self._bugPattern}
 
         for i, line in self._textLines.items():
-            if line.type() == TextLine.Diff:
+            if isinstance(line, DiffTextLine):
                 line.setDefOption(self._option)
             line.setFont(self._font)
             line.setCustomLinkPatterns(pattern)
@@ -626,37 +651,49 @@ class PatchViewer(SourceViewer):
 
     def toTextLine(self, item):
         # only diff line needs different encoding
-        if item.type != TextLine.Diff:
+        if item.type != DiffType.Diff:
             self.lastEncoding = diff_encoding
 
         # alloc too many objects at the same time is too slow
         # so delay construct TextLine and decode bytes here
         text, self.lastEncoding = decodeDiffData(
             item.content, self.lastEncoding)
-        if item.type == TextLine.Diff:
+        if item.type == DiffType.Diff:
             textLine = DiffTextLine(self, text)
-        elif item.type == TextLine.File or \
-                item.type == TextLine.FileInfo:
+        elif item.type == DiffType.File or \
+                item.type == DiffType.FileInfo:
             textLine = InfoTextLine(self, item.type, text)
         else:
-            textLine = TextLine(item.type, text,
-                                self._font, self._infoLineOption)
+            assert(False)
 
         return textLine
 
+    def addAuthorLine(self, name):
+        textLine = AuthorTextLine(self, name)
+        self._appendTextLine(textLine)
+
+    def addSHA1Line(self, content, isParent):
+        textLine = Sha1TextLine(self, content, isParent)
+        self._appendTextLine(textLine)
+
+    def addNormalTextLine(self, text, useBuiltinPatterns=True):
+        textLine = TextLine(text, self._font, self._infoLineOption)
+        textLine.useBuiltinPatterns = useBuiltinPatterns
+        self._appendTextLine(textLine)
+
     def drawLineBackground(self, painter, textLine, lineRect):
-        if textLine.isInfoType():
+        if isinstance(textLine, InfoTextLine):
             painter.fillRect(lineRect, ColorSchema.Info)
 
     def textLineFormatRange(self, textLine):
         formats = []
 
-        if textLine.type() >= TextLine.Author and textLine.type() <= TextLine.Comments:
-            fmt = self._createCommentsFormats(textLine)
+        if isinstance(textLine, DiffTextLine):
+            fmt = self._createDiffFormats(textLine)
             if fmt:
                 formats.extend(fmt)
-        elif textLine.type() == TextLine.Diff:
-            fmt = self._createDiffFormats(textLine)
+        elif not isinstance(textLine, InfoTextLine):
+            fmt = self._createCommentsFormats(textLine)
             if fmt:
                 formats.extend(fmt)
 
@@ -674,6 +711,13 @@ class PatchViewer(SourceViewer):
     def updateContextMenu(self, pos):
         self._acOpenCommit.setVisible(self._link is not None)
         self._acOpenCommit.setEnabled(self._link is not None)
+
+    def updateLinkData(self, link, lineNo):
+        if link.type == Link.Sha1:
+            textLine = self.textLineAt(lineNo)
+            if isinstance(textLine, Sha1TextLine):
+                if not isinstance(link.data, tuple):
+                    link.data = (link.data, textLine.isParent())
 
     def highlightKeyword(self, pattern, field):
         self.highlightPattern = pattern
@@ -744,6 +788,14 @@ class PatchViewer(SourceViewer):
 
         return None
 
+    def _appendTextLine(self, textLine):
+        lineNo = self.textLineCount()
+        textLine.setLineNo(lineNo)
+        if self._lines is None:
+            self._lines = []
+        self._lines.append(None)
+        self._textLines[lineNo] = textLine
+
     def _onVScollBarValueChanged(self, value):
         if not self.hasTextLines():
             return
@@ -751,10 +803,11 @@ class PatchViewer(SourceViewer):
         # TODO: improve
         for i in range(value, -1, -1):
             textLine = self.textLineAt(i)
-            if textLine.type() == TextLine.File:
+            if isinstance(textLine, InfoTextLine) and textLine.isFile():
                 self.fileRowChanged.emit(i)
                 break
-            elif textLine.type() == TextLine.Parent or textLine.type() == TextLine.Author:
+            elif isinstance(textLine, AuthorTextLine) or \
+                    (isinstance(textLine, Sha1TextLine) and textLine.isParent()):
                 self.fileRowChanged.emit(0)
                 break
 
@@ -793,9 +846,13 @@ class PatchViewer(SourceViewer):
     def _onLinkActivated(self, link):
         url = None
         if link.type == Link.Sha1:
-            isNear = link.lineType in (TextLine.Parent, TextLine.Child)
-            goNext = link.lineType == TextLine.Parent
-            self.requestCommit.emit(link.data, isNear, goNext)
+            data = link.data
+            isNear = isinstance(data, tuple)
+            goNext = False
+            if isNear:
+                goNext = data[1]
+                data = data[0]
+            self.requestCommit.emit(data, isNear, goNext)
         elif link.type == Link.Email:
             url = "mailto:" + link.data
         elif link.type == Link.BugId:

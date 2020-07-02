@@ -40,12 +40,11 @@ class Link():
     Email = 2
     Url = 3
 
-    def __init__(self, start, end, linkType, lineType):
+    def __init__(self, start, end, linkType):
         self.start = start
         self.end = end
         self.type = linkType
         self.data = None
-        self.lineType = lineType
 
     def setData(self, data):
         self.data = data
@@ -56,19 +55,7 @@ class Link():
 
 class TextLine():
 
-    Text = 0
-    Author = 1
-    Parent = 2
-    Child = 3
-    Branch = 4
-    Comments = 5
-    File = 6
-    FileInfo = 7
-    Diff = 8
-    Source = 9
-
-    def __init__(self, type, text, font, option):
-        self._type = type
+    def __init__(self, text, font, option):
         self._text = text
         self._layout = None
         self._links = []
@@ -87,29 +74,20 @@ class TextLine():
         self._layout.endLayout()
 
     def _findLinks(self, patterns):
-        if self.isInfoType():
-            return
-
         links = TextLine.findLinks(
             self._text,
-            patterns,
-            self._type)
+            patterns)
         if links:
             self._links.extend(links)
 
     @staticmethod
-    def findLinks(text, patterns, lineType=Text):
+    def findLinks(text, patterns):
         links = []
         if not text or not patterns:
             return links
 
         foundLinks = []
         for linkType, pattern in patterns.items():
-            # only find email if item is author
-            if linkType != Link.Email and \
-                    lineType == TextLine.Author:
-                continue
-
             matches = pattern.finditer(text)
             for m in matches:
                 found = False
@@ -124,7 +102,7 @@ class TextLine():
                 if found:
                     continue
 
-                link = Link(m.start(), m.end(), linkType, lineType)
+                link = Link(m.start(), m.end(), linkType)
                 link.setData(m.group(0 if pattern.groups == 0 else 1))
 
                 links.append(link)
@@ -153,13 +131,6 @@ class TextLine():
             formats.append(rg)
 
         return formats
-
-    def type(self):
-        return self._type
-
-    def isInfoType(self):
-        return self._type == TextLine.File or \
-            self._type == TextLine.FileInfo
 
     def text(self):
         return self._text
@@ -277,11 +248,11 @@ class TextLine():
 
 class SourceTextLineBase(TextLine):
 
-    def __init__(self, type, text, font, option):
+    def __init__(self, text, font, option):
         self._hasCR = text.endswith('\r')
         if self._hasCR:
             text = text[:-1]
-        super().__init__(type, text, font, option)
+        super().__init__(text, font, option)
 
         self._crWidth = 0
         self._updateCRWidth()

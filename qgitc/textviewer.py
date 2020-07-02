@@ -90,7 +90,7 @@ class TextViewer(QAbstractScrollArea):
         self._lineHeight = fm.height()
 
     def toTextLine(self, text):
-        return TextLine(TextLine.Text, text, self._font, self._option)
+        return TextLine(text, self._font, self._option)
 
     def initTextLine(self, textLine, lineNo):
         textLine.setLineNo(lineNo)
