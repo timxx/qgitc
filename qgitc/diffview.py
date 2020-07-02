@@ -582,6 +582,8 @@ class PatchViewer(SourceViewer):
 
         self.findWidget = None
 
+        self.updateSettings()
+
         self.verticalScrollBar().valueChanged.connect(
              self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
@@ -797,7 +799,7 @@ class PatchViewer(SourceViewer):
         elif link.type == Link.Email:
             url = "mailto:" + link.data
         elif link.type == Link.BugId:
-            url = self.bugUrl + link.data
+            url = self._bugUrl + link.data
         else:
             url = link.data
 
