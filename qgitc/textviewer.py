@@ -428,6 +428,9 @@ class TextViewer(QAbstractScrollArea):
         if self._cursor.endLine() == lineIndex:
             end = self._cursor.endPos()
 
+        if end == 0:
+            end = 1
+
         fmt = QTextCharFormat()
         if qApp.applicationState() == Qt.ApplicationActive:
             fmt.setBackground(QBrush(ColorSchema.SelFocus))
