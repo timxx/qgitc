@@ -55,7 +55,7 @@ class Link():
 
 class TextLine():
 
-    def __init__(self, text, font, option):
+    def __init__(self, text, font, option=None):
         self._text = text
         self._layout = None
         self._links = []
@@ -67,6 +67,10 @@ class TextLine():
 
         self._defOption = option
         self._useBuiltinPatterns = True
+
+        if not self._defOption:
+            self._defOption = QTextOption()
+        self._defOption.setWrapMode(QTextOption.NoWrap)
 
     def _relayout(self):
         self._layout.beginLayout()

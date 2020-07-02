@@ -542,7 +542,7 @@ class InfoTextLine(TextLine):
 
     def __init__(self, viewer, type, text):
         super(InfoTextLine, self).__init__(
-            text, viewer._font, viewer._infoLineOption)
+            text, viewer._font)
         self._type = type
         self.useBuiltinPatterns = False
 
@@ -570,7 +570,7 @@ class InfoTextLine(TextLine):
 class AuthorTextLine(TextLine):
 
     def __init__(self, viewer, text):
-        super().__init__(text, viewer._font, viewer._infoLineOption)
+        super().__init__(text, viewer._font)
         self.useBuiltinPatterns = False
         patterns = TextLine.builtinPatterns()
         self.setCustomLinkPatterns({Link.Email: patterns[Link.Email]})
@@ -579,7 +579,7 @@ class AuthorTextLine(TextLine):
 class Sha1TextLine(TextLine):
 
     def __init__(self, viewer, text, isParent):
-        super().__init__(text, viewer._font, viewer._infoLineOption)
+        super().__init__(text, viewer._font)
         self._isParent = isParent
         self.useBuiltinPatterns = False
         patterns = TextLine.builtinPatterns()
@@ -598,9 +598,6 @@ class PatchViewer(SourceViewer):
         super().__init__(parent)
 
         self.lastEncoding = None
-
-        self._infoLineOption = QTextOption()
-        self._infoLineOption.setWrapMode(QTextOption.NoWrap)
 
         self.highlightPattern = None
         self.highlightField = FindField.Comments
@@ -626,7 +623,7 @@ class PatchViewer(SourceViewer):
         tabSize = settings.tabSize()
         tabstopWidth = fm.width(' ') * tabSize
 
-        self._option = QTextOption(self._infoLineOption)
+        self._option = QTextOption()
         self._option.setTabStop(tabstopWidth)
 
         if settings.showWhitespace():
@@ -677,7 +674,7 @@ class PatchViewer(SourceViewer):
         self._appendTextLine(textLine)
 
     def addNormalTextLine(self, text, useBuiltinPatterns=True):
-        textLine = TextLine(text, self._font, self._infoLineOption)
+        textLine = TextLine(text, self._font)
         textLine.useBuiltinPatterns = useBuiltinPatterns
         self._appendTextLine(textLine)
 
