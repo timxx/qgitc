@@ -428,8 +428,9 @@ class TextViewer(QAbstractScrollArea):
         if self._cursor.endLine() == lineIndex:
             end = self._cursor.endPos()
 
-        if end == 0:
-            end = 1
+        # select the new line if multiple lines selected
+        if lineIndex < self._cursor.endLine():
+            end += 1
 
         fmt = QTextCharFormat()
         if qApp.applicationState() == Qt.ApplicationActive:
