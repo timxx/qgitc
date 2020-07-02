@@ -199,6 +199,8 @@ class TextLine():
         return self._layout.boundingRect()
 
     def offsetForPos(self, pos):
+        if not self._text:
+            return 0
         self.ensureLayout()
         line = self._layout.lineAt(0)
         return line.xToCursor(pos.x())
@@ -214,6 +216,8 @@ class TextLine():
         self._layout.draw(painter, pos, selections, clip)
 
     def rehighlight(self):
+        if not self._text:
+            return
         formats = self.createLinksFormats()
         if formats:
             self._layout.setAdditionalFormats(formats)
