@@ -15,7 +15,8 @@ import bisect
 import re
 
 
-__all__ = ["createFormatRange", "Link", "TextLine", "SourceTextLineBase"]
+__all__ = ["createFormatRange", "Link", "TextLine",
+           "SourceTextLineBase", "LinkTextLine"]
 
 
 sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{7,40}(?![a-zA-Z0-9_])")
@@ -337,3 +338,13 @@ class SourceTextLineBase(TextLine):
             formats.extend(linkFmt)
 
         return formats
+
+
+class LinkTextLine(TextLine):
+
+    def __init__(self, text, font, linkType):
+        super().__init__(text, font)
+        self.useBuiltinPatterns = False
+        patterns = TextLine.builtinPatterns()
+        self.setCustomLinkPatterns(
+            {linkType: patterns[linkType]})

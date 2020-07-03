@@ -9,9 +9,7 @@ from PySide2.QtGui import (
 from PySide2.QtCore import (
     Qt)
 
-from .textline import (
-    TextLine,
-    SourceTextLineBase)
+from .textline import SourceTextLineBase
 from .stylehelper import dpiScaled
 from .textviewer import TextViewer
 

@@ -13,7 +13,8 @@ from .textline import (
     createFormatRange,
     Link,
     TextLine,
-    SourceTextLineBase)
+    SourceTextLineBase,
+    LinkTextLine)
 from .colorschema import ColorSchema
 from .textcursor import TextCursor
 from .sourceviewer import SourceViewer
@@ -567,23 +568,17 @@ class InfoTextLine(TextLine):
         self._layout.setAdditionalFormats(formats)
 
 
-class AuthorTextLine(TextLine):
+class AuthorTextLine(LinkTextLine):
 
     def __init__(self, viewer, text):
-        super().__init__(text, viewer._font)
-        self.useBuiltinPatterns = False
-        patterns = TextLine.builtinPatterns()
-        self.setCustomLinkPatterns({Link.Email: patterns[Link.Email]})
+        super().__init__(text, viewer._font, Link.Email)
 
 
-class Sha1TextLine(TextLine):
+class Sha1TextLine(LinkTextLine):
 
     def __init__(self, viewer, text, isParent):
-        super().__init__(text, viewer._font)
+        super().__init__(text, viewer._font, Link.Sha1)
         self._isParent = isParent
-        self.useBuiltinPatterns = False
-        patterns = TextLine.builtinPatterns()
-        self.setCustomLinkPatterns({Link.Sha1: patterns[Link.Sha1]})
 
     def isParent(self):
         return self._isParent
@@ -667,16 +662,16 @@ class PatchViewer(SourceViewer):
 
     def addAuthorLine(self, name):
         textLine = AuthorTextLine(self, name)
-        self._appendTextLine(textLine)
+        self.appendTextLine(textLine)
 
     def addSHA1Line(self, content, isParent):
         textLine = Sha1TextLine(self, content, isParent)
-        self._appendTextLine(textLine)
+        self.appendTextLine(textLine)
 
     def addNormalTextLine(self, text, useBuiltinPatterns=True):
         textLine = TextLine(text, self._font)
         textLine.useBuiltinPatterns = useBuiltinPatterns
-        self._appendTextLine(textLine)
+        self.appendTextLine(textLine)
 
     def drawLineBackground(self, painter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
@@ -784,14 +779,6 @@ class PatchViewer(SourceViewer):
                 return self._highlightFormatRange(textLine.text())
 
         return None
-
-    def _appendTextLine(self, textLine):
-        lineNo = self.textLineCount()
-        textLine.setLineNo(lineNo)
-        if self._lines is None:
-            self._lines = []
-        self._lines.append(None)
-        self._textLines[lineNo] = textLine
 
     def _onVScollBarValueChanged(self, value):
         if not self.hasTextLines():

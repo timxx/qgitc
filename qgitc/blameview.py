@@ -39,7 +39,7 @@ from datetime import datetime
 from .datafetcher import DataFetcher
 from .stylehelper import dpiScaled
 from .sourceviewer import SourceViewer
-from .textline import TextLine, Link
+from .textline import LinkTextLine, Link
 from .gitutils import Git
 from .colorschema import ColorSchema
 from .events import BlameEvent, ShowCommitEvent
@@ -526,19 +526,23 @@ class CommitPanel(TextViewer):
         super().clear()
 
         text = self.tr("Commit: ") + rev.sha1
-        self.appendLine(text)
+        textLine = LinkTextLine(text, self._font, Link.Sha1)
+        self.appendTextLine(textLine)
 
         text = self.tr("Author: ") + rev.author + " " + \
             rev.authorMail + " " + rev.authorTime
-        self.appendLine(text)
+        textLine = LinkTextLine(text, self._font, Link.Email)
+        self.appendTextLine(textLine)
 
         text = self.tr("Committer: ") + rev.committer + " " + \
             rev.committerMail + " " + rev.committerTime
-        self.appendLine(text)
+        textLine = LinkTextLine(text, self._font, Link.Email)
+        self.appendTextLine(textLine)
 
         if rev.previous:
             text = self.tr("Previous: ") + rev.previous
-            self.appendLine(text)
+            textLine = LinkTextLine(text, self._font, Link.Sha1)
+            self.appendTextLine(textLine)
 
         self.appendLine("")
         self.appendLine(rev.summary)
