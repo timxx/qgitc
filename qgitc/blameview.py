@@ -465,6 +465,55 @@ class BlameSourceViewer(SourceViewer):
         event = BlameEvent(file, rev.previous, rev.oldLineNo)
         qApp.postEvent(qApp, event)
 
+    def _lineRect(self, lineNo):
+        firstLine = self.firstVisibleLine()
+        if lineNo < firstLine:
+            return QRect()
+        if lineNo > firstLine + self._linesPerPage():
+            return QRect()
+
+        offset = self.contentOffset()
+        offset.setY(offset.y() + (lineNo - firstLine) * self._lineHeight)
+
+        textLine = self.textLineAt(self._cursor.beginLine())
+        lineRect = textLine.boundingRect()
+        lineRect.translate(offset)
+        lineRect.setRight(self.viewport().rect().width()
+                          - offset.x()
+                          - dpiScaled(1))
+
+        return lineRect.toRect()
+
+    def mousePressEvent(self, event):
+        oldLine = self._cursor.beginLine()
+        super().mousePressEvent(event)
+        if not self._cursor.isValid():
+            return
+        if self._cursor.hasSelection():
+            return
+
+        newLine = self._cursor.endLine()
+        if newLine == oldLine:
+            return
+        r = self._lineRect(oldLine)
+        onePixel = dpiScaled(1)
+        self.viewport().update(r.adjusted(-onePixel, -onePixel, onePixel, onePixel))
+        r = self._lineRect(newLine)
+        self.viewport().update(r.adjusted(-onePixel, -onePixel, onePixel, onePixel))
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._cursor.isValid() and \
+                not self._cursor.hasSelection():
+            lineNo = self._cursor.beginLine()
+            lineRect = self._lineRect(lineNo)
+            if not lineRect.isValid():
+                return
+
+            painter = QPainter(self.viewport())
+            painter.setPen(Qt.gray)
+            painter.drawRect(lineRect)
+
 
 class CommitPanel(TextViewer):
 
