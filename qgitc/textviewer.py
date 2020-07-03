@@ -194,6 +194,8 @@ class TextViewer(QAbstractScrollArea):
         if lineNo < 0 or lineNo >= self.textLineCount():
             return
 
+        self._cursor.moveTo(lineNo, 0)
+
         # central the lineNo in view
         halfOfPage = self._linesPerPage() // 2
         if lineNo > halfOfPage:
