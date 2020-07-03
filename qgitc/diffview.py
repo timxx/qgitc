@@ -3,7 +3,6 @@
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
-from collections import namedtuple
 
 from .common import *
 from .gitutils import Git
@@ -16,13 +15,10 @@ from .textline import (
     SourceTextLineBase,
     LinkTextLine)
 from .colorschema import ColorSchema
-from .textcursor import TextCursor
 from .sourceviewer import SourceViewer
 
 import re
 
-
-LineItem = namedtuple("LineItem", ["type", "content"])
 
 diff_re = re.compile(b"^diff --(git a/(.*) b/(.*)|cc (.*))")
 diff_begin_re = re.compile(r"^@{2,}( (\+|\-)[0-9]+(,[0-9]+)?)+ @{2,}")
@@ -120,17 +116,17 @@ class DiffFetcher(DataFetcher):
                     fileB = match.group(3)
 
                 if not self._firstPatch:
-                    lineItems.append(LineItem(DiffType.Diff, b''))
+                    lineItems.append((DiffType.Diff, b''))
                     self._row += 1
                 self._firstPatch = False
 
                 fileItems[fileA.decode(diff_encoding)] = self._row
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
-                    lineItems.append(LineItem(DiffType.File, fileB))
+                    lineItems.append((DiffType.File, fileB))
                     fileItems[fileB.decode(diff_encoding)] = self._row
                 else:
-                    lineItems.append(LineItem(DiffType.File, fileA))
+                    lineItems.append((DiffType.File, fileA))
 
                 self._row += 1
                 self._isDiffContent = False
@@ -140,16 +136,16 @@ class DiffFetcher(DataFetcher):
             match = submodule_re.match(line)
             if match:
                 if not self._firstPatch:
-                    lineItems.append(LineItem(DiffType.Diff, b''))
+                    lineItems.append((DiffType.Diff, b''))
                     self._row += 1
                 self._firstPatch = False
 
                 submodule = match.group(1)
-                lineItems.append(LineItem(DiffType.File, submodule))
+                lineItems.append((DiffType.File, submodule))
                 fileItems[submodule.decode(diff_encoding)] = self._row
                 self._row += 1
 
-                lineItems.append(LineItem(DiffType.FileInfo, line))
+                lineItems.append((DiffType.FileInfo, line))
                 self._row += 1
 
                 self._isDiffContent = True
@@ -169,7 +165,7 @@ class DiffFetcher(DataFetcher):
 
             if itemType != DiffType.Diff:
                 line = line.rstrip(b'\r')
-            lineItems.append(LineItem(itemType, line))
+            lineItems.append((itemType, line))
             self._row += 1
 
         if lineItems:
@@ -642,19 +638,20 @@ class PatchViewer(SourceViewer):
         self.viewport().update()
 
     def toTextLine(self, item):
+        type, content = item
         # only diff line needs different encoding
-        if item.type != DiffType.Diff:
+        if type != DiffType.Diff:
             self.lastEncoding = diff_encoding
 
         # alloc too many objects at the same time is too slow
         # so delay construct TextLine and decode bytes here
         text, self.lastEncoding = decodeDiffData(
-            item.content, self.lastEncoding)
-        if item.type == DiffType.Diff:
+            content, self.lastEncoding)
+        if type == DiffType.Diff:
             textLine = DiffTextLine(self, text)
-        elif item.type == DiffType.File or \
-                item.type == DiffType.FileInfo:
-            textLine = InfoTextLine(self, item.type, text)
+        elif type == DiffType.File or \
+                type == DiffType.FileInfo:
+            textLine = InfoTextLine(self, type, text)
         else:
             assert(False)
 
