@@ -882,6 +882,9 @@ class LogView(QAbstractScrollArea):
             self.delayUpdateParents = len(lcc_cmit.parents) == 0
 
             if not self.delayUpdateParents:
+                if self.data[1].children is None:
+                    self.data[1].children = []
+
                 self.data[1].children.append(lcc_cmit.sha1)
 
             if self.curIdx > 0:
@@ -900,6 +903,8 @@ class LogView(QAbstractScrollArea):
                 luc_cmit.parents) == 0
 
             if not self.delayUpdateParents and not hasLCC:
+                if self.data[1].children is None:
+                    self.data[1].children = []
                 self.data[1].children.append(luc_cmit.sha1)
 
             if self.curIdx > 0:
