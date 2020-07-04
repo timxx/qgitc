@@ -735,20 +735,6 @@ class PatchViewer(SourceViewer):
             self.findWidget.setText(text)
         self.findWidget.showAnimate()
 
-    def keyPressEvent(self, event):
-        if event.matches(QKeySequence.Copy):
-            self.copy()
-        elif event.matches(QKeySequence.SelectAll):
-            self.selectAll()
-        elif event.key() == Qt.Key_Home:
-            self.verticalScrollBar().triggerAction(
-                QScrollBar.SliderToMinimum)
-        elif event.key() == Qt.Key_End:
-            self.verticalScrollBar().triggerAction(
-                QScrollBar.SliderToMaximum)
-        else:
-            super(PatchViewer, self).keyPressEvent(event)
-
     def _highlightFormatRange(self, text):
         formats = []
         if self.highlightPattern:

@@ -4,7 +4,8 @@ from PySide2.QtWidgets import (
     QAbstractScrollArea,
     QWidget,
     QApplication,
-    QMenu)
+    QMenu,
+    QScrollBar)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -681,3 +682,23 @@ class TextViewer(QAbstractScrollArea):
         menu = self.contextMenu
         self.updateContextMenu(event.pos())
         menu.exec_(event.globalPos())
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.Copy):
+            self.copy()
+        elif event.matches(QKeySequence.SelectAll):
+            self.selectAll()
+        elif event.matches(QKeySequence.MoveToStartOfDocument):
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderToMinimum)
+        elif event.matches(QKeySequence.MoveToEndOfDocument):
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderToMaximum)
+        elif event.matches(QKeySequence.MoveToPreviousPage):
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderPageStepSub)
+        elif event.matches(QKeySequence.MoveToNextPage):
+            self.verticalScrollBar().triggerAction(
+                QScrollBar.SliderPageStepAdd)
+        else:
+            super().keyPressEvent(event)
