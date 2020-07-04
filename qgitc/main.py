@@ -14,6 +14,8 @@ from .blamewindow import BlameWindow
 import os
 import sys
 import argparse
+import shutil
+import subprocess
 
 
 def setAppUserId(appId):
@@ -124,8 +126,45 @@ def _do_blame(app, args):
     return app.exec_()
 
 
+def _is_xfce4():
+    keys = ["XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP"]
+    for key in keys:
+        if key in os.environ:
+            v = os.environ[key]
+            if v:
+                return v == "XFCE"
+
+    return False
+
+
+def _update_scale_factor():
+    if sys.platform != "linux":
+        return
+
+    # only xfce4 for the moment
+    if not _is_xfce4():
+        return
+
+    xfconf_query = shutil.which("xfconf-query")
+    if not xfconf_query:
+        return
+
+    def _query_conf(name):
+        v = subprocess.check_output(
+            [xfconf_query, "-c", "xsettings", "-p", name],
+            universal_newlines=True)
+        if v:
+            v = v.rstrip('\n')
+        return v
+
+    if _query_conf("/Gdk/WindowScalingFactor") == "2" and \
+            _query_conf("/Xft/DPI") == "96":
+        os.environ["QT_SCALE_FACTOR"] = "2"
+
+
 def main():
     unsetEnv(["QT_SCALE_FACTOR", "QT_AUTO_SCREEN_SCALE_FACTOR"])
+    _update_scale_factor()
 
     args = _setup_argument(os.path.basename(sys.argv[0]))
 
