@@ -462,7 +462,16 @@ class TextViewer(QAbstractScrollArea):
             end += 1
 
         fmt = QTextCharFormat()
-        if qApp.applicationState() == Qt.ApplicationActive:
+
+        def _hasFocus():
+            if qApp.applicationState() != Qt.ApplicationActive:
+                return False
+            if self.hasFocus():
+                return True
+            fw = qApp.focusWidget()
+            return fw and self.isAncestorOf(fw)
+
+        if _hasFocus():
             fmt.setBackground(QBrush(ColorSchema.SelFocus))
         else:
             fmt.setBackground(QBrush(ColorSchema.SelNoFocus))
