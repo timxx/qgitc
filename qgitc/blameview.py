@@ -170,23 +170,10 @@ class RevisionPanel(TextViewer):
     revisionActivated = Signal(BlameLine)
 
     def __init__(self, viewer):
-        super().__init__(viewer)
-        self.updateFont(qApp.settings().diffViewFont())
         self._viewer = viewer
         self._revs = []
 
-        fm = QFontMetrics(self._font)
-        self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
-        self._dateWidth = fm.horizontalAdvance("2020-05-27")
-        self._space = fm.horizontalAdvance(' ')
-        self._digitWidth = fm.horizontalAdvance('9')
-        self._maxNameWidth = 12 * fm.horizontalAdvance('W')
-
-        width = self._sha1Width + self._space * 6
-        width += self._dateWidth
-        width += self._maxNameWidth
-        width += self._digitWidth * 6
-        self.resize(width, viewer.height())
+        super().__init__(viewer)
 
         self._activeRev = None
         self._sha1Pattern = re.compile(r"^[a-f0-9]{%s}" % ABBREV_N)
@@ -203,11 +190,30 @@ class RevisionPanel(TextViewer):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setFrameShape(QFrame.NoFrame)
 
+        settings = qApp.settings()
+        settings.diffViewFontChanged.connect(self.delayUpdateSettings)
+
     def toTextLine(self, text):
         textLine = super().toTextLine(text)
         textLine.useBuiltinPatterns = False
         textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
         return textLine
+
+    def reloadSettings(self):
+        self.updateFont(qApp.settings().diffViewFont())
+
+        fm = QFontMetrics(self._font)
+        self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
+        self._dateWidth = fm.horizontalAdvance("2020-05-27")
+        self._space = fm.horizontalAdvance(' ')
+        self._digitWidth = fm.horizontalAdvance('9')
+        self._maxNameWidth = 12 * fm.horizontalAdvance('W')
+
+        width = self._sha1Width + self._space * 6
+        width += self._dateWidth
+        width += self._maxNameWidth
+        width += self._digitWidth * 6
+        self.resize(width, self._viewer.height())
 
     def appendRevisions(self, revs):
         texts = []
@@ -283,6 +289,9 @@ class RevisionPanel(TextViewer):
             fr.moveTop(fr.top() + y)
             fr.moveLeft(x)
             painter.fillRect(fr, QColor(192, 237, 197))
+
+    def _reloadTextLine(self, textLine):
+        textLine.setFont(self._font)
 
     def _onMenuShowCommitLog(self):
         if self._hoveredLine == -1:
@@ -389,8 +398,7 @@ class BlameSourceViewer(SourceViewer):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._panel = RevisionPanel(self)
-        self._updatePanelGeo()
+        self.setPanel(RevisionPanel(self))
 
         self._panel.revisionActivated.connect(
             self.revisionActivated)
@@ -519,8 +527,10 @@ class CommitPanel(TextViewer):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.updateFont(qApp.settings().diffViewFont())
         self._bodyCache = {}
+
+        settings = qApp.settings()
+        settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
     def showRevision(self, rev):
         super().clear()
@@ -563,6 +573,14 @@ class CommitPanel(TextViewer):
     def clear(self):
         super().clear()
         self._bodyCache.clear()
+
+    def reloadSettings(self):
+        super().reloadSettings()
+        self.updateFont(qApp.settings().diffViewFont())
+
+    def _reloadTextLine(self, textLine):
+        super()._reloadTextLine(textLine)
+        textLine.setFont(self._font)
 
 
 class HeaderWidget(QWidget):

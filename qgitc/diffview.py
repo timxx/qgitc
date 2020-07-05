@@ -484,9 +484,6 @@ class DiffView(QWidget):
         # no need update
         self.filterPath = path
 
-    def updateSettings(self):
-        self.viewer.updateSettings()
-
     def highlightKeyword(self, pattern, field=FindField.Comments):
         self.viewer.highlightKeyword(pattern, field)
         self.treeWidget.viewport().update()
@@ -595,47 +592,9 @@ class PatchViewer(SourceViewer):
 
         self.findWidget = None
 
-        self.updateSettings()
-
         self.verticalScrollBar().valueChanged.connect(
              self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
-
-    def updateSettings(self):
-        settings = QApplication.instance().settings()
-
-        # to save the time call settings every time
-        self._font = settings.diffViewFont()
-
-        fm = QFontMetrics(self._font)
-        # total height of a line
-        self._lineHeight = fm.height()
-
-        tabSize = settings.tabSize()
-        tabstopWidth = fm.width(' ') * tabSize
-
-        self._option = QTextOption()
-        self._option.setTabStop(tabstopWidth)
-
-        if settings.showWhitespace():
-            flags = self._option.flags()
-            self._option.setFlags(flags | QTextOption.ShowTabsAndSpaces)
-
-        self._bugUrl = settings.bugUrl()
-        self._bugPattern = re.compile(settings.bugPattern())
-
-        pattern = None
-        if self._bugUrl and self._bugPattern:
-            pattern = {Link.BugId: self._bugPattern}
-
-        for i, line in self._textLines.items():
-            if isinstance(line, DiffTextLine):
-                line.setDefOption(self._option)
-            line.setFont(self._font)
-            line.setCustomLinkPatterns(pattern)
-
-        self._adjustScrollbars()
-        self.viewport().update()
 
     def toTextLine(self, item):
         type, content = item
@@ -823,7 +782,9 @@ class PatchViewer(SourceViewer):
         elif link.type == Link.Email:
             url = "mailto:" + link.data
         elif link.type == Link.BugId:
-            url = self._bugUrl + link.data
+            bugUrl = qApp.settings().bugUrl()
+            if bugUrl:
+                url = bugUrl + link.data
         else:
             url = link.data
 

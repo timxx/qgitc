@@ -66,7 +66,7 @@ class TextViewer(QAbstractScrollArea):
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
 
-        self.updateFont(self.font())
+        self.reloadSettings()
 
         self._maxWidth = 0
         self._highlightLines = []
@@ -80,15 +80,21 @@ class TextViewer(QAbstractScrollArea):
         self._clickOnLink = False
         self._link = None
 
-        pattern = qApp.settings().bugPattern()
-        self._bugPattern = re.compile(pattern) if pattern else None
-
         self._contextMenu = None
+
+        self._settingsTimer = None
+        qApp.settings().bugPatternChanged.connect(
+            self.delayUpdateSettings)
 
     def updateFont(self, font):
         self._font = font
         fm = QFontMetrics(self._font)
         self._lineHeight = fm.height()
+
+    def reloadSettings(self):
+        self.updateFont(self.font())
+        pattern = qApp.settings().bugPattern()
+        self._bugPattern = re.compile(pattern) if pattern else None
 
     def toTextLine(self, text):
         return TextLine(text, self._font, self._option)
@@ -388,6 +394,17 @@ class TextViewer(QAbstractScrollArea):
     def textLineFormatRange(self, textLine):
         return None
 
+    def delayUpdateSettings(self):
+        if self._settingsTimer:
+            # restart
+            self._settingsTimer.start(10)
+        else:
+            self._settingsTimer = QTimer(self)
+            self._settingsTimer.timeout.connect(
+                self._onUpdateSettings)
+            self._settingsTimer.setSingleShot(True)
+            self._settingsTimer.start(10)
+
     def _linesPerPage(self):
         return int(self.viewport().height() / self._lineHeight)
 
@@ -482,6 +499,13 @@ class TextViewer(QAbstractScrollArea):
 
         return False
 
+    def _reloadTextLine(self, textLine):
+        if textLine.useBuiltinPatterns:
+            pattern = None
+            if self._bugPattern:
+                pattern = {Link.BugId: self._bugPattern}
+            textLine.setCustomLinkPatterns(pattern)
+
     def _onConvertEvent(self):
         textLine = self.textLineAt(self._convertIndex)
         self._convertIndex += 1
@@ -499,6 +523,20 @@ class TextViewer(QAbstractScrollArea):
 
         if needAdjust:
             self._adjustScrollbars()
+
+    def _onUpdateSettings(self):
+        self.reloadSettings()
+
+        if self._settingsTimer:
+            self._settingsTimer.disconnect(self)
+            self._settingsTimer = None
+
+        # TODO: move to background
+        for _, line in self._textLines.items():
+            self._reloadTextLine(line)
+
+        self._adjustScrollbars()
+        self.viewport().update()
 
     def paintEvent(self, event):
         if not self.hasTextLines():

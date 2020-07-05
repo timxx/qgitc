@@ -251,9 +251,6 @@ class MainWindow(QMainWindow):
         preferences = Preferences(settings, self)
         if preferences.exec_() == QDialog.Accepted:
             preferences.save()
-            self.ui.gitViewA.updateSettings()
-            if self.gitViewB:
-                self.gitViewB.updateSettings()
 
     def __onIgnoreWhitespaceChanged(self, index):
         actions = [self.ui.acIgnoreNone,
@@ -279,10 +276,6 @@ class MainWindow(QMainWindow):
     def __onAcVisualizeWhitespaceTriggered(self, checked):
         sett = qApp.instance().settings()
         sett.setShowWhitespace(checked)
-
-        self.ui.gitViewA.updateSettings()
-        if self.gitViewB:
-            self.gitViewB.updateSettings()
 
     def __onAcCompareTriggered(self, checked):
         if checked:
