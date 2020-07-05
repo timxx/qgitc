@@ -205,16 +205,17 @@ class TextViewer(QAbstractScrollArea):
     def currentLineNo(self):
         return self.firstVisibleLine()
 
-    def gotoLine(self, lineNo):
+    def gotoLine(self, lineNo, centralOnView=True):
         if lineNo < 0 or lineNo >= self.textLineCount():
             return
 
         self._cursor.moveTo(lineNo, 0)
 
         # central the lineNo in view
-        halfOfPage = self._linesPerPage() // 2
-        if lineNo > halfOfPage:
-            lineNo -= halfOfPage
+        if centralOnView:
+            halfOfPage = self._linesPerPage() // 2
+            if lineNo > halfOfPage:
+                lineNo -= halfOfPage
 
         vScrollBar = self.verticalScrollBar()
         if vScrollBar.value() != lineNo:

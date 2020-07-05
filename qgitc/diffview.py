@@ -283,7 +283,10 @@ class DiffView(QWidget):
     def __onTreeItemChanged(self, current, previous):
         if current:
             row = current.data(0, Qt.UserRole)
-            self.viewer.gotoLine(row)
+            # do not fire the __onFileRowChanged
+            self.viewer.blockSignals(True)
+            self.viewer.gotoLine(row, False)
+            self.viewer.blockSignals(False)
 
     def __onFileRowChanged(self, row):
         for i in range(self.treeWidget.topLevelItemCount()):
