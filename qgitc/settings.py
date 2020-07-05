@@ -37,6 +37,11 @@ class Settings(QSettings):
 
     showWhitespaceChanged = Signal(bool)
     ignoreWhitespaceChanged = Signal(int)
+    logViewFontChanged = Signal(QFont)
+    diffViewFontChanged = Signal(QFont)
+    bugPatternChanged = Signal(str)
+    bugUrlChanged = Signal(str)
+    tabSizeChanged = Signal(int)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -52,6 +57,7 @@ class Settings(QSettings):
 
     def setLogViewFont(self, font):
         self.setValue("lvFont", font)
+        self.logViewFontChanged.emit(font)
 
     def diffViewFont(self):
         font = self.value("dvFont", self._fixedFont)
@@ -59,6 +65,7 @@ class Settings(QSettings):
 
     def setDiffViewFont(self, font):
         self.setValue("dvFont", font)
+        self.diffViewFontChanged.emit(font)
 
     def commitColorA(self):
         return self.value("colorA", QColor(255, 0, 0))
@@ -83,12 +90,14 @@ class Settings(QSettings):
 
     def setBugUrl(self, url):
         self.setValue("bugUrl", url)
+        self.bugUrlChanged.emit(url)
 
     def bugPattern(self):
         return self.value("bugPattern", "")
 
     def setBugPattern(self, pattern):
         self.setValue("bugPattern", pattern)
+        self.bugPatternChanged.emit(pattern)
 
     def showWhitespace(self):
         return self.value("showWhitespace", True, type=bool)
@@ -102,6 +111,7 @@ class Settings(QSettings):
 
     def setTabSize(self, size):
         self.setValue("tabSize", size)
+        self.tabSizeChanged.emit(size)
 
     def quitViaEsc(self):
         return self.value("quitViaEsc", False, type=bool)

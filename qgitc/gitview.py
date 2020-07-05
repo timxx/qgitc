@@ -382,9 +382,5 @@ class GitView(QWidget):
 
         self.ui.diffView.restoreState(settings, isBranchA)
 
-    def updateSettings(self):
-        self.ui.logView.updateSettings()
-        self.ui.diffView.updateSettings()
-
     def setBranchChangeble(self, canChange):
         self.ui.cbBranch.setEnabled(canChange)

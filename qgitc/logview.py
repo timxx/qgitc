@@ -535,11 +535,6 @@ class LogView(QAbstractScrollArea):
 
         self.logGraph = None
 
-        self.color = "#FF0000"
-        self.sha1Url = None
-        self.bugUrl = None
-        self.bugRe = None
-
         self.authorRe = re.compile("(.*) <.*>$")
 
         self.findProc = None
@@ -567,6 +562,9 @@ class LogView(QAbstractScrollArea):
 
         self.updateSettings()
 
+        qApp.settings().logViewFontChanged.connect(
+            self.updateSettings)
+
     def __del__(self):
         self.cancelFindCommit()
 
@@ -587,28 +585,27 @@ class LogView(QAbstractScrollArea):
 
     def setBranchB(self):
         self.branchA = False
-        settings = QApplication.instance().settings()
-        self.setColor(settings.commitColorB().name())
 
-    def setColor(self, color):
-        self.color = color
+    @property
+    def color(self):
+        settings = qApp.settings()
+        if self.branchA:
+            return settings.commitColorA().name()
 
-    def setSha1Url(self, url):
-        self.sha1Url = url
+        return settings.commitColorB().name()
 
-    def setBugUrl(self, url):
-        self.bugUrl = url
-
-    def setBugPattern(self, pattern):
+    @property
+    def bugRe(self):
+        settings = qApp.settings()
+        pattern = settings.bugPattern()
         if not pattern:
-            self.bugRe = None
-            return
+            return None
 
         # ensure the pattern has one group at least
         if pattern[0] != '(' or pattern[-1] != ')':
             pattern = '(' + pattern + ')'
 
-        self.bugRe = re.compile(pattern)
+        return re.compile(pattern)
 
     def showLogs(self, branch, args=None):
         self.curBranch = branch
@@ -731,14 +728,6 @@ class LogView(QAbstractScrollArea):
         self.font = settings.logViewFont()
 
         self.lineHeight = QFontMetrics(self.font).height() + self.lineSpace
-
-        if self.branchA:
-            self.setColor(settings.commitColorA().name())
-        else:
-            self.setColor(settings.commitColorB().name())
-        self.setSha1Url(settings.commitUrl())
-        self.setBugUrl(settings.bugUrl())
-        self.setBugPattern(settings.bugPattern())
 
         self.updateGeometries()
         self.viewport().update()
@@ -928,20 +917,23 @@ class LogView(QAbstractScrollArea):
         self.firstFreeLane = 0
 
     def __sha1Url(self, sha1):
-        if not self.sha1Url:
+        sha1Url = qApp.settings().commitUrl()
+        if not sha1Url:
             return sha1
 
-        return '<a href="{0}{1}">{1}</a>'.format(self.sha1Url, sha1)
+        return '<a href="{0}{1}">{1}</a>'.format(sha1Url, sha1)
 
     def __filterBug(self, subject):
         text = htmlEscape(subject)
-        if not self.bugUrl or not self.bugRe:
+        bugUrl = qApp.settings().bugUrl()
+        bugRe = self.bugRe
+        if not bugUrl or not bugRe:
             return text
 
-        if self.bugRe.groups == 1:
-            return self.bugRe.sub('<a href="{0}\\1">\\1</a>'.format(self.bugUrl), text)
+        if bugRe.groups == 1:
+            return bugRe.sub('<a href="{0}\\1">\\1</a>'.format(bugUrl), text)
         else:
-            return self.bugRe.sub('<a href="{0}\\2">\\1</a>'.format(self.bugUrl), text)
+            return bugRe.sub('<a href="{0}\\2">\\1</a>'.format(bugUrl), text)
 
     def __mailTo(self, author, email):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))
