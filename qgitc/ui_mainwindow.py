@@ -26,13 +26,16 @@ class Ui_MainWindow(object):
         self.acQuit = QAction(MainWindow)
         self.acQuit.setObjectName(u"acQuit")
         icon = QIcon()
-        iconThemeName = u"application-exit"
+        iconThemeName = u"window-close"
         if QIcon.hasThemeIcon(iconThemeName):
             icon = QIcon.fromTheme(iconThemeName)
         else:
             icon.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
         
         self.acQuit.setIcon(icon)
+#if QT_CONFIG(shortcut)
+        self.acQuit.setShortcut(u"Ctrl+W")
+#endif // QT_CONFIG(shortcut)
         self.acAbout = QAction(MainWindow)
         self.acAbout.setObjectName(u"acAbout")
         icon1 = QIcon()
@@ -173,7 +176,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 21))
+        self.menubar.setGeometry(QRect(0, 0, 800, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menu_Help = QMenu(self.menubar)
@@ -221,10 +224,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"QGitc", None))
-        self.acQuit.setText(QCoreApplication.translate("MainWindow", u"&Quit", None))
-#if QT_CONFIG(shortcut)
-        self.acQuit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Q", None))
-#endif // QT_CONFIG(shortcut)
+        self.acQuit.setText(QCoreApplication.translate("MainWindow", u"Close &Window", None))
         self.acAbout.setText(QCoreApplication.translate("MainWindow", u"&About QGitc", None))
         self.acPreferences.setText(QCoreApplication.translate("MainWindow", u"&Preferences...", None))
         self.actionIgnore_whitespace_changes.setText(QCoreApplication.translate("MainWindow", u"Ignore whitespace changes", None))
