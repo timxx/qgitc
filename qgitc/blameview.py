@@ -144,7 +144,7 @@ class BlameFetcher(DataFetcher):
     def makeArgs(self, args):
         file = args[0]
         sha1 = args[1]
-        blameArgs = ["blame", "--line-porcelain", file]
+        blameArgs = ["blame", "--porcelain", file]
         if sha1:
             blameArgs.append(sha1)
 
@@ -208,6 +208,7 @@ class RevisionPanel(TextViewer):
         texts = []
         for rev in revs:
             text = rev.sha1[:ABBREV_N]
+            self._fix_rev(rev)
             if not self._revs or self._revs[len(self._revs) - 1].sha1 != rev.sha1:
                 text += " " + rev.authorTime.split(" ")[0]
                 text += " " + rev.author
@@ -281,6 +282,24 @@ class RevisionPanel(TextViewer):
 
     def _reloadTextLine(self, textLine):
         textLine.setFont(self._font)
+
+    def _fix_rev(self, rev):
+        if rev.author:
+            return
+        for i in range(len(self._revs) - 1, -1, -1):
+            r = self._revs[i]
+            if r.sha1 == rev.sha1:
+                rev.author = r.author
+                rev.authorMail = r.authorMail
+                rev.authorTime = r.authorTime
+                rev.committer = r.committer
+                rev.committerMail = r.committerMail
+                rev.committerTime = r.committerTime
+                rev.summary = r.summary
+                rev.previous = r.previous
+                rev.prevFileName = r.prevFileName
+                rev.filename = r.filename
+                break
 
     def _onMenuShowCommitLog(self):
         if self._hoveredLine == -1:
