@@ -9,7 +9,6 @@ from .gitutils import Git
 from .excepthandler import ExceptHandler
 from .application import Application
 from .mainwindow import MainWindow
-from .blamewindow import BlameWindow
 
 import os
 import sys

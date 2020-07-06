@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from PySide2.QtWidgets import (
-    QAbstractScrollArea,
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
-    QPlainTextEdit,
     QSplitter,
     QToolButton,
     QSpacerItem,
@@ -16,23 +14,15 @@ from PySide2.QtWidgets import (
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
-    QTextOption,
-    QTextFormat,
-    QTextCursor,
     QColor,
     QPen,
-    QSyntaxHighlighter,
-    QTextCharFormat,
-    QTextBlockUserData,
-    QDesktopServices,
-    QCursor)
+    QDesktopServices)
 from PySide2.QtCore import (
     Qt,
     Signal,
     QRect,
     QRectF,
     QPointF,
-    QPoint,
     QUrl)
 
 from datetime import datetime
@@ -46,7 +36,6 @@ from .events import BlameEvent, ShowCommitEvent
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import TextViewer
 
-import sys
 import re
 
 
