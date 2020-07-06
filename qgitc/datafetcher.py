@@ -13,6 +13,7 @@ class DataFetcher(QObject):
         self._process = None
         self._dataChunk = None
         self._separator = b'\n'
+        self._errorData = b''
 
     @property
     def process(self):
@@ -29,6 +30,10 @@ class DataFetcher(QObject):
     @separator.setter
     def separator(self, sep):
         self._separator = sep
+
+    @property
+    def errorData(self):
+        return self._errorData
 
     def parse(self, data):
         """Implement in subclass"""
@@ -53,6 +58,10 @@ class DataFetcher(QObject):
 
         if data:
             self.parse(data)
+
+    def onProcessError(self):
+        data = self._process.readAllStandardError().data()
+        self._errorData += data
 
     def onDataFinished(self, exitCode, exitStatus):
         if self._dataChunk:
@@ -80,7 +89,7 @@ class DataFetcher(QObject):
         return []
 
     def reset(self):
-        pass
+        self._errorData = b''
 
     def fetch(self, *args):
         self.cancel()
@@ -91,6 +100,7 @@ class DataFetcher(QObject):
         self._process = QProcess()
         self._process.setWorkingDirectory(Git.REPO_DIR)
         self._process.readyReadStandardOutput.connect(self.onDataAvailable)
+        self._process.readyReadStandardError.connect(self.onProcessError)
         self._process.finished.connect(self.onDataFinished)
 
         self._process.start("git", git_args)
