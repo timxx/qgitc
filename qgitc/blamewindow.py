@@ -6,7 +6,8 @@ from PySide2.QtWidgets import (
     QDialog)
 
 from PySide2.QtGui import (
-    QKeySequence)
+    QKeySequence,
+    QIcon)
 from PySide2.QtCore import (
     Qt)
 
@@ -50,9 +51,10 @@ class BlameWindow(StateWindow):
 
     def _setupFileMenu(self):
         fileMenu = self.menuBar().addMenu(self.tr("&File"))
-        fileMenu.addAction(self.tr("&Close"),
+        acClose = fileMenu.addAction(self.tr("Close &Window"),
                            self.close,
                            QKeySequence("Ctrl+W"))
+        acClose.setIcon(QIcon.fromTheme("window-close"))
 
     def _setupEditMenu(self):
         editMenu = self.menuBar().addMenu(self.tr("&Edit"))

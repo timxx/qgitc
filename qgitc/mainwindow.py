@@ -102,7 +102,7 @@ class MainWindow(StateWindow):
         self.__setupMenus()
 
     def __setupSignals(self):
-        self.ui.acQuit.triggered.connect(QCoreApplication.instance().quit)
+        self.ui.acQuit.triggered.connect(self.close)
 
         self.ui.acPreferences.triggered.connect(
             self.__onAcPreferencesTriggered)

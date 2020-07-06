@@ -99,7 +99,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -156,14 +156,14 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="acQuit">
    <property name="icon">
-    <iconset theme="application-exit">
+    <iconset theme="window-close">
      <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
-    <string>&amp;Quit</string>
+    <string>Close &amp;Window</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Q</string>
+    <string notr="true">Ctrl+W</string>
    </property>
   </action>
   <action name="acAbout">
