@@ -786,6 +786,9 @@ class BlameView(QWidget):
         self._commitPanel.clear()
 
     def blame(self, file, sha1=None, lineNo=0):
+        if self._file == file and self._sha1 == sha1:
+            return
+
         self._headerWidget.notifyFecthingStarted()
         self.blameFileAboutToChange.emit(file)
         self.clear()
