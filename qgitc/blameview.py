@@ -686,8 +686,21 @@ class HeaderWidget(QWidget):
         if self._blockAdd:
             return
 
-        self._curIndex = len(self._histories)
-        self._histories.append((file, sha1))
+        index = -1
+        for i in range(len(self._histories)):
+            f, s = self._histories[i]
+            if file == f and sha1 == s:
+                index = i
+                break
+
+        if index != -1:
+            self._curIndex = index
+        else:
+            self._curIndex += 1
+            self._histories.insert(self._curIndex, (file, sha1))
+            if self._curIndex >= len(self._histories):
+                self._curIndex = len(self._histories) - 1
+
         self._updateInfo()
 
     def notifyFecthingStarted(self):
