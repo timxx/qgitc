@@ -10,7 +10,8 @@ from PySide2.QtWidgets import (
     QSpacerItem,
     QSizePolicy,
     QMenu,
-    QFrame)
+    QFrame,
+    QMessageBox)
 from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
@@ -151,6 +152,7 @@ class BlameFetcher(DataFetcher):
         return blameArgs
 
     def reset(self):
+        super().reset()
         self._curLine = BlameLine()
 
 
@@ -789,6 +791,9 @@ class BlameView(QWidget):
             self._viewer.panel.setActiveRevByLineNumber(self._lineNo - 1)
             self._lineNo = -1
         self._viewer.endReading()
+        if not self._viewer.hasTextLines() and self._fetcher.errorData:
+            QMessageBox.critical(self, self.window().windowTitle(),
+                                 self._fetcher.errorData.decode("utf-8"))
 
     def _findFileBySHA1(self, sha1):
         file = self._viewer.panel.getFileBySHA1(sha1)
