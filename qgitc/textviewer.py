@@ -115,9 +115,7 @@ class TextViewer(QAbstractScrollArea):
         else:
             for line in lines:
                 textLine = self.toTextLine(line)
-                lineNo = len(self._textLines)
-                self.initTextLine(textLine, lineNo)
-                self._textLines[lineNo] = textLine
+                self.appendTextLine(textLine)
 
         if not self._convertTimer.isActive():
             self._convertTimer.start(0)
