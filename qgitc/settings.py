@@ -125,19 +125,23 @@ class Settings(QSettings):
     def setRememberWindowState(self, remember):
         self.setValue("rememberWindowState", remember)
 
-    def windowState(self):
-        state = self.value("windowState", None)
+    def windowState(self, windowName):
+        self.beginGroup(windowName)
+        state = self.value("state", None)
         geometry = self.value("geometry", None)
-        isMaximized = self.value("mwMaximized", True, type=bool)
+        isMaximized = self.value("maximized", True, type=bool)
+        self.endGroup()
 
         return state, geometry, isMaximized
 
-    def setWindowState(self, state, geometry, isMaximized):
-        self.setValue("windowState", state)
+    def setWindowState(self, windowName, state, geometry, isMaximized):
+        self.beginGroup(windowName)
+        self.setValue("state", state)
         # FIXME: make a common version
         if not isMaximized or is_win:
             self.setValue("geometry", geometry)
-        self.setValue("mwMaximized", isMaximized)
+        self.setValue("maximized", isMaximized)
+        self.endGroup()
 
     def gitViewState(self, isBranchA):
         key = "gvStateA" if isBranchA else "gvStateB"

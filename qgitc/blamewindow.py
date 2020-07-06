@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from PySide2.QtWidgets import (
-    QMainWindow,
     QWidget,
     QVBoxLayout,
     QDialog)
@@ -15,12 +14,13 @@ from .blameview import BlameView
 from .stylehelper import dpiScaled
 from .gotodialog import GotoDialog
 from .findwidget import FindWidget
+from .statewindow import StateWindow
 
 
 __all__ = ["BlameWindow"]
 
 
-class BlameWindow(QMainWindow):
+class BlameWindow(StateWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -152,9 +152,6 @@ class BlameWindow(QMainWindow):
 
     def blame(self, file, sha1=None, lineNo=0):
         self._view.blame(file, sha1, lineNo)
-
-    def restoreState(self):
-        return False
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

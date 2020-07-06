@@ -118,7 +118,11 @@ def _do_log(app, args):
 def _do_blame(app, args):
     window = app.getWindow(Application.BlameWindow)
     _move_center(window)
-    window.showMaximized()
+
+    if window.restoreState():
+        window.show()
+    else:
+        window.showMaximized()
 
     window.blame(args.file, args.sha1, args.line_number)
 

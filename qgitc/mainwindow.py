@@ -3,7 +3,6 @@ from PySide2.QtGui import *
 from PySide2.QtCore import *
 
 from PySide2.QtWidgets import (
-    QMainWindow,
     QActionGroup,
     QLineEdit,
     QMessageBox,
@@ -18,6 +17,7 @@ from .diffview import PatchViewer
 from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
 from .stylehelper import dpiScaled
+from .statewindow import StateWindow
 
 import os
 import sys
@@ -75,13 +75,13 @@ class FindSubmoduleThread(QThread):
         self._submodules = submodules
 
 
-class MainWindow(QMainWindow):
+class MainWindow(StateWindow):
     LogMode = 1
     CompareMode = 2
     MergeMode = 3
 
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__(parent)
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -339,9 +339,7 @@ class MainWindow(QMainWindow):
         if not sett.rememberWindowState():
             return False
 
-        state = super(MainWindow, self).saveState()
-        geometry = self.saveGeometry()
-        sett.setWindowState(state, geometry, self.isMaximized())
+        super().saveState()
 
         self.ui.gitViewA.saveState(sett, True)
         if self.gitViewB:
@@ -354,18 +352,11 @@ class MainWindow(QMainWindow):
         if not sett.rememberWindowState():
             return False
 
-        state, geometry, isMaximized = sett.windowState()
-        if state:
-            super(MainWindow, self).restoreState(state)
-        if geometry:
-            self.restoreGeometry(geometry)
+        super().restoreState()
 
         self.ui.gitViewA.restoreState(sett, True)
         if self.gitViewB:
             self.gitViewB.restoreState(sett, False)
-
-        if isMaximized:
-            self.setWindowState(self.windowState() | Qt.WindowMaximized)
 
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
         self.ui.acVisualizeWhitespace.setChecked(
@@ -383,10 +374,6 @@ class MainWindow(QMainWindow):
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
-
-    def closeEvent(self, event):
-        self.saveState()
-        super(MainWindow, self).closeEvent(event)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
