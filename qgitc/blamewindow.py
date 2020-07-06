@@ -4,7 +4,6 @@ from PySide2.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
-    QMenu,
     QDialog)
 
 from PySide2.QtGui import (

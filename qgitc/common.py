@@ -4,7 +4,6 @@ import cProfile
 import pstats
 import io
 import os
-import sys
 
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"

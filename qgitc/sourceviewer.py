@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from PySide2.QtWidgets import (
-    QWidget,
     QApplication)
 from PySide2.QtGui import (
     QFontMetrics,
     QTextOption)
 from PySide2.QtCore import (
-    Qt,
     QEvent)
 
 from .textline import SourceTextLineBase

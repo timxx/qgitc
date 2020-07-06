@@ -2,7 +2,6 @@
 
 from PySide2.QtWidgets import (
     QAbstractScrollArea,
-    QWidget,
     QApplication,
     QMenu,
     QScrollBar)
