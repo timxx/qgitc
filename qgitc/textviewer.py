@@ -126,7 +126,7 @@ class TextViewer(QAbstractScrollArea):
 
     def appendTextLine(self, textLine):
         lineNo = self.textLineCount()
-        textLine.setLineNo(lineNo)
+        self.initTextLine(textLine, lineNo)
         if self._lines is None:
             self._lines = []
         self._lines.append(None)
