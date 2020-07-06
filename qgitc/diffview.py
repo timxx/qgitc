@@ -599,6 +599,12 @@ class PatchViewer(SourceViewer):
              self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
 
+    def endReading(self):
+        super().endReading()
+        if self.findWidget and self.findWidget.isVisible():
+            # redo a find
+            self._onFind(self.findWidget.text)
+
     def toTextLine(self, item):
         type, content = item
         # only diff line needs different encoding
