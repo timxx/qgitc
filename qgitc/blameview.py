@@ -81,7 +81,7 @@ def _decode(data):
 
 class BlameFetcher(DataFetcher):
 
-    dataAvailable = Signal(BlameLine)
+    dataAvailable = Signal(list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -140,7 +140,8 @@ class BlameFetcher(DataFetcher):
                     if len(parts) == 4:
                         self._curLine.groupLines = int(parts[3])
 
-        self.dataAvailable.emit(results)
+        if results:
+            self.dataAvailable.emit(results)
 
     def makeArgs(self, args):
         file = args[0]
