@@ -35,7 +35,7 @@ class SourceViewer(TextViewer):
         super().__init__(parent)
 
         self._panel = None
-        self._onePixel = dpiScaled(1)
+        self._blockEventFilter = False
 
         self.verticalScrollBar().valueChanged.connect(
             self._onVScrollBarValueChanged)
@@ -93,9 +93,10 @@ class SourceViewer(TextViewer):
         if self._panel:
             rc = self.rect()
             width = self._panel.width()
-            self.setViewportMargins(width + self._onePixel, 0, 0, 0)
-            self._panel.setGeometry(rc.left() + self._onePixel,
-                                    rc.top() + self._onePixel,
+            onePixel = dpiScaled(1)
+            self.setViewportMargins(width + onePixel, 0, 0, 0)
+            self._panel.setGeometry(rc.left() + onePixel,
+                                    rc.top() + onePixel,
                                     width,
                                     self.viewport().height())
 
@@ -110,11 +111,15 @@ class SourceViewer(TextViewer):
 
     def resizeEvent(self, event):
         if event.oldSize().height() != event.size().height():
+            self._blockEventFilter = True
             self._updatePanelGeo()
+            self._blockEventFilter = False
         super().resizeEvent(event)
 
     def eventFilter(self, obj, event):
-        if obj == self._panel and event.type() == QEvent.Resize:
+        if not self._blockEventFilter and \
+                obj == self._panel and \
+                event.type() == QEvent.Resize:
             self._updatePanelGeo()
             return True
 
