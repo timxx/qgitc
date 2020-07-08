@@ -31,10 +31,10 @@ class MergeWidget(QWidget):
         self.resolveIndex = -1
         self.process = None
 
+        self._firstShown = True
+
         self.__setupUi()
         self.__setupSignals()
-
-        self.updateList()
 
     def __setupUi(self):
         self.view = QListView(self)
@@ -337,12 +337,27 @@ class MergeWidget(QWidget):
                                     qApp.applicationName(),
                                     text)
 
+    def __onFirstShow(self):
+        self.updateList()
+        if self.model.rowCount() == 0:
+            QMessageBox.information(
+                self,
+                self.window().windowTitle(),
+                self.tr("No conflict files to resolve!"),
+                QMessageBox.Ok)
+
     def contextMenuEvent(self, event):
         index = self.view.currentIndex()
         enabled = index.data(StateRole) == STATE_RESOLVED
         self.acResolve.setEnabled(not enabled)
         self.acUndoMerge.setEnabled(enabled)
         self.menu.exec_(event.globalPos())
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._firstShown:
+            self._firstShown = False
+            QTimer.singleShot(0, self.__onFirstShow)
 
     def sizeHint(self):
         return dpiScaled(QSize(500, 700))
