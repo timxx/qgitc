@@ -20,6 +20,14 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Python: MergeTool (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "args": ["mergetool"],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Attach",
             "type": "python",
             "request": "attach",

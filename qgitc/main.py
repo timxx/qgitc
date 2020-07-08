@@ -89,11 +89,6 @@ def _move_center(window):
 
 def _do_log(app, args):
     merge_mode = args.cmd == "mergetool"
-    if merge_mode and not Git.isMergeInProgress():
-        QMessageBox.information(None, app.applicationName(),
-                                app.translate("app", "Not in merge state, now quit!"))
-        return 0
-
     window = app.getWindow(Application.LogWindow)
     if merge_mode:
         window.setMode(MainWindow.MergeMode)

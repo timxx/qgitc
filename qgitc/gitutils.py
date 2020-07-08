@@ -301,25 +301,6 @@ class Git():
         return data.rstrip(b'\n').decode("utf-8").split('\n')
 
     @staticmethod
-    def isMergeInProgress():
-        """return True only if in merge state and has unmerged paths"""
-        path = Git.gitPath("MERGE_HEAD")
-        if not path:
-            return False
-        if not os.path.exists(path):
-            return False
-
-        # use raw data without splitting
-        args = ["diff", "--name-only",
-                "--diff-filter=U",
-                "-no-color"]
-        data = Git.checkOutput(args)
-        if not data:
-            return False
-
-        return len(data.rstrip(b'\n')) > 0
-
-    @staticmethod
     def gitDir():
         args = ["rev-parse", "--git-dir"]
         data = Git.checkOutput(args)
