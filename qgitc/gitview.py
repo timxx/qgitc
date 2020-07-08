@@ -318,8 +318,10 @@ class GitView(QWidget):
             if idx != -1:
                 commit = self.ui.logView.getCommit(idx)
                 sha1 = commit.parents[0] if commit.parents else None
+
+        rev = sha1 if sha1 else self.currentBranch()
         QCoreApplication.postEvent(qApp,
-                                   BlameEvent(filePath, sha1))
+                                   BlameEvent(filePath, rev))
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)

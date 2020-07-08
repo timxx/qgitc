@@ -7,10 +7,10 @@ class BlameEvent(QEvent):
 
     Type = QEvent.User + 1
 
-    def __init__(self, filePath, sha1=None, lineNo=0):
+    def __init__(self, filePath, rev=None, lineNo=0):
         super().__init__(QEvent.Type(BlameEvent.Type))
         self.filePath = filePath
-        self.sha1 = sha1
+        self.rev = rev
         self.lineNo = lineNo
 
 
