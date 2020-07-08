@@ -145,10 +145,11 @@ class BlameFetcher(DataFetcher):
 
     def makeArgs(self, args):
         file = args[0]
-        sha1 = args[1]
-        blameArgs = ["blame", "--porcelain", file]
-        if sha1:
-            blameArgs.append(sha1)
+        rev = args[1]
+
+        blameArgs = ["blame", "--porcelain", "--", file]
+        if rev:
+            blameArgs.insert(1, rev)
 
         return blameArgs
 
@@ -619,8 +620,8 @@ class HeaderWidget(QWidget):
         self._lbFile = QLabel(self)
         layout.addWidget(self._lbFile)
 
-        self._lbSHA1 = QLabel(self)
-        layout.addWidget(self._lbSHA1)
+        self._lbRev = QLabel(self)
+        layout.addWidget(self._lbRev)
         layout.addSpacerItem(QSpacerItem(
             0, 0,
             QSizePolicy.Expanding,
@@ -644,13 +645,13 @@ class HeaderWidget(QWidget):
     def _updateInfo(self):
         if not self._histories:
             file = ""
-            sha1 = ""
+            rev = ""
         else:
-            file, sha1 = self._histories[self._curIndex]
-            if sha1 is None:
-                sha1 = ""
+            file, rev = self._histories[self._curIndex]
+            if rev is None:
+                rev = ""
 
-        self._lbSHA1.setText(sha1)
+        self._lbRev.setText(rev)
         self._lbFile.setText(file)
 
         enablePrev = False
@@ -667,8 +668,8 @@ class HeaderWidget(QWidget):
 
     def _blameCurrent(self):
         self._blockAdd = True
-        file, sha1 = self._histories[self._curIndex]
-        self._view.blame(file, sha1)
+        file, rev = self._histories[self._curIndex]
+        self._view.blame(file, rev)
         self._blockAdd = False
 
     def _onPrevious(self):
@@ -685,14 +686,14 @@ class HeaderWidget(QWidget):
         self._histories.clear()
         self._updateInfo()
 
-    def addBlameInfo(self, file, sha1):
+    def addBlameInfo(self, file, rev):
         if self._blockAdd:
             return
 
         index = -1
         for i in range(len(self._histories)):
-            f, s = self._histories[i]
-            if file == f and sha1 == s:
+            f, r = self._histories[i]
+            if file == f and rev == r:
                 index = i
                 break
 
@@ -700,7 +701,7 @@ class HeaderWidget(QWidget):
             self._curIndex = index
         else:
             self._curIndex += 1
-            self._histories.insert(self._curIndex, (file, sha1))
+            self._histories.insert(self._curIndex, (file, rev))
             if self._curIndex >= len(self._histories):
                 self._curIndex = len(self._histories) - 1
 
@@ -747,7 +748,7 @@ class BlameView(QWidget):
         mainLayout.addWidget(vSplitter)
 
         self._file = None
-        self._sha1 = None
+        self._rev = None
         self._lineNo = -1
         self._bugUrl = qApp.settings().bugUrl()
 
@@ -767,7 +768,7 @@ class BlameView(QWidget):
     def _onLinkActivated(self, link):
         url = None
         if link.type == Link.Sha1:
-            if self._sha1 != link.data:
+            if self._rev != link.data:
                 file = self._findFileBySHA1(link.data)
                 self.blame(file, link.data)
         elif link.type == Link.Email:
@@ -804,21 +805,21 @@ class BlameView(QWidget):
         self._viewer.clear()
         self._commitPanel.clear()
 
-    def blame(self, file, sha1=None, lineNo=0):
-        if self._file == file and self._sha1 == sha1:
+    def blame(self, file, rev=None, lineNo=0):
+        if self._file == file and self._rev == rev:
             return
 
         self._headerWidget.notifyFecthingStarted()
         self.blameFileAboutToChange.emit(file)
         self.clear()
         self._viewer.beginReading()
-        self._fetcher.fetch(file, sha1)
+        self._fetcher.fetch(file, rev)
 
         self._file = file
-        self._sha1 = sha1
+        self._rev = rev
         self._lineNo = lineNo
 
-        self._headerWidget.addBlameInfo(file, sha1)
+        self._headerWidget.addBlameInfo(file, rev)
 
     @property
     def viewer(self):

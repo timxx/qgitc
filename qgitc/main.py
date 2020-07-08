@@ -70,9 +70,9 @@ def _setup_argument(prog):
         default=0,
         help="Goto the specify line number when opening a file.")
     blame_parser.add_argument(
-        "--sha1", "-s",
-        metavar="SHA-1",
-        help="Blame parent commit with SHA-1.")
+        "--rev", "-r",
+        metavar="<rev>",
+        help="Blame with <rev>.")
     blame_parser.add_argument(
         "file", metavar="<file>",
         help="The file to blame.")
@@ -124,7 +124,7 @@ def _do_blame(app, args):
     else:
         window.showMaximized()
 
-    window.blame(args.file, args.sha1, args.line_number)
+    window.blame(args.file, args.rev, args.line_number)
 
     return app.exec_()
 
