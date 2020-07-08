@@ -521,7 +521,8 @@ class TextViewer(QAbstractScrollArea):
             self._convertTimer.stop()
             self._convertIndex = 0
 
-        needAdjust = self._inReading
+        maximum = self.textLineCount() - self._linesPerPage()
+        needAdjust = self.verticalScrollBar().maximum() < maximum
         if textLine:
             width = textLine.boundingRect().width()
             if width > self._maxWidth:
