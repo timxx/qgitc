@@ -242,9 +242,9 @@ class MainWindow(StateWindow):
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
             branch = "remotes/" + branch
-        self.ui.gitViewA.reloadBranches(branch)
+        self.ui.gitViewA.reloadBranches()
         if self.gitViewB:
-            self.gitViewB.reloadBranches()
+            self.gitViewB.reloadBranches(branch)
 
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
@@ -427,10 +427,11 @@ class MainWindow(StateWindow):
             branch = self.ui.gitViewA.currentBranch()
             if branch.startswith("remotes/origin/"):
                 branch = branch[15:]
-            else:
+            elif branch:
                 branch = "remotes/origin/" + branch
 
-            self.gitViewB.reloadBranches(branch)
+            if not self.mergeWidget:
+                self.gitViewB.reloadBranches(branch)
             self.ui.acCompare.setChecked(True)
         elif mode == MainWindow.MergeMode:
             self.mergeWidget = MergeWidget()

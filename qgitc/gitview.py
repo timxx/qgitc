@@ -163,6 +163,8 @@ class GitView(QWidget):
                     if branch.startswith("+ "):
                         branch = branch[2:]
                     self.ui.cbBranch.addItem(branch.strip())
+                    if activeBranch and activeBranch == branch:
+                        curBranchIdx = self.ui.cbBranch.count() - 1
 
         if curBranchIdx != -1:
             self.ui.cbBranch.setCurrentIndex(curBranchIdx)

@@ -330,7 +330,7 @@ class Git():
         name = None
         with open(path, "r") as f:
             line = f.readline()
-            m = re.match("Merge.* '(.*)' into .*", line)
+            m = re.match("Merge.* '(.*)'.*", line)
             if m:
                 name = m.group(1)
 

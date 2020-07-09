@@ -209,12 +209,12 @@ class MergeWidget(QWidget):
         if not self.process or not self.process.bytesAvailable():
             return
 
-        data = self.process.readAllStandardOutput()
+        data = self.process.readAllStandardOutput().data()
         # seems no options to control this buggy prompt
         if b'Continue merging other unresolved paths [y/n]?' in data:
             self.process.write(b"n\n")
         elif b'Deleted merge conflict for' in data:
-            text = data.data().decode("utf-8")
+            text = data.decode("utf-8")
             isCreated = "(c)reated" in text
             if isCreated:
                 text = text.replace("(c)reated", "created")
@@ -241,7 +241,7 @@ class MergeWidget(QWidget):
             else:  # r == QMessageBox.Abort:
                 self.process.write(b"a\n")
         elif b'Symbolic link merge conflict for' in data:
-            text = data.data().decode("utf-8")
+            text = data.decode("utf-8")
             text = text.replace("(l)ocal", "local")
             text = text.replace("(r)emote", "remote")
             text = text.replace("(a)bort", "abort")
