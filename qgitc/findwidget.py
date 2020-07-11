@@ -39,6 +39,11 @@ class FindWidget(QWidget):
         self._host.installEventFilter(self)
         self.updateFindResult([], 0)
 
+        self._delayTimer = QTimer(self)
+        self._delayTimer.setSingleShot(True)
+        self._delayTimer.timeout.connect(
+            self._doFind)
+
     def _setupUi(self):
         self._leFind = QLineEdit(self)
         self._tbPrev = QToolButton(self)
@@ -72,7 +77,7 @@ class FindWidget(QWidget):
         self._tbClose.setText('⨉')
 
     def _setupSignals(self):
-        self._leFind.textChanged.connect(self.find)
+        self._leFind.textChanged.connect(self._onDelayFind)
         self._leFind.returnPressed.connect(self._onNextClicked)
 
         self._tbPrev.clicked.connect(self._onPreviousClicked)
@@ -93,6 +98,12 @@ class FindWidget(QWidget):
         pos = self.parentWidget().mapFromGlobal(pos)
 
         self.move(pos)
+
+    def _doFind(self):
+        self.find.emit(self._leFind.text())
+
+    def _onDelayFind(self, text):
+        self._delayTimer.start(200)
 
     def _onPreviousClicked(self):
         if not self._findResult:
