@@ -3,8 +3,11 @@
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
+
 from .stylehelper import dpiScaled
 from .textcursor import TextCursor
+from .waitingspinnerwidget import QtWaitingSpinner
+from .textviewer import FindPart
 
 
 class FindWidget(QWidget):
@@ -18,11 +21,12 @@ class FindWidget(QWidget):
         self._host = host
         self._findResult = []
         self._curIndex = 0
+        self._searching = False
 
         self._setupUi()
         self._setupSignals()
 
-        width = dpiScaled(280)
+        width = dpiScaled(300)
         heigth = self._leFind.height()
         self.resize(width, heigth)
 
@@ -41,6 +45,14 @@ class FindWidget(QWidget):
         self._tbNext = QToolButton(self)
         self._tbClose = QToolButton(self)
         self._lbStatus = QLabel(self)
+        self._spinner = QtWaitingSpinner(self)
+
+        self._leFind.setFixedWidth(dpiScaled(100))
+
+        height = self._leFind.height() // 6
+        self._spinner.setLineLength(height)
+        self._spinner.setInnerRadius(height)
+        self._spinner.setNumberOfLines(14)
 
         hlayout = QHBoxLayout(self)
         margin = dpiScaled(3)
@@ -48,8 +60,9 @@ class FindWidget(QWidget):
         hlayout.setSpacing(margin)
 
         hlayout.addWidget(self._leFind)
+        hlayout.addWidget(self._spinner)
         hlayout.addWidget(self._lbStatus)
-        hlayout.addSpacing(dpiScaled(10))
+        hlayout.addSpacing(dpiScaled(5))
         hlayout.addWidget(self._tbPrev)
         hlayout.addWidget(self._tbNext)
         hlayout.addWidget(self._tbClose)
@@ -108,6 +121,9 @@ class FindWidget(QWidget):
             color = Qt.black
             self._lbStatus.setText("{}/{}".format(
                 self._curIndex + 1, len(self._findResult)))
+        elif self._searching:
+            color = Qt.black
+            self._lbStatus.setText(self.tr("Finding..."))
         else:
             color = Qt.red
             self._lbStatus.setText(self.tr("No results"))
@@ -132,12 +148,34 @@ class FindWidget(QWidget):
     def text(self):
         return self._leFind.text()
 
-    def updateFindResult(self, result, curIndex=0):
-        self._findResult = result
-        self._curIndex = curIndex
+    def updateFindResult(self, result, curIndex=0, part=FindPart.All):
+        if part in [FindPart.CurrentPage, FindPart.All]:
+            self._findResult = result[:]
+            if curIndex >= 0:
+                self._curIndex = curIndex
+        elif part == FindPart.BeforeCurPage:
+            if curIndex >= 0:
+                self._curIndex = curIndex
+            else:
+                self._curIndex += len(result)
+            findResult = result[:]
+            findResult.extend(self._findResult)
+            self._findResult = findResult
+        else:
+            if curIndex >= 0:
+                self._curIndex = curIndex + len(self._findResult)
+            self._findResult.extend(result)
 
-        self._updateButtons(len(result) > 0)
+        self._updateButtons(len(self._findResult) > 0)
         self._updateStatus()
+
+    def findStarted(self):
+        self._searching = True
+        self._spinner.start()
+
+    def findFinished(self):
+        self._searching = False
+        self._spinner.stop()
 
     def showEvent(self, event):
         self._updatePos()

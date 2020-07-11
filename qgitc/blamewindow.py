@@ -16,6 +16,7 @@ from .stylehelper import dpiScaled
 from .gotodialog import GotoDialog
 from .findwidget import FindWidget
 from .statewindow import StateWindow
+from .textviewer import FindPart
 
 
 __all__ = ["BlameWindow"]
@@ -39,11 +40,15 @@ class BlameWindow(StateWindow):
         self._setupMenuBar()
 
         self._findWidget = None
+        self._curIndexFound = False
 
         self._view.blameFileAboutToChange.connect(
             self._onBlameFileAboutToChange)
         self._view.blameFileChanged.connect(
             self._onBlameFileChanged)
+
+        self._view.viewer.findResultAvailable.connect(
+            self._onFindResultAvailable)
 
     def _setupMenuBar(self):
         self._setupFileMenu()
@@ -99,22 +104,18 @@ class BlameWindow(StateWindow):
 
     def _onFindFind(self, text):
         viewer = self._view.viewer
-        findResult = viewer.findAll(text)
 
-        curFindIndex = 0
-        textCursor = viewer.textCursor
-        if textCursor.isValid() and textCursor.hasSelection() and not textCursor.hasMultiLines():
-            for i in range(0, len(findResult)):
-                r = findResult[i]
-                if r == textCursor:
-                    curFindIndex = i
-                    break
+        self._findWidget.updateFindResult([])
+        viewer.highlightFindResult([])
 
-        viewer.highlightFindResult(findResult)
-        if findResult:
-            viewer.select(findResult[curFindIndex])
-
-        self._findWidget.updateFindResult(findResult, curFindIndex)
+        if viewer.textLineCount() > 3000:
+            self._curIndexFound = False
+            if viewer.findAllAsync(text):
+                self._findWidget.findStarted()
+        else:
+            findResult = viewer.findAll(text)
+            if findResult:
+                self._onFindResultAvailable(findResult, FindPart.All)
 
     def _onFindCursorChanged(self, cursor):
         self._view.viewer.select(cursor)
@@ -131,6 +132,33 @@ class BlameWindow(StateWindow):
             # redo a find
             self._onFindFind(self._findWidget.text)
 
+    def _onFindResultAvailable(self, result, findPart):
+        curFindIndex = 0 if findPart == FindPart.All else -1
+        viewer = self._view.viewer
+
+        if findPart in [FindPart.CurrentPage, FindPart.All]:
+            textCursor = viewer.textCursor
+            if textCursor.isValid() and textCursor.hasSelection() \
+                    and not textCursor.hasMultiLines():
+                for i in range(0, len(result)):
+                    r = result[i]
+                    if r == textCursor:
+                        curFindIndex = i
+                        break
+            else:
+                curFindIndex = 0
+        elif not self._curIndexFound:
+            curFindIndex = 0
+
+        if curFindIndex >= 0:
+            self._curIndexFound = True
+
+        viewer.highlightFindResult(result, findPart)
+        if curFindIndex >= 0:
+            viewer.select(result[curFindIndex])
+
+        self._findWidget.updateFindResult(result, curFindIndex, findPart)
+
     def showFindWidget(self):
         if not self._findWidget:
             self._findWidget = FindWidget(
@@ -141,6 +169,8 @@ class BlameWindow(StateWindow):
                 self._onFindCursorChanged)
             self._findWidget.afterHidden.connect(
                 self._onFindHidden)
+            self._view.viewer.findFinished.connect(
+                self._findWidget.findFinished)
 
         text = self._view.viewer.selectedText
         if text:

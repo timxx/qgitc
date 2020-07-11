@@ -16,6 +16,7 @@ from .textline import (
     LinkTextLine)
 from .colorschema import ColorSchema
 from .sourceviewer import SourceViewer
+from .textviewer import FindPart
 
 import re
 
@@ -594,10 +595,12 @@ class PatchViewer(SourceViewer):
         self.highlightField = FindField.Comments
 
         self.findWidget = None
+        self.curIndexFound = False
 
         self.verticalScrollBar().valueChanged.connect(
              self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
+        self.findResultAvailable.connect(self._onFindResultAvailable)
 
     def endReading(self):
         super().endReading()
@@ -692,6 +695,8 @@ class PatchViewer(SourceViewer):
                 self._onFindCursorChanged)
             self.findWidget.afterHidden.connect(
                 self._onFindHidden)
+            self.findFinished.connect(
+                self.findWidget.findFinished)
 
         text = self.selectedText
         if text:
@@ -756,21 +761,17 @@ class PatchViewer(SourceViewer):
         QDesktopServices.openUrl(QUrl(url))
 
     def _onFind(self, text):
-        findResult = self.findAll(text)
-        curFindIndex = 0
-        textCursor = self.textCursor
-        if textCursor.isValid() and textCursor.hasSelection() and not textCursor.hasMultiLines():
-            for i in range(0, len(findResult)):
-                r = findResult[i]
-                if r == textCursor:
-                    curFindIndex = i
-                    break
+        self.findWidget.updateFindResult([])
+        self.highlightFindResult([])
 
-        self.highlightFindResult(findResult)
-        if findResult:
-            self.select(findResult[curFindIndex])
-
-        self.findWidget.updateFindResult(findResult, curFindIndex)
+        if self.textLineCount() > 3000:
+            self.curIndexFound = False
+            if self.findAllAsync(text):
+                self.findWidget.findStarted()
+        else:
+            findResult = self.findAll(text)
+            if findResult:
+                self._onFindResultAvailable(findResult, FindPart.All)
 
     def _onFindCursorChanged(self, cursor):
         self.select(cursor)
@@ -799,3 +800,29 @@ class PatchViewer(SourceViewer):
 
         if url:
             QDesktopServices.openUrl(QUrl(url))
+
+    def _onFindResultAvailable(self, result, findPart):
+        curFindIndex = 0 if findPart == FindPart.All else -1
+
+        if findPart in [FindPart.CurrentPage, FindPart.All]:
+            textCursor = self.textCursor
+            if textCursor.isValid() and textCursor.hasSelection() \
+                    and not textCursor.hasMultiLines():
+                for i in range(0, len(result)):
+                    r = result[i]
+                    if r == textCursor:
+                        curFindIndex = i
+                        break
+            else:
+                curFindIndex = 0
+        elif not self.curIndexFound:
+            curFindIndex = 0
+
+        if curFindIndex >= 0:
+            self.curIndexFound = True
+
+        self.highlightFindResult(result, findPart)
+        if curFindIndex >= 0:
+            self.select(result[curFindIndex])
+
+        self.findWidget.updateFindResult(result, curFindIndex, findPart)
