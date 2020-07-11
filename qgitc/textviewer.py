@@ -34,7 +34,7 @@ from .textcursor import TextCursor
 import re
 
 
-__all__ = ["TextViewer", "FindFlags"]
+__all__ = ["TextViewer", "FindFlags", "FindPart"]
 
 
 class FindFlags:
@@ -45,10 +45,20 @@ class FindFlags:
     UseRegExp = 0x08
 
 
+class FindPart:
+
+    BeforeCurPage = 0
+    CurrentPage = 1
+    AfterCurPage = 2
+    All = 3
+
+
 class TextViewer(QAbstractScrollArea):
 
     textLineClicked = Signal(TextLine)
     linkActivated = Signal(Link)
+    findResultAvailable = Signal(list, int)
+    findFinished = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,8 +69,7 @@ class TextViewer(QAbstractScrollArea):
         self._inReading = False
 
         self._convertIndex = 0
-        self._convertTimer = QTimer(self)
-        self._convertTimer.timeout.connect(self._onConvertEvent)
+        self._convertTimerId = None
 
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
@@ -80,6 +89,11 @@ class TextViewer(QAbstractScrollArea):
         self._link = None
 
         self._contextMenu = None
+
+        self._findTimerId = None
+        self._findIndex = 0
+        self._findPattern = None
+        self._findCurPageRange = None
 
         self._settingsTimer = None
         qApp.settings().bugPatternChanged.connect(
@@ -117,8 +131,8 @@ class TextViewer(QAbstractScrollArea):
                 textLine = self.toTextLine(line)
                 self.appendTextLine(textLine)
 
-        if not self._convertTimer.isActive():
-            self._convertTimer.start(0)
+        if self._convertTimerId is None:
+            self._convertTimerId = self.startTimer(0)
 
         self.viewport().update()
 
@@ -152,7 +166,15 @@ class TextViewer(QAbstractScrollArea):
         self._link = None
 
         self._convertIndex = 0
-        self._convertTimer.stop()
+        if self._convertTimerId is not None:
+            self.killTimer(self._convertTimerId)
+            self._convertTimerId = None
+
+        self.cancelFind()
+
+        if self._settingsTimer is not None:
+            self._settingsTimer.stop()
+            self._settingsTimer = None
 
         self._adjustScrollbars()
         self.viewport().setCursor(Qt.IBeamCursor)
@@ -254,8 +276,15 @@ class TextViewer(QAbstractScrollArea):
 
         self.viewport().update()
 
-    def highlightFindResult(self, result):
-        self._highlightFind = result
+    def highlightFindResult(self, result, findPart=FindPart.All):
+        if findPart in [FindPart.CurrentPage, FindPart.All]:
+            self._highlightFind = result[:]
+        elif findPart == FindPart.BeforeCurPage:
+            newResult = result[:]
+            newResult.extend(self._highlightFind)
+            self._highlightFind = newResult
+        else:
+            self._highlightFind.extend(result)
         self.viewport().update()
 
     def selectAll(self):
@@ -311,35 +340,51 @@ class TextViewer(QAbstractScrollArea):
             hbar.setValue(x1)
 
     def findAll(self, text, flags=0):
-        result = []
         if not text or not self.hasTextLines():
-            return result
+            return []
 
-        exp = text
-        exp_flags = re.IGNORECASE
+        pattern = self._toFindPattern(text, flags)
+        return self._findInRange(pattern, 0, self.textLineCount())
 
-        if not (flags & FindFlags.UseRegExp):
-            exp = re.escape(text)
-        if flags & FindFlags.CaseSenitively:
-            exp_flags = 0
-        if flags & FindFlags.WholeWords:
-            exp = r'\b' + text + r'\b'
+    def findAllAsync(self, text, flags=0):
+        """ Find text in idle.
+        False returned if search done without starting idle
+        """
 
-        pattern = re.compile(exp, exp_flags)
+        if not text or not self.hasTextLines():
+            return False
 
-        for i in range(0, self.textLineCount()):
-            text = self.textLineAt(i).text()
-            if not text:
-                continue
+        self.cancelFind()
 
-            iter = pattern.finditer(text)
-            for m in iter:
-                tc = TextCursor()
-                tc.moveTo(i, m.start())
-                tc.selectTo(i, m.end())
-                result.append(tc)
+        # Always find current visible page first
+        begin = self.firstVisibleLine()
+        end = self._linesPerPage() + begin
+        if end >= self.textLineCount():
+            end = self.textLineCount()
 
-        return result
+        pattern = self._toFindPattern(text, flags)
+        result = self._findInRange(pattern, begin, end)
+
+        if result:
+            self.findResultAvailable.emit(result, FindPart.CurrentPage)
+
+        # no more lines
+        if begin == 0 and end == self.textLineCount():
+            return False
+
+        self._findPattern = pattern
+        self._findCurPageRange = (begin, end - 1)
+        self._findIndex = end  # search from next page
+        self._findTimerId = self.startTimer(0)
+
+        return True
+
+    def cancelFind(self):
+        if self._findTimerId is not None:
+            self.killTimer(self._findTimerId)
+            self._findTimerId = None
+            self._findPattern = None
+            self.findFinished.emit()
 
     @property
     def selectedText(self):
@@ -513,12 +558,42 @@ class TextViewer(QAbstractScrollArea):
                 pattern = {Link.BugId: self._bugPattern}
             textLine.setCustomLinkPatterns(pattern)
 
+    def _toFindPattern(self, text, flags):
+        exp = text
+        exp_flags = re.IGNORECASE
+
+        if not (flags & FindFlags.UseRegExp):
+            exp = re.escape(text)
+        if flags & FindFlags.CaseSenitively:
+            exp_flags = 0
+        if flags & FindFlags.WholeWords:
+            exp = r'\b' + text + r'\b'
+
+        return re.compile(exp, exp_flags)
+
+    def _findInRange(self, pattern, low, high):
+        result = []
+        for i in range(low, high):
+            text = self.textLineAt(i).text()
+            if not text:
+                continue
+
+            iter = pattern.finditer(text)
+            for m in iter:
+                tc = TextCursor()
+                tc.moveTo(i, m.start())
+                tc.selectTo(i, m.end())
+                result.append(tc)
+
+        return result
+
     def _onConvertEvent(self):
         textLine = self.textLineAt(self._convertIndex)
         self._convertIndex += 1
 
         if not self._inReading and self._convertIndex >= self.textLineCount():
-            self._convertTimer.stop()
+            self.killTimer(self._convertTimerId)
+            self._convertTimerId = None
             self._convertIndex = 0
 
         maximum = self.textLineCount() - self._linesPerPage()
@@ -545,6 +620,43 @@ class TextViewer(QAbstractScrollArea):
 
         self._adjustScrollbars()
         self.viewport().update()
+
+    def _onFindEvent(self):
+        low, high = self._findCurPageRange
+        if self._findIndex > high:
+            findPart = FindPart.AfterCurPage
+            # Search from beginning
+            if self._findIndex == self.textLineCount():
+                self._findIndex = 0
+                findPart = FindPart.BeforeCurPage
+        else:
+            findPart = FindPart.BeforeCurPage
+
+        assert(self._findIndex < low or high < self._findIndex)
+
+        # find one page each time
+        begin = self._findIndex
+        end = begin + self._linesPerPage()
+        pattern = self._findPattern
+        if findPart == FindPart.AfterCurPage:
+            if end >= self.textLineCount():
+                end = self.textLineCount()
+        else:
+            if end >= low:
+                end = low
+
+        self._findIndex = end
+
+        result = self._findInRange(pattern, begin, end)
+        if result:
+            self.findResultAvailable.emit(result, findPart)
+
+        if findPart == FindPart.AfterCurPage:
+            if low == 0 and self._findIndex == self.textLineCount():
+                self.cancelFind()
+        else:
+            if self._findIndex == low:
+                self.cancelFind()
 
     def paintEvent(self, event):
         if not self.hasTextLines():
@@ -748,3 +860,10 @@ class TextViewer(QAbstractScrollArea):
                 QScrollBar.SliderPageStepAdd)
         else:
             super().keyPressEvent(event)
+
+    def timerEvent(self, event):
+        id = event.timerId()
+        if id == self._convertTimerId:
+            self._onConvertEvent()
+        elif id == self._findTimerId:
+            self._onFindEvent()
