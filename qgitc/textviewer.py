@@ -305,7 +305,7 @@ class TextViewer(QAbstractScrollArea):
         self.ensureCursorVisible()
         self.viewport().update()
 
-    def ensureCursorVisible(self):
+    def ensureCursorVisible(self, lineOnly=False):
         if not self.hasTextLines():
             return
         if not self._cursor.isValid():
@@ -321,6 +321,9 @@ class TextViewer(QAbstractScrollArea):
             if lineNo > halfOfPage:
                 lineNo -= halfOfPage
             self.verticalScrollBar().setValue(lineNo)
+
+        if lineOnly:
+            return
 
         hbar = self.horizontalScrollBar()
 
@@ -606,6 +609,7 @@ class TextViewer(QAbstractScrollArea):
 
         if needAdjust:
             self._adjustScrollbars()
+            self.ensureCursorVisible(True)
 
     def _onUpdateSettings(self):
         self.reloadSettings()
