@@ -416,3 +416,27 @@ class Git():
                 return m.group(1)
 
         return ""
+
+    @staticmethod
+    def generateDiff(sha1, filePath):
+        data = Git.commitRawDiff(sha1)
+        if not data:
+            return False
+
+        with open(filePath, "wb+") as f:
+            f.write(data)
+
+        return True
+
+    @staticmethod
+    def generatePatch(sha1, filePath):
+        args = ["format-patch", "-1", "--stdout", sha1]
+
+        data = Git.checkOutput(args)
+        if not data:
+            return False
+
+        with open(filePath, "wb+") as f:
+            f.write(data)
+
+        return True

@@ -545,8 +545,7 @@ class LogView(QAbstractScrollArea):
         self.marker = Marker()
 
         self.filterPath = None
-
-        self.__setupMenu()
+        self.menu = None
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -568,7 +567,10 @@ class LogView(QAbstractScrollArea):
     def __del__(self):
         self.cancelFindCommit()
 
-    def __setupMenu(self):
+    def __ensureContextMenu(self):
+        if self.menu:
+            return
+
         self.menu = QMenu()
 
         self.acCopySummary = self.menu.addAction(
@@ -582,6 +584,14 @@ class LogView(QAbstractScrollArea):
                                             self.__onMarkToCommit)
         self.acClearMarks = self.menu.addAction(self.tr("Clea&r Marks"),
                                                 self.__onClearMarks)
+
+        self.menu.addSeparator()
+        self.acGenPatch = self.menu.addAction(
+            self.tr("Generate &patch"),
+            self.__onGeneratePatch)
+        self.acGenDiff = self.menu.addAction(
+            self.tr("Generate &diff"),
+            self.__onGenerateDiff)
 
     def setBranchB(self):
         self.branchA = False
@@ -712,9 +722,12 @@ class LogView(QAbstractScrollArea):
         if self.curIdx == -1:
             return
 
+        self.__ensureContextMenu()
+
         commit = self.getCommit(self.curIdx)
-        self.acCopySummary.setEnabled(
-            not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1])
+        isCommitted = not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]
+        self.acCopySummary.setEnabled(isCommitted)
+        self.acGenPatch.setEnabled(isCommitted)
 
         hasMark = self.marker.hasMark()
         self.acMarkTo.setVisible(hasMark)
@@ -798,6 +811,32 @@ class LogView(QAbstractScrollArea):
         self.marker.clear()
         # TODO: update marked lines only
         self.viewport().update()
+
+    def __onGeneratePatch(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        f, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Patch"))
+        if f:
+           Git.generatePatch(commit.sha1, f)
+
+    def __onGenerateDiff(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        f, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Save Diff"))
+        if f:
+            Git.generateDiff(commit.sha1, f)
 
     def __onFindDataAvailable(self):
         data = self.findProc.readAllStandardOutput()
