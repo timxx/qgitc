@@ -14,6 +14,7 @@ class DataFetcher(QObject):
         self._dataChunk = None
         self._separator = b'\n'
         self._errorData = b''
+        self._cwd = Git.REPO_DIR
 
     @property
     def process(self):
@@ -34,6 +35,14 @@ class DataFetcher(QObject):
     @property
     def errorData(self):
         return self._errorData
+
+    @property
+    def cwd(self):
+        return self._cwd
+
+    @cwd.setter
+    def cwd(self, cwd):
+        self._cwd = cwd
 
     def parse(self, data):
         """Implement in subclass"""
@@ -98,7 +107,8 @@ class DataFetcher(QObject):
         git_args = self.makeArgs(args)
 
         self._process = QProcess()
-        self._process.setWorkingDirectory(Git.REPO_DIR)
+        cwd = self._cwd if self._cwd else Git.REPO_DIR
+        self._process.setWorkingDirectory(cwd)
         self._process.readyReadStandardOutput.connect(self.onDataAvailable)
         self._process.readyReadStandardError.connect(self.onProcessError)
         self._process.finished.connect(self.onDataFinished)

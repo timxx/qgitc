@@ -272,7 +272,7 @@ class Git():
         return data
 
     @staticmethod
-    def externalDiff(commit, path=None, tool=None):
+    def externalDiff(branchDir, commit, path=None, tool=None):
         args = ["difftool"]
         if commit.sha1 == Git.LUC_SHA1:
             pass
@@ -288,7 +288,8 @@ class Git():
             args.append("--")
             args.append(path)
 
-        process = Git.run(args)
+        cwd = branchDir if branchDir else Git.REPO_DIR
+        process = GitProcess(cwd, args)
 
     @staticmethod
     def conflictFiles():
@@ -384,13 +385,11 @@ class Git():
         if not dir:
             return False
 
-        # FIXME: the @branch isn't working as expected
-        # and cannot specified here
         args = ["diff", "--quiet"]
         if cached:
             args.append("--cached")
 
-        process = Git.run(args)
+        process = GitProcess(dir, args)
         process.communicate()
 
         return process.returncode == 1

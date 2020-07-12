@@ -221,6 +221,7 @@ class DiffView(QWidget):
         self.filterPath = None
         self.twMenu = QMenu()
         self.commit = None
+        self.branchDir = None
         self.gitArgs = []
         self.fetcher = DiffFetcher(self)
 
@@ -307,7 +308,7 @@ class DiffView(QWidget):
             return
         filePath = item.text(0)
         tool = self.__diffToolForFile(filePath)
-        Git.externalDiff(self.commit, filePath, tool)
+        Git.externalDiff(self.branchDir, self.commit, filePath, tool)
 
     def __doCopyPath(self, asWin=False):
         item = self.treeWidget.currentItem()
@@ -362,7 +363,7 @@ class DiffView(QWidget):
 
         filePath = item.text(0)
         tool = self.__diffToolForFile(filePath)
-        Git.externalDiff(self.commit, filePath, tool)
+        Git.externalDiff(self.branchDir, self.commit, filePath, tool)
 
     def __onIgnoreWhitespaceChanged(self, index):
         args = ["", "--ignore-space-at-eol",
@@ -500,6 +501,10 @@ class DiffView(QWidget):
         state = settings.diffViewState(isBranchA)
         if state:
             self.splitter.restoreState(state)
+
+    def setBranchDir(self, branchDir):
+        self.branchDir = branchDir
+        self.fetcher.cwd = branchDir
 
 
 class DiffTextLine(SourceTextLineBase):
