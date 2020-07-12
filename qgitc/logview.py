@@ -518,6 +518,7 @@ class LogView(QAbstractScrollArea):
         self.curIdx = -1
         self.branchA = True
         self.curBranch = ""
+        self.args = None
         self.preferSha1 = None
         self.delayVisible = False
         self.delayUpdateParents = False
@@ -593,6 +594,22 @@ class LogView(QAbstractScrollArea):
             self.tr("Generate &diff"),
             self.__onGenerateDiff)
 
+        self.menu.addSeparator()
+        self.acRevert = self.menu.addAction(
+            self.tr("Re&vert this commit"),
+            self.__onRevertCommit)
+        resetMenu = self.menu.addMenu(self.tr("Re&set to here"))
+        resetMenu.addAction(
+            self.tr("&Soft"),
+            self.__onResetSoft)
+        resetMenu.addAction(
+            self.tr("&Mixed"),
+            self.__onResetMixed)
+        resetMenu.addAction(
+            self.tr("&Hard"),
+            self.__onResetHard)
+        self.resetMenu = resetMenu
+
     def setBranchB(self):
         self.branchA = False
 
@@ -619,6 +636,7 @@ class LogView(QAbstractScrollArea):
 
     def showLogs(self, branch, args=None):
         self.curBranch = branch
+        self.args = args
         self.fetcher.fetch(branch, args)
         self.beginFetch.emit()
 
@@ -725,9 +743,17 @@ class LogView(QAbstractScrollArea):
         self.__ensureContextMenu()
 
         commit = self.getCommit(self.curIdx)
-        isCommitted = not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]
+        isCommitted = commit.sha1 not in [Git.LCC_SHA1, Git.LUC_SHA1]
         self.acCopySummary.setEnabled(isCommitted)
         self.acGenPatch.setEnabled(isCommitted)
+
+        enabled = isCommitted
+        if enabled:
+            branchDir = Git.branchDir(self.curBranch)
+            enabled = not not branchDir
+
+        self.acRevert.setEnabled(enabled)
+        self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
         self.acMarkTo.setVisible(hasMark)
@@ -837,6 +863,49 @@ class LogView(QAbstractScrollArea):
             self.tr("Save Diff"))
         if f:
             Git.generateDiff(commit.sha1, f)
+
+    def __onRevertCommit(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        ret, error = Git.revertCommit(self.curBranch, commit.sha1)
+        # ret == 1 with no error can happened but still reverted
+        if ret != 0 and error:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
+        else:
+            # FIXME: fetch the new one only?
+            self.clear()
+            self.showLogs(self.curBranch, self.args)
+
+    def __resetToCurCommit(self, method):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        ret, error = Git.resetCommitTo(self.curBranch, commit.sha1, method)
+        if ret != 0:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
+        else:
+            self.clear()
+            self.showLogs(self.curBranch, self.args)
+
+    def __onResetSoft(self):
+        self.__resetToCurCommit("soft")
+
+    def __onResetMixed(self):
+        self.__resetToCurCommit("mixed")
+
+    def __onResetHard(self):
+        self.__resetToCurCommit("hard")
 
     def __onFindDataAvailable(self):
         data = self.findProc.readAllStandardOutput()
