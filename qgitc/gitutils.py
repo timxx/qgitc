@@ -400,6 +400,9 @@ class Git():
         """returned the branch directory if it checked out
         otherwise returned an empty string"""
 
+        if not branch or branch.startswith("remotes/"):
+            return ""
+
         args = ["worktree", "list"]
         data = Git.checkOutput(args)
         if not data:
@@ -440,3 +443,26 @@ class Git():
             f.write(data)
 
         return True
+
+    @staticmethod
+    def revertCommit(branch, sha1):
+        branchDir = Git.branchDir(branch)
+
+        args = ["revert", "--no-edit", sha1]
+        process = GitProcess(branchDir, args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            error = error.decode("utf-8")
+
+        return process.returncode, error
+
+    @staticmethod
+    def resetCommitTo(branch, sha1, method):
+        branchDir = Git.branchDir(branch)
+        args = ["reset", "--" + method, sha1]
+        process = GitProcess(branchDir, args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            error = error.decode("utf-8")
+
+        return process.returncode, error
