@@ -285,7 +285,17 @@ class TextViewer(QAbstractScrollArea):
             self._highlightFind = newResult
         else:
             self._highlightFind.extend(result)
-        self.viewport().update()
+
+        needUpdate = True
+        if result:
+            firstVisibleLine = self.firstVisibleLine()
+            lastVisibleLine = firstVisibleLine + self._linesPerPage()
+            firstLine = result[0].beginLine()
+            lastLine = result[-1].endLine()
+            if firstLine > lastVisibleLine or lastLine < firstVisibleLine:
+                needUpdate = False
+        if needUpdate:
+            self.viewport().update()
 
     def selectAll(self):
         if not self.hasTextLines():
@@ -638,9 +648,8 @@ class TextViewer(QAbstractScrollArea):
 
         assert(self._findIndex < low or high < self._findIndex)
 
-        # find one page each time
         begin = self._findIndex
-        end = begin + self._linesPerPage()
+        end = begin + 1000
         pattern = self._findPattern
         if findPart == FindPart.AfterCurPage:
             if end >= self.textLineCount():
