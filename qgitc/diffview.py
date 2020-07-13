@@ -783,6 +783,7 @@ class PatchViewer(SourceViewer):
 
     def _onFindHidden(self):
         self.highlightFindResult([])
+        self.cancelFind()
 
     def _onLinkActivated(self, link):
         url = None

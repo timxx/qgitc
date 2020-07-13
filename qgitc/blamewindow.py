@@ -122,6 +122,7 @@ class BlameWindow(StateWindow):
 
     def _onFindHidden(self):
         self._view.viewer.highlightFindResult([])
+        self._view.viewer.cancelFind()
 
     def _onBlameFileAboutToChange(self, file):
         if self._findWidget and self._findWidget.isVisible():
