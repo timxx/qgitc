@@ -9,6 +9,8 @@ from .textcursor import TextCursor
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import FindPart
 
+import bisect
+
 
 class FindWidget(QWidget):
     find = Signal(str)
@@ -169,9 +171,9 @@ class FindWidget(QWidget):
                 self._curIndex = curIndex
             else:
                 self._curIndex += len(result)
-            findResult = result[:]
-            findResult.extend(self._findResult)
-            self._findResult = findResult
+            low = bisect.bisect_left(self._findResult, result[0])
+            for i in range(0, len(result)):
+                self._findResult.insert(low + i, result[i])
         else:
             if curIndex >= 0:
                 self._curIndex = curIndex + len(self._findResult)

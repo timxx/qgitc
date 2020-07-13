@@ -16,6 +16,14 @@ class TextCursor():
             self._endLine == other._endLine and \
             self._endPos == other._endPos
 
+    def __lt__(self, other):
+        if self.beginLine() < other.beginLine():
+            return True
+        elif self.beginLine() > other.beginLine():
+            return False
+        else:
+            return self.beginPos() < other.beginPos()
+
     def clear(self):
         self._beginLine = -1
         self._beginPos = -1

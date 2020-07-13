@@ -32,6 +32,7 @@ from .colorschema import ColorSchema
 from .textcursor import TextCursor
 
 import re
+import bisect
 
 
 __all__ = ["TextViewer", "FindFlags", "FindPart"]
@@ -277,12 +278,15 @@ class TextViewer(QAbstractScrollArea):
         self.viewport().update()
 
     def highlightFindResult(self, result, findPart=FindPart.All):
-        if findPart in [FindPart.CurrentPage, FindPart.All]:
+        if not result:
+            self._highlightFind.clear()
+        elif findPart in [FindPart.CurrentPage, FindPart.All]:
             self._highlightFind = result[:]
         elif findPart == FindPart.BeforeCurPage:
-            newResult = result[:]
-            newResult.extend(self._highlightFind)
-            self._highlightFind = newResult
+            low = bisect.bisect_left(self._highlightFind, result[0])
+            # FIXME: how to improve performance?
+            for i in range(0, len(result)):
+                self._highlightFind.insert(low + i, result[i])
         else:
             self._highlightFind.extend(result)
 
@@ -533,19 +537,28 @@ class TextViewer(QAbstractScrollArea):
 
         return createFormatRange(start, end - start, fmt)
 
-    def _findResultFormatRange(self, lineIndex):
+    def _findResultFormatRange(self, lineIndex, endLine):
         if not self._highlightFind:
+            return None
+
+        key = TextCursor()
+        key.moveTo(lineIndex, 0)
+        low = bisect.bisect_left(self._highlightFind, key)
+        if low >= len(self._highlightFind):
+            return None
+        if self._highlightFind[low].beginLine() > lineIndex:
             return None
 
         result = []
         fmt = QTextCharFormat()
         fmt.setBackground(ColorSchema.FindResult)
 
-        for r in self._highlightFind:
+        for i in range(low, len(self._highlightFind)):
+            r = self._highlightFind[i]
             if r.beginLine() == lineIndex:
                 rg = createFormatRange(r.beginPos(), r.endPos() - r.beginPos(), fmt)
                 result.append(rg)
-            elif r.beginLine() > lineIndex:
+            elif r.beginLine() > lineIndex or r.beginLine() > endLine:
                 break
 
         return result
@@ -708,7 +721,7 @@ class TextViewer(QAbstractScrollArea):
             formats = []
 
             # find result
-            findRg = self._findResultFormatRange(i)
+            findRg = self._findResultFormatRange(i, endLine)
             if findRg:
                 formats.extend(findRg)
 
