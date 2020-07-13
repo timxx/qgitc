@@ -14,7 +14,7 @@ class DataFetcher(QObject):
         self._dataChunk = None
         self._separator = b'\n'
         self._errorData = b''
-        self._cwd = Git.REPO_DIR
+        self._cwd = None
 
     @property
     def process(self):
