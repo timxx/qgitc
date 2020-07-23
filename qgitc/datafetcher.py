@@ -6,7 +6,7 @@ from .gitutils import Git
 
 class DataFetcher(QObject):
 
-    fetchFinished = Signal()
+    fetchFinished = Signal(int)
 
     def __init__(self, parent=None):
         super(DataFetcher, self).__init__(parent)
@@ -77,7 +77,7 @@ class DataFetcher(QObject):
             self.parse(self._dataChunk)
 
         self._process = None
-        self.fetchFinished.emit()
+        self.fetchFinished.emit(exitCode)
 
     def cancel(self):
         if self._process:
