@@ -785,7 +785,7 @@ class BlameView(QWidget):
     def _onFetchDataAvailable(self, lines):
         self._viewer.appendBlameLines(lines)
 
-    def _onFetchFinished(self):
+    def _onFetchFinished(self, exitCode):
         self.blameFileChanged.emit(self._file)
         self._headerWidget.notifyFecthingFinished()
         if self._lineNo > 0:

@@ -396,9 +396,13 @@ class DiffView(QWidget):
         self.__addToTreeWidget(fileItems)
         self.viewer.appendLines(lineItems)
 
-    def __onFetchFinished(self):
+    def __onFetchFinished(self, exitCode):
         self.viewer.endReading()
         self.endFetch.emit()
+
+        if exitCode != 0 and self.fetcher.errorData:
+            QMessageBox.critical(self, self.window().windowTitle(),
+                                 self.fetcher.errorData.decode("utf-8"))
 
     def __addToTreeWidget(self, *args):
         """specify the @row number of the file in the viewer"""

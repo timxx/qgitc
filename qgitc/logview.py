@@ -951,16 +951,19 @@ class LogView(QAbstractScrollArea):
 
         self.updateGeometries()
 
-    def __onFetchFinished(self):
+    def __onFetchFinished(self, exitCode):
         if self.delayVisible:
             self.ensureVisible()
             self.delayVisible = False
         elif self.curIdx == -1:
             self.setCurrentIndex(0)
 
-        self.viewport().update()
-
         self.endFetch.emit()
+        if exitCode != 0 and self.fetcher.errorData:
+            QMessageBox.critical(self, self.window().windowTitle(),
+                                 self.fetcher.errorData.decode("utf-8"))
+        else:
+            self.viewport().update()
 
     def __onCheckFinished(self, hasLCC, hasLUC):
         parent_sha1 = self.data[0].sha1 if self.data else None
