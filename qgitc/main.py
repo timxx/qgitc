@@ -100,7 +100,17 @@ def _do_log(app, args):
             window.setMode(MainWindow.CompareMode)
 
         if args.file:
-            window.setFilterFile(args.file)
+            filterFile = args.file
+            if not os.path.isabs(filterFile):
+                filterFile = os.path.abspath(filterFile)
+
+            if Git.REPO_DIR:
+                normPath = os.path.normcase(os.path.normpath(filterFile))
+                repoDir = os.path.normcase(os.path.normpath(Git.REPO_DIR))
+                if normPath.find(repoDir) != -1:
+                    filterFile = filterFile[len(repoDir) + 1:]
+
+            window.setFilterFile(filterFile)
 
     if window.restoreState():
         window.show()
