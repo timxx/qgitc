@@ -127,8 +127,6 @@ class GitView(QWidget):
         self.ui.leSha1.returnPressed.connect(self.reqCommit)
         self.ui.leFindWhat.returnPressed.connect(self.reqFind)
 
-        self.ui.cbBranch.completer().activated.connect(self.__onBranchChanged)
-
     def __updateBranches(self, activeBranch=None):
         self.ui.cbBranch.clear()
         self.ui.logView.clear()
