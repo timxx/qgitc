@@ -14,34 +14,6 @@ from .events import BlameEvent
 import re
 
 
-QT_VERSION = (PySide2.__version_info__[0] << 16) + \
-    (PySide2.__version_info__[1] << 8) + \
-    (PySide2.__version_info__[2])
-
-
-class BranchFilterProxyModel(QSortFilterProxyModel):
-
-    def __init__(self, parent=None):
-        super(BranchFilterProxyModel, self).__init__(parent)
-
-    def filterAcceptsRow(self, sourceRow, sourceParent):
-        regExp = self.filterRegExp()
-        if regExp.isEmpty():
-            return False
-
-        model = self.sourceModel()
-        index = model.index(sourceRow, 0, sourceParent)
-        if not index.isValid():
-            return False
-
-        branch = index.data(Qt.DisplayRole).lower()
-        pattern = regExp.pattern().lower()
-
-        if branch == pattern:
-            return False
-        return pattern in branch
-
-
 class GitView(QWidget):
     reqCommit = Signal()
     reqFind = Signal()
@@ -75,16 +47,9 @@ class GitView(QWidget):
         self.ui.cbBranch.setInsertPolicy(QComboBox.NoInsert)
         self.ui.cbBranch.setEditable(True)
 
-        if QT_VERSION >= 0x050200:
-            self.ui.cbBranch.completer().setFilterMode(Qt.MatchContains)
-            self.ui.cbBranch.completer().setCompletionMode(
-                QCompleter.PopupCompletion)
-        else:
-            self.filterModel = BranchFilterProxyModel(self)
-            self.filterModel.setSourceModel(self.ui.cbBranch.model())
-            self.ui.cbBranch.completer().setModel(self.filterModel)
-            self.ui.cbBranch.completer().setCompletionMode(
-                QCompleter.UnfilteredPopupCompletion)
+        self.ui.cbBranch.completer().setFilterMode(Qt.MatchContains)
+        self.ui.cbBranch.completer().setCompletionMode(
+            QCompleter.PopupCompletion)
 
         height = self.ui.lbBranch.height() // 6
         self.ui.branchSpinner.setLineLength(height)
@@ -103,11 +68,6 @@ class GitView(QWidget):
 
     def __setupSignals(self):
         self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
-        if QT_VERSION < 0x050200:
-            # don't use editTextChanged as it will emit when activated signaled
-            self.ui.cbBranch.lineEdit().textEdited.connect(
-                self.filterModel.setFilterFixedString)
-
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.beginFetch.connect(self.__onBeginFetch)
