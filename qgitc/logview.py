@@ -465,14 +465,20 @@ class CheckLocalChangesThread(QThread):
     checkFinished = Signal(bool, bool)
 
     def __init__(self, branch, parent=None):
-        super(CheckLocalChangesThread, self).__init__(parent)
+        super().__init__(parent)
         self._branch = branch
 
     def run(self):
+        if self.isInterruptionRequested():
+            return
         hasLCC = Git.hasLocalChanges(self._branch, True)
+
+        if self.isInterruptionRequested():
+            return
         hasLUC = Git.hasLocalChanges(self._branch)
 
-        self.checkFinished.emit(hasLCC, hasLUC)
+        if not self.isInterruptionRequested():
+            self.checkFinished.emit(hasLCC, hasLUC)
 
 
 class LogGraph(QWidget):
@@ -641,11 +647,12 @@ class LogView(QAbstractScrollArea):
         self.beginFetch.emit()
 
         if self.checkThread:
-            self.checkThread.terminate()
-            del self.checkThread
+            self.checkThread.disconnect(self)
+            self.checkThread.requestInterruption()
+            self.checkThread = None
 
         if not args:
-            self.checkThread = CheckLocalChangesThread(self.curBranch, self)
+            self.checkThread = CheckLocalChangesThread(self.curBranch)
             self.checkThread.checkFinished.connect(self.__onCheckFinished)
             self.checkThread.start()
 
