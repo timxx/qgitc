@@ -108,7 +108,10 @@ class TextLine():
                     continue
 
                 link = Link(m.start(), m.end(), linkType)
-                link.setData(m.group(0 if pattern.groups == 0 else 1))
+                if pattern.groups == 0 or m.lastindex is None:
+                    link.setData(m.group(0))
+                else:
+                    link.setData(m.group(m.lastindex))
 
                 links.append(link)
                 bisect.insort(foundLinks, (m.start(), m.end()))

@@ -17,6 +17,7 @@ from .textline import (
 from .colorschema import ColorSchema
 from .sourceviewer import SourceViewer
 from .textviewer import FindPart
+from .events import OpenLinkEvent
 
 import re
 
@@ -761,8 +762,11 @@ class PatchViewer(SourceViewer):
                 break
 
     def _onOpenCommit(self):
-        sett = qApp.instance().settings()
-        url = sett.commitUrl()
+        sett = qApp.settings()
+        repoName = qApp.repoName()
+        url = sett.commitUrl(repoName)
+        if not url and sett.fallbackGlobalLinks(repoName):
+            url = sett.commitUrl(None)
         if not url:
             return
 
@@ -790,7 +794,6 @@ class PatchViewer(SourceViewer):
         self.cancelFind()
 
     def _onLinkActivated(self, link):
-        url = None
         if link.type == Link.Sha1:
             data = link.data
             isNear = isinstance(data, tuple)
@@ -799,17 +802,8 @@ class PatchViewer(SourceViewer):
                 goNext = data[1]
                 data = data[0]
             self.requestCommit.emit(data, isNear, goNext)
-        elif link.type == Link.Email:
-            url = "mailto:" + link.data
-        elif link.type == Link.BugId:
-            bugUrl = qApp.settings().bugUrl()
-            if bugUrl:
-                url = bugUrl + link.data
         else:
-            url = link.data
-
-        if url:
-            QDesktopServices.openUrl(QUrl(url))
+            qApp.postEvent(qApp, OpenLinkEvent(link))
 
     def _onFindResultAvailable(self, result, findPart):
         curFindIndex = 0 if findPart == FindPart.All else -1

@@ -465,3 +465,11 @@ class Git():
             error = error.decode("utf-8")
 
         return process.returncode, error
+
+    @staticmethod
+    def repoUrl():
+        args = ["config", "remote.origin.url"]
+        data = Git.checkOutput(args)
+        if data:
+            return data.rstrip(b'\n').decode("utf-8")
+        return ""

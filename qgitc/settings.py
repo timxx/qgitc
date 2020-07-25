@@ -79,25 +79,48 @@ class Settings(QSettings):
     def setCommitColorB(self, color):
         self.setValue("colorB", color)
 
-    def commitUrl(self):
-        return self.value("commitUrl", "")
+    def _linkGroup(self, repoName):
+        return repoName if repoName else "Global"
 
-    def setCommitUrl(self, url):
-        self.setValue("commitUrl", url)
+    def getLinkValue(self, repoName, key, default=None, type=None):
+        self.beginGroup(self._linkGroup(repoName))
+        if type is not None:  # BUG!!!
+            value = self.value(key, default, type=type)
+        else:
+            value = self.value(key, default)
+        self.endGroup()
+        return value
 
-    def bugUrl(self):
-        return self.value("bugUrl", "")
+    def setLinkValue(self, repoName, key, value):
+        self.beginGroup(self._linkGroup(repoName))
+        self.setValue(key, value)
+        self.endGroup()
 
-    def setBugUrl(self, url):
-        self.setValue("bugUrl", url)
+    def commitUrl(self, repoName):
+        return self.getLinkValue(repoName, "commitUrl", "")
+
+    def setCommitUrl(self, repoName, url):
+        self.setLinkValue(repoName, "commitUrl", url)
+
+    def bugUrl(self, repoName):
+        return self.getLinkValue(repoName, "bugUrl", "")
+
+    def setBugUrl(self, repoName, url):
+        self.setLinkValue(repoName, "bugUrl", url)
         self.bugUrlChanged.emit(url)
 
-    def bugPattern(self):
-        return self.value("bugPattern", "")
+    def bugPattern(self, repoName):
+        return self.getLinkValue(repoName, "bugPattern", "")
 
-    def setBugPattern(self, pattern):
-        self.setValue("bugPattern", pattern)
+    def setBugPattern(self, repoName, pattern):
+        self.setLinkValue(repoName, "bugPattern", pattern)
         self.bugPatternChanged.emit(pattern)
+
+    def fallbackGlobalLinks(self, repoName):
+        return self.getLinkValue(repoName, "fallback", True, type=bool)
+
+    def setFallbackGlobalLinks(self, repoName, fallback):
+        self.setLinkValue(repoName, "fallback", fallback)
 
     def showWhitespace(self):
         return self.value("showWhitespace", True, type=bool)

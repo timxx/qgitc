@@ -107,8 +107,25 @@ class TextViewer(QAbstractScrollArea):
 
     def reloadSettings(self):
         self.updateFont(self.font())
-        pattern = qApp.settings().bugPattern()
-        self._bugPattern = re.compile(pattern) if pattern else None
+        self.reloadBugPattern()
+
+    def reloadBugPattern(self):
+        repoName = qApp.repoName()
+        sett = qApp.settings()
+        pattern = sett.bugPattern(repoName)
+        globalPattern = sett.bugPattern(
+            None) if sett.fallbackGlobalLinks(repoName) else None
+
+        self._bugPattern = None
+        if pattern == globalPattern:
+            if pattern:
+                self._bugPattern = re.compile(pattern)
+        elif pattern and globalPattern:
+            self._bugPattern = re.compile(pattern + '|' + globalPattern)
+        elif pattern:
+            self._bugPattern = re.compile(pattern)
+        elif globalPattern:
+            self._bugPattern = re.compile(globalPattern)
 
     def toTextLine(self, text):
         return TextLine(text, self._font, self._option)

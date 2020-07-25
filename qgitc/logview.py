@@ -627,19 +627,6 @@ class LogView(QAbstractScrollArea):
 
         return settings.commitColorB().name()
 
-    @property
-    def bugRe(self):
-        settings = qApp.settings()
-        pattern = settings.bugPattern()
-        if not pattern:
-            return None
-
-        # ensure the pattern has one group at least
-        if pattern[0] != '(' or pattern[-1] != ')':
-            pattern = '(' + pattern + ')'
-
-        return re.compile(pattern)
-
     def showLogs(self, branch, args=None):
         self.curBranch = branch
         self.args = args
@@ -1035,7 +1022,10 @@ class LogView(QAbstractScrollArea):
         self.firstFreeLane = 0
 
     def __sha1Url(self, sha1):
-        sha1Url = qApp.settings().commitUrl()
+        sha1Url = qApp.settings().commitUrl(qApp.repoName())
+        if not sha1Url:
+            sha1Url = qApp.settings().commitUrl(None)
+
         if not sha1Url:
             return sha1
 
@@ -1043,15 +1033,53 @@ class LogView(QAbstractScrollArea):
 
     def __filterBug(self, subject):
         text = htmlEscape(subject)
-        bugUrl = qApp.settings().bugUrl()
-        bugRe = self.bugRe
-        if not bugUrl or not bugRe:
+
+        sett = qApp.settings()
+        repoName = qApp.repoName()
+
+        fallback = sett.fallbackGlobalLinks(repoName)
+        bugUrl = sett.bugUrl(repoName)
+        bugUrlGlobal = sett.bugUrl(None) if fallback else None
+
+        if not bugUrl and not bugUrlGlobal:
             return text
 
-        if bugRe.groups == 1:
-            return bugRe.sub('<a href="{0}\\1">\\1</a>'.format(bugUrl), text)
-        else:
-            return bugRe.sub('<a href="{0}\\2">\\1</a>'.format(bugUrl), text)
+        def _toRe(pattern):
+            if not pattern:
+                return None
+
+            if pattern[0] != '(' or pattern[-1] != ')':
+                pattern = '(' + pattern + ')'
+            return re.compile(pattern)
+
+        def _replace(bugRe, url):
+            if bugRe.groups == 1:
+                return bugRe.sub('<a href="{0}\\1">\\1</a>'.format(
+                    url), text)
+            else:
+                return bugRe.sub('<a href="{0}\\2">\\1</a>'.format(
+                    url), text)
+
+        bugPattern = sett.bugPattern(repoName)
+        bugRe = _toRe(bugPattern)
+        if bugRe:
+            newText = _replace(bugRe, bugUrl if bugUrl else bugUrlGlobal)
+            if newText != text:
+                return newText
+
+        # global pattern follows only with global url
+        if not bugUrlGlobal:
+            return text
+
+        bugPatternGlobal = sett.bugPattern(None) if fallback else None
+        if bugPatternGlobal == bugPattern:
+            return text
+
+        bugRe = _toRe(bugPatternGlobal)
+        if not bugRe:
+            return text
+
+        return _replace(bugRe, bugUrlGlobal)
 
     def __mailTo(self, author, email):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))

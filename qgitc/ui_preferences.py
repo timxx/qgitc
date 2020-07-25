@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.15.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -16,13 +16,14 @@ from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
 from PySide2.QtWidgets import *
 
 from .colorwidget import ColorWidget
+from .linkeditwidget import LinkEditWidget
 
 
 class Ui_Preferences(object):
     def setupUi(self, Preferences):
         if not Preferences.objectName():
             Preferences.setObjectName(u"Preferences")
-        Preferences.resize(529, 316)
+        Preferences.resize(576, 321)
         self.verticalLayout_2 = QVBoxLayout(Preferences)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tabWidget = QTabWidget(Preferences)
@@ -213,37 +214,31 @@ class Ui_Preferences(object):
 
         self.groupBox_2 = QGroupBox(self.tabSummary)
         self.groupBox_2.setObjectName(u"groupBox_2")
-        self.gridLayout_2 = QGridLayout(self.groupBox_2)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.label_3 = QLabel(self.groupBox_2)
-        self.label_3.setObjectName(u"label_3")
+        self.verticalLayout_9 = QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.linkEditWidget = LinkEditWidget(self.groupBox_2)
+        self.linkEditWidget.setObjectName(u"linkEditWidget")
 
-        self.gridLayout_2.addWidget(self.label_3, 0, 0, 1, 1)
+        self.verticalLayout_9.addWidget(self.linkEditWidget)
 
-        self.label_4 = QLabel(self.groupBox_2)
-        self.label_4.setObjectName(u"label_4")
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.cbFallback = QCheckBox(self.groupBox_2)
+        self.cbFallback.setObjectName(u"cbFallback")
 
-        self.gridLayout_2.addWidget(self.label_4, 1, 0, 1, 1)
+        self.horizontalLayout_4.addWidget(self.cbFallback)
 
-        self.leBugUrl = QLineEdit(self.groupBox_2)
-        self.leBugUrl.setObjectName(u"leBugUrl")
+        self.btnGlobal = QPushButton(self.groupBox_2)
+        self.btnGlobal.setObjectName(u"btnGlobal")
 
-        self.gridLayout_2.addWidget(self.leBugUrl, 1, 1, 1, 1)
+        self.horizontalLayout_4.addWidget(self.btnGlobal)
 
-        self.leCommitUrl = QLineEdit(self.groupBox_2)
-        self.leCommitUrl.setObjectName(u"leCommitUrl")
+        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.gridLayout_2.addWidget(self.leCommitUrl, 0, 1, 1, 1)
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_4)
 
-        self.label_5 = QLabel(self.groupBox_2)
-        self.label_5.setObjectName(u"label_5")
 
-        self.gridLayout_2.addWidget(self.label_5, 2, 0, 1, 1)
-
-        self.leBugPattern = QLineEdit(self.groupBox_2)
-        self.leBugPattern.setObjectName(u"leBugPattern")
-
-        self.gridLayout_2.addWidget(self.leBugPattern, 2, 1, 1, 1)
+        self.verticalLayout_9.addLayout(self.horizontalLayout_4)
 
 
         self.verticalLayout_3.addWidget(self.groupBox_2)
@@ -310,18 +305,12 @@ class Ui_Preferences(object):
         self.label_8.setBuddy(self.cbFamilyDiff)
         self.label_2.setBuddy(self.colorB)
         self.label.setBuddy(self.colorA)
-        self.label_3.setBuddy(self.leCommitUrl)
-        self.label_4.setBuddy(self.leBugUrl)
-        self.label_5.setBuddy(self.leBugPattern)
 #endif // QT_CONFIG(shortcut)
         QWidget.setTabOrder(self.btnAdd, self.tableView)
         QWidget.setTabOrder(self.tableView, self.cbSizeDiff)
         QWidget.setTabOrder(self.cbSizeDiff, self.colorA)
         QWidget.setTabOrder(self.colorA, self.colorB)
-        QWidget.setTabOrder(self.colorB, self.leCommitUrl)
-        QWidget.setTabOrder(self.leCommitUrl, self.leBugUrl)
-        QWidget.setTabOrder(self.leBugUrl, self.leBugPattern)
-        QWidget.setTabOrder(self.leBugPattern, self.buttonBox)
+        QWidget.setTabOrder(self.colorB, self.buttonBox)
         QWidget.setTabOrder(self.buttonBox, self.cbEsc)
         QWidget.setTabOrder(self.cbEsc, self.cbState)
         QWidget.setTabOrder(self.cbState, self.cbShowWhitespace)
@@ -336,7 +325,7 @@ class Ui_Preferences(object):
         self.buttonBox.accepted.connect(Preferences.accept)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(3)
+        self.tabWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(Preferences)
@@ -367,9 +356,11 @@ class Ui_Preferences(object):
         self.label_2.setText(QCoreApplication.translate("Preferences", u"Branch &B:", None))
         self.label.setText(QCoreApplication.translate("Preferences", u"Branch &A:", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("Preferences", u"Links", None))
-        self.label_3.setText(QCoreApplication.translate("Preferences", u"C&ommit URL:", None))
-        self.label_4.setText(QCoreApplication.translate("Preferences", u"B&UG URL:", None))
-        self.label_5.setText(QCoreApplication.translate("Preferences", u"BUG &Pattern:", None))
+#if QT_CONFIG(tooltip)
+        self.cbFallback.setToolTip(QCoreApplication.translate("Preferences", u"Use global settings when no match current setting", None))
+#endif // QT_CONFIG(tooltip)
+        self.cbFallback.setText(QCoreApplication.translate("Preferences", u"Fallbac&k to Global", None))
+        self.btnGlobal.setText(QCoreApplication.translate("Preferences", u"&Edit Global", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSummary), QCoreApplication.translate("Preferences", u"Co&mmit", None))
         self.groupBox_7.setTitle(QCoreApplication.translate("Preferences", u"Tools", None))
         self.label_12.setText(QCoreApplication.translate("Preferences", u"You must add the tool to git config mergetool/difftool section to make it works.", None))

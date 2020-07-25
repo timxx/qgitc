@@ -8,6 +8,7 @@ from .ui_preferences import *
 from .mergetool import MergeTool
 from .comboboxitemdelegate import ComboBoxItemDelegate
 from .stylehelper import dpiScaled
+from .linkeditdialog import LinkEditDialog
 
 
 class ToolTableModel(QAbstractTableModel):
@@ -26,7 +27,7 @@ class ToolTableModel(QAbstractTableModel):
                         MergeTool.CanMerge: self.tr("Merge"),
                         MergeTool.Both: self.tr("Both")}
 
-    def __checkSuffix(self, row, suffix):
+    def _checkSuffix(self, row, suffix):
         for i in range(len(self._data)):
             if i == row:
                 continue
@@ -89,7 +90,7 @@ class ToolTableModel(QAbstractTableModel):
             if not value:
                 return False
             if col == self.Col_Suffix:
-                if not self.__checkSuffix(row, value):
+                if not self._checkSuffix(row, value):
                     self.suffixExists.emit(value)
                     return False
                 tool.suffix = value
@@ -170,24 +171,27 @@ class Preferences(QDialog):
             ToolTableModel.Col_Scenes, delegate)
 
         self.ui.cbFamilyLog.currentFontChanged.connect(
-            self.__onFamilyChanged)
+            self._onFamilyChanged)
         self.ui.cbFamilyDiff.currentFontChanged.connect(
-            self.__onFamilyChanged)
+            self._onFamilyChanged)
 
         self.ui.btnAdd.clicked.connect(
-            self.__onBtnAddClicked)
+            self._onBtnAddClicked)
         self.ui.btnDelete.clicked.connect(
-            self.__onBtnDeleteClicked)
+            self._onBtnDeleteClicked)
 
         self.ui.tableView.model().suffixExists.connect(
-            self.__onSuffixExists)
+            self._onSuffixExists)
+
+        self.ui.btnGlobal.clicked.connect(
+            self._onBtnGlobalClicked)
 
         # default to General tab
         self.ui.tabWidget.setCurrentIndex(0)
 
-        self.__initSettings()
+        self._initSettings()
 
-    def __initSettings(self):
+    def _initSettings(self):
         # TODO: delay load config for each tab
         font = self.settings.logViewFont()
         self.ui.cbFamilyLog.setCurrentFont(font)
@@ -200,9 +204,13 @@ class Preferences(QDialog):
         self.ui.colorA.setColor(self.settings.commitColorA())
         self.ui.colorB.setColor(self.settings.commitColorB())
 
-        self.ui.leCommitUrl.setText(self.settings.commitUrl())
-        self.ui.leBugUrl.setText(self.settings.bugUrl())
-        self.ui.leBugPattern.setText(self.settings.bugPattern())
+        repoName = qApp.repoName()
+        self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
+        self.ui.linkEditWidget.setBugUrl(self.settings.bugUrl(repoName))
+        self.ui.linkEditWidget.setBugPattern(
+            self.settings.bugPattern(repoName))
+        self.ui.cbFallback.setChecked(
+            self.settings.fallbackGlobalLinks(repoName))
 
         self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
         self.ui.sbTabSize.setValue(self.settings.tabSize())
@@ -218,7 +226,7 @@ class Preferences(QDialog):
         tools = self.settings.mergeToolList()
         self.ui.tableView.model().setRawData(tools)
 
-    def __updateFontSizes(self, family, size, cb):
+    def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
         if not sizes:
@@ -242,16 +250,16 @@ class Preferences(QDialog):
         cb.blockSignals(False)
         cb.setCurrentIndex(0 if curIdx == -1 else curIdx)
 
-    def __onFamilyChanged(self, font):
+    def _onFamilyChanged(self, font):
         cbSize = self.ui.cbSizeLog
         size = self.settings.logViewFont().pointSize()
         if self.sender() == self.ui.cbFamilyDiff:
             cbSize = self.ui.cbSizeDiff
             size = self.settings.diffViewFont().pointSize()
 
-        self.__updateFontSizes(font.family(), size, cbSize)
+        self._updateFontSizes(font.family(), size, cbSize)
 
-    def __onBtnAddClicked(self, checked=False):
+    def _onBtnAddClicked(self, checked=False):
         model = self.ui.tableView.model()
         row = model.rowCount()
         if not model.insertRow(row):
@@ -259,7 +267,7 @@ class Preferences(QDialog):
         index = model.index(row, ToolTableModel.Col_Suffix)
         self.ui.tableView.edit(index)
 
-    def __onBtnDeleteClicked(self, checked=False):
+    def _onBtnDeleteClicked(self, checked=False):
         indexes = self.ui.tableView.selectionModel().selectedRows()
         if not indexes:
             QMessageBox.information(self,
@@ -281,10 +289,26 @@ class Preferences(QDialog):
         for index in indexes:
             self.ui.tableView.model().removeRow(index.row())
 
-    def __onSuffixExists(self, suffix):
+    def _onSuffixExists(self, suffix):
         QMessageBox.information(self,
                                 qApp.applicationName(),
                                 self.tr("The suffix you specify is already exists."))
+
+    def _onBtnGlobalClicked(self, clicked):
+        linkEditDlg = LinkEditDialog(self)
+        commitUrl = self.settings.commitUrl(None)
+        bugUrl = self.settings.bugUrl(None)
+        bugPattern = self.settings.bugPattern(None)
+
+        linkEdit = linkEditDlg.linkEdit
+        linkEdit.setCommitUrl(commitUrl)
+        linkEdit.setBugUrl(bugUrl)
+        linkEdit.setBugPattern(bugPattern)
+
+        if linkEditDlg.exec_() == QDialog.Accepted:
+            self.settings.setCommitUrl(None, linkEdit.commitUrl())
+            self.settings.setBugUrl(None, linkEdit.bugUrl())
+            self.settings.setBugPattern(None, linkEdit.bugPattern())
 
     def save(self):
         # TODO: only update those values that really changed
@@ -304,14 +328,18 @@ class Preferences(QDialog):
         color = self.ui.colorB.getColor()
         self.settings.setCommitColorB(color)
 
-        value = self.ui.leCommitUrl.text().strip()
-        self.settings.setCommitUrl(value)
+        value = self.ui.linkEditWidget.commitUrl().strip()
+        repoName = qApp.repoName()
+        self.settings.setCommitUrl(repoName, value)
 
-        value = self.ui.leBugUrl.text().strip()
-        self.settings.setBugUrl(value)
+        value = self.ui.linkEditWidget.bugUrl().strip()
+        self.settings.setBugUrl(repoName, value)
 
-        value = self.ui.leBugPattern.text().strip()
-        self.settings.setBugPattern(value)
+        value = self.ui.linkEditWidget.bugPattern().strip()
+        self.settings.setBugPattern(repoName, value)
+
+        value = self.ui.cbFallback.isChecked()
+        self.settings.setFallbackGlobalLinks(repoName, value)
 
         value = self.ui.cbShowWhitespace.isChecked()
         self.settings.setShowWhitespace(value)

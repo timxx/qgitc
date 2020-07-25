@@ -16,8 +16,7 @@ from PySide2.QtGui import (
     QPainter,
     QFontMetrics,
     QColor,
-    QPen,
-    QDesktopServices)
+    QPen)
 from PySide2.QtCore import (
     Qt,
     Signal,
@@ -33,7 +32,10 @@ from .sourceviewer import SourceViewer
 from .textline import LinkTextLine, Link
 from .gitutils import Git
 from .colorschema import ColorSchema
-from .events import BlameEvent, ShowCommitEvent
+from .events import (
+    BlameEvent,
+    ShowCommitEvent,
+    OpenLinkEvent)
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import TextViewer
 
@@ -750,7 +752,6 @@ class BlameView(QWidget):
         self._file = None
         self._rev = None
         self._lineNo = -1
-        self._bugUrl = qApp.settings().bugUrl()
 
         self._fetcher = BlameFetcher(self)
         self._fetcher.dataAvailable.connect(
@@ -766,21 +767,12 @@ class BlameView(QWidget):
             self._commitPanel.showRevision)
 
     def _onLinkActivated(self, link):
-        url = None
         if link.type == Link.Sha1:
             if self._rev != link.data:
                 file = self._findFileBySHA1(link.data)
                 self.blame(file, link.data)
-        elif link.type == Link.Email:
-            url = "mailto:" + link.data
-        elif link.type == Link.BugId:
-            if self._bugUrl:
-                url = self._bugUrl + link.data
         else:
-            url = link.data
-
-        if url:
-            QDesktopServices.openUrl(QUrl(url))
+            qApp.postEvent(qApp, OpenLinkEvent(link))
 
     def _onFetchDataAvailable(self, lines):
         self._viewer.appendBlameLines(lines)
