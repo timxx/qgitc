@@ -40,7 +40,7 @@ class Settings(QSettings):
     logViewFontChanged = Signal(QFont)
     diffViewFontChanged = Signal(QFont)
     bugPatternChanged = Signal(str)
-    bugUrlChanged = Signal(str)
+    fallbackGlobalChanged = Signal(bool)
     tabSizeChanged = Signal(int)
 
     def __init__(self, parent=None):
@@ -107,7 +107,6 @@ class Settings(QSettings):
 
     def setBugUrl(self, repoName, url):
         self.setLinkValue(repoName, "bugUrl", url)
-        self.bugUrlChanged.emit(url)
 
     def bugPattern(self, repoName):
         return self.getLinkValue(repoName, "bugPattern", "")
@@ -121,6 +120,7 @@ class Settings(QSettings):
 
     def setFallbackGlobalLinks(self, repoName, fallback):
         self.setLinkValue(repoName, "fallback", fallback)
+        self.fallbackGlobalChanged.emit(fallback)
 
     def showWhitespace(self):
         return self.value("showWhitespace", True, type=bool)
