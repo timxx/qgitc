@@ -480,6 +480,7 @@ class DiffView(QWidget):
 
         self.__commitToTextLines(commit)
 
+        self.viewer.setParentCount(len(commit.parents))
         self.viewer.beginReading()
         self.fetcher.resetRow(self.viewer.textLineCount())
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
@@ -514,30 +515,37 @@ class DiffView(QWidget):
 
 class DiffTextLine(SourceTextLineBase):
 
-    def __init__(self, viewer, text):
+    def __init__(self, viewer, text, parentCount):
         super().__init__(text, viewer._font, viewer._option)
+        self._parentCount = parentCount
 
     def rehighlight(self):
         text = self.text()
 
         formats = self._commonHighlightFormats()
         tcFormat = QTextCharFormat()
-        if diff_begin_re.search(text) or text.startswith(r"\ No newline "):
+        if not text:
+            pass
+        elif text[0] == "+":
+            if len(text) >= 2 and text[1] == "+":
+                tcFormat.setFontWeight(QFont.Bold)
+            else:
+                tcFormat.setForeground(ColorSchema.Adding)
+        elif text[0] == "-":
+            tcFormat.setForeground(ColorSchema.Deletion)
+        elif text[0] == " " and len(text) >= 2:
+            if text.startswith("  > "):
+                tcFormat.setForeground(ColorSchema.Submodule)
+            elif self._parentCount > 1 and len(text) >= self._parentCount:
+                index = self._parentCount - 1
+                if text[index] == "+":
+                    tcFormat.setFontWeight(QFont.Bold)
+                    tcFormat.setForeground(ColorSchema.Adding)
+                elif text[index] == "-":
+                    tcFormat.setFontWeight(QFont.Bold)
+                    tcFormat.setForeground(ColorSchema.Deletion)
+        elif diff_begin_re.search(text) or text.startswith(r"\ No newline "):
             tcFormat.setForeground(ColorSchema.Newline)
-        elif text.startswith("++"):
-            tcFormat.setFontWeight(QFont.Bold)
-        elif text.startswith(" +"):
-            tcFormat.setFontWeight(QFont.Bold)
-            tcFormat.setForeground(ColorSchema.Adding)
-        elif text.startswith("+"):
-            tcFormat.setForeground(ColorSchema.Adding)
-        elif text.startswith(" -"):
-            tcFormat.setFontWeight(QFont.Bold)
-            tcFormat.setForeground(ColorSchema.Deletion)
-        elif text.startswith("-"):
-            tcFormat.setForeground(ColorSchema.Deletion)
-        elif text.startswith("  > "):
-            tcFormat.setForeground(ColorSchema.Submodule)
 
         if tcFormat.isValid():
             formats.append(createFormatRange(0, len(text), tcFormat))
@@ -607,6 +615,8 @@ class PatchViewer(SourceViewer):
         self.findWidget = None
         self.curIndexFound = False
 
+        self._parentCount = 1
+
         self.verticalScrollBar().valueChanged.connect(
              self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
@@ -629,7 +639,7 @@ class PatchViewer(SourceViewer):
         text, self.lastEncoding = decodeDiffData(
             content, self.lastEncoding)
         if type == DiffType.Diff:
-            textLine = DiffTextLine(self, text)
+            textLine = DiffTextLine(self, text, self._parentCount)
         elif type == DiffType.File or \
                 type == DiffType.FileInfo:
             textLine = InfoTextLine(self, type, text)
@@ -717,6 +727,9 @@ class PatchViewer(SourceViewer):
                 text = text[:index]
             self.findWidget.setText(text)
         self.findWidget.showAnimate()
+
+    def setParentCount(self, n):
+        self._parentCount = n
 
     def _highlightFormatRange(self, text):
         formats = []
