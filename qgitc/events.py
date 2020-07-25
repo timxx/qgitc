@@ -21,3 +21,12 @@ class ShowCommitEvent(QEvent):
     def __init__(self, sha1):
         super().__init__(QEvent.Type(ShowCommitEvent.Type))
         self.sha1 = sha1
+
+
+class OpenLinkEvent(QEvent):
+
+    Type = QEvent.User + 3
+
+    def __init__(self, link):
+        super().__init__(QEvent.Type(OpenLinkEvent.Type))
+        self.link = link

@@ -1,20 +1,26 @@
 # -*- coding: utf-8 -*-
 
 from PySide2.QtWidgets import QApplication
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QIcon, QDesktopServices
 from PySide2.QtCore import (Qt,
                             QTranslator,
                             QLibraryInfo,
-                            QLocale)
+                            QLocale,
+                            QUrl)
 
 from .common import dataDirPath
 from .settings import Settings
-from .events import BlameEvent, ShowCommitEvent
+from .events import (
+    BlameEvent,
+    ShowCommitEvent,
+    OpenLinkEvent)
 from .blamewindow import BlameWindow
 from .mainwindow import MainWindow
 from .gitutils import Git
+from .textline import Link
 
 import os
+import re
 
 
 class Application(QApplication):
@@ -76,6 +82,13 @@ class Application(QApplication):
 
         return window
 
+    def repoName(self):
+        url = Git.repoUrl()
+        index = url.rfind('/')
+        if index == -1:
+            return url
+        return url[index+1:]
+
     def event(self, event):
         type = event.type()
         if type == BlameEvent.Type:
@@ -87,6 +100,44 @@ class Application(QApplication):
             window = self.getWindow(Application.LogWindow)
             window.showCommit(event.sha1)
             self._ensureVisible(window)
+            return True
+        elif type == OpenLinkEvent.Type:
+            url = None
+            link = event.link
+            if link.type == Link.Email:
+                url = "mailto:" + link.data
+            elif link.type == Link.BugId:
+                # FIXME: bind the url with pattern?
+                repoName = self.repoName()
+                sett = self.settings()
+                bugPattern = sett.bugPattern(repoName)
+                fallback = True
+                if bugPattern:
+                    bugRe = re.compile(bugPattern)
+                    m = bugRe.search(link.data)
+                    if m:
+                        fallback = False
+                        bugUrl = sett.bugUrl(repoName)
+                        if not bugUrl and sett.fallbackGlobalLinks(repoName):
+                            bugUrl = sett.bugUrl(None)
+                        if bugUrl:
+                            url = bugUrl + link.data
+
+                if fallback and sett.fallbackGlobalLinks(repoName):
+                    bugPattern = sett.bugPattern(None)
+                    bugUrl = sett.bugUrl(None)
+                    if not bugPattern or not bugUrl:
+                        return True
+
+                    bugRe = re.compile(bugPattern)
+                    m = bugRe.search(link.data)
+                    if m:
+                        url = bugUrl + link.data
+            else:
+                url = link.data
+
+            if url:
+                QDesktopServices.openUrl(QUrl(url))
             return True
 
         return super().event(event)

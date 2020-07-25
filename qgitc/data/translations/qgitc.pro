@@ -20,6 +20,8 @@ SOURCES = \
     ../../gitutils.py \
     ../../gitview.py \
     ../../gotodialog.py \
+    ../../linkeditdialog.py \
+    ../../linkeditwidget.py \
     ../../logview.py \
     ../../main.py \
     ../../mainwindow.py \

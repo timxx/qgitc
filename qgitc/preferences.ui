@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>529</width>
-    <height>316</height>
+    <width>576</width>
+    <height>321</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>3</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -305,45 +305,43 @@
          <property name="title">
           <string>Links</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_2">
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_3">
-            <property name="text">
-             <string>C&amp;ommit URL:</string>
-            </property>
-            <property name="buddy">
-             <cstring>leCommitUrl</cstring>
-            </property>
-           </widget>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <item>
+           <widget class="LinkEditWidget" name="linkEditWidget" native="true"/>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_4">
-            <property name="text">
-             <string>B&amp;UG URL:</string>
-            </property>
-            <property name="buddy">
-             <cstring>leBugUrl</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="leBugUrl"/>
-          </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="leCommitUrl"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_5">
-            <property name="text">
-             <string>BUG &amp;Pattern:</string>
-            </property>
-            <property name="buddy">
-             <cstring>leBugPattern</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QLineEdit" name="leBugPattern"/>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_4">
+            <item>
+             <widget class="QCheckBox" name="cbFallback">
+              <property name="toolTip">
+               <string>Use global settings when no match current setting</string>
+              </property>
+              <property name="text">
+               <string>Fallbac&amp;k to Global</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnGlobal">
+              <property name="text">
+               <string>&amp;Edit Global</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
          </layout>
         </widget>
@@ -432,6 +430,12 @@
    <header>colorwidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>LinkEditWidget</class>
+   <extends>QWidget</extends>
+   <header>linkeditwidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>btnAdd</tabstop>
@@ -439,9 +443,6 @@
   <tabstop>cbSizeDiff</tabstop>
   <tabstop>colorA</tabstop>
   <tabstop>colorB</tabstop>
-  <tabstop>leCommitUrl</tabstop>
-  <tabstop>leBugUrl</tabstop>
-  <tabstop>leBugPattern</tabstop>
   <tabstop>buttonBox</tabstop>
   <tabstop>cbEsc</tabstop>
   <tabstop>cbState</tabstop>
