@@ -99,6 +99,8 @@ class TextViewer(QAbstractScrollArea):
         self._settingsTimer = None
         qApp.settings().bugPatternChanged.connect(
             self.delayUpdateSettings)
+        qApp.settings().fallbackGlobalChanged.connect(
+            self.delayUpdateSettings)
 
     def updateFont(self, font):
         self._font = font
@@ -191,6 +193,8 @@ class TextViewer(QAbstractScrollArea):
         self.cancelFind()
 
         if self._settingsTimer is not None:
+            if self._settingsTimer.isActive():
+                self.reloadSettings()
             self._settingsTimer.stop()
             self._settingsTimer = None
 
