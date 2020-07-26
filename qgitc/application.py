@@ -112,6 +112,12 @@ class Application(QApplication):
                 sett = self.settings()
                 bugPattern = sett.bugPattern(repoName)
                 fallback = True
+
+                def _linkData(bugRe, m):
+                    if bugRe.groups == 1:
+                        return m.group(1)
+                    return m.group(2)
+
                 if bugPattern:
                     bugRe = re.compile(bugPattern)
                     m = bugRe.search(link.data)
@@ -121,7 +127,7 @@ class Application(QApplication):
                         if not bugUrl and sett.fallbackGlobalLinks(repoName):
                             bugUrl = sett.bugUrl(None)
                         if bugUrl:
-                            url = bugUrl + link.data
+                            url = bugUrl + _linkData(bugRe, m)
 
                 if fallback and sett.fallbackGlobalLinks(repoName):
                     bugPattern = sett.bugPattern(None)
@@ -132,7 +138,7 @@ class Application(QApplication):
                     bugRe = re.compile(bugPattern)
                     m = bugRe.search(link.data)
                     if m:
-                        url = bugUrl + link.data
+                        url = bugUrl + _linkData(bugRe, m)
             else:
                 url = link.data
 
