@@ -319,6 +319,7 @@ class Preferences(QDialog):
             QMessageBox.critical(
                 self, self.window().windowTitle(),
                 self.tr("Unable to detect current repo's name"))
+            return
 
         linkEdit = self.ui.linkEditWidget
         if self._isQt5Repo(name):
@@ -334,6 +335,17 @@ class Preferences(QDialog):
                     "https://github.com/{}/{}/issues/".format(user, name))
                 linkEdit.setCommitUrl(
                     "https://github.com/{}/{}/commit/".format(user, name))
+        elif self._isGiteeRepo(url):
+            linkEdit.setBugPattern("(I[A-Z0-9]{4,})")
+            if user:
+                linkEdit.setBugUrl(
+                    "https://gitee.com/{}/{}/issues/".format(user, name))
+                linkEdit.setCommitUrl(
+                    "https://gitee.com/{}/{}/commit/".format(user, name))
+        else:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("Unsupported repository"))
 
     def _parseRepo(self):
         url = Git.repoUrl()
@@ -383,6 +395,10 @@ class Preferences(QDialog):
     def _isGithubRepo(self, repoUrl):
         return repoUrl.startswith("git@github.com:") or \
             repoUrl.startswith("https://github.com/")
+
+    def _isGiteeRepo(self, repoUrl):
+        return repoUrl.startswith("git@gitee.com:") or \
+            repoUrl.startswith("https://gitee.com/")
 
     def save(self):
         # TODO: only update those values that really changed
