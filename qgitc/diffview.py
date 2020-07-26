@@ -689,8 +689,11 @@ class PatchViewer(SourceViewer):
         return menu
 
     def updateContextMenu(self, pos):
-        self._acOpenCommit.setVisible(self._link is not None)
-        self._acOpenCommit.setEnabled(self._link is not None)
+        enabled = False
+        if self._link is not None:
+            enabled = self._link.type == Link.Sha1
+
+        self._acOpenCommit.setEnabled(enabled)
 
     def updateLinkData(self, link, lineNo):
         if link.type == Link.Sha1:
@@ -783,7 +786,10 @@ class PatchViewer(SourceViewer):
         if not url:
             return
 
-        url += self._link.data
+        if isinstance(self._link.data, tuple):
+            url += self._link.data[0]
+        else:
+            url += self._link.data
         QDesktopServices.openUrl(QUrl(url))
 
     def _onFind(self, text):
