@@ -216,6 +216,20 @@ class Ui_Preferences(object):
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.verticalLayout_9 = QVBoxLayout(self.groupBox_2)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.btnDetect = QPushButton(self.groupBox_2)
+        self.btnDetect.setObjectName(u"btnDetect")
+
+        self.horizontalLayout_5.addWidget(self.btnDetect)
+
+        self.horizontalSpacer_5 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_5)
+
+
+        self.verticalLayout_9.addLayout(self.horizontalLayout_5)
+
         self.linkEditWidget = LinkEditWidget(self.groupBox_2)
         self.linkEditWidget.setObjectName(u"linkEditWidget")
 
@@ -356,6 +370,10 @@ class Ui_Preferences(object):
         self.label_2.setText(QCoreApplication.translate("Preferences", u"Branch &B:", None))
         self.label.setText(QCoreApplication.translate("Preferences", u"Branch &A:", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("Preferences", u"Links", None))
+#if QT_CONFIG(tooltip)
+        self.btnDetect.setToolTip(QCoreApplication.translate("Preferences", u"Audo detect current repo's settings", None))
+#endif // QT_CONFIG(tooltip)
+        self.btnDetect.setText(QCoreApplication.translate("Preferences", u"Auto &Detect", None))
 #if QT_CONFIG(tooltip)
         self.cbFallback.setToolTip(QCoreApplication.translate("Preferences", u"Use global settings when no match current setting", None))
 #endif // QT_CONFIG(tooltip)
