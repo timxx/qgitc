@@ -38,3 +38,15 @@ A file conflict viewer for git
 
 - Install from pypi
   - pip install qgitc
+
+
+## Shell Integration (Windows only)
+
+``` sh
+qgitc shell register
+# to unregister, run:
+qgitc shell unregister
+
+# to use the source directly:
+python qgitc.py shell register
+```
