@@ -28,6 +28,22 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "Python: Register Shell (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "args": ["shell", "register"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Unregister Shell (Integrated Terminal)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "args": ["shell", "register"],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Python: Attach",
             "type": "python",
             "request": "attach",

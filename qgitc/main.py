@@ -9,6 +9,7 @@ from .gitutils import Git
 from .excepthandler import ExceptHandler
 from .application import Application
 from .mainwindow import MainWindow
+from .shell import setup_shell_args
 
 import os
 import sys
@@ -46,6 +47,7 @@ def _setup_argument(prog):
     subparsers = parser.add_subparsers(
         title="The <command> list",
         dest="cmd", metavar="")
+    parser.set_defaults(func=_do_log)
 
     log_parser = subparsers.add_parser(
         "log",
@@ -56,10 +58,12 @@ def _setup_argument(prog):
     log_parser.add_argument(
         "file", metavar="<file>", nargs="?",
         help="The file to filter.")
+    log_parser.set_defaults(func=_do_log)
 
     mergetool_parser = subparsers.add_parser(
         "mergetool",
         help="Run mergetool to resolve merge conflicts.")
+    log_parser.set_defaults(func=_do_log)
 
     blame_parser = subparsers.add_parser(
         "blame",
@@ -76,6 +80,10 @@ def _setup_argument(prog):
     blame_parser.add_argument(
         "file", metavar="<file>",
         help="The file to blame.")
+    blame_parser.set_defaults(func=_do_blame)
+
+    if sys.platform == "win32":
+        setup_shell_args(subparsers)
 
     return parser.parse_args()
 
@@ -87,7 +95,18 @@ def _move_center(window):
         qApp.desktop().availableGeometry()))
 
 
-def _do_log(app, args):
+def _init_gui():
+    setAppUserId("appid.qgitc.xyz")
+    app = Application(sys.argv)
+
+    sys.excepthook = ExceptHandler
+
+    return app
+
+
+def _do_log(args):
+    app = _init_gui()
+
     merge_mode = args.cmd == "mergetool"
     window = app.getWindow(Application.LogWindow)
     if merge_mode:
@@ -120,7 +139,9 @@ def _do_log(app, args):
     return app.exec_()
 
 
-def _do_blame(app, args):
+def _do_blame(args):
+    app = _init_gui()
+
     window = app.getWindow(Application.BlameWindow)
     _move_center(window)
 
@@ -175,18 +196,7 @@ def main():
     _update_scale_factor()
 
     args = _setup_argument(os.path.basename(sys.argv[0]))
-
-    setAppUserId("appid.qgitc.xyz")
-    app = Application(sys.argv)
-
-    sys.excepthook = ExceptHandler
-
-    if args.cmd == "blame":
-        return _do_blame(app, args)
-    else:
-        return _do_log(app, args)
-
-    return 0
+    return args.func(args)
 
 
 if __name__ == "__main__":
