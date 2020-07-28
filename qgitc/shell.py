@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-from winreg import (
-    CreateKeyEx,
-    SetValueEx,
-    DeleteKeyEx,
-    HKEY_CLASSES_ROOT,
-    REG_SZ)
-
 import sys
 import os
+
+if sys.platform == "win32":
+    from winreg import (
+        CreateKeyEx,
+        SetValueEx,
+        DeleteKeyEx,
+        HKEY_CLASSES_ROOT,
+        REG_SZ)
 
 
 def _shell_usage(args):
