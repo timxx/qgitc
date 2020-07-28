@@ -342,6 +342,13 @@ class Preferences(QDialog):
                     "https://gitee.com/{}/{}/issues/".format(user, name))
                 linkEdit.setCommitUrl(
                     "https://gitee.com/{}/{}/commit/".format(user, name))
+        elif self._isGitlabRepo(url):
+            linkEdit.setBugPattern("(#([0-9]+))")
+            if user:
+                linkEdit.setBugUrl(
+                    "https://gitlab.com/{}/{}/-/issues/".format(user, name))
+                linkEdit.setCommitUrl(
+                    "https://gitlab.com/{}/{}/-/commit/".format(user, name))
         else:
             QMessageBox.critical(
                 self, self.window().windowTitle(),
@@ -399,6 +406,10 @@ class Preferences(QDialog):
     def _isGiteeRepo(self, repoUrl):
         return repoUrl.startswith("git@gitee.com:") or \
             repoUrl.startswith("https://gitee.com/")
+
+    def _isGitlabRepo(self, repoUrl):
+        return repoUrl.startswith("git@gitlab.com:") or \
+            repoUrl.startswith("https://gitlab.com/")
 
     def save(self):
         # TODO: only update those values that really changed
