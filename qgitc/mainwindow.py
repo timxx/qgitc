@@ -397,7 +397,7 @@ class MainWindow(StateWindow):
             self.mergeWidget.close()
 
     def setFilterFile(self, filePath):
-        if not filePath.startswith("-- "):
+        if filePath and not filePath.startswith("-- "):
             self.ui.leOpts.setText("-- " + filePath)
         else:
             self.ui.leOpts.setText(filePath)
