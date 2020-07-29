@@ -433,7 +433,9 @@ class MainWindow(StateWindow):
             self.mergeWidget = MergeWidget()
             self.mergeWidget.requestResolve.connect(
                 self.__onRequestResolve)
-            self.mergeWidget.show()
+
+            # delay a while to let it show front to mainwindow
+            QTimer.singleShot(0, self.mergeWidget.show)
             if not self.gitViewB:
                 self.setMode(MainWindow.CompareMode)
             # not allowed changed in this mode
