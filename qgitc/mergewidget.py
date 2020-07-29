@@ -22,6 +22,7 @@ class MergeWidget(QWidget):
 
     def __init__(self, parent=None):
         super(MergeWidget, self).__init__(parent)
+        self.setWindowFlags(Qt.WindowMinMaxButtonsHint)
         self.setWindowTitle(self.tr("Conflict List"))
 
         self.resolvedCount = 0
