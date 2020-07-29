@@ -84,6 +84,9 @@ def _decode(data):
 
 
 def _decodeFile(data, encoding="utf-8"):
+    if not data:
+        return data.decode("utf-8"), encoding
+
     err = None
     if data[0] == 0x00 and encoding == "utf-16le":
         data = data[1:]
