@@ -145,10 +145,6 @@ class MainWindow(StateWindow):
         self.ui.acAboutQt.triggered.connect(
             qApp.aboutQt)
 
-        if self.mergeWidget:
-            self.mergeWidget.requestResolve.connect(
-                self.__onRequestResolve)
-
         # settings
         sett = qApp.instance().settings()
 
@@ -435,6 +431,8 @@ class MainWindow(StateWindow):
             self.ui.acCompare.setChecked(True)
         elif mode == MainWindow.MergeMode:
             self.mergeWidget = MergeWidget()
+            self.mergeWidget.requestResolve.connect(
+                self.__onRequestResolve)
             self.mergeWidget.show()
             if not self.gitViewB:
                 self.setMode(MainWindow.CompareMode)
