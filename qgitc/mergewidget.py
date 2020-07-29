@@ -123,6 +123,11 @@ class MergeWidget(QWidget):
             "<a href='#refresh'>{}/{}</a>".format(self.resolvedCount,
                                                   total))
 
+    def __updateFilterCount(self):
+        text = self.proxyModel.filterRegExp().pattern()
+        count = self.proxyModel.rowCount() if text else 0
+        self.lbFilter.setText("{}".format(count))
+
     def __resolvedIndex(self, index):
         index = self.proxyModel.mapToSource(index)
         item = self.model.itemFromIndex(index)
@@ -159,8 +164,7 @@ class MergeWidget(QWidget):
 
     def __onFilterChanged(self, text):
         self.proxyModel.setFilterRegExp(text)
-        count = self.proxyModel.rowCount() if text else 0
-        self.lbFilter.setText("{}".format(count))
+        self.__updateFilterCount()
 
     def __onMenuResolve(self):
         self.__onResolveClicked()
@@ -383,6 +387,7 @@ class MergeWidget(QWidget):
             self.view.setCurrentIndex(index)
         self.resolvedCount = 0
         self.__updateStatus()
+        self.__updateFilterCount()
 
         for action in self.menu.actions():
             action.setEnabled(not files is None)
