@@ -40,6 +40,8 @@ from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import TextViewer
 
 import re
+import chardet
+import os
 
 
 __all__ = ["BlameView"]
@@ -81,6 +83,38 @@ def _decode(data):
     return data.decode("utf-8")
 
 
+def _decodeFile(data, encoding="utf-8"):
+    err = None
+    if data[0] == 0x00 and encoding == "utf-16le":
+        data = data[1:]
+    elif data[-1] == 0x00 and encoding == "utf-16be":
+        data = data[:-1]
+    try:
+        return data.decode(encoding), encoding
+    except UnicodeDecodeError as e:
+        err = e
+
+    encodings = ["utf-8", "utf16", "gb18030", "gb2312"]
+    if encoding in encodings:
+        encodings.remove(encoding)
+
+    # chardet is not always working
+    r = chardet.detect(data)
+    if r and r["encoding"] != encoding:
+        e = r["encoding"]
+        if e in encodings:
+            encodings.remove(e)
+        encodings.insert(0, e)
+
+    for e in encodings:
+        try:
+            return data.decode(e), e
+        except UnicodeDecodeError:
+            pass
+
+    raise err
+
+
 class BlameFetcher(DataFetcher):
 
     dataAvailable = Signal(list)
@@ -89,12 +123,16 @@ class BlameFetcher(DataFetcher):
         super().__init__(parent)
         self._curLine = BlameLine()
 
+        self._encoding = "utf-8"
+
     def parse(self, data):
         results = []
+        # TODO: support utf16 32 split...
         lines = data.rstrip(self.separator).split(self.separator)
         for line in lines:
             if line[0] == 9:  # \t
-                self._curLine.text = _decode(line[1:])
+                self._curLine.text, self._encoding = _decodeFile(
+                    line[1:], self._encoding)
                 results.append(self._curLine)
                 self._curLine = BlameLine()
             elif line[0] == 97 and line[1] == 117:  # author
@@ -158,6 +196,33 @@ class BlameFetcher(DataFetcher):
     def reset(self):
         super().reset()
         self._curLine = BlameLine()
+
+    def detectFileEncoding(self, file):
+        absPath = file
+        if not os.path.isabs(file) and Git.REPO_DIR:
+            absPath = os.path.join(Git.REPO_DIR, file)
+
+        if not os.path.exists(absPath):
+            return
+
+        with open(absPath, "rb") as f:
+            data = f.read(4)
+            if len(data) < 4:
+                return
+            b1 = data[0]
+            b2 = data[1]
+            b3 = data[2]
+            b4 = data[3]
+            if b1 == 0xFE and b2 == 0xFF:
+                self._encoding = "utf-16be"
+            elif b1 == 0xFF and b2 == 0xFE:
+                self._encoding = "utf-16le"
+            elif b1 == 0xEF and b2 == 0xBB and b3 == 0xBF:
+                self._encoding = "utf-8"
+            elif b1 == 0x00 and b2 == 0x00 and b3 == 0xFE and b4 == 0xFF:
+                self._encoding = "utf-32be"
+            elif b1 == 0xFF and b2 == 0xFE and b3 == 0x00 and b4 == 0x00:
+                self._encoding = "utf-32le"
 
 
 class RevisionPanel(TextViewer):
@@ -805,6 +870,7 @@ class BlameView(QWidget):
         self.blameFileAboutToChange.emit(file)
         self.clear()
         self._viewer.beginReading()
+        self._fetcher.detectFileEncoding(file)
         self._fetcher.fetch(file, rev)
 
         self._file = file
