@@ -45,9 +45,14 @@ class MergeWidget(QWidget):
         self.view.setModel(self.proxyModel)
         self.view.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.leFilter = QLineEdit(self)
+        self.lbFilter = QLabel("0", self)
+
+        filterLayout = QHBoxLayout()
+        filterLayout.addWidget(self.leFilter)
+        filterLayout.addWidget(self.lbFilter)
 
         vlayout = QVBoxLayout(self)
-        vlayout.addWidget(self.leFilter)
+        vlayout.addLayout(filterLayout)
         vlayout.addWidget(self.view)
 
         hlayout = QHBoxLayout()
@@ -153,6 +158,8 @@ class MergeWidget(QWidget):
 
     def __onFilterChanged(self, text):
         self.proxyModel.setFilterRegExp(text)
+        count = self.proxyModel.rowCount() if text else 0
+        self.lbFilter.setText("{}".format(count))
 
     def __onMenuResolve(self):
         self.__onResolveClicked()
