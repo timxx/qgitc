@@ -102,7 +102,7 @@ setup(name="qgitc",
               "imgdiff=mergetool.imgdiff:main"
           ]
       },
-      install_requires=["PySide2>=5.2.0"],
+      install_requires=["PySide2>=5.2.0", "chardet"],
       classifiers=[
           "License :: OSI Approved :: Apache Software License",
           "Operating System :: POSIX",
