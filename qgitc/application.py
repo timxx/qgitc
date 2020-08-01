@@ -2,11 +2,13 @@
 
 from PySide2.QtWidgets import QApplication
 from PySide2.QtGui import QIcon, QDesktopServices
-from PySide2.QtCore import (Qt,
-                            QTranslator,
-                            QLibraryInfo,
-                            QLocale,
-                            QUrl)
+from PySide2.QtCore import (
+    Qt,
+    QTranslator,
+    QLibraryInfo,
+    QLocale,
+    QUrl,
+    QTimer)
 
 from .common import dataDirPath
 from .settings import Settings
@@ -18,6 +20,8 @@ from .blamewindow import BlameWindow
 from .mainwindow import MainWindow
 from .gitutils import Git
 from .textline import Link
+from .versionchecker import VersionChecker
+from .newversiondialog import NewVersionDialog
 
 import os
 import re
@@ -45,6 +49,13 @@ class Application(QApplication):
 
         repoDir = Git.repoTopLevelDir(os.getcwd())
         Git.REPO_DIR = repoDir
+
+        self._checker = VersionChecker(self)
+        self._checker.newVersionAvailable.connect(
+            self._onNewVersionAvailable)
+        self._checker.finished.connect(
+            self._onVersionCheckFinished)
+        QTimer.singleShot(0, self._checker.startCheck)
 
     def settings(self):
         return self._settings
@@ -153,6 +164,18 @@ class Application(QApplication):
 
     def _onBlameWindowDestroyed(self, obj):
         self._blameWindow = None
+
+    def _onNewVersionAvailable(self, version):
+        ignoredVersion = self.settings().ignoredVersion()
+        if ignoredVersion == version:
+            return
+
+        parent = self.activeWindow()
+        versionDlg = NewVersionDialog(version, parent)
+        versionDlg.exec_()
+
+    def _onVersionCheckFinished(self):
+        self._checker = None
 
     def _ensureVisible(self, window):
         if window.isVisible():

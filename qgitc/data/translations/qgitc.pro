@@ -27,6 +27,7 @@ SOURCES = \
     ../../mainwindow.py \
     ../../mergetool.py \
     ../../mergewidget.py \
+    ../../newversiondialog.py \
     ../../preferences.py \
     ../../settings.py \
     ../../sourceviewer.py \
