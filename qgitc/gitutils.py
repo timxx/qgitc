@@ -273,7 +273,7 @@ class Git():
 
     @staticmethod
     def externalDiff(branchDir, commit, path=None, tool=None):
-        args = ["difftool"]
+        args = ["difftool", "--no-prompt"]
         if commit.sha1 == Git.LUC_SHA1:
             pass
         elif commit.sha1 == Git.LCC_SHA1:

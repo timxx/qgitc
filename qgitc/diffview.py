@@ -289,6 +289,8 @@ class DiffView(QWidget):
         self.fetcher.fetchFinished.connect(
             self.__onFetchFinished)
 
+        self._difftoolProc = None
+
     def __onTreeItemChanged(self, current, previous):
         if current:
             row = current.data(0, Qt.UserRole)
@@ -309,13 +311,7 @@ class DiffView(QWidget):
 
     def __onExternalDiff(self):
         item = self.treeWidget.currentItem()
-        if not item:
-            return
-        if not self.commit:
-            return
-        filePath = item.text(0)
-        tool = self.__diffToolForFile(filePath)
-        Git.externalDiff(self.branchDir, self.commit, filePath, tool)
+        self.__runDiffTool(item)
 
     def __doCopyPath(self, asWin=False):
         item = self.treeWidget.currentItem()
@@ -361,16 +357,60 @@ class DiffView(QWidget):
         # return item and item == self.treeWidget.topLevelItem(0):
         return item and item.data(0, Qt.UserRole) == 0
 
-    def __onTreeItemDoubleClicked(self, item, column):
-        if not item or self.__isCommentItem(item):
-            return
-
-        if not self.commit:
+    def __runDiffTool(self, item):
+        if not item or not self.commit:
             return
 
         filePath = item.text(0)
         tool = self.__diffToolForFile(filePath)
-        Git.externalDiff(self.branchDir, self.commit, filePath, tool)
+
+        cwd = self.branchDir if self.branchDir else Git.REPO_DIR
+        args = ["difftool", "--no-prompt"]
+        if self.commit.sha1 == Git.LUC_SHA1:
+            pass
+        elif self.commit.sha1 == Git.LCC_SHA1:
+            args.append("--cached")
+        else:
+            args.append("{0}^..{0}".format(self.commit.sha1))
+
+        if tool:
+            args.append("--tool={}".format(tool))
+
+        if filePath:
+            args.append("--")
+            args.append(filePath)
+
+        if self._difftoolProc:
+            QObject.disconnect(self._difftoolProc,
+                               SIGNAL("finished(int, QProcess::ExitStatus)"),
+                               self.__onDiffToolFinished)
+
+        self._difftoolProc = QProcess(self)
+        self._difftoolProc.setWorkingDirectory(cwd)
+        # only care about the error
+        self._difftoolProc.finished.connect(self.__onDiffToolFinished)
+
+        self._difftoolProc.start("git", args)
+
+    def __onDiffToolFinished(self, exitCode, exitStatus):
+        if exitStatus == QProcess.CrashExit:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("The external diff tool crashed!"))
+        elif exitCode != 0:
+            data = self._difftoolProc.readAllStandardError()
+            if data:
+                QMessageBox.critical(
+                    self, self.window().windowTitle(),
+                    data.data().decode("utf-8"))
+
+        self._difftoolProc = None
+
+    def __onTreeItemDoubleClicked(self, item, column):
+        if not item or self.__isCommentItem(item):
+            return
+
+        self.__runDiffTool(item)
 
     def __onIgnoreWhitespaceChanged(self, index):
         args = ["", "--ignore-space-at-eol",
