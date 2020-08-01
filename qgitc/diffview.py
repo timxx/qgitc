@@ -262,8 +262,14 @@ class DiffView(QWidget):
         self.splitter.setSizes(sizes)
 
         self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
-        self.treeWidget.itemDoubleClicked.connect(
-            self.__onTreeItemDoubleClicked)
+        style = qApp.style()
+        # single click to activate is so terrible
+        if not style.styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
+            self.treeWidget.itemActivated.connect(
+                self.__onTreeItemDoubleClicked)
+        else:
+            self.treeWidget.itemDoubleClicked.connect(
+                self.__onTreeItemDoubleClicked)
 
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
         self.viewer.requestCommit.connect(self.requestCommit)
