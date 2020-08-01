@@ -24,7 +24,6 @@ A file conflict viewer for git
 ## Requirements
 
 - PySide2 >= 5.2.0
-- chardet
 - git (command line)
 
 
