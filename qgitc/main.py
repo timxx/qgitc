@@ -186,9 +186,12 @@ def _update_scale_factor():
             v = v.rstrip('\n')
         return v
 
-    if _query_conf("/Gdk/WindowScalingFactor") == "2" and \
-            _query_conf("/Xft/DPI") == "96":
-        os.environ["QT_SCALE_FACTOR"] = "2"
+    try:
+        if _query_conf("/Gdk/WindowScalingFactor") == "2" and \
+                _query_conf("/Xft/DPI") == "96":
+            os.environ["QT_SCALE_FACTOR"] = "2"
+    except subprocess.CalledProcessError:
+        pass
 
 
 def main():
