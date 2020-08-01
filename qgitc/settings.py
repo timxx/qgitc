@@ -196,3 +196,9 @@ class Settings(QSettings):
 
     def setMergeToolList(self, tools):
         self.setValue("mergeTool", tools)
+
+    def ignoredVersion(self):
+        return self.value("ignoredVersion", "")
+
+    def setIgnoredVersion(self, version):
+        self.setValue("ignoredVersion", version)
