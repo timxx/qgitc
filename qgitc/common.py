@@ -120,26 +120,43 @@ def htmlEscape(text):
     return "".join(html_escape_table.get(c, c) for c in text)
 
 
-def decodeDiffData(data, preferEncoding="utf-8"):
-    encodings = ["utf-8", "gb18030", "utf16"]
-    if preferEncoding:
-        encodings.remove(preferEncoding)
-        encodings.insert(0, preferEncoding)
-    line = None
-    ok = False
+def _fix_data(data, encoding):
+    if data[0] == 0x00 and encoding == "utf-16le":
+        data = data[1:]
+    elif data[-1] == 0x00 and encoding == "utf-16be":
+        data = data[:-1]
+
+    return data
+
+
+def decodeFileData(data, encoding="utf-8"):
+    if not data:
+        return data.decode("utf-8"), encoding
+
+    try:
+        data = _fix_data(data, encoding)
+        return data.decode(encoding), encoding
+    except UnicodeDecodeError:
+        pass
+
+    encodings = ["gb18030", "utf16", "utf-8"]
+    if encoding in encodings:
+        encodings.remove(encoding)
+
+    # try the prefer encodings first
     for e in encodings:
         try:
-            line = data.decode(e)
-            ok = True
-            break
+            data = _fix_data(data, e)
+            return data.decode(e), e
         except UnicodeDecodeError:
             pass
 
-    if not ok:
-        line = data.decode(preferEncoding, "replace")
-        e = preferEncoding
+    # DO NOT waste time on chardet
+    # which lost of false detects
 
-    return line, e
+    # the last chance
+    print(b"Warning: can't decode '%s'" % data)
+    return data.decode(encoding, "replace"), None
 
 
 def appDirPath():
