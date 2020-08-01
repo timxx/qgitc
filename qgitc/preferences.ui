@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>2</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -417,7 +417,7 @@
              </widget>
             </item>
             <item>
-             <spacer name="horizontalSpacer_3">
+             <spacer name="horizontalSpacer_6">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
@@ -428,6 +428,13 @@
                </size>
               </property>
              </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="lbConfigImgDiff">
+              <property name="text">
+               <string>&lt;a href='#config'&gt;Config imgdiff as tool for diff or merge&lt;/a&gt;</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>

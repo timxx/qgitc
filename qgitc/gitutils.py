@@ -473,3 +473,43 @@ class Git():
         if data:
             return data.rstrip(b'\n').decode("utf-8")
         return ""
+
+    @staticmethod
+    def runWithError(args):
+        process = Git.run(args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            error = error.decode("utf-8")
+
+        return process.returncode, error
+
+    @staticmethod
+    def addDiffTool(name, cmd, isGlobal=True):
+        args = ["config"]
+        if isGlobal:
+            args.append("--global")
+        args.append("difftool.%s.cmd" % name)
+        args.append(cmd)
+
+        return Git.runWithError(args)
+
+    @staticmethod
+    def addMergeTool(name, cmd, isGlobal=True):
+        args = ["config"]
+        if isGlobal:
+            args.append("--global")
+        args.append("mergetool.%s.cmd" % name)
+        args.append(cmd)
+
+        ret, error = Git.runWithError(args)
+        if ret != 0:
+            return ret, error
+
+        args = ["config"]
+        if isGlobal:
+            args.append("--global")
+        args.append("--bool")
+        args.append("mergetool.%s.trustExitCode" % name)
+        args.append("true")
+
+        return Git.runWithError(args)
