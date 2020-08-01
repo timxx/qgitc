@@ -11,6 +11,9 @@ from .stylehelper import dpiScaled
 from .linkeditdialog import LinkEditDialog
 from .gitutils import Git
 
+import sys
+import os
+
 
 class ToolTableModel(QAbstractTableModel):
     Col_Scenes = 0
@@ -189,6 +192,9 @@ class Preferences(QDialog):
         self.ui.btnDetect.clicked.connect(
             self._onBtnDetectClicked)
 
+        self.ui.lbConfigImgDiff.linkActivated.connect(
+            self._onConfigImgDiff)
+
         # default to General tab
         self.ui.tabWidget.setCurrentIndex(0)
 
@@ -353,6 +359,59 @@ class Preferences(QDialog):
             QMessageBox.critical(
                 self, self.window().windowTitle(),
                 self.tr("Unsupported repository"))
+
+    def _onConfigImgDiff(self, link):
+        path = self._imgDiffBin()
+        if not path:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("Unable to find the path of imgdiff!"))
+            return
+
+        ret, error = Git.addDiffTool(
+            "imgdiff", '%s "$LOCAL" "$REMOTE"' % path)
+        if ret != 0:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
+            return
+
+        ret, error = Git.addMergeTool(
+            "imgdiff", '%s "$BASE" "$LOCAL" "$REMOTE" -o "$MERGED"' % path)
+        if ret != 0:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
+
+    def _imgDiffBin(self):
+        def _quote(path):
+            if " " in path:
+                return '"' + path + '"'
+            return path
+
+        exeName = os.path.basename(sys.argv[0])
+        exePath = os.path.abspath(os.path.dirname(sys.argv[0]))
+        # source version
+        if exeName == "qgitc.py":
+            path = os.path.join(exePath, "mergetool", "imgdiff.py")
+            if not os.path.exists(path):
+                return None
+
+            bin = sys.executable
+            if bin.endswith(".exe") and not bin.endswith("w.exe"):
+                bin = bin.replace(".exe", "w.exe")
+
+            return _quote(bin) + " " + _quote(path)
+        else:
+            path = os.path.join(exePath, "imgdiff")
+            if sys.platform == "win32":
+                path += ".exe"
+            if not os.path.exists(path):
+                return None
+
+            return _quote(path)
+
+        return None
 
     def _parseRepo(self):
         url = Git.repoUrl()

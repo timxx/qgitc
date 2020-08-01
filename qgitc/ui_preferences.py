@@ -289,9 +289,14 @@ class Ui_Preferences(object):
 
         self.horizontalLayout_2.addWidget(self.btnDelete)
 
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.horizontalLayout_2.addItem(self.horizontalSpacer_3)
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_6)
+
+        self.lbConfigImgDiff = QLabel(self.groupBox_7)
+        self.lbConfigImgDiff.setObjectName(u"lbConfigImgDiff")
+
+        self.horizontalLayout_2.addWidget(self.lbConfigImgDiff)
 
 
         self.verticalLayout_8.addLayout(self.horizontalLayout_2)
@@ -339,7 +344,7 @@ class Ui_Preferences(object):
         self.buttonBox.accepted.connect(Preferences.accept)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(3)
 
 
         QMetaObject.connectSlotsByName(Preferences)
@@ -384,6 +389,7 @@ class Ui_Preferences(object):
         self.label_12.setText(QCoreApplication.translate("Preferences", u"You must add the tool to git config mergetool/difftool section to make it works.", None))
         self.btnAdd.setText(QCoreApplication.translate("Preferences", u"&Add", None))
         self.btnDelete.setText(QCoreApplication.translate("Preferences", u"&Delete", None))
+        self.lbConfigImgDiff.setText(QCoreApplication.translate("Preferences", u"<a href='#config'>Config imgdiff as tool for diff or merge</a>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
     # retranslateUi
 
