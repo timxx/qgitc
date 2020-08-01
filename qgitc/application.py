@@ -23,6 +23,8 @@ from .textline import Link
 from .versionchecker import VersionChecker
 from .newversiondialog import NewVersionDialog
 
+from datetime import datetime
+
 import os
 import re
 
@@ -50,12 +52,16 @@ class Application(QApplication):
         repoDir = Git.repoTopLevelDir(os.getcwd())
         Git.REPO_DIR = repoDir
 
-        self._checker = VersionChecker(self)
-        self._checker.newVersionAvailable.connect(
-            self._onNewVersionAvailable)
-        self._checker.finished.connect(
-            self._onVersionCheckFinished)
-        QTimer.singleShot(0, self._checker.startCheck)
+        dt = datetime.fromtimestamp(self._settings.lastCheck())
+        diff = datetime.now() - dt
+        # one day a check
+        if diff.days >= 1:
+            self._checker = VersionChecker(self)
+            self._checker.newVersionAvailable.connect(
+                self._onNewVersionAvailable)
+            self._checker.finished.connect(
+                self._onVersionCheckFinished)
+            QTimer.singleShot(0, self._checker.startCheck)
 
     def settings(self):
         return self._settings
@@ -176,6 +182,7 @@ class Application(QApplication):
 
     def _onVersionCheckFinished(self):
         self._checker = None
+        self._settings.setLastCheck(int(datetime.now().timestamp()))
 
     def _ensureVisible(self, window):
         if window.isVisible():

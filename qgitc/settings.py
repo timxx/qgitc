@@ -202,3 +202,9 @@ class Settings(QSettings):
 
     def setIgnoredVersion(self, version):
         self.setValue("ignoredVersion", version)
+
+    def lastCheck(self):
+        return self.value("lastCheck", 0, type=int)
+
+    def setLastCheck(self, datetime):
+        self.setValue("lastCheck", datetime)
