@@ -63,20 +63,24 @@ class BlameWindow(StateWindow):
 
     def _setupEditMenu(self):
         editMenu = self.menuBar().addMenu(self.tr("&Edit"))
-        editMenu.addAction(self.tr("&Go To Line..."),
-                           self._onGotoLine,
-                           QKeySequence("Ctrl+G"))
-        editMenu.addAction(self.tr("&Find"),
-                           self.showFindWidget,
-                           QKeySequence("Ctrl+F"))
+        ac = editMenu.addAction(self.tr("&Go To Line..."),
+                                self._onGotoLine,
+                                QKeySequence("Ctrl+G"))
+        ac.setIcon(QIcon.fromTheme("go-jump"))
+        ac = editMenu.addAction(self.tr("&Find"),
+                                self.showFindWidget,
+                                QKeySequence("Ctrl+F"))
+        ac.setIcon(QIcon.fromTheme("edit-find"))
         editMenu.addSeparator()
-        editMenu.addAction(self.tr("&Copy"),
-                           self._onCopy,
-                           QKeySequence("Ctrl+C"))
+        ac = editMenu.addAction(self.tr("&Copy"),
+                                self._onCopy,
+                                QKeySequence("Ctrl+C"))
+        ac.setIcon(QIcon.fromTheme("edit-copy"))
         editMenu.addSeparator()
-        editMenu.addAction(self.tr("Select &All"),
-                           self._onSelectAll,
-                           QKeySequence("Ctrl+A"))
+        ac = editMenu.addAction(self.tr("Select &All"),
+                                self._onSelectAll,
+                                QKeySequence("Ctrl+A"))
+        ac.setIcon(QIcon.fromTheme("edit-select-all"))
 
     def _onGotoLine(self):
         gotoDialog = GotoDialog(self)

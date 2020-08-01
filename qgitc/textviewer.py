@@ -12,7 +12,8 @@ from PySide2.QtGui import (
     QTextOption,
     QBrush,
     QColor,
-    QKeySequence)
+    QKeySequence,
+    QIcon)
 from PySide2.QtCore import (
     Qt,
     QRect,
@@ -452,11 +453,13 @@ class TextViewer(QAbstractScrollArea):
             self.tr("&Copy"),
             self.copy,
             QKeySequence("Ctrl+C"))
+        self._acCopy.setIcon(QIcon.fromTheme("edit-copy"))
         menu.addSeparator()
         self._acSelectAll = menu.addAction(
             self.tr("Select &All"),
             self.selectAll,
             QKeySequence("Ctrl+A"))
+        self._acSelectAll.setIcon(QIcon.fromTheme("edit-select-all"))
 
         return menu
 
