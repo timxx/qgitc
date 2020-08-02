@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>576</width>
-    <height>321</height>
+    <width>655</width>
+    <height>430</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -437,6 +437,332 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_8">
+            <property name="title">
+             <string>Diff</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
+             <property name="spacing">
+              <number>3</number>
+             </property>
+             <property name="leftMargin">
+              <number>3</number>
+             </property>
+             <property name="topMargin">
+              <number>3</number>
+             </property>
+             <property name="rightMargin">
+              <number>3</number>
+             </property>
+             <property name="bottomMargin">
+              <number>3</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_3">
+               <property name="text">
+                <string>Name:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="cbDiffName">
+               <property name="toolTip">
+                <string>Specify diff tool name or choose default one</string>
+               </property>
+               <property name="editable">
+                <bool>true</bool>
+               </property>
+               <property name="currentIndex">
+                <number>-1</number>
+               </property>
+               <property name="insertPolicy">
+                <enum>QComboBox::NoInsert</enum>
+               </property>
+               <item>
+                <property name="text">
+                 <string notr="true">opendiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">kdiff3</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">tkdiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">xxdiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">meld</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">kompare</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">gvimdiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">diffuse</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">diffmerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">ecmerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">p4merge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">araxis</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">bc</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">codecompare</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">smerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">emerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">vimdiff</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_4">
+               <property name="text">
+                <string>Command:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="leDiffCmd">
+               <property name="toolTip">
+                <string>The command line and arguments, for example:
+imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_9">
+            <property name="title">
+             <string>Merge</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <property name="spacing">
+              <number>3</number>
+             </property>
+             <property name="leftMargin">
+              <number>3</number>
+             </property>
+             <property name="topMargin">
+              <number>3</number>
+             </property>
+             <property name="rightMargin">
+              <number>3</number>
+             </property>
+             <property name="bottomMargin">
+              <number>3</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_5">
+               <property name="text">
+                <string>Name:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="cbMergeName">
+               <property name="toolTip">
+                <string>Specify merge tool name or choose default one</string>
+               </property>
+               <property name="editable">
+                <bool>true</bool>
+               </property>
+               <property name="currentIndex">
+                <number>-1</number>
+               </property>
+               <property name="insertPolicy">
+                <enum>QComboBox::NoInsert</enum>
+               </property>
+               <item>
+                <property name="text">
+                 <string notr="true">opendiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">kdiff3</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">tkdiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">xxdiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">meld</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">tortoisemerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">gvimdiff</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">diffuse</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">diffmerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">ecmerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">p4merge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">araxis</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">bc</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">codecompare</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">smerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">emerge</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string notr="true">vimdiff</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_7">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>10</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_13">
+               <property name="text">
+                <string>Command:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="leMergeCmd">
+               <property name="toolTip">
+                <string>The command line and arguments, for example:
+imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
           </item>
          </layout>
         </widget>

@@ -162,7 +162,7 @@ class Preferences(QDialog):
         self.ui.setupUi(self)
         self.settings = settings
 
-        self.resize(dpiScaled(QSize(529, 316)))
+        self.resize(dpiScaled(QSize(655, 440)))
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
@@ -234,6 +234,14 @@ class Preferences(QDialog):
 
         tools = self.settings.mergeToolList()
         self.ui.tableView.model().setRawData(tools)
+
+        name = self.settings.diffToolName()
+        self.ui.cbDiffName.setCurrentText(name)
+        self.ui.leDiffCmd.setText(Git.diffToolCmd(name))
+
+        name = self.settings.mergeToolName()
+        self.ui.cbMergeName.setCurrentText(name)
+        self.ui.leMergeCmd.setText(Git.mergeToolCmd(name))
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -519,3 +527,24 @@ class Preferences(QDialog):
         tools = self.ui.tableView.model().rawData()
         # TODO: validate if all tool isValid before saving
         self.settings.setMergeToolList(tools)
+
+        name = self.ui.cbDiffName.currentText()
+        self.settings.setDiffToolName(name)
+
+        value = self.ui.leDiffCmd.text()
+        ret, error = Git.addDiffTool(name, value)
+        if ret != 0 and error:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
+
+        name = self.ui.cbMergeName.currentText()
+        self.settings.setMergeToolName(name)
+
+        value = self.ui.leMergeCmd.text()
+        ret, error = Git.addMergeTool(name, value)
+
+        if ret != 0 and error:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
