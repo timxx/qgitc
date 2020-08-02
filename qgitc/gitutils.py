@@ -484,35 +484,64 @@ class Git():
         return process.returncode, error
 
     @staticmethod
-    def addDiffTool(name, cmd, isGlobal=True):
+    def setConfigValue(key, value, isGlobal=True):
+        if not key:
+            return 0, None
+
         args = ["config"]
         if isGlobal:
             args.append("--global")
-        args.append("difftool.%s.cmd" % name)
-        args.append(cmd)
+        args.append(key)
+        if value:
+            args.append(value)
+        else:
+            args.insert(1, "--unset")
 
         return Git.runWithError(args)
 
     @staticmethod
-    def addMergeTool(name, cmd, isGlobal=True):
+    def removeSection(section, isGlobal=True):
+        if not section:
+            return 0, None
+
         args = ["config"]
         if isGlobal:
             args.append("--global")
-        args.append("mergetool.%s.cmd" % name)
-        args.append(cmd)
 
-        ret, error = Git.runWithError(args)
+        args.append("--remove-section")
+        args.append(section)
+
+        return Git.runWithError(args)
+
+    @staticmethod
+    def setDiffTool(name, cmd, isGlobal=True):
+        if not name:
+            return 0, None
+
+        if not cmd:
+            Git.removeSection("difftool.%s" % name)
+            # treat as OK
+            return 0, None
+
+        key = "difftool.%s.cmd" % name
+        return Git.setConfigValue(key, cmd, isGlobal)
+
+    @staticmethod
+    def setMergeTool(name, cmd, isGlobal=True):
+        if not name:
+            return 0, None
+
+        if not cmd:
+            Git.removeSection("mergetool.%s" % name)
+            return 0, None
+
+        key = "mergetool.%s.cmd" % name
+        ret, error = Git.setConfigValue(key, cmd, isGlobal)
         if ret != 0:
             return ret, error
 
-        args = ["config"]
-        if isGlobal:
-            args.append("--global")
-        args.append("--bool")
-        args.append("mergetool.%s.trustExitCode" % name)
-        args.append("true")
-
-        return Git.runWithError(args)
+        key = "mergetool.%s.trustExitCode" % name
+        return Git.setConfigValue(key, cmd, isGlobal)
 
     @staticmethod
     def getConfigValue(key, isGlobal=True):

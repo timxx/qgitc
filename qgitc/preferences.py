@@ -376,7 +376,7 @@ class Preferences(QDialog):
                 self.tr("Unable to find the path of imgdiff!"))
             return
 
-        ret, error = Git.addDiffTool(
+        ret, error = Git.setDiffTool(
             "imgdiff", '%s "$LOCAL" "$REMOTE"' % path)
         if ret != 0:
             QMessageBox.critical(
@@ -384,7 +384,7 @@ class Preferences(QDialog):
                 error)
             return
 
-        ret, error = Git.addMergeTool(
+        ret, error = Git.setMergeTool(
             "imgdiff", '%s "$BASE" "$LOCAL" "$REMOTE" -o "$MERGED"' % path)
         if ret != 0:
             QMessageBox.critical(
@@ -532,7 +532,7 @@ class Preferences(QDialog):
         self.settings.setDiffToolName(name)
 
         value = self.ui.leDiffCmd.text()
-        ret, error = Git.addDiffTool(name, value)
+        ret, error = Git.setDiffTool(name, value)
         if ret != 0 and error:
             QMessageBox.critical(
                 self, self.window().windowTitle(),
@@ -542,7 +542,7 @@ class Preferences(QDialog):
         self.settings.setMergeToolName(name)
 
         value = self.ui.leMergeCmd.text()
-        ret, error = Git.addMergeTool(name, value)
+        ret, error = Git.setMergeTool(name, value)
 
         if ret != 0 and error:
             QMessageBox.critical(
