@@ -505,7 +505,7 @@ class DiffView(QWidget):
         self.viewer.addNormalTextLine("", False)
 
     def __diffToolForFile(self, filePath):
-        tools = qApp.instance().settings().mergeToolList()
+        tools = qApp.settings().mergeToolList()
         # ignored case even on Unix platform
         lowercase_file = filePath.lower()
         for tool in tools:
@@ -513,7 +513,7 @@ class DiffView(QWidget):
                 if lowercase_file.endswith(tool.suffix.lower()):
                     return tool.command
 
-        return None
+        return qApp.settings().diffToolName()
 
     def showCommit(self, commit):
         self.clear()

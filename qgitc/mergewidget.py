@@ -278,9 +278,12 @@ class MergeWidget(QWidget):
             print("unhandled prompt", data)
 
     def __onResolveFinished(self, exitCode, exitStatus):
+        errorData = None
         if exitCode == 0:
             index = self.proxyModel.index(self.resolveIndex, 0)
             self.__resolvedIndex(index)
+        else:
+            errorData = self.process.readAllStandardError()
 
         self.process = None
         curRow = self.resolveIndex
@@ -292,6 +295,10 @@ class MergeWidget(QWidget):
         self.leFilter.setEnabled(True)
         # auto next only when success
         if exitCode != 0:
+            if errorData:
+                QMessageBox.critical(
+                    self, self.window().windowTitle(),
+                    errorData.data().decode("utf-8"))
             return
 
         if not self.cbAutoNext.isChecked():
@@ -339,15 +346,6 @@ class MergeWidget(QWidget):
 
         self.view.setCurrentIndex(index)
         self.resolve(index)
-
-    def __onResolveError(self):
-        data = self.process.readAllStandardError()
-        if b'Unknown merge tool' in data:
-            text = self.tr(
-                "Unknown merge tool, please check your configuration.")
-            QMessageBox.information(self,
-                                    qApp.applicationName(),
-                                    text)
 
     def __onFirstShow(self):
         self.updateList()
@@ -413,20 +411,27 @@ class MergeWidget(QWidget):
         file = index.data()
         args = ["mergetool", "--no-prompt"]
 
-        tools = qApp.instance().settings().mergeToolList()
+        toolName = None
+        tools = qApp.settings().mergeToolList()
         # ignored case even on Unix platform
         lowercase_file = file.lower()
         for tool in tools:
             if tool.canMerge() and tool.isValid():
                 if lowercase_file.endswith(tool.suffix.lower()):
-                    args.append("--tool={}".format(tool.command))
+                    toolName = tool.command
                     break
+
+        if not toolName:
+            toolName = qApp.settings().mergeToolName()
+
+        if toolName:
+            args.append("--tool=%s" % toolName)
+
         args.append(file)
 
         # subprocess is not suitable here
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.__onReadyRead)
-        self.process.readyReadStandardError.connect(self.__onResolveError)
         self.process.finished.connect(self.__onResolveFinished)
         self.process.setWorkingDirectory(Git.REPO_DIR)
         self.process.start("git", args)
