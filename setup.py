@@ -1,6 +1,5 @@
-import sys
 import os
-import codecs
+import re
 
 from setuptools import (setup, find_packages)
 from distutils.core import Command
@@ -36,16 +35,24 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        return  # tempory disabled
         uic_bin = find_executable("pyside2-uic") or find_executable("uic")
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
+
+        pattern = re.compile(rb"from (diffview"
+                             rb"|logview"
+                             rb"|waitingspinnerwidget"
+                             rb"|gitview"
+                             rb"|colorwidget"
+                             rb"|linkeditwidget"
+                             rb") (import .*$)")
 
         for uiFile in glob("qgitc/*.ui"):
             name = os.path.basename(uiFile)
             pyFile = "qgitc/ui_" + name[:-3] + ".py"
             # "--from-imports" seems no use at all
             spawn([uic_bin, "-g", "python", "-o", pyFile, uiFile])
+            self._fix_import(pyFile, pattern)
 
     def compile_ts(self):
         lrelease = find_executable(
@@ -55,6 +62,17 @@ class BuildQt(Command):
 
         path = os.path.realpath("qgitc/data/translations/qgitc.pro")
         spawn([lrelease, path])
+
+    def _fix_import(self, pyFile, pattern):
+        f = open(pyFile, "rb")
+        lines = f.readlines()
+        f.close()
+
+        f = open(pyFile, "wb+")
+        for line in lines:
+            text = pattern.sub(rb"from .\1 \2", line)
+            f.write(text)
+        f.close()
 
 
 class UpdateTs(Command):
