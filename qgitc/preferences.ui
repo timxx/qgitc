@@ -560,11 +560,6 @@
                  <string notr="true">emerge</string>
                 </property>
                </item>
-               <item>
-                <property name="text">
-                 <string notr="true">vimdiff</string>
-                </property>
-               </item>
               </widget>
              </item>
              <item>
@@ -721,11 +716,6 @@ imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</string>
                <item>
                 <property name="text">
                  <string notr="true">emerge</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string notr="true">vimdiff</string>
                 </property>
                </item>
               </widget>
