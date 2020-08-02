@@ -208,3 +208,15 @@ class Settings(QSettings):
 
     def setLastCheck(self, datetime):
         self.setValue("lastCheck", datetime)
+
+    def diffToolName(self):
+        return self.value("diffToolName", "")
+
+    def setDiffToolName(self, name):
+        self.setValue("diffToolName", name)
+
+    def mergeToolName(self):
+        return self.value("mergeToolName", "")
+
+    def setMergeToolName(self, name):
+        self.setValue("mergeToolName", name)

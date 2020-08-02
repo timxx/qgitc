@@ -119,12 +119,12 @@ class Git():
     LCC_SHA1 = "0000000000000000000000000000000000000001"
 
     @staticmethod
-    def run(args):
-        return GitProcess(Git.REPO_DIR, args)
+    def run(args, text=None):
+        return GitProcess(Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args):
-        process = Git.run(args)
+    def checkOutput(args, text=None):
+        process = Git.run(args, text)
         data = process.communicate()[0]
         if process.returncode != 0:
             return None
@@ -513,3 +513,32 @@ class Git():
         args.append("true")
 
         return Git.runWithError(args)
+
+    @staticmethod
+    def getConfigValue(key, isGlobal=True):
+        if not key:
+            return ""
+
+        args = ["config", "--get", key]
+        if isGlobal:
+            args.insert(1, "--global")
+
+        data = Git.checkOutput(args, True)
+        if data is None:
+            return ""
+
+        return data.rstrip("\n")
+
+    @staticmethod
+    def diffToolCmd(name, isGlobal=True):
+        if not name:
+            return ""
+
+        return Git.getConfigValue("difftool.%s.cmd" % name)
+
+    @staticmethod
+    def mergeToolCmd(name, isGlobal=True):
+        if not name:
+            return ""
+
+        return Git.getConfigValue("mergetool.%s.cmd" % name)

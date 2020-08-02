@@ -23,7 +23,7 @@ class Ui_Preferences(object):
     def setupUi(self, Preferences):
         if not Preferences.objectName():
             Preferences.setObjectName(u"Preferences")
-        Preferences.resize(576, 321)
+        Preferences.resize(655, 430)
         self.verticalLayout_2 = QVBoxLayout(Preferences)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tabWidget = QTabWidget(Preferences)
@@ -301,6 +301,110 @@ class Ui_Preferences(object):
 
         self.verticalLayout_8.addLayout(self.horizontalLayout_2)
 
+        self.groupBox_8 = QGroupBox(self.groupBox_7)
+        self.groupBox_8.setObjectName(u"groupBox_8")
+        self.horizontalLayout_6 = QHBoxLayout(self.groupBox_8)
+        self.horizontalLayout_6.setSpacing(3)
+        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
+        self.horizontalLayout_6.setContentsMargins(3, 3, 3, 3)
+        self.label_3 = QLabel(self.groupBox_8)
+        self.label_3.setObjectName(u"label_3")
+
+        self.horizontalLayout_6.addWidget(self.label_3)
+
+        self.cbDiffName = QComboBox(self.groupBox_8)
+        self.cbDiffName.addItem(u"opendiff")
+        self.cbDiffName.addItem(u"kdiff3")
+        self.cbDiffName.addItem(u"tkdiff")
+        self.cbDiffName.addItem(u"xxdiff")
+        self.cbDiffName.addItem(u"meld")
+        self.cbDiffName.addItem(u"kompare")
+        self.cbDiffName.addItem(u"gvimdiff")
+        self.cbDiffName.addItem(u"diffuse")
+        self.cbDiffName.addItem(u"diffmerge")
+        self.cbDiffName.addItem(u"ecmerge")
+        self.cbDiffName.addItem(u"p4merge")
+        self.cbDiffName.addItem(u"araxis")
+        self.cbDiffName.addItem(u"bc")
+        self.cbDiffName.addItem(u"codecompare")
+        self.cbDiffName.addItem(u"smerge")
+        self.cbDiffName.addItem(u"emerge")
+        self.cbDiffName.addItem(u"vimdiff")
+        self.cbDiffName.setObjectName(u"cbDiffName")
+        self.cbDiffName.setEditable(True)
+        self.cbDiffName.setInsertPolicy(QComboBox.NoInsert)
+
+        self.horizontalLayout_6.addWidget(self.cbDiffName)
+
+        self.horizontalSpacer_3 = QSpacerItem(10, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
+
+        self.horizontalLayout_6.addItem(self.horizontalSpacer_3)
+
+        self.label_4 = QLabel(self.groupBox_8)
+        self.label_4.setObjectName(u"label_4")
+
+        self.horizontalLayout_6.addWidget(self.label_4)
+
+        self.leDiffCmd = QLineEdit(self.groupBox_8)
+        self.leDiffCmd.setObjectName(u"leDiffCmd")
+
+        self.horizontalLayout_6.addWidget(self.leDiffCmd)
+
+
+        self.verticalLayout_8.addWidget(self.groupBox_8)
+
+        self.groupBox_9 = QGroupBox(self.groupBox_7)
+        self.groupBox_9.setObjectName(u"groupBox_9")
+        self.horizontalLayout_7 = QHBoxLayout(self.groupBox_9)
+        self.horizontalLayout_7.setSpacing(3)
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.horizontalLayout_7.setContentsMargins(3, 3, 3, 3)
+        self.label_5 = QLabel(self.groupBox_9)
+        self.label_5.setObjectName(u"label_5")
+
+        self.horizontalLayout_7.addWidget(self.label_5)
+
+        self.cbMergeName = QComboBox(self.groupBox_9)
+        self.cbMergeName.addItem(u"opendiff")
+        self.cbMergeName.addItem(u"kdiff3")
+        self.cbMergeName.addItem(u"tkdiff")
+        self.cbMergeName.addItem(u"xxdiff")
+        self.cbMergeName.addItem(u"meld")
+        self.cbMergeName.addItem(u"tortoisemerge")
+        self.cbMergeName.addItem(u"gvimdiff")
+        self.cbMergeName.addItem(u"diffuse")
+        self.cbMergeName.addItem(u"diffmerge")
+        self.cbMergeName.addItem(u"ecmerge")
+        self.cbMergeName.addItem(u"p4merge")
+        self.cbMergeName.addItem(u"araxis")
+        self.cbMergeName.addItem(u"bc")
+        self.cbMergeName.addItem(u"codecompare")
+        self.cbMergeName.addItem(u"smerge")
+        self.cbMergeName.addItem(u"emerge")
+        self.cbMergeName.addItem(u"vimdiff")
+        self.cbMergeName.setObjectName(u"cbMergeName")
+        self.cbMergeName.setEditable(True)
+        self.cbMergeName.setInsertPolicy(QComboBox.NoInsert)
+
+        self.horizontalLayout_7.addWidget(self.cbMergeName)
+
+        self.horizontalSpacer_7 = QSpacerItem(10, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
+
+        self.horizontalLayout_7.addItem(self.horizontalSpacer_7)
+
+        self.label_13 = QLabel(self.groupBox_9)
+        self.label_13.setObjectName(u"label_13")
+
+        self.horizontalLayout_7.addWidget(self.label_13)
+
+        self.leMergeCmd = QLineEdit(self.groupBox_9)
+        self.leMergeCmd.setObjectName(u"leMergeCmd")
+
+        self.horizontalLayout_7.addWidget(self.leMergeCmd)
+
+
+        self.verticalLayout_8.addWidget(self.groupBox_9)
+
 
         self.verticalLayout_7.addWidget(self.groupBox_7)
 
@@ -345,6 +449,8 @@ class Ui_Preferences(object):
         self.buttonBox.rejected.connect(Preferences.reject)
 
         self.tabWidget.setCurrentIndex(3)
+        self.cbDiffName.setCurrentIndex(-1)
+        self.cbMergeName.setCurrentIndex(-1)
 
 
         QMetaObject.connectSlotsByName(Preferences)
@@ -390,6 +496,28 @@ class Ui_Preferences(object):
         self.btnAdd.setText(QCoreApplication.translate("Preferences", u"&Add", None))
         self.btnDelete.setText(QCoreApplication.translate("Preferences", u"&Delete", None))
         self.lbConfigImgDiff.setText(QCoreApplication.translate("Preferences", u"<a href='#config'>Config imgdiff as tool for diff or merge</a>", None))
+        self.groupBox_8.setTitle(QCoreApplication.translate("Preferences", u"Diff", None))
+        self.label_3.setText(QCoreApplication.translate("Preferences", u"Name:", None))
+
+#if QT_CONFIG(tooltip)
+        self.cbDiffName.setToolTip(QCoreApplication.translate("Preferences", u"Specify diff tool name or choose default one", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_4.setText(QCoreApplication.translate("Preferences", u"Command:", None))
+#if QT_CONFIG(tooltip)
+        self.leDiffCmd.setToolTip(QCoreApplication.translate("Preferences", u"The command line and arguments, for example:\n"
+"imgdiff \"$LOCAL\" \"$REMOTE\"", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_9.setTitle(QCoreApplication.translate("Preferences", u"Merge", None))
+        self.label_5.setText(QCoreApplication.translate("Preferences", u"Name:", None))
+
+#if QT_CONFIG(tooltip)
+        self.cbMergeName.setToolTip(QCoreApplication.translate("Preferences", u"Specify merge tool name or choose default one", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_13.setText(QCoreApplication.translate("Preferences", u"Command:", None))
+#if QT_CONFIG(tooltip)
+        self.leMergeCmd.setToolTip(QCoreApplication.translate("Preferences", u"The command line and arguments, for example:\n"
+"imgdiff \"$BASE\" \"$LOCAL\" \"$REMOTE\" -o \"$MERGED\"", None))
+#endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
     # retranslateUi
 
