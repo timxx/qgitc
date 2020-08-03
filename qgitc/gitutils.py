@@ -541,7 +541,7 @@ class Git():
             return ret, error
 
         key = "mergetool.%s.trustExitCode" % name
-        return Git.setConfigValue(key, cmd, isGlobal)
+        return Git.setConfigValue(key, "true", isGlobal)
 
     @staticmethod
     def getConfigValue(key, isGlobal=True):
