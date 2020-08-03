@@ -139,7 +139,7 @@ def decodeFileData(data, encoding="utf-8"):
     except UnicodeDecodeError:
         pass
 
-    encodings = ["gb18030", "utf16", "utf-8"]
+    encodings = ["utf-8", "gb18030", "utf16"]
     if encoding in encodings:
         encodings.remove(encoding)
 

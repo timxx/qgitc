@@ -687,6 +687,8 @@ class PatchViewer(SourceViewer):
         elif type == DiffType.File or \
                 type == DiffType.FileInfo:
             textLine = InfoTextLine(self, type, content.decode(diff_encoding))
+            # reset to default encoding on each file
+            self.lastEncoding = "utf-8"
         else:
             assert(False)
 
