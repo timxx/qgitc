@@ -653,8 +653,6 @@ class PatchViewer(SourceViewer):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.lastEncoding = diff_encoding
-
         self.highlightPattern = None
         self.highlightField = FindField.Comments
 
@@ -680,15 +678,11 @@ class PatchViewer(SourceViewer):
         # alloc too many objects at the same time is too slow
         # so delay construct TextLine and decode bytes here
         if type == DiffType.Diff:
-            text, encoding = decodeFileData(content, self.lastEncoding)
-            if encoding:
-                self.lastEncoding = encoding
+            text, _ = decodeFileData(content, diff_encoding)
             textLine = DiffTextLine(self, text, self._parentCount)
         elif type == DiffType.File or \
                 type == DiffType.FileInfo:
             textLine = InfoTextLine(self, type, content.decode(diff_encoding))
-            # reset to default encoding on each file
-            self.lastEncoding = "utf-8"
         else:
             assert(False)
 
