@@ -209,6 +209,18 @@ class Settings(QSettings):
     def setLastCheck(self, datetime):
         self.setValue("lastCheck", datetime)
 
+    def checkUpdatesEnabled(self):
+        return self.value("checkUpdates", True, type=bool)
+
+    def setCheckUpdatesEnabled(self, enabled):
+        self.setValue("checkUpdates", enabled)
+
+    def checkUpdatesInterval(self):
+        return self.value("checkInterval", 1, type=int)
+
+    def setCheckUpdatesInterval(self, days):
+        self.setValue("checkInterval", days)
+
     def diffToolName(self):
         return self.value("diffToolName", "")
 

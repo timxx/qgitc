@@ -163,7 +163,7 @@ class Preferences(QDialog):
         self.ui.setupUi(self)
         self.settings = settings
 
-        self.resize(dpiScaled(QSize(655, 440)))
+        self.resize(dpiScaled(QSize(655, 396)))
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
@@ -202,10 +202,20 @@ class Preferences(QDialog):
         self.ui.buttonBox.accepted.connect(
             self._onAccepted)
 
+        self.ui.cbCheckUpdates.toggled.connect(
+            self._onCheckUpdatesChanged)
+
         self._initSettings()
 
     def _initSettings(self):
         # TODO: delay load config for each tab
+        checked = self.settings.checkUpdatesEnabled()
+        self.ui.cbCheckUpdates.setChecked(checked)
+        self._onCheckUpdatesChanged(checked)
+
+        self.ui.sbDays.setValue(
+            self.settings.checkUpdatesInterval())
+
         font = self.settings.logViewFont()
         self.ui.cbFamilyLog.setCurrentFont(font)
         self.ui.cbFamilyLog.currentFontChanged.emit(font)
@@ -422,6 +432,9 @@ class Preferences(QDialog):
 
         self.accept()
 
+    def _onCheckUpdatesChanged(self, checked):
+        self.ui.sbDays.setEnabled(checked)
+
     def _checkBugPattern(self):
         value = self.ui.linkEditWidget.bugPattern().strip()
         if not value:
@@ -532,6 +545,12 @@ class Preferences(QDialog):
 
     def save(self):
         # TODO: only update those values that really changed
+        value = self.ui.cbCheckUpdates.isChecked()
+        self.settings.setCheckUpdatesEnabled(value)
+
+        value = self.ui.sbDays.value()
+        self.settings.setCheckUpdatesInterval(value)
+
         font = QFont(self.ui.cbFamilyLog.currentText(),
                      int(self.ui.cbSizeLog.currentText()))
 

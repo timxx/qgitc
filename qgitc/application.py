@@ -52,16 +52,19 @@ class Application(QApplication):
         repoDir = Git.repoTopLevelDir(os.getcwd())
         Git.REPO_DIR = repoDir
 
-        dt = datetime.fromtimestamp(self._settings.lastCheck())
-        diff = datetime.now() - dt
-        # one day a check
-        if diff.days >= 1:
-            self._checker = VersionChecker(self)
-            self._checker.newVersionAvailable.connect(
-                self._onNewVersionAvailable)
-            self._checker.finished.connect(
-                self._onVersionCheckFinished)
-            QTimer.singleShot(0, self._checker.startCheck)
+        checkUpdates = self._settings.checkUpdatesEnabled()
+        if checkUpdates:
+            days = self._settings.checkUpdatesInterval()
+            dt = datetime.fromtimestamp(self._settings.lastCheck())
+            diff = datetime.now() - dt
+            # one day a check
+            if diff.days >= days:
+                self._checker = VersionChecker(self)
+                self._checker.newVersionAvailable.connect(
+                    self._onNewVersionAvailable)
+                self._checker.finished.connect(
+                    self._onVersionCheckFinished)
+                QTimer.singleShot(0, self._checker.startCheck)
 
     def settings(self):
         return self._settings
