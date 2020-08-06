@@ -13,6 +13,7 @@ from .gitutils import Git
 
 import sys
 import os
+import re
 
 
 class ToolTableModel(QAbstractTableModel):
@@ -197,6 +198,9 @@ class Preferences(QDialog):
 
         # default to General tab
         self.ui.tabWidget.setCurrentIndex(0)
+
+        self.ui.buttonBox.accepted.connect(
+            self._onAccepted)
 
         self._initSettings()
 
@@ -390,6 +394,54 @@ class Preferences(QDialog):
             QMessageBox.critical(
                 self, self.window().windowTitle(),
                 error)
+
+    def _onAccepted(self):
+        if not self._checkBugPattern():
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("The bug pattern is invalid, please check again."))
+            self.ui.tabWidget.setCurrentWidget(self.ui.tabSummary)
+            self.ui.linkEditWidget.leBugPattern.setFocus()
+            return
+
+        if not self._checkTool(True):
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("The diff tool name can't be empty!"))
+            self.ui.tabWidget.setCurrentWidget(self.ui.tabTools)
+            self.ui.cbDiffName.setFocus()
+            return
+
+        if not self._checkTool(False):
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("The merge tool name can't be empty!"))
+            self.ui.tabWidget.setCurrentWidget(self.ui.tabTools)
+            self.ui.cbMergeName.setFocus()
+            return
+
+        self.accept()
+
+    def _checkBugPattern(self):
+        value = self.ui.linkEditWidget.bugPattern().strip()
+        if not value:
+            return True
+
+        try:
+            re.compile(value)
+            return True
+        except:
+            return False
+
+    def _checkTool(self, isDiff):
+        if isDiff:
+            name = self.ui.cbDiffName.currentText().strip()
+            cmd = self.ui.leDiffCmd.text().strip()
+        else:
+            name = self.ui.cbMergeName.currentText().strip()
+            cmd = self.ui.leMergeCmd.text().strip()
+
+        return not cmd or name
 
     def _imgDiffBin(self):
         def _quote(path):

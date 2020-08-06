@@ -443,7 +443,6 @@ class Ui_Preferences(object):
         QWidget.setTabOrder(self.cbFamilyLog, self.cbSizeLog)
 
         self.retranslateUi(Preferences)
-        self.buttonBox.accepted.connect(Preferences.accept)
         self.buttonBox.rejected.connect(Preferences.reject)
 
         self.tabWidget.setCurrentIndex(3)
