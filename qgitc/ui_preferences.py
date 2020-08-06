@@ -23,7 +23,7 @@ class Ui_Preferences(object):
     def setupUi(self, Preferences):
         if not Preferences.objectName():
             Preferences.setObjectName(u"Preferences")
-        Preferences.resize(655, 430)
+        Preferences.resize(655, 396)
         self.verticalLayout_2 = QVBoxLayout(Preferences)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tabWidget = QTabWidget(Preferences)
@@ -45,6 +45,31 @@ class Ui_Preferences(object):
         self.cbState.setObjectName(u"cbState")
 
         self.verticalLayout_5.addWidget(self.cbState)
+
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.cbCheckUpdates = QCheckBox(self.groupBox_6)
+        self.cbCheckUpdates.setObjectName(u"cbCheckUpdates")
+
+        self.horizontalLayout_8.addWidget(self.cbCheckUpdates)
+
+        self.sbDays = QSpinBox(self.groupBox_6)
+        self.sbDays.setObjectName(u"sbDays")
+        self.sbDays.setMinimum(1)
+
+        self.horizontalLayout_8.addWidget(self.sbDays)
+
+        self.label_14 = QLabel(self.groupBox_6)
+        self.label_14.setObjectName(u"label_14")
+
+        self.horizontalLayout_8.addWidget(self.label_14)
+
+        self.horizontalSpacer_8 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_8.addItem(self.horizontalSpacer_8)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_8)
 
 
         self.verticalLayout.addWidget(self.groupBox_6)
@@ -445,7 +470,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(3)
+        self.tabWidget.setCurrentIndex(0)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -458,6 +483,8 @@ class Ui_Preferences(object):
         self.groupBox_6.setTitle(QCoreApplication.translate("Preferences", u"Application", None))
         self.cbEsc.setText(QCoreApplication.translate("Preferences", u"&Quit also via Esc key", None))
         self.cbState.setText(QCoreApplication.translate("Preferences", u"&Remember window state", None))
+        self.cbCheckUpdates.setText(QCoreApplication.translate("Preferences", u"Check updates every", None))
+        self.label_14.setText(QCoreApplication.translate("Preferences", u"day(s)", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("Preferences", u"Diff view", None))
         self.cbShowWhitespace.setText(QCoreApplication.translate("Preferences", u"&Visualize whitespace", None))
         self.label_10.setText(QCoreApplication.translate("Preferences", u"&Tab size:", None))
