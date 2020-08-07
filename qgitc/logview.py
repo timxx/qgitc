@@ -51,11 +51,16 @@ class LogsFetcher(DataFetcher):
         branch = args[0]
         logArgs = args[1]
 
+        if branch and branch.startswith("(HEAD detached"):
+            branch = None
+
         git_args = ["log", "-z", "--topo-order",
                     "--parents",
                     "--no-color",
-                    "--pretty=format:{0}".format(log_fmt),
-                    branch]
+                    "--pretty=format:{0}".format(log_fmt)]
+        if branch:
+            git_args.append(branch)
+
         if logArgs:
             git_args.extend(logArgs)
         else:
