@@ -402,12 +402,18 @@ class Git():
         if not branch or branch.startswith("remotes/"):
             return ""
 
+        # Use the repo dir directly
+        # since we are unable to get two detached branch
+        if branch.startswith("(HEAD detached"):
+            return Git.REPO_DIR
+
         args = ["worktree", "list"]
         data = Git.checkOutput(args)
         if not data:
             return ""
 
-        worktree_re = re.compile(r"(\S+)\s+[a-f0-9]+\s+\[(\S+)\]$")
+        worktree_re = re.compile(
+            r"(\S+)\s+[a-f0-9]+\s+(\[(\S+)\]|\(detached HEAD\))$")
         worktrees = data.rstrip(b'\n').decode("utf8").split('\n')
 
         for wt in worktrees:
