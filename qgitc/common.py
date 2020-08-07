@@ -4,6 +4,7 @@ import cProfile
 import pstats
 import io
 import os
+import chardet
 
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
@@ -151,8 +152,13 @@ def decodeFileData(data, encoding="utf-8"):
         except UnicodeDecodeError:
             pass
 
-    # DO NOT waste time on chardet
-    # which lost of false detects
+    # try the buggy chardet
+    encoding = chardet.detect(data)["encoding"]
+    if encoding and encoding not in encodings:
+        try:
+            return data.decode(encoding), encoding
+        except UnicodeDecodeError:
+            pass
 
     # the last chance
     print(b"Warning: can't decode '%s'" % data)

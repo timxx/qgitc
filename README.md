@@ -25,6 +25,7 @@ A file conflict viewer for git
 
 - PySide2 >= 5.2.0
 - git (command line)
+- chardet
 
 
 ## Build & Run
