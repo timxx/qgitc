@@ -234,7 +234,7 @@ class MainWindow(StateWindow):
             self.findSubmoduleThread.terminate()
 
         if repoDir:
-            self.ui.leRepo.setDisabled(True)
+            self.ui.leRepo.setReadOnly(True)
             self.ui.btnRepoBrowse.setDisabled(True)
             self.findSubmoduleThread = FindSubmoduleThread(repoDir, self)
             self.findSubmoduleThread.finished.connect(
@@ -330,8 +330,9 @@ class MainWindow(StateWindow):
         submodules = self.findSubmoduleThread.submodules
         for submodule in submodules:
             self.ui.cbSubmodule.addItem(submodule)
-        self.ui.leRepo.setEnabled(True)
-        self.ui.btnRepoBrowse.setEnabled(True)
+        if not self.mergeWidget:
+            self.ui.leRepo.setReadOnly(False)
+            self.ui.btnRepoBrowse.setEnabled(True)
         hasSubmodule = len(submodules) > 0
         self.ui.cbSubmodule.setVisible(hasSubmodule)
         self.ui.lbSubmodule.setVisible(hasSubmodule)
@@ -454,6 +455,7 @@ class MainWindow(StateWindow):
             # not allowed changed in this mode
             self.ui.leRepo.setReadOnly(True)
             self.ui.acCompare.setEnabled(False)
+            self.ui.btnRepoBrowse.setEnabled(False)
 
     def showCommit(self, sha1):
         if not sha1:
