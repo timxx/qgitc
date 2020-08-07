@@ -95,6 +95,9 @@ class MainWindow(StateWindow):
 
         self.mergeWidget = None
 
+        self._delayTimer = QTimer(self)
+        self._delayTimer.setSingleShot(True)
+
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
 
@@ -109,7 +112,7 @@ class MainWindow(StateWindow):
 
         self.ui.btnRepoBrowse.clicked.connect(self.__onBtnRepoBrowseClicked)
 
-        self.ui.leRepo.textChanged.connect(self.__onRepoChanged)
+        self.ui.leRepo.textChanged.connect(self.__onDelayRepoChanged)
 
         self.ui.acIgnoreNone.triggered.connect(
             self.__onAcIgnoreNoneTriggered)
@@ -158,6 +161,9 @@ class MainWindow(StateWindow):
         qApp.focusChanged.connect(self.__updateEditMenu)
 
         self.ui.cbSubmodule.currentIndexChanged.connect(self.__onSubmoduleChanged)
+
+        self._delayTimer.timeout.connect(
+            self.__onDelayTimeout)
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -329,6 +335,13 @@ class MainWindow(StateWindow):
         hasSubmodule = len(submodules) > 0
         self.ui.cbSubmodule.setVisible(hasSubmodule)
         self.ui.lbSubmodule.setVisible(hasSubmodule)
+
+    def __onDelayTimeout(self):
+        repoDir = self.ui.leRepo.text()
+        self.__onRepoChanged(repoDir)
+
+    def __onDelayRepoChanged(self, text):
+        self._delayTimer.start(500)
 
     def saveState(self):
         sett = qApp.instance().settings()
