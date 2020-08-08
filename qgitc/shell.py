@@ -103,7 +103,7 @@ def _shell_unregister_win(args):
 
 
 def _shell_register_linux(args):
-    if isXfce4():
+    if args.file_manager == "thunar" or isXfce4():
         return _register_xfce4(args)
 
     print("Unsupported desktop!")
@@ -111,7 +111,7 @@ def _shell_register_linux(args):
 
 
 def _shell_unregister_linux(args):
-    if isXfce4():
+    if args.file_manager == "thunar" or isXfce4():
         return _unregister_xfce4(args)
 
     print("Unsupported desktop!")
@@ -228,5 +228,18 @@ def setup_shell_args(parser):
         reg_parser.set_defaults(func=_shell_register_win)
         unreg_parser.set_defaults(func=_shell_unregister_win)
     else:
+        supported_fm = ["thunar"]
+        reg_parser.add_argument(
+            "-m", "--file-manager",
+            metavar="<file manager>",
+            choices=supported_fm,
+            help="Register for specify file manager")
+
+        unreg_parser.add_argument(
+            "-m", "--file-manager",
+            metavar="<file manager>",
+            choices=supported_fm,
+            help="Unregister for specify file manager")
+
         reg_parser.set_defaults(func=_shell_register_linux)
         unreg_parser.set_defaults(func=_shell_unregister_linux)
