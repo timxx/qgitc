@@ -49,8 +49,9 @@ class Application(QApplication):
         self._logWindow = None
         self._blameWindow = None
 
-        repoDir = Git.repoTopLevelDir(os.getcwd())
-        Git.REPO_DIR = repoDir
+        cwd = os.getcwd()
+        repoDir = Git.repoTopLevelDir(cwd)
+        Git.REPO_DIR = repoDir or cwd
 
         checkUpdates = self._settings.checkUpdatesEnabled()
         if checkUpdates:
