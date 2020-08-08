@@ -41,7 +41,7 @@ A file conflict viewer for git
   - pip install qgitc
 
 
-## Shell Integration (Windows only)
+## Shell Integration
 
 ``` sh
 qgitc shell register

@@ -9,6 +9,37 @@ if sys.platform == "win32":
         DeleteKeyEx,
         HKEY_CLASSES_ROOT,
         REG_SZ)
+else:
+    import xml.etree.ElementTree as ET
+    from datetime import datetime
+
+    from .common import isXfce4
+
+
+def _exePath():
+    exePath = os.path.abspath(sys.argv[0])
+
+    def _quote(path):
+        if " " in path:
+            return '"' + path + '"'
+        return path
+
+    if exePath.endswith("qgitc.py"):
+        if sys.platform == "win32":
+            pyExe = _quote(sys.executable.replace(".exe", "w.exe"))
+        else:
+            pyExe = _quote(sys.executable)
+        exePath = pyExe + ' ' + _quote(exePath)
+    else:
+        if sys.platform == "win32":
+            if not exePath.endswith(".exe"):
+                exePath += ".exe"
+        exePath = _quote(exePath)
+    return exePath
+
+
+def _dataDir():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 
 def _shell_usage(args):
@@ -17,7 +48,7 @@ def _shell_usage(args):
           "\tqgitc shell unregister")
 
 
-def _shell_register(args):
+def _shell_register_win(args):
 
     def _do_register(subkey, name, ico, exe, cmd="log", arg="%1"):
         with CreateKeyEx(HKEY_CLASSES_ROOT, subkey) as key:
@@ -30,19 +61,7 @@ def _shell_register(args):
 
         return 0
 
-    def _exePath():
-        exePath = os.path.abspath(sys.argv[0])
-        if exePath.endswith("qgitc.py"):
-            pyExe = '"' + sys.executable.replace(".exe", "w.exe") + '"'
-            exePath = pyExe + ' "' + exePath + '"'
-        else:
-            if not exePath.endswith(".exe"):
-                exePath += ".exe"
-            exePath = '"' + exePath + '"'
-        return exePath
-
-    dataDir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-    ico = os.path.join(dataDir, "icons", "qgitc.ico")
+    ico = os.path.join(_dataDir(), "icons", "qgitc.ico")
     exe = _exePath()
 
     ret = _do_register(r"*\shell\QGitc", "QGitc", ico, exe)
@@ -55,7 +74,7 @@ def _shell_register(args):
     return ret
 
 
-def _shell_unregister(args):
+def _shell_unregister_win(args):
 
     def _do_delete(subkey):
         try:
@@ -80,6 +99,115 @@ def _shell_unregister(args):
     return ret
 
 
+def _shell_register_linux(args):
+    if isXfce4():
+        return _register_xfce4(args)
+
+    print("Unsupported desktop!")
+    return 1
+
+
+def _shell_unregister_linux(args):
+    if isXfce4():
+        return _unregister_xfce4(args)
+
+    print("Unsupported desktop!")
+    return 1
+
+
+# use custom action for thunar
+def _register_xfce4(args):
+    dir = os.path.join(os.path.expanduser("~"), ".config", "Thunar")
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    uca = os.path.join(dir, "uca.xml")
+    if not os.path.exists(uca):
+        pass
+    else:
+        # remove first
+        _unregister_xfce4(args)
+
+    tree = ET.parse(uca)
+    root = tree.getroot()
+
+    action = ET.Element("action")
+    action.text = "\n\t"
+    action.tail = "\n"
+
+    def _addElement(name, text=None, withTab=True):
+        e = ET.Element(name)
+        if text is not None:
+            e.text = text
+        # for indent LoL
+        if withTab:
+            e.tail = "\n\t"
+        else:
+            e.tail = "\n"
+        action.append(e)
+
+    def _uniqueId():
+        stamp = datetime.now().timestamp()
+        return "{}-1".format(int(stamp * 1000000))
+
+    ico = os.path.join(_dataDir(), "icons", "qgitc.svg")
+
+    _addElement("icon", ico)
+    _addElement("name", "QGitc")
+    _addElement("unique-id", _uniqueId())
+    _addElement("command", '%s log %%f' % _exePath())
+    _addElement("description", "Run QGitc")
+    _addElement("patterns", "*")
+    _addElement("directories")
+    _addElement("audio-files")
+    _addElement("image-files")
+    _addElement("other-files")
+    _addElement("text-files")
+    _addElement("video-files", withTab=False)
+
+    root.append(action)
+
+    action = ET.Element("action")
+    action.text = "\n\t"
+    action.tail = "\n"
+
+    _addElement("icon", ico)
+    _addElement("name", "QGitc Blame")
+    _addElement("unique-id", _uniqueId())
+    _addElement("command", '%s blame %%f' % _exePath())
+    _addElement("description", "Run QGitc Blame")
+    _addElement("patterns", "*")
+    _addElement("other-files")
+    _addElement("text-files", withTab=False)
+
+    root.append(action)
+
+    tree.write(uca, xml_declaration=True, encoding="utf-8")
+
+    return 0
+
+
+def _unregister_xfce4(args):
+    uca = os.path.join(os.path.expanduser("~"), ".config", "Thunar", "uca.xml")
+    if not os.path.exists(uca):
+        return 0
+
+    tree = ET.parse(uca)
+    root = tree.getroot()
+
+    def _remove(name):
+        items = root.findall("./action[name='%s']" % name)
+        for item in items:
+            root.remove(item)
+
+    _remove("QGitc")
+    _remove("QGitc Blame")
+
+    tree.write(uca, xml_declaration=True, encoding="utf-8")
+
+    return 0
+
+
 def setup_shell_args(parser):
     shell = parser.add_parser(
         "shell", help="Shell integration")
@@ -90,8 +218,12 @@ def setup_shell_args(parser):
 
     reg_parser = subparser.add_parser(
         "register", help="Register shell")
-    reg_parser.set_defaults(func=_shell_register)
-
     unreg_parser = subparser.add_parser(
         "unregister", help="Unregister shell")
-    unreg_parser.set_defaults(func=_shell_unregister)
+
+    if sys.platform == "win32":
+        reg_parser.set_defaults(func=_shell_register_win)
+        unreg_parser.set_defaults(func=_shell_unregister_win)
+    else:
+        reg_parser.set_defaults(func=_shell_register_linux)
+        unreg_parser.set_defaults(func=_shell_unregister_linux)
