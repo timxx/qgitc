@@ -40,7 +40,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
-            "args": ["shell", "register"],
+            "args": ["shell", "unregister"],
             "console": "integratedTerminal"
         },
         {

@@ -173,3 +173,14 @@ def appDirPath():
 
 def dataDirPath():
     return appDirPath() + "/data"
+
+
+def isXfce4():
+    keys = ["XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP"]
+    for key in keys:
+        if key in os.environ:
+            v = os.environ[key]
+            if v:
+                return v == "XFCE"
+
+    return False

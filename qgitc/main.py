@@ -10,6 +10,7 @@ from .excepthandler import ExceptHandler
 from .application import Application
 from .mainwindow import MainWindow
 from .shell import setup_shell_args
+from .common import isXfce4
 
 import os
 import sys
@@ -82,8 +83,7 @@ def _setup_argument(prog):
         help="The file to blame.")
     blame_parser.set_defaults(func=_do_blame)
 
-    if sys.platform == "win32":
-        setup_shell_args(subparsers)
+    setup_shell_args(subparsers)
 
     return parser.parse_args()
 
@@ -155,23 +155,12 @@ def _do_blame(args):
     return app.exec_()
 
 
-def _is_xfce4():
-    keys = ["XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP"]
-    for key in keys:
-        if key in os.environ:
-            v = os.environ[key]
-            if v:
-                return v == "XFCE"
-
-    return False
-
-
 def _update_scale_factor():
     if sys.platform != "linux":
         return
 
     # only xfce4 for the moment
-    if not _is_xfce4():
+    if not isXfce4():
         return
 
     xfconf_query = shutil.which("xfconf-query")
