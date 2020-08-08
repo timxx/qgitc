@@ -50,4 +50,10 @@ qgitc shell unregister
 
 # to use the source directly:
 python qgitc.py shell register
+
+# for Linux user
+# if your file manager isn't the default one comes with desktop
+# say your desktop is Ubuntu, but use thunar as default one
+# use --file-manager to specify reigster for
+qgitch shell register --file-manager=thunar
 ```
