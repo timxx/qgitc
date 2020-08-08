@@ -56,7 +56,10 @@ def _shell_register_win(args):
             SetValueEx(key, "Icon", 0, REG_SZ, ico)
 
         with CreateKeyEx(HKEY_CLASSES_ROOT, subkey + "\\command") as key:
-            value = '{} {} "{}"'.format(exe, cmd, arg)
+            if arg:
+                value = '{} {} "{}"'.format(exe, cmd, arg)
+            else:
+                value = '{} {}'.format(exe, cmd)
             SetValueEx(key, "", 0, REG_SZ, value)
 
         return 0
@@ -66,7 +69,7 @@ def _shell_register_win(args):
 
     ret = _do_register(r"*\shell\QGitc", "QGitc", ico, exe)
     ret |= _do_register(r"Directory\Background\shell\QGitc",
-                        "QGitc", ico, exe, arg="%v")
+                        "QGitc", ico, exe, arg=None)
     ret |= _do_register(r"Directory\shell\QGitc", "QGitc", ico, exe)
     ret |= _do_register(r"*\shell\QGitcBlame",
                         "QGitc Blame", ico, exe, "blame")
