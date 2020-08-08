@@ -420,7 +420,7 @@ class Git():
             m = worktree_re.fullmatch(wt)
             if not m:
                 print("Oops! Wrong format for worktree:", wt)
-            elif m.group(2) == branch:
+            elif m.group(3) == branch:
                 return m.group(1)
 
         return ""
