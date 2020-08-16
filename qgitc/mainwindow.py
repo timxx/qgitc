@@ -33,18 +33,22 @@ class FindSubmoduleThread(QThread):
 
     @property
     def submodules(self):
-        if self.isFinished():
+        if self.isFinished() and not self.isInterruptionRequested():
             return self._submodules
         return []
 
     def run(self):
         self._submodules.clear()
+        if self.isInterruptionRequested():
+            return
 
         # try git submodule first
         process = GitProcess(self._repoDir,
                              ["submodule", "foreach", "--quiet", "echo $name"],
                              True)
         data = process.communicate()[0]
+        if self.isInterruptionRequested():
+            return
         if process.returncode == 0 and data:
             self._submodules = data.rstrip().split('\n')
             self._submodules.insert(0, ".")
@@ -54,6 +58,8 @@ class FindSubmoduleThread(QThread):
         # some projects may not use submodule or subtree
         max_level = 5 + self._repoDir.count(os.path.sep)
         for root, subdirs, files in os.walk(self._repoDir, topdown=True):
+            if self.isInterruptionRequested():
+                return
             if os.path.normcase(root) == self._repoDir:
                 continue
 
@@ -231,7 +237,8 @@ class MainWindow(StateWindow):
             Git.REV_HEAD = Git.revHead()
 
         if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
-            self.findSubmoduleThread.terminate()
+            self.findSubmoduleThread.disconnect(self)
+            self.findSubmoduleThread.requestInterruption()
 
         if repoDir:
             self.ui.leRepo.setReadOnly(True)
