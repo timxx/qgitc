@@ -580,8 +580,11 @@ class DiffTextLine(SourceTextLineBase):
         elif text[0] == "-":
             tcFormat.setForeground(ColorSchema.Deletion)
         elif text[0] == " " and len(text) >= 2:
+            # TODO: only if in submodule changes
             if text.startswith("  > "):
                 tcFormat.setForeground(ColorSchema.Submodule)
+            elif text.startswith("  < "):
+                tcFormat.setForeground(ColorSchema.Submodule2)
             elif self._parentCount > 1 and len(text) >= self._parentCount:
                 index = self._parentCount - 1
                 if text[index] == "+":
