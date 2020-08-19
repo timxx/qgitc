@@ -165,6 +165,11 @@ class TextViewer(QAbstractScrollArea):
         self._lines.append(None)
         self._textLines[lineNo] = textLine
 
+        if self._convertTimerId is None:
+            self._convertTimerId = self.startTimer(0)
+
+        self.viewport().update()
+
     def beginReading(self):
         """ Call before reading lines to TextViewer """
         self._inReading = True
