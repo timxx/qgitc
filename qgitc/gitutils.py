@@ -227,6 +227,14 @@ class Git():
                 "email": parts[4]}
 
     @staticmethod
+    def abbrevCommit(sha1):
+        args = ["show", "-s", "--pretty=format:%h", sha1]
+        data = Git.checkOutput(args)
+        if not data:
+            return sha1[:7]
+        return data.rstrip().decode("utf-8")
+
+    @staticmethod
     def commitSubject(sha1):
         args = ["show", "-s", "--pretty=format:%s", sha1]
         data = Git.checkOutput(args)
