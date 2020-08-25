@@ -588,6 +588,9 @@ class LogView(QAbstractScrollArea):
         self.acCopySummary = self.menu.addAction(
             self.tr("&Copy commit summary"),
             self.__onCopyCommitSummary)
+        self.acCopyAbbrevCommit = self.menu.addAction(
+            self.tr("Copy &abbrev commit"),
+            self.__onCopyAbbrevCommit)
         self.menu.addSeparator()
 
         self.menu.addAction(self.tr("&Mark this commit"),
@@ -745,6 +748,7 @@ class LogView(QAbstractScrollArea):
         isCommitted = commit.sha1 not in [Git.LCC_SHA1, Git.LUC_SHA1]
         self.acCopySummary.setEnabled(isCommitted)
         self.acGenPatch.setEnabled(isCommitted)
+        self.acCopyAbbrevCommit.setEnabled(isCommitted)
 
         enabled = isCommitted
         if enabled:
@@ -812,6 +816,20 @@ class LogView(QAbstractScrollArea):
             commit["author"],
             commit["date"]))
 
+        clipboard.setMimeData(mimeData)
+
+    def __onCopyAbbrevCommit(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        mimeData = QMimeData()
+        abbrev = Git.abbrevCommit(commit.sha1)
+        mimeData.setText(abbrev)
+
+        clipboard = QApplication.clipboard()
         clipboard.setMimeData(mimeData)
 
     def __onMarkCommit(self):
