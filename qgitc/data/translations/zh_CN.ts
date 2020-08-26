@@ -4,32 +4,32 @@
 <context>
     <name></name>
     <message>
-        <location filename="../../mainwindow.py" line="195"/>
+        <location filename="../../mainwindow.py" line="201"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="204"/>
+        <location filename="../../mainwindow.py" line="210"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="216"/>
+        <location filename="../../mainwindow.py" line="222"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="418"/>
+        <location filename="../../mainwindow.py" line="425"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="429"/>
+        <location filename="../../mainwindow.py" line="436"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="430"/>
+        <location filename="../../mainwindow.py" line="437"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
@@ -331,12 +331,12 @@
     </message>
     <message>
         <location filename="../../gitview.ui" line="174"/>
-        <source>↑</source>
+        <source>â</source>
         <translation></translation>
     </message>
     <message>
         <location filename="../../gitview.ui" line="184"/>
-        <source>↓</source>
+        <source>â</source>
         <translation></translation>
     </message>
 </context>
@@ -392,74 +392,79 @@
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="593"/>
+        <location filename="../../logview.py" line="596"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="595"/>
+        <location filename="../../logview.py" line="598"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="597"/>
+        <location filename="../../logview.py" line="600"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="976"/>
+        <location filename="../../logview.py" line="994"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="997"/>
+        <location filename="../../logview.py" line="1015"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="602"/>
+        <location filename="../../logview.py" line="605"/>
         <source>Generate &amp;patch</source>
         <translation>生成&amp;patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="605"/>
+        <location filename="../../logview.py" line="608"/>
         <source>Generate &amp;diff</source>
         <translation>生成&amp;diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="610"/>
+        <location filename="../../logview.py" line="613"/>
         <source>Re&amp;vert this commit</source>
         <translation>回滚此记录(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="612"/>
+        <location filename="../../logview.py" line="615"/>
         <source>Re&amp;set to here</source>
         <translation>重置HEAD为此记录(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="614"/>
+        <location filename="../../logview.py" line="617"/>
         <source>&amp;Soft</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="617"/>
+        <location filename="../../logview.py" line="620"/>
         <source>&amp;Mixed</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="620"/>
+        <location filename="../../logview.py" line="623"/>
         <source>&amp;Hard</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="849"/>
+        <location filename="../../logview.py" line="867"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="862"/>
+        <location filename="../../logview.py" line="880"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
+    </message>
+    <message>
+        <location filename="../../logview.py" line="592"/>
+        <source>Copy &amp;abbrev commit</source>
+        <translation>复制短SHA-1(&amp;A)</translation>
     </message>
 </context>
 <context>
@@ -831,7 +836,7 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="727"/>
+        <location filename="../../diffview.py" line="730"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
@@ -1164,12 +1169,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>TextViewer</name>
     <message>
-        <location filename="../../textviewer.py" line="453"/>
+        <location filename="../../textviewer.py" line="458"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="459"/>
+        <location filename="../../textviewer.py" line="464"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
