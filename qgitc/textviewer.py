@@ -643,6 +643,10 @@ class TextViewer(QAbstractScrollArea):
         return result
 
     def _onConvertEvent(self):
+        # wait for more text lines
+        if self._inReading and self._convertIndex >= self.textLineCount():
+            return
+
         textLine = self.textLineAt(self._convertIndex)
         self._convertIndex += 1
 
