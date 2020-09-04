@@ -179,11 +179,16 @@ class Application(QApplication):
     def _onDelayInit(self):
         checkUpdates = self._settings.checkUpdatesEnabled()
         if checkUpdates:
-            days = self._settings.checkUpdatesInterval()
-            dt = datetime.fromtimestamp(self._settings.lastCheck())
-            diff = datetime.now() - dt
-            # one day a check
-            if diff.days >= days:
+            ts = self._settings.lastCheck()
+            if ts < 86440:
+                haveToCheck = True
+            else:
+                days = self._settings.checkUpdatesInterval()
+                dt = datetime.fromtimestamp(ts)
+                diff = datetime.now() - dt
+                haveToCheck = diff.days >= days
+
+            if haveToCheck:
                 self._checker = VersionChecker(self)
                 self._checker.newVersionAvailable.connect(
                     self._onNewVersionAvailable)
