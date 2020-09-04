@@ -228,10 +228,19 @@ class DiffView(QWidget):
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
-        self.twMenu.addAction(self.tr("&Copy path"),
-                              self.__onCopyPath)
-        self.twMenu.addAction(self.tr("Copy &Windows path"),
-                              self.__onCopyWinPath)
+        self.twMenu.addSeparator()
+
+        copyMenu = self.twMenu.addMenu(self.tr("&Copy path"))
+        copyMenu.addAction(self.tr("As &seen"),
+                           self.__onCopyPath)
+        copyMenu.addAction(self.tr("As &absolute"),
+                           self.__onCopyAbsPath)
+        copyMenu.addAction(self.tr("As &Windows"),
+                           self.__onCopyWinPath)
+        # useless on non-Windows platform
+        if os.name == "nt":
+            copyMenu.addAction(self.tr("As W&indows absolute"),
+                               self.__onCopyWinAbsPath)
         self.twMenu.addSeparator()
         self.twMenu.addAction(self.tr("&Log this file"),
                               self.__onFilterPath)
@@ -313,22 +322,32 @@ class DiffView(QWidget):
         item = self.treeWidget.currentItem()
         self.__runDiffTool(item)
 
-    def __doCopyPath(self, asWin=False):
+    def __doCopyPath(self, asWin=False, absPath=False):
         item = self.treeWidget.currentItem()
         if not item:
             return
 
         clipboard = QApplication.clipboard()
+        path = item.text(0)
+        if absPath and Git.REPO_DIR:
+            path = os.path.join(Git.REPO_DIR, path)
+
         if not asWin:
-            clipboard.setText(item.text(0))
+            clipboard.setText(path)
         else:
-            clipboard.setText(item.text(0).replace('/', '\\'))
+            clipboard.setText(path.replace('/', '\\'))
 
     def __onCopyPath(self):
         self.__doCopyPath()
 
+    def __onCopyAbsPath(self):
+        self.__doCopyPath(absPath=True)
+
     def __onCopyWinPath(self):
         self.__doCopyPath(True)
+
+    def __onCopyWinAbsPath(self):
+        self.__doCopyPath(True, absPath=True)
 
     def __onFilterPath(self):
         item = self.treeWidget.currentItem()
