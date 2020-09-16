@@ -770,7 +770,7 @@ class TextViewer(QAbstractScrollArea):
 
             textLine.draw(painter, offset, formats, QRectF(eventRect))
 
-            offset.setY(offset.y() + r.height())
+            offset.setY(offset.y() + self._lineHeight)
 
             if offset.y() > viewportRect.height():
                 break
