@@ -555,10 +555,15 @@ class BlameSourceViewer(SourceViewer):
         if newLine == oldLine:
             return
         r = self._lineRect(oldLine)
-        onePixel = dpiScaled(1)
-        self.viewport().update(r.adjusted(-onePixel, -onePixel, onePixel, onePixel))
+        # if line contains invalid char
+        # offset <= 2 is not working as the paintEvent rect
+        # is not high enough for repaint
+        # even if the update rect seems OK LoL
+        offset = dpiScaled(3)
+        self.viewport().update(r.adjusted(-offset, -offset, offset, offset))
         r = self._lineRect(newLine)
-        self.viewport().update(r.adjusted(-onePixel, -onePixel, onePixel, onePixel))
+        offset = dpiScaled(1)
+        self.viewport().update(r.adjusted(-offset, -offset, offset, offset))
 
     def paintEvent(self, event):
         super().paintEvent(event)
