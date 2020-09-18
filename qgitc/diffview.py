@@ -701,7 +701,9 @@ class PatchViewer(SourceViewer):
         # so delay construct TextLine and decode bytes here
         if type == DiffType.Diff:
             text, _ = decodeFileData(content, diff_encoding)
-            textLine = DiffTextLine(self, text, self._parentCount)
+            # FIXME: The git may generate some patch with \x00 char (such as: b'- \x00')
+            # The origin file is a normal text file and not Unicode encoding
+            textLine = DiffTextLine(self, text.replace('\x00', ''), self._parentCount)
         elif type == DiffType.File or \
                 type == DiffType.FileInfo:
             textLine = InfoTextLine(self, type, content.decode(diff_encoding))
