@@ -286,9 +286,9 @@ class TextViewer(QAbstractScrollArea):
     def lineHeight(self):
         return self._lineHeight
 
-    def textLineForPos(self, pos):
+    def textRowForPos(self, pos):
         if not self.hasTextLines():
-            return None
+            return -1
 
         y = max(0, pos.y())
         n = int(y / self.lineHeight)
@@ -297,6 +297,12 @@ class TextViewer(QAbstractScrollArea):
         if n >= self.textLineCount():
             n = self.textLineCount() - 1
 
+        return n
+
+    def textLineForPos(self, pos):
+        n = self.textRowForPos(pos)
+        if n == -1:
+            return None
         return self.textLineAt(n)
 
     def highlightLines(self, lines):
@@ -722,14 +728,20 @@ class TextViewer(QAbstractScrollArea):
             return
 
         painter = QPainter(self.viewport())
+        eventRect = event.rect()
 
-        startLine = self.firstVisibleLine()
-        endLine = startLine + self._linesPerPage() + 1
+        if eventRect.isValid():
+            startLine = self.textRowForPos(eventRect.topLeft())
+            endLine = self.textRowForPos(eventRect.bottomRight()) + 1
+        else:
+            startLine = self.firstVisibleLine()
+            endLine = startLine + self._linesPerPage() + 1
         endLine = min(self.textLineCount(), endLine)
 
         offset = self.contentOffset()
+        offset.setY(offset.y() + (startLine -
+                                  self.firstVisibleLine()) * self.lineHeight)
         viewportRect = self.viewport().rect()
-        eventRect = event.rect()
 
         painter.setClipRect(eventRect)
 
