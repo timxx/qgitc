@@ -32,55 +32,79 @@ submodule_re = re.compile(
 diff_encoding = "utf-8"
 
 
-class TreeItemDelegate(QItemDelegate):
+class FileListModel(QAbstractListModel):
+
+    RowRole = Qt.UserRole
 
     def __init__(self, parent=None):
-        super(TreeItemDelegate, self).__init__(parent)
-        self.pattern = None
+        super().__init__(parent)
+        self._fileList = []
 
-    def paint(self, painter, option, index):
-        text = index.data()
+    def rowCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
 
-        itemSelected = option.state & QStyle.State_Selected
-        self.drawBackground(painter, option, index)
-        self.drawFocus(painter, option, option.rect)
+        return len(self._fileList)
 
-        textLayout = QTextLayout(text, option.font)
-        textOption = QTextOption()
-        textOption.setWrapMode(QTextOption.NoWrap)
+    def flags(self, index):
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-        textLayout.setTextOption(textOption)
+    def insertRows(self, row, count, parent=QModelIndex()):
+        if row < 0 or count < 1 or row > self.rowCount(parent):
+            return False
 
-        formats = []
-        if index.row() != 0 and self.pattern:
-            matchs = self.pattern.finditer(text)
-            fmt = QTextCharFormat()
-            if itemSelected:
-                fmt.setForeground(QBrush(Qt.yellow))
-            else:
-                fmt.setBackground(QBrush(Qt.yellow))
-            for m in matchs:
-                rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
-                formats.append(rg)
+        self.beginInsertRows(QModelIndex(), row, row + count - 1)
+        for i in range(count):
+            self._fileList.insert(row, "")
+        self.endInsertRows()
 
-        textLayout.setAdditionalFormats(formats)
+        return True
 
-        textLayout.beginLayout()
-        line = textLayout.createLine()
-        line.setPosition(QPointF(0, 0))
-        textLayout.endLayout()
+    def removeRows(self, row, count, parent=QModelIndex()):
+        if row < 0 or (row + count) > self.rowCount(parent) or count < 1:
+            return False
 
-        painter.save()
-        if itemSelected:
-            painter.setPen(option.palette.color(QPalette.HighlightedText))
-        else:
-            painter.setPen(option.palette.color(QPalette.WindowText))
+        self.beginRemoveRows(QModelIndex(), row, row + count - 1)
+        del self._fileList[row: row + count]
+        self.endRemoveRows()
 
-        textLayout.draw(painter, QPointF(option.rect.topLeft()))
-        painter.restore()
+        return True
 
-    def setHighlightPattern(self, pattern):
-        self.pattern = pattern
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        if row < 0 or row >= self.rowCount():
+            return False
+
+        if role == Qt.DisplayRole:
+            return self._fileList[row][0]
+        elif role == FileListModel.RowRole:
+            return self._fileList[row][1]
+
+        return None
+
+    def setData(self, index, value, role=Qt.EditRole):
+        row = index.row()
+        if row < 0 or row >= self.rowCount():
+            return False
+
+        old_value = self._fileList[row]
+        if role == Qt.DisplayRole:
+            self._fileList[row] = (value, old_value[1])
+            return True
+        elif role == FileListModel.RowRole:
+            self._fileList[row] = (old_value[0], value)
+            return True
+
+        return False
+
+    def addFile(self, file, row):
+        rowCount = self.rowCount()
+        self.beginInsertRows(QModelIndex(), rowCount, rowCount)
+        self._fileList.append((file, row))
+        self.endInsertRows()
+
+    def clear(self):
+        self.removeRows(0, self.rowCount())
 
 
 class DiffType:
@@ -218,7 +242,7 @@ class DiffView(QWidget):
         super(DiffView, self).__init__(parent)
 
         self.viewer = PatchViewer(self)
-        self.treeWidget = QTreeWidget(self)
+        self.fileListView = QListView(self)
         self.filterPath = None
         self.twMenu = QMenu()
         self.commit = None
@@ -251,34 +275,32 @@ class DiffView(QWidget):
 
         self.splitter = QSplitter(self)
         self.splitter.addWidget(self.viewer)
-        self.splitter.addWidget(self.treeWidget)
+
+        self.fileListView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.fileListModel = FileListModel(self)
+        self.fileListProxy = QSortFilterProxyModel(self)
+        self.fileListProxy.setSourceModel(self.fileListModel)
+        self.fileListView.setModel(self.fileListProxy)
+        self.splitter.addWidget(self.fileListView)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.splitter)
 
-        self.treeWidget.setColumnCount(1)
-        self.treeWidget.setHeaderHidden(True)
-        self.treeWidget.setRootIsDecorated(False)
-        self.treeWidget.header().setStretchLastSection(False)
-        self.treeWidget.header().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-        self.itemDelegate = TreeItemDelegate(self)
-        self.treeWidget.setItemDelegate(self.itemDelegate)
-
         width = self.sizeHint().width()
         sizes = [width * 2 / 3, width * 1 / 3]
         self.splitter.setSizes(sizes)
 
-        self.treeWidget.currentItemChanged.connect(self.__onTreeItemChanged)
+        self.fileListView.selectionModel().currentRowChanged.connect(
+            self.__onFileListViewCurrentRowChanged)
         style = qApp.style()
         # single click to activate is so terrible
         if not style.styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
-            self.treeWidget.itemActivated.connect(
-                self.__onTreeItemDoubleClicked)
+            self.fileListView.activated.connect(
+                self.__onFileListViewDoubleClicked)
         else:
-            self.treeWidget.itemDoubleClicked.connect(
-                self.__onTreeItemDoubleClicked)
+            self.fileListView.doubleClicked.connect(
+                self.__onFileListViewDoubleClicked)
 
         self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
         self.viewer.requestCommit.connect(self.requestCommit)
@@ -289,9 +311,9 @@ class DiffView(QWidget):
             self.__onIgnoreWhitespaceChanged)
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
 
-        self.treeWidget.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.treeWidget.customContextMenuRequested.connect(
-            self.__onTreeWidgetContextMenuRequested)
+        self.fileListView.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.fileListView.customContextMenuRequested.connect(
+            self.__onFileListViewContextMenuRequested)
 
         self.fetcher.diffAvailable.connect(
             self.__onDiffAvailable)
@@ -299,36 +321,36 @@ class DiffView(QWidget):
             self.__onFetchFinished)
 
         self._difftoolProc = None
+        self._withinFileRowChanged = False
 
-    def __onTreeItemChanged(self, current, previous):
-        if current:
-            row = current.data(0, Qt.UserRole)
+    def __onFileListViewCurrentRowChanged(self, current, previous):
+        if not self._withinFileRowChanged and current.isValid():
+            row = current.data(FileListModel.RowRole)
             # do not fire the __onFileRowChanged
             self.viewer.blockSignals(True)
             self.viewer.gotoLine(row, False)
             self.viewer.blockSignals(False)
 
     def __onFileRowChanged(self, row):
-        for i in range(self.treeWidget.topLevelItemCount()):
-            item = self.treeWidget.topLevelItem(i)
-            n = item.data(0, Qt.UserRole)
-            if n == row:
-                self.treeWidget.blockSignals(True)
-                self.treeWidget.setCurrentItem(item)
-                self.treeWidget.blockSignals(False)
+        for i in range(self.fileListProxy.rowCount()):
+            index = self.fileListProxy.index(i, 0)
+            if index.data(FileListModel.RowRole) == row:
+                self._withinFileRowChanged = True
+                self.fileListView.setCurrentIndex(index)
+                self._withinFileRowChanged = False
                 break
 
     def __onExternalDiff(self):
-        item = self.treeWidget.currentItem()
-        self.__runDiffTool(item)
+        index = self.fileListView.currentIndex()
+        self.__runDiffTool(index)
 
     def __doCopyPath(self, asWin=False, absPath=False):
-        item = self.treeWidget.currentItem()
-        if not item:
+        index = self.fileListView.currentIndex()
+        if not index.isValid():
             return
 
         clipboard = QApplication.clipboard()
-        path = item.text(0)
+        path = index.data()
         if absPath and Git.REPO_DIR:
             path = os.path.join(Git.REPO_DIR, path)
 
@@ -350,37 +372,35 @@ class DiffView(QWidget):
         self.__doCopyPath(True, absPath=True)
 
     def __onFilterPath(self):
-        item = self.treeWidget.currentItem()
-        if not item:
+        index = self.fileListView.currentIndex()
+        if not index.isValid():
             return
 
-        filePath = item.text(0)
+        filePath = index.data()
         self.window().setFilterFile(filePath)
 
     def __onBlameFile(self):
-        item = self.treeWidget.currentItem()
-        if not item:
+        index = self.fileListView.currentIndex()
+        if not index.isValid():
             return
 
-        self.requestBlame.emit(item.text(0), False)
+        self.requestBlame.emit(index.data(), False)
 
     def __onBlameParentCommit(self):
-        item = self.treeWidget.currentItem()
-        if not item:
+        index = self.fileListView.currentIndex()
+        if not index.isValid():
             return
 
-        self.requestBlame.emit(item.text(0), True)
+        self.requestBlame.emit(index.data(), True)
 
-    def __isCommentItem(self, item):
-        # operator not implemented LoL
-        # return item and item == self.treeWidget.topLevelItem(0):
-        return item and item.data(0, Qt.UserRole) == 0
+    def __isCommentItem(self, index):
+        return index.isValid() and index.row() == 0
 
-    def __runDiffTool(self, item):
-        if not item or not self.commit:
+    def __runDiffTool(self, index):
+        if not index.isValid() or not self.commit:
             return
 
-        filePath = item.text(0)
+        filePath = index.data()
         tool = self.__diffToolForFile(filePath)
 
         cwd = self.branchDir if self.branchDir else Git.REPO_DIR
@@ -425,11 +445,11 @@ class DiffView(QWidget):
 
         self._difftoolProc = None
 
-    def __onTreeItemDoubleClicked(self, item, column):
-        if not item or self.__isCommentItem(item):
+    def __onFileListViewDoubleClicked(self, index):
+        if not index.isValid() or self.__isCommentItem(index):
             return
 
-        self.__runDiffTool(item)
+        self.__runDiffTool(index)
 
     def __onIgnoreWhitespaceChanged(self, index):
         args = ["", "--ignore-space-at-eol",
@@ -445,21 +465,18 @@ class DiffView(QWidget):
         if self.commit:
             self.showCommit(self.commit)
 
-    def __onTreeWidgetContextMenuRequested(self, pos):
-        item = self.treeWidget.currentItem()
-        if not item:
+    def __onFileListViewContextMenuRequested(self, pos):
+        index = self.fileListView.currentIndex()
+        if not index.isValid():
             return
 
-        if self.treeWidget.topLevelItemCount() < 2:
+        if self.__isCommentItem(index):
             return
 
-        if self.__isCommentItem(item):
-            return
-
-        self.twMenu.exec_(self.treeWidget.mapToGlobal(pos))
+        self.twMenu.exec_(self.fileListView.mapToGlobal(pos))
 
     def __onDiffAvailable(self, lineItems, fileItems):
-        self.__addToTreeWidget(fileItems)
+        self.__addToFileListView(fileItems)
         self.viewer.appendLines(lineItems)
 
     def __onFetchFinished(self, exitCode):
@@ -470,25 +487,21 @@ class DiffView(QWidget):
             QMessageBox.critical(self, self.window().windowTitle(),
                                  self.fetcher.errorData.decode("utf-8"))
 
-    def __addToTreeWidget(self, *args):
+    def __addToFileListView(self, *args):
         """specify the @row number of the file in the viewer"""
         if len(args) == 1 and isinstance(args[0], dict):
-            items = []
             for file, row in args[0].items():
-                item = QTreeWidgetItem([file])
-                item.setData(0, Qt.UserRole, row)
-                items.append(item)
-            self.treeWidget.addTopLevelItems(items)
+                self.fileListModel.addFile(file, row)
         else:
-            item = QTreeWidgetItem([args[0]])
-            item.setData(0, Qt.UserRole, args[1])
-            self.treeWidget.addTopLevelItem(item)
+            self.fileListModel.addFile(args[0], args[1])
 
     def __commitDesc(self, sha1):
         if sha1 == Git.LUC_SHA1:
-            subject = self.tr("Local uncommitted changes, not checked in to index")
+            subject = self.tr(
+                "Local uncommitted changes, not checked in to index")
         elif sha1 == Git.LCC_SHA1:
-            subject = self.tr("Local changes checked in to index but not committed")
+            subject = self.tr(
+                "Local changes checked in to index but not committed")
         else:
             subject = Git.commitSubject(sha1).decode("utf-8")
 
@@ -497,11 +510,11 @@ class DiffView(QWidget):
     def __commitToTextLines(self, commit):
         if not commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
             content = self.tr("Author: ") + commit.author + \
-                                     " " + commit.authorDate
+                " " + commit.authorDate
             self.viewer.addAuthorLine(content)
 
             content = self.tr("Committer: ") + commit.committer + \
-                                     " " + commit.committerDate
+                " " + commit.committerDate
             self.viewer.addAuthorLine(content)
 
         for parent in commit.parents:
@@ -538,10 +551,10 @@ class DiffView(QWidget):
         self.clear()
         self.commit = commit
 
-        self.__addToTreeWidget(self.tr("Comments"), 0)
+        self.__addToFileListView(self.tr("Comments"), 0)
 
-        item = self.treeWidget.topLevelItem(0)
-        self.treeWidget.setCurrentItem(item)
+        index = self.fileListProxy.index(0, 0)
+        self.fileListView.setCurrentIndex(index)
 
         self.__commitToTextLines(commit)
 
@@ -553,7 +566,7 @@ class DiffView(QWidget):
         self.beginFetch.emit()
 
     def clear(self):
-        self.treeWidget.clear()
+        self.fileListModel.clear()
         self.viewer.clear()
 
     def setFilterPath(self, path):
@@ -562,7 +575,6 @@ class DiffView(QWidget):
 
     def highlightKeyword(self, pattern, field=FindField.Comments):
         self.viewer.highlightKeyword(pattern, field)
-        self.treeWidget.viewport().update()
 
     def saveState(self, settings, isBranchA):
         state = self.splitter.saveState()
@@ -684,7 +696,7 @@ class PatchViewer(SourceViewer):
         self._parentCount = 1
 
         self.verticalScrollBar().valueChanged.connect(
-             self._onVScollBarValueChanged)
+            self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
         self.findResultAvailable.connect(self._onFindResultAvailable)
 
@@ -703,7 +715,8 @@ class PatchViewer(SourceViewer):
             text, _ = decodeFileData(content, diff_encoding)
             # FIXME: The git may generate some patch with \x00 char (such as: b'- \x00')
             # The origin file is a normal text file and not Unicode encoding
-            textLine = DiffTextLine(self, text.replace('\x00', ''), self._parentCount)
+            textLine = DiffTextLine(self, text.replace(
+                '\x00', ''), self._parentCount)
         elif type == DiffType.File or \
                 type == DiffType.FileInfo:
             textLine = InfoTextLine(self, type, content.decode(diff_encoding))
