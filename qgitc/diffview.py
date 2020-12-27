@@ -281,7 +281,18 @@ class DiffView(QWidget):
         self.fileListProxy = QSortFilterProxyModel(self)
         self.fileListProxy.setSourceModel(self.fileListModel)
         self.fileListView.setModel(self.fileListProxy)
-        self.splitter.addWidget(self.fileListView)
+
+        fileListFilter = QLineEdit(self)
+        fileListFilter.textChanged.connect(
+            self.fileListProxy.setFilterRegExp)
+
+        listViewWrapper = QWidget(self)
+        vbox = QVBoxLayout(listViewWrapper)
+        vbox.setMargin(0)
+        vbox.addWidget(fileListFilter)
+        vbox.addWidget(self.fileListView)
+
+        self.splitter.addWidget(listViewWrapper)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
