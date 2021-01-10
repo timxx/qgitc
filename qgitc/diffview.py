@@ -284,7 +284,7 @@ class DiffView(QWidget):
 
         fileListFilter = QLineEdit(self)
         fileListFilter.textChanged.connect(
-            self.fileListProxy.setFilterRegExp)
+            self._onFileListFilterChanged)
 
         listViewWrapper = QWidget(self)
         vbox = QVBoxLayout(listViewWrapper)
@@ -599,6 +599,19 @@ class DiffView(QWidget):
     def setBranchDir(self, branchDir):
         self.branchDir = branchDir
         self.fetcher.cwd = branchDir
+
+    def _onFileListFilterChanged(self, text):
+        self.fileListProxy.setFilterRegExp(text)
+
+        if not text:
+            # restore previus row
+            index = self.fileListView.currentIndex()
+            if not index.isValid() and self.fileListProxy.rowCount():
+                row = self.viewer.currentFileRow()
+                self.__onFileRowChanged(row)
+        else:
+            index = self.fileListProxy.index(0, 0)
+            self.fileListView.setCurrentIndex(index)
 
 
 class DiffTextLine(SourceTextLineBase):
@@ -937,3 +950,16 @@ class PatchViewer(SourceViewer):
             self.select(result[curFindIndex])
 
         self.findWidget.updateFindResult(result, curFindIndex, findPart)
+
+    def currentFileRow(self):
+        row = self.verticalScrollBar().value()
+        # TODO: cache the file row to improve performance?
+        for i in range(row, -1, -1):
+            textLine = self.textLineAt(i)
+            if isinstance(textLine, InfoTextLine) and textLine.isFile():
+                return i
+            elif isinstance(textLine, AuthorTextLine) or \
+                    (isinstance(textLine, Sha1TextLine) and textLine.isParent()):
+                return 0
+
+        return 0
