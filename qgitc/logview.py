@@ -1664,8 +1664,9 @@ class LogView(QAbstractScrollArea):
             graphPainter = QPainter(graphImage)
             graphPainter.setRenderHints(QPainter.Antialiasing)
 
+        painter.setFont(self.font)
+        flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
         for i in range(startLine, endLine):
-            painter.setFont(self.font)
             rect = self.__itemRect(i)
             rect.adjust(dpiScaled(2), 0, 0, 0)
 
@@ -1701,54 +1702,38 @@ class LogView(QAbstractScrollArea):
                 painter.setPen(palette.color(QPalette.WindowText))
 
             content = commit.comments.split('\n')[0]
-            textLayout = QTextLayout(content, self.font)
-
-            textOption = QTextOption()
-            textOption.setWrapMode(QTextOption.NoWrap)
-            textOption.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-
-            textLayout.setTextOption(textOption)
-
-            formats = []
-            if self.highlightPattern:
-                matchs = self.highlightPattern.finditer(content)
-                fmt = QTextCharFormat()
-                if i == self.curIdx:
-                    fmt.setForeground(QBrush(Qt.yellow))
-                else:
-                    fmt.setBackground(QBrush(Qt.yellow))
-                for m in matchs:
-                    rg = QTextLayout.FormatRange()
-                    rg.start = m.start()
-                    rg.length = m.end() - rg.start
-                    rg.format = fmt
-                    formats.append(rg)
 
             # bold find result
             # it seems that *in* already fast, so no bsearch
             if i in self.findData.result:
-                fmt = QTextCharFormat()
-                fmt.setFontWeight(QFont.Bold)
-                rg = QTextLayout.FormatRange()
-                rg.start = 0
-                rg.length = len(content)
-                rg.format = fmt
-                formats.append(rg)
+                font = painter.font()
+                font.setBold(True)
+                painter.setFont(font)
 
-            textLayout.setAdditionalFormats(formats)
+            if self.highlightPattern:
+                matchs = self.highlightPattern.finditer(content)
+                start = 0
+                oldPen = painter.pen()
+                for m in matchs:
+                    if m.start() > start:
+                        br = painter.drawText(rect, flags, content[start:m.start()])
+                        rect.adjust(br.width(), 0, 0, 0)
 
-            textLayout.beginLayout()
-            line = textLayout.createLine()
-            line.setPosition(QPointF(0, 0))
-            textLayout.endLayout()
+                    text = content[m.start():m.end()]
+                    if i == self.curIdx:
+                        painter.setPen(Qt.yellow)
+                    else:
+                        br = painter.boundingRect(rect, flags, text)
+                        painter.fillRect(br, Qt.yellow)
+                    br = painter.drawText(rect, flags, text)
+                    rect.adjust(br.width(), 0, 0, 0)
+                    start = m.end()
+                    painter.setPen(oldPen)
 
-            # setAlignment doesn't works at all!
-            # we have to vcenter by self LoL
-            rect.adjust(dpiScaled(2), 0, 0, 0)
-            offsetY = (rect.height() - painter.fontMetrics().lineSpacing()) / 2
-            pos = QPointF(rect.left(), rect.top() + offsetY)
-            textLayout.draw(painter, pos)
-
+                if start < len(content):
+                    painter.drawText(rect, flags, content[start:])
+            else:
+                painter.drawText(rect, flags, content)
             painter.restore()
 
         if graphImage:
