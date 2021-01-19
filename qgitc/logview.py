@@ -1638,6 +1638,22 @@ class LogView(QAbstractScrollArea):
     def setLogGraph(self, logGraph):
         self.logGraph = logGraph
 
+    def firstVisibleLine(self):
+        return self.verticalScrollBar().value()
+
+    def lineForPos(self, pos):
+        if not self.data:
+            return -1
+
+        y = max(0, pos.y())
+        n = int(y / self.lineHeight)
+        n += self.firstVisibleLine()
+
+        if n >= len(self.data):
+            n = len(self.data) - 1
+
+        return n
+
     def resizeEvent(self, event):
         super(LogView, self).resizeEvent(event)
 
@@ -1650,9 +1666,15 @@ class LogView(QAbstractScrollArea):
         painter = QPainter(self.viewport())
         painter.setClipRect(event.rect())
 
-        startLine = self.verticalScrollBar().value()
-        endLine = startLine + self.__linesPerPage() + 1
-        endLine = min(len(self.data), endLine)
+        eventRect = event.rect()
+
+        if eventRect.isValid():
+            startLine = self.lineForPos(eventRect.topLeft())
+            endLine = self.lineForPos(eventRect.bottomRight()) + 1
+        else:
+            startLine = self.firstVisibleLine()
+            endLine = startLine + self.__linesPerPage() + 1
+            endLine = min(len(self.data), endLine)
 
         palette = self.palette()
 
