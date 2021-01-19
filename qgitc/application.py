@@ -38,6 +38,7 @@ class Application(QApplication):
         super(Application, self).__init__(argv)
 
         self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
+        self.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
         self.setApplicationName("qgitc")
 
         iconPath = dataDirPath() + "/icons/qgitc.svg"
