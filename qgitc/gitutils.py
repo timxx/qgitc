@@ -187,27 +187,6 @@ class Git():
         return data.decode("utf-8").split('\n')
 
     @staticmethod
-    def branchLogs(branch, pattern=None):
-        args = ["log", "-z", "--topo-order",
-                "--parents",
-                "--no-color",
-                "--pretty=format:{0}".format(log_fmt),
-                branch]
-        if pattern:
-            # FIXME: pass "--" from caller
-            if not pattern.startswith("-"):
-                args.append("--")
-            args.append(pattern)
-        else:
-            args.append("--boundary")
-
-        data = Git.checkOutput(args)
-        if not data:
-            return None
-
-        return data.decode("utf-8", "replace").split('\0')
-
-    @staticmethod
     def commitSummary(sha1):
         fmt = "%h%x01%s%x01%ad%x01%an%x01%ae"
         args = ["show", "-s",
@@ -240,19 +219,6 @@ class Git():
         data = Git.checkOutput(args)
 
         return data
-
-    @staticmethod
-    def commitFiles(sha1):
-        args = ["diff-tree", "--no-commit-id",
-                "--name-only", "--root", "-r",
-                "-z", "-C", "--cc",
-                "--submodule", sha1]
-
-        data = Git.checkOutput(args)
-        if not data:
-            return None
-
-        return data.decode("utf-8")
 
     @staticmethod
     def commitRawDiff(sha1, filePath=None, gitArgs=None):
