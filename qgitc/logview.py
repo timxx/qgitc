@@ -644,6 +644,7 @@ class LogView(QAbstractScrollArea):
         if self.checkThread:
             self.checkThread.disconnect(self)
             self.checkThread.requestInterruption()
+            self.checkThread.wait()
             self.checkThread = None
 
         if not args:

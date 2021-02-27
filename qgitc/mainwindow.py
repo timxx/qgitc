@@ -239,6 +239,7 @@ class MainWindow(StateWindow):
         if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
             self.findSubmoduleThread.disconnect(self)
             self.findSubmoduleThread.requestInterruption()
+            self.findSubmoduleThread.wait()
 
         if repoDir:
             self.ui.leRepo.setReadOnly(True)
