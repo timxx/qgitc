@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
+from PySide6.QtCore import *
 from .gitutils import Git, GitProcess
 from .stylehelper import dpiScaled
 from .conflictlog import (
@@ -295,6 +295,7 @@ class MergeWidget(QWidget):
         indexList = self.view.selectionModel().selectedRows()
         paths = ""
         for index in indexList:
+
             path = index.data(Qt.DisplayRole)
             if asWin:
                 path = path.replace('/', '\\')
