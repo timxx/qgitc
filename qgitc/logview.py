@@ -1229,12 +1229,12 @@ class LogView(QAbstractScrollArea):
                 activeLane = i
                 break
 
+        totalColor = len(GRAPH_COLORS)
         if commit.sha1 == Git.LUC_SHA1:
             activeColor = Qt.red
         elif commit.sha1 == Git.LCC_SHA1:
             activeColor = Qt.green
         else:
-            totalColor = len(GRAPH_COLORS)
             activeColor = GRAPH_COLORS[activeLane % totalColor]
 
         w = self.__laneWidth()
