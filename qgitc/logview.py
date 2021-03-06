@@ -1681,7 +1681,8 @@ class LogView(QAbstractScrollArea):
 
         graphPainter = None
         graphImage = None
-        if self.logGraph and not self.logGraph.size().isEmpty():
+        if self.logGraph and not self.logGraph.size().isEmpty() and \
+                eventRect.height() == self.viewport().height():
             graphImage = QPixmap(self.logGraph.size())
             graphImage.fill(self.logGraph.palette().color(QPalette.Base))
             graphPainter = QPainter(graphImage)
