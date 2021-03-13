@@ -28,10 +28,6 @@ class FindWidget(QWidget):
         self._setupUi()
         self._setupSignals()
 
-        width = dpiScaled(300)
-        heigth = self._leFind.height()
-        self.resize(width, heigth)
-
         effect = QGraphicsDropShadowEffect(self)
         effect.setBlurRadius(dpiScaled(15))
         offset = dpiScaled(1)
@@ -54,7 +50,8 @@ class FindWidget(QWidget):
         self._lbStatus = QLabel(self)
         self._spinner = QtWaitingSpinner(self)
 
-        self._leFind.setFixedWidth(dpiScaled(100))
+        leFindHeight = self._leFind.fontMetrics().height()
+        self._leFind.setFixedSize(dpiScaled(100), leFindHeight)
 
         height = self._leFind.height() // 6
         self._spinner.setLineLength(height)
@@ -77,6 +74,10 @@ class FindWidget(QWidget):
         self._tbPrev.setText('🡩')
         self._tbNext.setText('🡫')
         self._tbClose.setText('⨉')
+
+        width = dpiScaled(300)
+        heigth = leFindHeight + margin * 2
+        self.resize(width, heigth)
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self._onDelayFind)
