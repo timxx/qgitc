@@ -405,6 +405,9 @@ class DiffView(QWidget):
         self.requestBlame.emit(index.data(), True)
 
     def __isCommentItem(self, index):
+        if not index.isValid():
+            return False
+        index = self.fileListProxy.mapToSource(index)
         return index.isValid() and index.row() == 0
 
     def __runDiffTool(self, index):
