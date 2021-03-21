@@ -1190,7 +1190,7 @@ class LogView(QAbstractScrollArea):
 
     def __drawGraph(self, painter, graphPainter, rect, cid):
         commit = self.data[cid]
-        if not commit.sha1 in self.graphs:
+        if commit.sha1 not in self.graphs:
             self.__updateGraph(cid)
 
         lanes = self.graphs[commit.sha1]
@@ -1404,12 +1404,17 @@ class LogView(QAbstractScrollArea):
         painter.save()
 
         isHead = commit.sha1 == Git.REV_HEAD
+        maxWidth = rc.width() * 2 / 3
         for ref in refs:
             # tag
             painter.setPen(QPen(Qt.black))
             color = TAG_COLORS[ref.type]
 
-            if ref.type == Ref.TAG:
+            br = painter.boundingRect(rc, Qt.AlignLeft | Qt.AlignVCenter, ref.name)
+            if rc.width() - br.width() < maxWidth:
+                self.__drawTag(painter, rc, color, "...", False)
+                break
+            elif ref.type == Ref.TAG:
                 self.__drawTriangleTag(painter, rc, color, ref.name)
             else:
                 bold = (ref.type == Ref.HEAD and isHead)
