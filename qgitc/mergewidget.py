@@ -68,11 +68,29 @@ class MergeWidget(QWidget):
             20, 20, QSizePolicy.MinimumExpanding))
         hlayout.addWidget(self.cbAutoNext)
         hlayout.addWidget(self.btnResolve)
+
+        vlayout.addLayout(hlayout)
+
+        self.cbAutoLog = QCheckBox(self.tr("Log conflicts to"), self)
+        self.leLogFile = QLineEdit(self)
+        self.btnChooseLog = QPushButton(self.tr("Choose"), self)
+
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self.cbAutoLog)
+        hlayout.addWidget(self.leLogFile)
+        hlayout.addWidget(self.btnChooseLog)
         vlayout.addLayout(hlayout)
 
         self.cbAutoNext.setChecked(True)
+        self.cbAutoLog.setChecked(True)
+        self.leLogFile.setText(self.__defaultLogFile())
+        self.__onAutoLogChanged(Qt.Checked)
 
         self.__setupMenu()
+
+    def __defaultLogFile(self):
+        dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
+        return dir + QDir.separator() + "conflicts.xml"
 
     def __setupMenu(self):
         self.menu = QMenu()
@@ -101,6 +119,8 @@ class MergeWidget(QWidget):
         self.view.doubleClicked.connect(self.__onItemDoubleClicked)
         self.status.linkActivated.connect(self.__onStatusRefresh)
         self.leFilter.textChanged.connect(self.__onFilterChanged)
+        self.cbAutoLog.stateChanged.connect(self.__onAutoLogChanged)
+        self.btnChooseLog.clicked.connect(self.__onChooseLogFile)
 
     def __makeTextIcon(self, text, color):
         img = QPixmap(dpiScaled(QSize(32, 32)))
@@ -165,6 +185,19 @@ class MergeWidget(QWidget):
     def __onFilterChanged(self, text):
         self.proxyModel.setFilterRegExp(text)
         self.__updateFilterCount()
+
+    def __onAutoLogChanged(self, state):
+        enabled = state == Qt.Checked
+        self.leLogFile.setEnabled(enabled)
+        self.btnChooseLog.setEnabled(enabled)
+
+    def __onChooseLogFile(self, checked):
+        f, _ = QFileDialog.getSaveFileName(
+            self,
+            self.tr("Choose file"),
+            dir=QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation))
+        if f:
+            self.leLogFile.setText(f)
 
     def __onMenuResolve(self):
         self.__onResolveClicked()
@@ -293,6 +326,8 @@ class MergeWidget(QWidget):
                                   else RESOLVE_FAILED)
 
         self.leFilter.setEnabled(True)
+        self.cbAutoLog.setEnabled(True)
+        self.__onAutoLogChanged(self.cbAutoLog.checkState())
         # auto next only when success
         if exitCode != 0:
             if errorData:
@@ -407,6 +442,8 @@ class MergeWidget(QWidget):
 
         # since we saved the index, so disabled ...
         self.leFilter.setEnabled(False)
+        self.cbAutoLog.setEnabled(False)
+        self.__onAutoLogChanged(Qt.Unchecked)
         self.resolveIndex = index.row()
         file = index.data()
         args = ["mergetool", "--no-prompt"]
