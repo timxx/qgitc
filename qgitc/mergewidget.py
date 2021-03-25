@@ -5,9 +5,7 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from .gitutils import Git
 from .stylehelper import dpiScaled
-
-import tempfile
-import os
+from .conflictlog import ConflictLogProxy
 
 
 STATE_CONFLICT = 0
@@ -17,51 +15,6 @@ RESOLVE_SUCCEEDED = 0
 RESOLVE_FAILED = 1
 
 StateRole = Qt.UserRole + 1
-
-
-class ConflictsLog:
-    """ The temporay log file, the format is:
-    [f] The conflict file path 1
-    \t[a] conflict commit 1
-    \t[a] conflict commit N
-    \t[b] conflict commit 1
-    \t[b] conflict commit N
-    \t[s] Y/N
-    [f] The conflict file path N
-    ...
-    """
-
-    def __init__(self):
-        self.filePath = os.path.join(
-            tempfile.gettempdir(), "qgitc_conflicts.log")
-        self._handle = None
-
-    def _ensureHandle(self):
-        if self._handle is None:
-            self._handle = open(self.filePath, "a+")
-
-    def addFile(self, path):
-        self._ensureHandle()
-
-        self._handle.write("[f] " + path + "\n")
-        self._handle.flush()
-
-    def addCommit(self, commit):
-        self._handle.flush()
-
-    def setStatus(self, ok):
-        self._handle.write("\t[s] ")
-        self._handle.write("Y" if ok else "N")
-        self._handle.write("\n")
-        self._handle.flush()
-
-    def toExcelXml(self, path):
-        pass
-
-    def unlink(self):
-        self._handle.close()
-        self._handle = None
-        os.remove(self.filePath)
 
 
 class MergeWidget(QWidget):
@@ -82,7 +35,7 @@ class MergeWidget(QWidget):
 
         self._firstShown = True
 
-        self.log = ConflictsLog()
+        self.log = ConflictLogProxy()
 
         self.__setupUi()
         self.__setupSignals()
