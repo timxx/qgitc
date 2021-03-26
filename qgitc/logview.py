@@ -8,6 +8,7 @@ from .common import *
 from .gitutils import *
 from .datafetcher import DataFetcher
 from .stylehelper import dpiScaled
+from .events import CopyConflictCommit
 
 import re
 import bisect
@@ -591,6 +592,9 @@ class LogView(QAbstractScrollArea):
         self.acCopyAbbrevCommit = self.menu.addAction(
             self.tr("Copy &abbrev commit"),
             self.__onCopyAbbrevCommit)
+        self.acCopyToLog = self.menu.addAction(
+            self.tr("Copy to conflict &log"),
+            self.copyToLog)
         self.menu.addSeparator()
 
         self.menu.addAction(self.tr("&Mark this commit"),
@@ -751,6 +755,12 @@ class LogView(QAbstractScrollArea):
         self.acGenPatch.setEnabled(isCommitted)
         self.acCopyAbbrevCommit.setEnabled(isCommitted)
 
+        w = self.window().mergeWidget
+        visible = w is not None
+        self.acCopyToLog.setVisible(visible)
+        if visible:
+            self.acCopyToLog.setEnabled(isCommitted and w.isResolving())
+
         enabled = isCommitted
         if enabled:
             branchDir = Git.branchDir(self.curBranch)
@@ -832,6 +842,20 @@ class LogView(QAbstractScrollArea):
 
         clipboard = QApplication.clipboard()
         clipboard.setMimeData(mimeData)
+
+    def copyToLog(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        commit = Git.commitSummary(commit.sha1)
+        if not commit:
+            return
+
+        commit["branchA"] = self.branchA
+        qApp.postEvent(self.window().mergeWidget, CopyConflictCommit(commit))
 
     def __onMarkCommit(self):
         assert self.curIdx >= 0

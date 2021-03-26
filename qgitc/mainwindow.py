@@ -18,6 +18,7 @@ from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
 from .stylehelper import dpiScaled
 from .statewindow import StateWindow
+from .logview import LogView
 
 import os
 import sys
@@ -133,6 +134,9 @@ class MainWindow(StateWindow):
         self.ui.acCopy.triggered.connect(
             self.__onCopyTriggered)
 
+        self.ui.acCopyLog.triggered.connect(
+            self.__onCopyLogTriggered)
+
         self.ui.acSelectAll.triggered.connect(
             self.__onSelectAllTriggered)
 
@@ -183,6 +187,9 @@ class MainWindow(StateWindow):
         self.ui.acCopy.setEnabled(False)
         self.ui.acSelectAll.setEnabled(False)
         self.ui.acFind.setEnabled(False)
+        self.ui.acCopyLog.setEnabled(False)
+        visible = self.mergeWidget is not None
+        self.ui.acCopyLog.setVisible(visible)
 
         if not fw:
             pass
@@ -194,6 +201,9 @@ class MainWindow(StateWindow):
             self.ui.acCopy.setEnabled(fw.hasSelectedText())
             self.ui.acSelectAll.setEnabled(True)
             self.ui.acFind.setEnabled(False)
+        elif isinstance(fw, LogView):
+            if visible:
+                self.ui.acCopyLog.setEnabled(self.mergeWidget.isResolving())
 
     def __onBtnRepoBrowseClicked(self, checked):
         repoDir = QFileDialog.getExistingDirectory(self,
@@ -302,6 +312,11 @@ class MainWindow(StateWindow):
         fw = qApp.focusWidget()
         assert fw
         fw.copy()
+
+    def __onCopyLogTriggered(self):
+        fw = qApp.focusWidget()
+        assert fw
+        fw.copyToLog()
 
     def __onSelectAllTriggered(self):
         fw = qApp.focusWidget()
