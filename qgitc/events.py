@@ -30,3 +30,12 @@ class OpenLinkEvent(QEvent):
     def __init__(self, link):
         super().__init__(QEvent.Type(OpenLinkEvent.Type))
         self.link = link
+
+
+class CopyConflictCommit(QEvent):
+
+    Type = QEvent.User + 4
+
+    def __init__(self, commit):
+        super().__init__(QEvent.Type(CopyConflictCommit.Type))
+        self.commit = commit

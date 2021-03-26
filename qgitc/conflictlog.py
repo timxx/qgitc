@@ -73,6 +73,13 @@ class ConflictLogFile(ConflictLogBase):
         return True
 
     def addCommit(self, commit):
+        self._handle.write('\t[{}] {} ("{}", {}, {})\n'.format(
+            "a" if commit["branchA"] else "b",
+            commit["sha1"],
+            commit["subject"],
+            commit["author"],
+            commit["date"]
+        ))
         self._handle.flush()
         return True
 

@@ -6,6 +6,7 @@ from PySide2.QtCore import *
 from .gitutils import Git
 from .stylehelper import dpiScaled
 from .conflictlog import ConflictLogProxy
+from .events import CopyConflictCommit
 
 
 STATE_CONFLICT = 0
@@ -479,3 +480,14 @@ class MergeWidget(QWidget):
 
         self.requestResolve.emit(file)
         self.log.addFile(file)
+
+    def event(self, e):
+        if e.type() == CopyConflictCommit.Type:
+            if self.isResolving():
+                self.log.addCommit(e.commit)
+            return True
+
+        return super().event(e)
+
+    def isResolving(self):
+        return self.process is not None

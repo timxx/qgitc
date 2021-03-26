@@ -99,7 +99,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -143,6 +143,7 @@
      <string>&amp;Edit</string>
     </property>
     <addaction name="acCopy"/>
+    <addaction name="acCopyLog"/>
     <addaction name="acSelectAll"/>
     <addaction name="separator"/>
     <addaction name="acFind"/>
@@ -279,6 +280,14 @@
   <action name="acAboutQt">
    <property name="text">
     <string>About &amp;Qt</string>
+   </property>
+  </action>
+  <action name="acCopyLog">
+   <property name="text">
+    <string>Copy To Conflict &amp;Log</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
  </widget>
