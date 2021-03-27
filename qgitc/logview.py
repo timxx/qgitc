@@ -674,6 +674,12 @@ class LogView(QAbstractScrollArea):
     def getCommit(self, index):
         return self.data[index]
 
+    def isCurrentCommitted(self):
+        if not self.data or self.curIdx == -1:
+            return False
+
+        return self.data[self.curIdx].sha1 not in [Git.LCC_SHA1, Git.LUC_SHA1]
+
     def getCount(self):
         return len(self.data)
 
@@ -749,8 +755,7 @@ class LogView(QAbstractScrollArea):
 
         self.__ensureContextMenu()
 
-        commit = self.getCommit(self.curIdx)
-        isCommitted = commit.sha1 not in [Git.LCC_SHA1, Git.LUC_SHA1]
+        isCommitted = self.isCurrentCommitted()
         self.acCopySummary.setEnabled(isCommitted)
         self.acGenPatch.setEnabled(isCommitted)
         self.acCopyAbbrevCommit.setEnabled(isCommitted)
@@ -1854,3 +1859,6 @@ class LogView(QAbstractScrollArea):
 
     def focusOutEvent(self, event):
         self.invalidateItem(self.curIdx)
+
+    def copy(self):
+        self.__onCopyCommitSummary()

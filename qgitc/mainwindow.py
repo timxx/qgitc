@@ -202,6 +202,7 @@ class MainWindow(StateWindow):
             self.ui.acSelectAll.setEnabled(True)
             self.ui.acFind.setEnabled(False)
         elif isinstance(fw, LogView):
+            self.ui.acCopy.setEnabled(fw.isCurrentCommitted())
             if visible:
                 self.ui.acCopyLog.setEnabled(self.mergeWidget.isResolving())
 
