@@ -15,6 +15,7 @@ HAVE_EXCEL_API = False
 if sys.platform == "win32":
     try:
         from win32com.client import gencache
+        from win32com.client import DispatchWithEvents
         HAVE_EXCEL_API = True
     except ImportError:
         pass
@@ -101,6 +102,12 @@ class ConflictLogFile(ConflictLogBase):
         os.remove(self.filePath)
 
 
+class WorkbookEvents:
+
+    def OnBeforeClose(self, cancel):
+        return True
+
+
 class ConflictLogExcel(ConflictLogBase):
 
     def __init__(self, logFile):
@@ -125,7 +132,9 @@ class ConflictLogExcel(ConflictLogBase):
                 if not self.app:
                     self.app = gencache.EnsureDispatch("Excel.Application")
                 self.app.Visible = True
-                self.book = self.app.Workbooks.Open(self.logFile)
+                self.book = DispatchWithEvents(
+                    self.app.Workbooks.Open(self.logFile),
+                    WorkbookEvents)
             else:
                 if not self._rpc:
                     _, self._rpc = createEtRpcInstance()
