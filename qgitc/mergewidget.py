@@ -119,10 +119,12 @@ class MergeWidget(QWidget):
             self.__onMenuUndoMerge)
         self.menu.addSeparator()
 
-        self.menu.addAction(self.tr("Use &ours"),
-                            self.__onMenuUseOurs)
-        self.menu.addAction(self.tr("Use &theirs"),
-                            self.__onMenuUseTheirs)
+        self.acUseOurs = self.menu.addAction(
+            self.tr("Use &ours"),
+            self.__onMenuUseOurs)
+        self.acUseTheirs = self.menu.addAction(
+            self.tr("Use &theirs"),
+            self.__onMenuUseTheirs)
 
         self.menu.addSeparator()
         self.menu.addAction(self.tr("&Copy Path"),
@@ -414,6 +416,8 @@ class MergeWidget(QWidget):
         enabled = index.data(StateRole) == STATE_RESOLVED
         self.acResolve.setEnabled(not enabled)
         self.acUndoMerge.setEnabled(enabled)
+        self.acUseOurs.setEnabled(not self.isResolving())
+        self.acUseTheirs.setEnabled(not self.isResolving())
         self.menu.exec_(event.globalPos())
 
     def paintEvent(self, event):
