@@ -344,7 +344,8 @@ class MergeWidget(QWidget):
         self.resolveFinished.emit(RESOLVE_SUCCEEDED if exitCode == 0
                                   else RESOLVE_FAILED)
 
-        self.log.setStatus(exitCode == 0)
+        if self.logEnabled():
+            self.log.setStatus(exitCode == 0)
         self.leFilter.setEnabled(True)
         self.cbAutoLog.setEnabled(True)
         self.__onAutoLogChanged(self.cbAutoLog.checkState())
@@ -496,12 +497,13 @@ class MergeWidget(QWidget):
         self.process.start("git", args)
 
         self.requestResolve.emit(file)
-        self.__ensureLogWriter()
-        self.log.addFile(file)
+        if self.logEnabled():
+            self.__ensureLogWriter()
+            self.log.addFile(file)
 
     def event(self, e):
         if e.type() == CopyConflictCommit.Type:
-            if self.isResolving():
+            if self.isResolving() and self.logEnabled():
                 self.log.addCommit(e.commit)
             return True
 
@@ -509,3 +511,6 @@ class MergeWidget(QWidget):
 
     def isResolving(self):
         return self.process is not None
+
+    def logEnabled(self):
+        return self.cbAutoLog.isChecked()
