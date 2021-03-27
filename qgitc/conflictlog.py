@@ -176,23 +176,14 @@ class ConflictLogExcel(ConflictLogBase):
         if not self._setCellValue(cell, msg, True):
             return False
 
-        if self._isWin:
-            self.book.Save()
-        else:
-            self.book.Save(0)
+        self.book.Save()
         return True
 
     def isValid(self):
         return self.sheet is not None
 
     def _setCellValue(self, cell, value, append=False):
-        if self._isWin:
-            rg = self.sheet.Range(cell)
-        else:
-            hr, rg = self.sheet.get_Range(cell)
-            if hr != 0:
-                return False
-
+        rg = self.sheet.Range(cell)
         rg.WrapText = True
         text = rg.Value
         if text and append:
