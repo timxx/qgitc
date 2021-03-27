@@ -20,7 +20,7 @@ if sys.platform == "win32":
         pass
 elif sys.platform == "linux":
     try:
-        from pywpsrpc.rpcetapi import createEtRpcInstance
+        from pywpsrpc.rpcetapi import createEtRpcInstance, etapi
         HAVE_EXCEL_API = True
     except ImportError:
         pass
@@ -133,6 +133,12 @@ class ConflictLogExcel(ConflictLogBase):
                     _, self.app = self._rpc.getEtApplication()
                 self.app.Visible = True
                 _, self.book = self.app.Workbooks.Open(self.logFile)
+
+                self._rpc.registerEvent(self.app,
+                                        etapi.DIID_AppEvents,
+                                        "WorkbookBeforeClose",
+                                        self._onWorkbookBeforeClose)
+
             self.sheet = self.book.Sheets[1]
         except Exception:
             pass
@@ -187,6 +193,10 @@ class ConflictLogExcel(ConflictLogBase):
         rg.Value = text
 
         return True
+
+    def _onWorkbookBeforeClose(self, wookbook):
+        # not allow close the doc
+        return wookbook == self.book
 
 
 class ConflictLogProxy(ConflictLogBase):
