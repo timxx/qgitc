@@ -5,8 +5,11 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from .gitutils import Git
 from .stylehelper import dpiScaled
-from .conflictlog import ConflictLogProxy
+from .conflictlog import ConflictLogProxy, HAVE_EXCEL_API
 from .events import CopyConflictCommit
+from .common import dataDirPath
+
+import shutil
 
 
 STATE_CONFLICT = 0
@@ -36,7 +39,7 @@ class MergeWidget(QWidget):
 
         self._firstShown = True
 
-        self.log = ConflictLogProxy()
+        self.log = None
 
         self.__setupUi()
         self.__setupSignals()
@@ -94,7 +97,17 @@ class MergeWidget(QWidget):
 
     def __defaultLogFile(self):
         dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
-        return dir + QDir.separator() + "conflicts.xml"
+        fileName = "conflicts.xlsx" if HAVE_EXCEL_API else "conflicts.xml"
+        return dir + QDir.separator() + fileName
+
+    def __ensureLogWriter(self):
+        if self.log is not None:
+            return
+
+        logFile = self.leLogFile.text()
+        if HAVE_EXCEL_API:
+            shutil.copy(dataDirPath() + "/templates/builtin.xlsx", logFile)
+        self.log = ConflictLogProxy(logFile)
 
     def __setupMenu(self):
         self.menu = QMenu()
@@ -479,6 +492,7 @@ class MergeWidget(QWidget):
         self.process.start("git", args)
 
         self.requestResolve.emit(file)
+        self.__ensureLogWriter()
         self.log.addFile(file)
 
     def event(self, e):
