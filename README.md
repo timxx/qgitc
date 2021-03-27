@@ -26,6 +26,10 @@ A file conflict viewer for git
 - PySide2 >= 5.2.0
 - git (command line)
 - chardet
+- pywin32
+  - Optional for Windows if you want record the conflict log easily
+- pywpsrpc
+  - Optional for Linux if you want record the conflict log easily
 
 
 ## Build & Run
