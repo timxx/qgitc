@@ -103,54 +103,98 @@ class ConflictLogFile(ConflictLogBase):
 
 class ConflictLogExcel(ConflictLogBase):
 
-    def __init__(self):
+    def __init__(self, logFile):
         super().__init__()
         self._curFile = None
         self._isWin = sys.platform == "win32"
         self.app = None
+        self.book = None
         self.sheet = None
+        self.row = 1
+        self.logFile = logFile
+        self._rpc = None
+
+        self._ensureExcel()
 
     def _ensureExcel(self):
-        if not HAVE_EXCEL_API or self.app:
+        if not HAVE_EXCEL_API or self.sheet:
             return
 
         try:
             if self._isWin:
-                self.app = gencache.EnsureDispatch("Excel.Application")
+                if not self.app:
+                    self.app = gencache.EnsureDispatch("Excel.Application")
+                self.app.Visible = True
+                self.book = self.app.Workbooks.Open(self.logFile)
             else:
-                hr, rpc = createEtRpcInstance()
-                if hr == 0:
-                    _, self.app = rpc.getEtApplication()
-            self.app.Visible = True
-            hr, book = self.app.Workbooks.Add()
-            self.sheet = book.Sheets[1]
-            self._initHeader()
-        except:
+                if not self._rpc:
+                    _, self._rpc = createEtRpcInstance()
+                if not self.app:
+                    _, self.app = self._rpc.getEtApplication()
+                self.app.Visible = True
+                _, self.book = self.app.Workbooks.Open(self.logFile)
+            self.sheet = self.book.Sheets[1]
+        except Exception:
             pass
 
-    def _initHeader(self):
-        pass
-
     def addFile(self, file):
-        self._ensureExcel()
         self._curFile = file
         return True
 
     def addCommit(self, commit):
+        self._ensureExcel()
         if not self.sheet:
             return False
+
+        if self._curFile:
+            self.row += 1
+            self._setCellValue("A%s" % self.row, self._curFile)
+            self._curFile = None
+
+        msg = '{} ("{}", {}, {})'.format(
+            commit["sha1"],
+            commit["subject"],
+            commit["author"],
+            commit["date"])
+
+        cell = "{}{}".format("B" if commit["branchA"] else "C", self.row)
+        if not self._setCellValue(cell, msg, True):
+            return False
+
+        if self._isWin:
+            self.book.Save()
+        else:
+            self.book.Save(0)
         return True
 
     def isValid(self):
         return self.sheet is not None
 
+    def _setCellValue(self, cell, value, append=False):
+        if self._isWin:
+            rg = self.sheet.Range(cell)
+        else:
+            hr, rg = self.sheet.get_Range(cell)
+            if hr != 0:
+                return False
+
+        rg.WrapText = True
+        text = rg.Value
+        if text and append:
+            text += "\r\n" + value
+        else:
+            text = value
+        rg.Value = text
+
+        return True
+
 
 class ConflictLogProxy(ConflictLogBase):
 
-    def __init__(self):
+    def __init__(self, logFile):
         super().__init__()
         self._file = ConflictLogFile()
-        self._excel = ConflictLogExcel()
+        self._excel = ConflictLogExcel(logFile)
 
     def addFile(self, file):
         self._file.addFile(file)
