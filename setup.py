@@ -110,7 +110,8 @@ setup(name="qgitc",
       packages=find_packages(),
       package_data={"qgitc": ["data/icons/qgitc.*",
                               "data/licenses/Apache-2.0.html",
-                              "data/translations/*.qm"
+                              "data/translations/*.qm",
+                              "data/templates/*.xlsx"
                               ]},
       license="Apache",
       python_requires='>=3.0',
