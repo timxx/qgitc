@@ -840,6 +840,9 @@ class BlameView(QWidget):
         self._commitPanel.clear()
 
     def blame(self, file, rev=None, lineNo=0):
+        if not Git.available():
+            return
+
         if self._file == file and self._rev == rev:
             return
 

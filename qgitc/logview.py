@@ -1593,7 +1593,7 @@ class LogView(QAbstractScrollArea):
 
             tempFile.close()
             process.setStandardInputFile(tempFile.fileName())
-            process.start("git", args)
+            process.start(GitProcess.GIT_BIN, args)
 
         return True
 

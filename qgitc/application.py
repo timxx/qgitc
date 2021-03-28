@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QIcon, QDesktopServices
 from PySide2.QtCore import (
     Qt,
@@ -15,10 +15,11 @@ from .settings import Settings
 from .events import (
     BlameEvent,
     ShowCommitEvent,
-    OpenLinkEvent)
+    OpenLinkEvent,
+    GitBinChanged)
 from .blamewindow import BlameWindow
 from .mainwindow import MainWindow
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 from .textline import Link
 from .versionchecker import VersionChecker
 from .newversiondialog import NewVersionDialog
@@ -27,6 +28,7 @@ from datetime import datetime
 
 import os
 import re
+import shutil
 
 
 class Application(QApplication):
@@ -50,9 +52,11 @@ class Application(QApplication):
         self._logWindow = None
         self._blameWindow = None
 
-        cwd = os.getcwd()
-        repoDir = Git.repoTopLevelDir(cwd)
-        Git.REPO_DIR = repoDir or cwd
+        gitBin = self._settings.gitBinPath() or shutil.which("git")
+        if not gitBin or not os.path.exists(gitBin):
+            QTimer.singleShot(0, self._warnGitMissing)
+        else:
+            self._initGit(gitBin)
 
         QTimer.singleShot(0, self._onDelayInit)
 
@@ -93,6 +97,9 @@ class Application(QApplication):
         return window
 
     def repoName(self):
+        if not Git.available():
+            return ""
+
         url = Git.repoUrl()
         index = url.rfind('/')
         if index == -1:
@@ -155,6 +162,10 @@ class Application(QApplication):
             if url:
                 QDesktopServices.openUrl(QUrl(url))
             return True
+        elif type == GitBinChanged.Type:
+            self._initGit(self._settings.gitBinPath())
+            if self._logWindow:
+                self._logWindow.reloadRepo()
 
         return super().event(event)
 
@@ -208,3 +219,16 @@ class Application(QApplication):
             window.show()
         else:
             window.showMaximized()
+
+    def _warnGitMissing(self):
+        QMessageBox.critical(
+            self.activeWindow(),
+            self.applicationName(),
+            self.tr(
+                "No git found, please check your settings."))
+
+    def _initGit(self, gitBin):
+        GitProcess.GIT_BIN = gitBin
+        cwd = os.getcwd()
+        repoDir = Git.repoTopLevelDir(cwd)
+        Git.REPO_DIR = repoDir or cwd

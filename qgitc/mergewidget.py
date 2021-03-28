@@ -3,7 +3,7 @@
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 from .stylehelper import dpiScaled
 from .conflictlog import (
     ConflictLogExcel,
@@ -446,6 +446,9 @@ class MergeWidget(QWidget):
         return dpiScaled(QSize(500, 700))
 
     def updateList(self):
+        if not Git.available():
+            return
+
         files = Git.conflictFiles()
         self.model.clear()
         if files:
@@ -509,7 +512,7 @@ class MergeWidget(QWidget):
         self.process.readyReadStandardOutput.connect(self.__onReadyRead)
         self.process.finished.connect(self.__onResolveFinished)
         self.process.setWorkingDirectory(Git.REPO_DIR)
-        self.process.start("git", args)
+        self.process.start(GitProcess.GIT_BIN, args)
 
         self.requestResolve.emit(file)
         if self.logEnabled():
