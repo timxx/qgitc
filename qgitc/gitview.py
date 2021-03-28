@@ -93,7 +93,7 @@ class GitView(QWidget):
         self.ui.diffView.clear()
         self.ui.leSha1.clear()
 
-        if not Git.REPO_DIR:
+        if not Git.REPO_DIR or not Git.available():
             return
 
         branches = Git.branches()

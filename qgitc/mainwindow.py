@@ -19,6 +19,7 @@ from .mergewidget import MergeWidget
 from .stylehelper import dpiScaled
 from .statewindow import StateWindow
 from .logview import LogView
+from .events import GitBinChanged
 
 import os
 import sys
@@ -228,6 +229,9 @@ class MainWindow(StateWindow):
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
 
+        if not Git.available():
+            return
+
         if not Git.repoTopLevelDir(repoDir):
             msg = self.tr("'{0}' is not a git repository")
             self.ui.statusbar.showMessage(
@@ -272,6 +276,8 @@ class MainWindow(StateWindow):
         preferences = Preferences(settings, self)
         if preferences.exec_() == QDialog.Accepted:
             preferences.save()
+            if settings.gitBinPath() != GitProcess.GIT_BIN:
+                qApp.postEvent(qApp, GitBinChanged())
 
     def __onIgnoreWhitespaceChanged(self, index):
         actions = [self.ui.acIgnoreNone,
@@ -492,3 +498,7 @@ class MainWindow(StateWindow):
         self.ui.gitViewA.ui.logView.switchToCommit(sha1, True)
         if self.gitViewB:
             self.gitViewB.ui.logView.switchToCommit(sha1, True)
+
+    def reloadRepo(self):
+        repoDir = self.ui.leRepo.text()
+        self.__onRepoChanged(repoDir)

@@ -5,7 +5,7 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 
 from .common import *
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 from .findwidget import FindWidget
 from .datafetcher import DataFetcher
 from .textline import (
@@ -443,7 +443,7 @@ class DiffView(QWidget):
         # only care about the error
         self._difftoolProc.finished.connect(self.__onDiffToolFinished)
 
-        self._difftoolProc.start("git", args)
+        self._difftoolProc.start(GitProcess.GIT_BIN, args)
 
     def __onDiffToolFinished(self, exitCode, exitStatus):
         if exitStatus == QProcess.CrashExit:

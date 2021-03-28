@@ -232,3 +232,9 @@ class Settings(QSettings):
 
     def setMergeToolName(self, name):
         self.setValue("mergeToolName", name)
+
+    def gitBinPath(self):
+        return self.value("gitBin", "")
+
+    def setGitBinPath(self, path):
+        self.setValue("gitBin", path)

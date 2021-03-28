@@ -39,3 +39,11 @@ class CopyConflictCommit(QEvent):
     def __init__(self, commit):
         super().__init__(QEvent.Type(CopyConflictCommit.Type))
         self.commit = commit
+
+
+class GitBinChanged(QEvent):
+
+    Type = QEvent.User + 5
+
+    def __init__(self):
+        super().__init__(QEvent.Type(GitBinChanged.Type))

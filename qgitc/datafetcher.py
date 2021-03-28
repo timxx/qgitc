@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PySide2.QtCore import *
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 
 
 class DataFetcher(QObject):
@@ -113,4 +113,4 @@ class DataFetcher(QObject):
         self._process.readyReadStandardError.connect(self.onProcessError)
         self._process.finished.connect(self.onDataFinished)
 
-        self._process.start("git", git_args)
+        self._process.start(GitProcess.GIT_BIN, git_args)

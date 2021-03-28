@@ -9,11 +9,12 @@ from .mergetool import MergeTool
 from .comboboxitemdelegate import ComboBoxItemDelegate
 from .stylehelper import dpiScaled
 from .linkeditdialog import LinkEditDialog
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 
 import sys
 import os
 import re
+import subprocess
 
 
 class ToolTableModel(QAbstractTableModel):
@@ -205,6 +206,9 @@ class Preferences(QDialog):
         self.ui.cbCheckUpdates.toggled.connect(
             self._onCheckUpdatesChanged)
 
+        self.ui.btnChooseGit.clicked.connect(
+            self._onBtnChooseGitClicked)
+
         self._initSettings()
 
     def _initSettings(self):
@@ -256,6 +260,11 @@ class Preferences(QDialog):
         name = self.settings.mergeToolName()
         self.ui.cbMergeName.setCurrentText(name)
         self.ui.leMergeCmd.setText(Git.mergeToolCmd(name))
+
+        git = self.settings.gitBinPath()
+        if not git and GitProcess.GIT_BIN:
+            git = GitProcess.GIT_BIN
+        self.ui.leGitPath.setText(git)
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -430,10 +439,34 @@ class Preferences(QDialog):
             self.ui.cbMergeName.setFocus()
             return
 
+        git = self.ui.leGitPath.text()
+        if not self.isGitUsable(git):
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("The git path you specified is invalid."))
+
+            self.ui.tabWidget.setCurrentWidget(self.ui.tabGeneral)
+            self.ui.leGitPath.setFocus()
+            return
+
         self.accept()
+
+    def isGitUsable(self, git):
+        try:
+            subprocess.check_call([git, "--version"])
+            return True
+        except Exception:
+            return False
 
     def _onCheckUpdatesChanged(self, checked):
         self.ui.sbDays.setEnabled(checked)
+
+    def _onBtnChooseGitClicked(self, checked):
+        f, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Choose Git"))
+        if f:
+            self.ui.leGitPath.setText(f)
 
     def _checkBugPattern(self):
         value = self.ui.linkEditWidget.bugPattern().strip()
@@ -619,3 +652,6 @@ class Preferences(QDialog):
             QMessageBox.critical(
                 self, self.window().windowTitle(),
                 error)
+
+        value = self.ui.leGitPath.text()
+        self.settings.setGitBinPath(value)

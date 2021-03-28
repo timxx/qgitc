@@ -68,6 +68,26 @@ class Ui_Preferences(object):
 
         self.verticalLayout_5.addLayout(self.horizontalLayout_8)
 
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.label_15 = QLabel(self.groupBox_6)
+        self.label_15.setObjectName(u"label_15")
+
+        self.horizontalLayout_9.addWidget(self.label_15)
+
+        self.leGitPath = QLineEdit(self.groupBox_6)
+        self.leGitPath.setObjectName(u"leGitPath")
+
+        self.horizontalLayout_9.addWidget(self.leGitPath)
+
+        self.btnChooseGit = QPushButton(self.groupBox_6)
+        self.btnChooseGit.setObjectName(u"btnChooseGit")
+
+        self.horizontalLayout_9.addWidget(self.btnChooseGit)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_9)
+
 
         self.verticalLayout.addWidget(self.groupBox_6)
 
@@ -482,6 +502,8 @@ class Ui_Preferences(object):
         self.cbState.setText(QCoreApplication.translate("Preferences", u"&Remember window state", None))
         self.cbCheckUpdates.setText(QCoreApplication.translate("Preferences", u"Check updates every", None))
         self.label_14.setText(QCoreApplication.translate("Preferences", u"day(s)", None))
+        self.label_15.setText(QCoreApplication.translate("Preferences", u"Git:", None))
+        self.btnChooseGit.setText(QCoreApplication.translate("Preferences", u"&Browse", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("Preferences", u"Diff view", None))
         self.cbShowWhitespace.setText(QCoreApplication.translate("Preferences", u"&Visualize whitespace", None))
         self.label_10.setText(QCoreApplication.translate("Preferences", u"&Tab size:", None))

@@ -12,13 +12,15 @@ from .common import log_fmt
 
 class GitProcess():
 
+    GIT_BIN = None
+
     def __init__(self, repoDir, args, text=None):
         startupinfo = None
         if os.name == "nt":
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         self._process = subprocess.Popen(
-            ["git"] + args,
+            [GitProcess.GIT_BIN] + args,
             cwd=repoDir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -117,6 +119,10 @@ class Git():
     LUC_SHA1 = "0000000000000000000000000000000000000000"
     # local changes checked
     LCC_SHA1 = "0000000000000000000000000000000000000001"
+
+    @staticmethod
+    def available():
+        return GitProcess.GIT_BIN is not None
 
     @staticmethod
     def run(args, text=None):
