@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 
-
-import tempfile
-import os
 import sys
 
 
-__all__ = ["ConflictLogBase", "ConflictLogFile",
-           "ConflictLogExcel", "ConflictLogProxy"]
+__all__ = ["ConflictLogBase", "ConflictLogXlsx",
+           "ConflictLogExcel"]
 
 
 HAVE_EXCEL_API = False
+HAVE_XLSX_WRITER = False
 
 if sys.platform == "win32":
     try:
@@ -27,6 +25,14 @@ elif sys.platform == "linux":
         pass
 
 
+if not HAVE_EXCEL_API:
+    try:
+        import openpyxl
+        HAVE_XLSX_WRITER = True
+    except ImportError:
+        pass
+
+
 class ConflictLogBase:
 
     def __init__(self):
@@ -38,68 +44,50 @@ class ConflictLogBase:
     def addCommit(self, commit):
         return False
 
-    def setStatus(self, ok):
+    def save(self):
         pass
 
-    def isValid(self):
-        return False
 
+class ConflictLogXlsx(ConflictLogBase):
 
-class ConflictLogFile(ConflictLogBase):
-    """ The temporay log file, the format is:
-    [f] The conflict file path 1
-    \t[a] conflict commit 1
-    \t[a] conflict commit N
-    \t[b] conflict commit 1
-    \t[b] conflict commit N
-    \t[s] Y/N
-    [f] The conflict file path N
-    ...
-    """
-
-    def __init__(self):
-        self.filePath = os.path.join(
-            tempfile.gettempdir(), "qgitc_conflicts.log")
-        self._handle = None
-
-    def _ensureHandle(self):
-        if self._handle is None:
-            self._handle = open(self.filePath, "a+")
+    def __init__(self, logFile):
+        self.logFile = logFile
+        self.book = openpyxl.load_workbook(logFile)
+        self.sheet = self.book.active
+        self._curFile = None
+        self._curRow = 1
 
     def addFile(self, path):
-        self._ensureHandle()
-
-        self._handle.write("[f] " + path + "\n")
-        self._handle.flush()
+        self._curFile = path
         return True
 
     def addCommit(self, commit):
-        self._handle.write('\t[{}] {} ("{}", {}, {})\n'.format(
-            "a" if commit["branchA"] else "b",
+        if self._curFile:
+            self._curRow += 1
+            cell = "A%s" % self._curRow
+            self.sheet[cell] = self._curFile
+            self._curFile = None
+
+        msg = '{} ("{}", {}, {})'.format(
             commit["sha1"],
             commit["subject"],
             commit["author"],
-            commit["date"]
-        ))
-        self._handle.flush()
+            commit["date"])
+
+        cell = "{}{}".format("B" if commit["branchA"] else "C", self._curRow)
+        self.sheet[cell].alignment = openpyxl.styles.Alignment(
+            wrap_text=True, vertical="center")
+        text = self.sheet[cell].value
+        if text:
+            text += "\r\n" + msg
+        else:
+            text = msg
+        self.sheet[cell].value = text
+
         return True
 
-    def setStatus(self, ok):
-        self._handle.write("\t[s] ")
-        self._handle.write("Y" if ok else "N")
-        self._handle.write("\n")
-        self._handle.flush()
-
-    def isValid(self):
-        return True
-
-    def toExcelXml(self, path):
-        pass
-
-    def unlink(self):
-        self._handle.close()
-        self._handle = None
-        os.remove(self.filePath)
+    def save(self):
+        self.book.save(self.logFile)
 
 
 class WorkbookEvents:
@@ -179,9 +167,6 @@ class ConflictLogExcel(ConflictLogBase):
         self.book.Save()
         return True
 
-    def isValid(self):
-        return self.sheet is not None
-
     def _setCellValue(self, cell, value, append=False):
         rg = self.sheet.Range(cell)
         rg.WrapText = True
@@ -197,29 +182,3 @@ class ConflictLogExcel(ConflictLogBase):
     def _onWorkbookBeforeClose(self, wookbook):
         # not allow close the doc
         return wookbook == self.book
-
-
-class ConflictLogProxy(ConflictLogBase):
-
-    def __init__(self, logFile):
-        super().__init__()
-        self._file = ConflictLogFile()
-        self._excel = ConflictLogExcel(logFile)
-
-    def addFile(self, file):
-        self._file.addFile(file)
-        self._excel.addFile(file)
-
-    def addCommit(self, commit):
-        self._file.addCommit(commit)
-        self._excel.addCommit(commit)
-
-    def setStatus(self, ok):
-        self._file.setStatus(ok)
-        self._excel.setStatus(ok)
-
-    def isValid(self):
-        return True
-
-    def isExcelValid(self):
-        return self._excel.isValid()

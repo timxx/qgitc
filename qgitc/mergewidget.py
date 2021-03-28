@@ -5,9 +5,15 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from .gitutils import Git
 from .stylehelper import dpiScaled
-from .conflictlog import ConflictLogProxy, HAVE_EXCEL_API
+from .conflictlog import (
+    ConflictLogExcel,
+    ConflictLogXlsx,
+    HAVE_EXCEL_API,
+    HAVE_XLSX_WRITER)
 from .events import CopyConflictCommit
 from .common import dataDirPath
+
+from datetime import datetime
 
 import shutil
 
@@ -89,15 +95,23 @@ class MergeWidget(QWidget):
         vlayout.addLayout(hlayout)
 
         self.cbAutoNext.setChecked(True)
-        self.cbAutoLog.setChecked(True)
+        if HAVE_EXCEL_API or HAVE_XLSX_WRITER:
+            self.cbAutoLog.setChecked(True)
+            self.__onAutoLogChanged(Qt.Checked)
+        else:
+            self.cbAutoLog.setChecked(False)
+            self.cbAutoLog.setEnabled(False)
+            self.cbAutoLog.setToolTip(
+                self.tr("No pywin32/pywpsrpc or openpyxl found, feature disabled."))
+            self.__onAutoLogChanged(Qt.Unchecked)
         self.leLogFile.setText(self.__defaultLogFile())
-        self.__onAutoLogChanged(Qt.Checked)
 
         self.__setupMenu()
 
     def __defaultLogFile(self):
         dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
-        fileName = "conflicts.xlsx" if HAVE_EXCEL_API else "conflicts.xml"
+        dt = datetime.now()
+        fileName = "conflicts-{}.xlsx".format(dt.strftime("%Y%m%d%H%M%S"))
         return dir + QDir.separator() + fileName
 
     def __ensureLogWriter(self):
@@ -105,9 +119,12 @@ class MergeWidget(QWidget):
             return
 
         logFile = self.leLogFile.text()
+        shutil.copy(dataDirPath() + "/templates/builtin.xlsx", logFile)
+
         if HAVE_EXCEL_API:
-            shutil.copy(dataDirPath() + "/templates/builtin.xlsx", logFile)
-        self.log = ConflictLogProxy(logFile)
+            self.log = ConflictLogExcel(logFile)
+        elif HAVE_XLSX_WRITER:
+            self.log = ConflictLogXlsx(logFile)
 
     def __setupMenu(self):
         self.menu = QMenu()
@@ -344,8 +361,6 @@ class MergeWidget(QWidget):
         self.resolveFinished.emit(RESOLVE_SUCCEEDED if exitCode == 0
                                   else RESOLVE_FAILED)
 
-        if self.logEnabled():
-            self.log.setStatus(exitCode == 0)
         self.leFilter.setEnabled(True)
         self.cbAutoLog.setEnabled(True)
         self.__onAutoLogChanged(self.cbAutoLog.checkState())
@@ -514,3 +529,9 @@ class MergeWidget(QWidget):
 
     def logEnabled(self):
         return self.cbAutoLog.isChecked()
+
+    def queryClose(self):
+        if self.log:
+            self.log.save()
+            self.log = None
+        return True

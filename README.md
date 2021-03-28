@@ -30,6 +30,8 @@ A file conflict viewer for git
   - Optional for Windows if you want record the conflict log easily
 - pywpsrpc
   - Optional for Linux if you want record the conflict log easily
+- openpyxl
+  - Optional if no pywin32/ pywpsrpc is available
 
 
 ## Build & Run
