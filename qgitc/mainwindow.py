@@ -426,9 +426,12 @@ class MainWindow(StateWindow):
                 self.ui.leRepo.setText(Git.REPO_DIR)
 
     def closeEvent(self, event):
-        super().closeEvent(event)
         if self.mergeWidget:
+            if not self.mergeWidget.queryClose():
+                return
             self.mergeWidget.close()
+
+        super().closeEvent(event)
 
     def setFilterFile(self, filePath):
         if filePath and not filePath.startswith("-- "):
