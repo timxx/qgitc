@@ -276,6 +276,12 @@ class MainWindow(StateWindow):
         if self.gitViewB:
             self.gitViewB.reloadBranches(branch)
 
+        if self.mergeWidget:
+            # cache in case changed later
+            self.mergeWidget.setBranches(
+                self.ui.gitViewA.currentBranch(),
+                self.gitViewB.currentBranch())
+
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
         preferences = Preferences(settings, self)
