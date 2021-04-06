@@ -9,7 +9,8 @@ from .conflictlog import (
     ConflictLogExcel,
     ConflictLogXlsx,
     HAVE_EXCEL_API,
-    HAVE_XLSX_WRITER)
+    HAVE_XLSX_WRITER,
+    MergeInfo)
 from .events import CopyConflictCommit
 from .common import dataDirPath
 
@@ -49,6 +50,8 @@ class MergeWidget(QWidget):
 
         self.__setupUi()
         self.__setupSignals()
+
+        self._mergeInfo = None
 
     def __setupUi(self):
         self.view = QListView(self)
@@ -125,6 +128,9 @@ class MergeWidget(QWidget):
             self.log = ConflictLogExcel(logFile)
         elif HAVE_XLSX_WRITER:
             self.log = ConflictLogXlsx(logFile)
+
+        if self._mergeInfo is not None:
+            self.log.setMergeInfo(self._mergeInfo)
 
     def __setupMenu(self):
         self.menu = QMenu()
@@ -548,3 +554,10 @@ class MergeWidget(QWidget):
             self.log.save()
             self.log = None
         return True
+
+    def setBranches(self, localBranch, remoteBranch):
+        self._mergeInfo = MergeInfo(
+            localBranch,
+            remoteBranch.replace("remotes/origin/", ""),
+            Git.getConfigValue("user.name", False)
+        )

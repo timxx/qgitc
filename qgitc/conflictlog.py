@@ -33,10 +33,19 @@ if not HAVE_EXCEL_API:
         pass
 
 
+class MergeInfo:
+
+    def __init__(self, local, remote, author):
+        self.local = local
+        self.remote = remote
+        self.author = author
+
+
 class ConflictLogBase:
 
     def __init__(self):
-        pass
+        # the starting row to log
+        self._curRow = 6
 
     def addFile(self, file):
         return False
@@ -50,15 +59,18 @@ class ConflictLogBase:
     def setResolveMethod(self, file, desc):
         pass
 
+    def setMergeInfo(self, info):
+        pass
+
 
 class ConflictLogXlsx(ConflictLogBase):
 
     def __init__(self, logFile):
+        super().__init__()
         self.logFile = logFile
         self.book = openpyxl.load_workbook(logFile)
         self.sheet = self.book.active
         self._curFile = None
-        self._curRow = 1
 
     def addFile(self, path):
         self._curFile = path
@@ -99,6 +111,11 @@ class ConflictLogXlsx(ConflictLogBase):
         cell = "D%s" % self._curRow
         self.sheet[cell] = desc
 
+    def setMergeInfo(self, info):
+        self.sheet["B1"] = info.local
+        self.sheet["B2"] = info.remote
+        self.sheet["B3"] = info.author
+
 
 class WorkbookEvents:
 
@@ -115,9 +132,9 @@ class ConflictLogExcel(ConflictLogBase):
         self.app = None
         self.book = None
         self.sheet = None
-        self.row = 1
         self.logFile = logFile
         self._rpc = None
+        self._mergeInfo = None
 
         self._ensureExcel()
 
@@ -147,6 +164,10 @@ class ConflictLogExcel(ConflictLogBase):
                                         self._onWorkbookBeforeClose)
 
             self.sheet = self.book.Sheets[1]
+
+            if self._mergeInfo is not None:
+                self._setMergeInfo(self._mergeInfo)
+                self._mergeInfo = None
         except Exception:
             pass
 
@@ -160,8 +181,8 @@ class ConflictLogExcel(ConflictLogBase):
             return False
 
         if self._curFile:
-            self.row += 1
-            self._setCellValue("A%s" % self.row, self._curFile)
+            self._curRow += 1
+            self._setCellValue("A%s" % self._curRow, self._curFile)
             self._curFile = None
 
         msg = '{} ("{}", {}, {})'.format(
@@ -170,7 +191,7 @@ class ConflictLogExcel(ConflictLogBase):
             commit["author"],
             commit["date"])
 
-        cell = "{}{}".format("B" if commit["branchA"] else "C", self.row)
+        cell = "{}{}".format("B" if commit["branchA"] else "C", self._curRow)
         if not self._setCellValue(cell, msg, True):
             return False
 
@@ -178,9 +199,21 @@ class ConflictLogExcel(ConflictLogBase):
         return True
 
     def setResolveMethod(self, file, desc):
-        self.row += 1
-        self._setCellValue("A%s" % self.row, file)
-        self._setCellValue("D%s" % self.row, desc)
+        self._curRow += 1
+        self._setCellValue("A%s" % self._curRow, file)
+        self._setCellValue("D%s" % self._curRow, desc)
+
+    def setMergeInfo(self, info):
+        # delay for buggy wps on Linux
+        if not self.book:
+            self._mergeInfo = info
+        else:
+            self._setMergeInfo(info)
+
+    def _setMergeInfo(self, info):
+        self._setCellValue("B1", info.local)
+        self._setCellValue("B2", info.remote)
+        self._setCellValue("B3", info.author)
 
     def _setCellValue(self, cell, value, append=False):
         rg = self.sheet.Range(cell)
