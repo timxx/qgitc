@@ -47,6 +47,9 @@ class ConflictLogBase:
     def save(self):
         pass
 
+    def setResolveMethod(self, file, desc):
+        pass
+
 
 class ConflictLogXlsx(ConflictLogBase):
 
@@ -88,6 +91,13 @@ class ConflictLogXlsx(ConflictLogBase):
 
     def save(self):
         self.book.save(self.logFile)
+
+    def setResolveMethod(self, file, desc):
+        self._curRow += 1
+        cell = "A%s" % self._curRow
+        self.sheet[cell] = file
+        cell = "D%s" % self._curRow
+        self.sheet[cell] = desc
 
 
 class WorkbookEvents:
@@ -166,6 +176,11 @@ class ConflictLogExcel(ConflictLogBase):
 
         self.book.Save()
         return True
+
+    def setResolveMethod(self, file, desc):
+        self.row += 1
+        self._setCellValue("A%s" % self.row, file)
+        self._setCellValue("D%s" % self.row, desc)
 
     def _setCellValue(self, cell, value, append=False):
         rg = self.sheet.Range(cell)
