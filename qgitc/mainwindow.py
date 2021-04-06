@@ -137,6 +137,10 @@ class MainWindow(StateWindow):
 
         self.ui.acCopyLog.triggered.connect(
             self.__onCopyLogTriggered)
+        self.ui.acCopyLogA.triggered.connect(
+            self.__onCopyLogATriggered)
+        self.ui.acCopyLogB.triggered.connect(
+            self.__onCopyLogBTriggered)
 
         self.ui.acSelectAll.triggered.connect(
             self.__onSelectAllTriggered)
@@ -181,6 +185,7 @@ class MainWindow(StateWindow):
         acGroup.addAction(self.ui.acIgnoreNone)
         acGroup.addAction(self.ui.acIgnoreEOL)
         acGroup.addAction(self.ui.acIgnoreAll)
+        self.ui.menu_Merge.menuAction().setVisible(False)
 
     def __updateEditMenu(self):
         fw = qApp.focusWidget()
@@ -188,9 +193,10 @@ class MainWindow(StateWindow):
         self.ui.acCopy.setEnabled(False)
         self.ui.acSelectAll.setEnabled(False)
         self.ui.acFind.setEnabled(False)
+        enabled = self.mergeWidget is not None and self.mergeWidget.isResolving()
         self.ui.acCopyLog.setEnabled(False)
-        visible = self.mergeWidget is not None
-        self.ui.acCopyLog.setVisible(visible)
+        self.ui.acCopyLogA.setEnabled(enabled)
+        self.ui.acCopyLogB.setEnabled(enabled)
 
         if not fw:
             pass
@@ -204,8 +210,7 @@ class MainWindow(StateWindow):
             self.ui.acFind.setEnabled(False)
         elif isinstance(fw, LogView):
             self.ui.acCopy.setEnabled(fw.isCurrentCommitted())
-            if visible:
-                self.ui.acCopyLog.setEnabled(self.mergeWidget.isResolving())
+            self.ui.acCopyLog.setEnabled(enabled)
 
     def __onBtnRepoBrowseClicked(self, checked):
         repoDir = QFileDialog.getExistingDirectory(self,
@@ -324,6 +329,12 @@ class MainWindow(StateWindow):
         fw = qApp.focusWidget()
         assert fw
         fw.copyToLog()
+
+    def __onCopyLogATriggered(self):
+        self.ui.gitViewA.logView.copyToLog()
+
+    def __onCopyLogBTriggered(self):
+        self.gitViewB.logView.copyToLog()
 
     def __onSelectAllTriggered(self):
         fw = qApp.focusWidget()
@@ -447,6 +458,7 @@ class MainWindow(StateWindow):
         self.__onOptsReturnPressed()
 
     def setMode(self, mode):
+        hasMergeMenu = False
         if mode == MainWindow.LogMode:
             self.ui.gitViewA.setBranchDesc(self.tr("Branch"))
 
@@ -489,6 +501,8 @@ class MainWindow(StateWindow):
             self.ui.leRepo.setReadOnly(True)
             self.ui.acCompare.setEnabled(False)
             self.ui.btnRepoBrowse.setEnabled(False)
+            hasMergeMenu = True
+        self.ui.menu_Merge.menuAction().setVisible(hasMergeMenu)
 
     def showCommit(self, sha1):
         if not sha1:

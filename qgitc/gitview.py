@@ -340,3 +340,7 @@ class GitView(QWidget):
 
     def setBranchChangeble(self, canChange):
         self.ui.cbBranch.setEnabled(canChange)
+
+    @property
+    def logView(self):
+        return self.ui.logView

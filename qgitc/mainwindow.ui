@@ -143,14 +143,28 @@
      <string>&amp;Edit</string>
     </property>
     <addaction name="acCopy"/>
-    <addaction name="acCopyLog"/>
     <addaction name="acSelectAll"/>
     <addaction name="separator"/>
     <addaction name="acFind"/>
    </widget>
+   <widget class="QMenu" name="menu_Merge">
+    <property name="title">
+     <string>&amp;Merge</string>
+    </property>
+    <widget class="QMenu" name="menuCopy_To_Conflict_Log">
+     <property name="title">
+      <string>Copy To Conflict &amp;Log</string>
+     </property>
+     <addaction name="acCopyLog"/>
+     <addaction name="acCopyLogA"/>
+     <addaction name="acCopyLogB"/>
+    </widget>
+    <addaction name="menuCopy_To_Conflict_Log"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_Edit"/>
    <addaction name="menu_View"/>
+   <addaction name="menu_Merge"/>
    <addaction name="menu_Settings"/>
    <addaction name="menu_Help"/>
   </widget>
@@ -284,10 +298,26 @@
   </action>
   <action name="acCopyLog">
    <property name="text">
-    <string>Copy To Conflict &amp;Log</string>
+    <string>From Current &amp;View</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="acCopyLogA">
+   <property name="text">
+    <string>From &amp;A</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="acCopyLogB">
+   <property name="text">
+    <string>From &amp;B</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
    </property>
   </action>
  </widget>
