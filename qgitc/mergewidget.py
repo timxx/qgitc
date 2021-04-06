@@ -258,6 +258,11 @@ class MergeWidget(QWidget):
         if index.data(StateRole) == STATE_CONFLICT:
             if Git.resolveBy(True, index.data()):
                 self.__resolvedIndex(index)
+                if self.logEnabled():
+                    self.__ensureLogWriter()
+                    self.log.setResolveMethod(
+                        index.data(),
+                        self.tr("Local Branch"))
 
     def __onMenuUseTheirs(self):
         index = self.view.currentIndex()
@@ -266,6 +271,11 @@ class MergeWidget(QWidget):
         if index.data(StateRole) == STATE_CONFLICT:
             if Git.resolveBy(False, index.data()):
                 self.__resolvedIndex(index)
+                if self.logEnabled():
+                    self.__ensureLogWriter()
+                    self.log.setResolveMethod(
+                        index.data(),
+                        self.tr("Remote Branch"))
 
     def __doCopyPath(self, asWin=False):
         index = self.view.currentIndex()
