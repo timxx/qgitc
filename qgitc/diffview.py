@@ -211,12 +211,14 @@ class DiffFetcher(DataFetcher):
         filePath = args[1]
         gitArgs = args[2]
 
+        git_args = ["-c", "core.quotePath=false"]
+
         if sha1 == Git.LCC_SHA1:
-            git_args = ["diff-index", "--cached", "HEAD"]
+            git_args.extend(["diff-index", "--cached", "HEAD"])
         elif sha1 == Git.LUC_SHA1:
-            git_args = ["diff-files"]
+            git_args.extend(["diff-files"])
         else:
-            git_args = ["diff-tree", "-r", "--root", sha1]
+            git_args.extend(["diff-tree", "-r", "--root", sha1])
 
         git_args.extend(["-p", "--textconv", "--submodule",
                          "-C", "--cc", "--no-commit-id", "-U3"])
