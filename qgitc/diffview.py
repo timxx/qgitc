@@ -336,6 +336,9 @@ class DiffView(QWidget):
         self._difftoolProc = None
         self._withinFileRowChanged = False
 
+        self.fileListView.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.fileListView.installEventFilter(self)
+
     def __onFileListViewCurrentRowChanged(self, current, previous):
         if not self._withinFileRowChanged and current.isValid():
             row = current.data(FileListModel.RowRole)
@@ -358,19 +361,19 @@ class DiffView(QWidget):
         self.__runDiffTool(index)
 
     def __doCopyPath(self, asWin=False, absPath=False):
-        index = self.fileListView.currentIndex()
-        if not index.isValid():
-            return
+        indexList = self.fileListView.selectionModel().selectedRows()
+        paths = ""
+        for index in indexList:
+            path = index.data()
+            if absPath and Git.REPO_DIR:
+                path = os.path.join(Git.REPO_DIR, path)
+            if asWin:
+                path = path.replace('/', '\\')
+            paths += path + "\n"
 
-        clipboard = QApplication.clipboard()
-        path = index.data()
-        if absPath and Git.REPO_DIR:
-            path = os.path.join(Git.REPO_DIR, path)
-
-        if not asWin:
-            clipboard.setText(path)
-        else:
-            clipboard.setText(path.replace('/', '\\'))
+        if paths:
+            clipboard = QApplication.clipboard()
+            clipboard.setText(paths)
 
     def __onCopyPath(self):
         self.__doCopyPath()
@@ -617,6 +620,18 @@ class DiffView(QWidget):
         else:
             index = self.fileListProxy.index(0, 0)
             self.fileListView.setCurrentIndex(index)
+
+    def eventFilter(self, obj, event):
+        if obj == self.fileListView and \
+            event.type() == QEvent.KeyPress:
+            if event.matches(QKeySequence.SelectAll):
+                self.fileListView.selectAll()
+                return True
+            elif event.matches(QKeySequence.Copy):
+                self.__onCopyPath()
+                return True
+
+        return super().eventFilter(obj, event)
 
 
 class DiffTextLine(SourceTextLineBase):
