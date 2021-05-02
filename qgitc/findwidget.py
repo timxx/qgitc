@@ -75,9 +75,7 @@ class FindWidget(QWidget):
         self._tbNext.setText('🡫')
         self._tbClose.setText('⨉')
 
-        width = dpiScaled(300)
-        heigth = leFindHeight + margin * 2
-        self.resize(width, heigth)
+        self.resize(self._getShowSize())
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self._onDelayFind)
@@ -91,7 +89,15 @@ class FindWidget(QWidget):
         self._tbNext.setEnabled(enable)
         self._tbPrev.setEnabled(enable)
 
-    def _updatePos(self):
+    def _getShowSize(self):
+        width = dpiScaled(300)
+        leFindHeight = self._leFind.sizeHint().height()
+        margin = dpiScaled(3)
+        heigth = leFindHeight + margin * 2
+
+        return QSize(width, heigth)
+
+    def _getShowPos(self):
         pos = self._host.rect().topLeft()
         offset = self._host.width() - self.width()
         pos.setX(pos.x() + offset)
@@ -100,7 +106,10 @@ class FindWidget(QWidget):
         pos = self._host.mapToGlobal(pos)
         pos = self.parentWidget().mapFromGlobal(pos)
 
-        self.move(pos)
+        return pos
+
+    def _updatePos(self):
+        self.move(self._getShowPos())
 
     def _doFind(self):
         self.find.emit(self._leFind.text())
@@ -147,13 +156,26 @@ class FindWidget(QWidget):
         self._lbStatus.setPalette(palette)
 
     def showAnimate(self):
-        # TODO: make it animate
         self._leFind.setFocus()
         self._leFind.selectAll()
-        self.show()
+        if not self.isVisible():
+            self.show()
+            animation = QPropertyAnimation(self, b"geometry", self)
+            animation.setDuration(150)
+            pos = self._getShowPos()
+            size = self._getShowSize()
+            animation.setStartValue(QRect(pos, QSize(size.width(), 0)))
+            animation.setEndValue(QRect(pos, size))
+            animation.start(QAbstractAnimation.DeleteWhenStopped)
 
     def hideAnimate(self):
-        self.hide()
+        animation = QPropertyAnimation(self, b"geometry", self)
+        animation.setDuration(150)
+        pos = self.pos()
+        animation.setStartValue(QRect(pos, QSize(self.width(), self.height())))
+        animation.setEndValue(QRect(pos, QSize(self.width(), 0)))
+        animation.finished.connect(self.hide)
+        animation.start(QAbstractAnimation.DeleteWhenStopped)
 
     def setText(self, text):
         self._leFind.setText(text)
