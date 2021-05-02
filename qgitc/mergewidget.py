@@ -59,6 +59,10 @@ class MergeWidget(QWidget):
         self.proxyModel = QSortFilterProxyModel(self)
         self.proxyModel.setSourceModel(self.model)
 
+        self.view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        # for Ctrl+C
+        self.view.installEventFilter(self)
+
         self.view.setModel(self.proxyModel)
         self.view.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.leFilter = QLineEdit(self)
@@ -155,6 +159,10 @@ class MergeWidget(QWidget):
                             QKeySequence("Ctrl+C"))
         self.menu.addAction(self.tr("Copy &Windows Path"),
                             self.__onMenuCopyWinPath)
+        self.menu.addSeparator()
+        self.menu.addAction(self.tr("Select &All"),
+                            self.__onMenuSelectAll,
+                            QKeySequence("Ctrl+A"))
 
     def __setupSignals(self):
         self.btnResolve.clicked.connect(self.__onResolveClicked)
@@ -284,18 +292,25 @@ class MergeWidget(QWidget):
                         self.tr("Remote Branch"))
 
     def __doCopyPath(self, asWin=False):
-        index = self.view.currentIndex()
-        if not index.isValid():
-            return
+        indexList = self.view.selectionModel().selectedRows()
+        paths = ""
+        for index in indexList:
+            path = index.data(Qt.DisplayRole)
+            if asWin:
+                path = path.replace('/', '\\')
+            paths += path + "\n"
 
-        path = index.data(Qt.DisplayRole)
-        qApp.clipboard().setText(path if not asWin else path.replace('/', '\\'))
+        if paths:
+            qApp.clipboard().setText(paths)
 
     def __onMenuCopyPath(self):
         self.__doCopyPath()
 
     def __onMenuCopyWinPath(self):
         self.__doCopyPath(True)
+
+    def __onMenuSelectAll(self):
+        self.view.selectAll()
 
     def __onReadyRead(self):
         # FIXME: since git might not flush all output at one time
@@ -447,9 +462,16 @@ class MergeWidget(QWidget):
         index = self.view.currentIndex()
         enabled = index.data(StateRole) == STATE_RESOLVED
         self.acResolve.setEnabled(not enabled)
-        self.acUndoMerge.setEnabled(enabled)
-        self.acUseOurs.setEnabled(not self.isResolving())
-        self.acUseTheirs.setEnabled(not self.isResolving())
+
+        # TODO: handle multiple files
+        if len(self.view.selectionModel().selectedRows()) > 1:
+            self.acUndoMerge.setEnabled(False)
+            self.acUseOurs.setEnabled(False)
+            self.acUseTheirs.setEnabled(False)
+        else:
+            self.acUndoMerge.setEnabled(enabled)
+            self.acUseOurs.setEnabled(not self.isResolving())
+            self.acUseTheirs.setEnabled(not self.isResolving())
         self.menu.exec_(event.globalPos())
 
     def paintEvent(self, event):
@@ -542,6 +564,14 @@ class MergeWidget(QWidget):
             return True
 
         return super().event(e)
+
+    def eventFilter(self, obj, event):
+        if obj == self.view and event.type() == QEvent.KeyPress:
+            if event.matches(QKeySequence.Copy):
+                self.__doCopyPath()
+                return True
+
+        return super().eventFilter(obj, event)
 
     def isResolving(self):
         return self.process is not None
