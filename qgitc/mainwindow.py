@@ -434,6 +434,8 @@ class MainWindow(StateWindow):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
+            if self.closeFindWidget():
+                return
             sett = qApp.instance().settings()
             if sett.quitViaEsc():
                 self.close()
@@ -522,3 +524,11 @@ class MainWindow(StateWindow):
     def reloadRepo(self):
         repoDir = self.ui.leRepo.text()
         self.__onRepoChanged(repoDir)
+
+    def closeFindWidget(self):
+        if self.ui.gitViewA.closeFindWidget():
+            return True
+        if self.gitViewB and self.gitViewB.closeFindWidget():
+            return True
+
+        return False
