@@ -633,6 +633,9 @@ class DiffView(QWidget):
 
         return super().eventFilter(obj, event)
 
+    def closeFindWidget(self):
+        return self.viewer.closeFindWidget()
+
 
 class DiffTextLine(SourceTextLineBase):
 
@@ -983,3 +986,9 @@ class PatchViewer(SourceViewer):
                 return 0
 
         return 0
+
+    def closeFindWidget(self):
+        if self.findWidget and self.findWidget.isVisible():
+            self.findWidget.hideAnimate()
+            return True
+        return False

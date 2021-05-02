@@ -344,3 +344,6 @@ class GitView(QWidget):
     @property
     def logView(self):
         return self.ui.logView
+
+    def closeFindWidget(self):
+        return self.ui.diffView.closeFindWidget()
