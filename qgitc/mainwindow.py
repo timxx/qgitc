@@ -435,6 +435,8 @@ class MainWindow(StateWindow):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             if self.closeFindWidget():
+                if qApp.lastFocusWidget():
+                    qApp.lastFocusWidget().setFocus()
                 return
             sett = qApp.instance().settings()
             if sett.quitViaEsc():
