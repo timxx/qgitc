@@ -25,6 +25,7 @@ from .versionchecker import VersionChecker
 from .newversiondialog import NewVersionDialog
 
 from datetime import datetime
+from .findwidget import FindWidget
 
 import os
 import re
@@ -59,6 +60,9 @@ class Application(QApplication):
             self._initGit(gitBin)
 
         QTimer.singleShot(0, self._onDelayInit)
+
+        self._lastFocusWidget = None
+        self.focusChanged.connect(self._onFocusChanged)
 
     def settings(self):
         return self._settings
@@ -105,6 +109,9 @@ class Application(QApplication):
         if index == -1:
             return url
         return url[index+1:]
+
+    def lastFocusWidget(self):
+        return self._lastFocusWidget
 
     def event(self, event):
         type = event.type()
@@ -207,6 +214,25 @@ class Application(QApplication):
                 self._checker.finished.connect(
                     self._onVersionCheckFinished)
                 QTimer.singleShot(0, self._checker.startCheck)
+
+    def _onFocusChanged(self, old, now):
+        def _isFindWidget(w):
+            if w is None:
+                return False
+
+            if isinstance(w, FindWidget):
+                return True
+
+            p = w.parent()
+            while p:
+                if isinstance(p, FindWidget):
+                    return True
+                p = p.parent()
+
+            return False
+
+        if not _isFindWidget(now):
+            self._lastFocusWidget = now
 
     def _ensureVisible(self, window):
         if window.isVisible():
