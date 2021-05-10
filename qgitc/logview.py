@@ -652,7 +652,7 @@ class LogView(QAbstractScrollArea):
             self.checkThread = None
 
         if not args:
-            self.checkThread = CheckLocalChangesThread(self.curBranch)
+            self.checkThread = CheckLocalChangesThread(self.curBranch, self)
             self.checkThread.checkFinished.connect(self.__onCheckFinished)
             self.checkThread.start()
 
