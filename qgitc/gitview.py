@@ -64,10 +64,13 @@ class GitView(QWidget):
         self.ui.findSpinner.setInnerRadius(height)
         self.ui.findSpinner.setNumberOfLines(14)
 
+        self._delayTimer = QTimer(self)
+        self._delayTimer.setSingleShot(True)
+
         self.__setupSignals()
 
     def __setupSignals(self):
-        self.ui.cbBranch.currentIndexChanged.connect(self.__onBranchChanged)
+        self.ui.cbBranch.currentIndexChanged.connect(self.__onDelayBranchChanged)
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.beginFetch.connect(self.__onBeginFetch)
@@ -86,6 +89,8 @@ class GitView(QWidget):
 
         self.ui.leSha1.returnPressed.connect(self.reqCommit)
         self.ui.leFindWhat.returnPressed.connect(self.reqFind)
+
+        self._delayTimer.timeout.connect(self.__onDelayTimeOut)
 
     def __updateBranches(self, activeBranch=None):
         self.ui.cbBranch.clear()
@@ -149,6 +154,13 @@ class GitView(QWidget):
         self.ui.logView.showLogs(
             branch,
             self.logArgs)
+
+    def __onDelayBranchChanged(self, index):
+        self._delayTimer.start(150)
+
+    def __onDelayTimeOut(self):
+        index = self.ui.cbBranch.currentIndex()
+        self.__onBranchChanged(index)
 
     def __onCommitChanged(self, index):
         if self.ui.logView.cancelFindCommit(False):
