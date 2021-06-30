@@ -272,9 +272,9 @@ class MainWindow(StateWindow):
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
             branch = "remotes/" + branch
-        self.ui.gitViewA.reloadBranches()
+        self.ui.gitViewA.reloadBranches( self.ui.gitViewA.currentBranch())
         if self.gitViewB:
-            self.gitViewB.reloadBranches(branch)
+            self.gitViewB.reloadBranches(branch or self.gitViewB.currentBranch())
 
         if self.mergeWidget:
             # cache in case changed later

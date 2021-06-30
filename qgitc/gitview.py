@@ -107,6 +107,7 @@ class GitView(QWidget):
             return
 
         curBranchIdx = -1
+        defBranchIdx = -1
         self.ui.cbBranch.blockSignals(True)
 
         for branch in branches:
@@ -120,8 +121,9 @@ class GitView(QWidget):
                 if branch.startswith("*"):
                     pure_branch = branch.replace("*", "").strip()
                     self.ui.cbBranch.addItem(pure_branch)
+                    defBranchIdx = self.ui.cbBranch.count() - 1
                     if curBranchIdx == -1 and (not activeBranch or activeBranch == pure_branch):
-                        curBranchIdx = self.ui.cbBranch.count() - 1
+                        curBranchIdx = defBranchIdx
                 else:
                     if branch.startswith("+ "):
                         branch = branch[2:]
@@ -129,6 +131,8 @@ class GitView(QWidget):
                     if activeBranch and activeBranch == branch:
                         curBranchIdx = self.ui.cbBranch.count() - 1
 
+        if curBranchIdx == -1:
+            curBranchIdx = defBranchIdx
         if curBranchIdx != -1:
             self.ui.cbBranch.setCurrentIndex(curBranchIdx)
 
