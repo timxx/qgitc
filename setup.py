@@ -11,6 +11,18 @@ from glob import glob
 from qgitc.version import VERSION
 
 
+ENV_PATH = None
+
+# find_executable doesn't support `~`
+if "PATH" in os.environ:
+    paths = os.environ["PATH"].split(os.pathsep)
+    ENV_PATH = ""
+    for p in paths:
+        ENV_PATH += (os.pathsep + p) if ENV_PATH else p
+        if p.startswith("~"):
+            ENV_PATH += os.pathsep + os.path.expanduser(p)
+
+
 class CustomBuild(build):
 
     def get_sub_commands(self):
@@ -35,7 +47,7 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        uic_bin = find_executable("uic-qt6") or find_executable("uic")
+        uic_bin = find_executable("pyside6-uic", ENV_PATH) or find_executable("uic", ENV_PATH)
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
@@ -56,7 +68,7 @@ class BuildQt(Command):
 
     def compile_ts(self):
         lrelease = find_executable(
-            "lrelease-qt5") or find_executable("lrelease")
+            "lrelease-qt6", ENV_PATH) or find_executable("lrelease", ENV_PATH)
         if not lrelease:
             raise DistutilsExecError("Missing lrelease")
 
@@ -86,9 +98,9 @@ class UpdateTs(Command):
         pass
 
     def run(self):
-        lupdate = find_executable("pyside2-lupdate")
+        lupdate = find_executable("pyside6-lupdate", ENV_PATH)
         if not lupdate:
-            raise DistutilsExecError("Missing pyside2-lupdate")
+            raise DistutilsExecError("Missing pyside6-lupdate")
 
         path = os.path.realpath("qgitc/data/translations/qgitc.pro")
         spawn([lupdate, path])
