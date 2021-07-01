@@ -3,14 +3,14 @@
 ################################################################################
 ## Form generated from reading UI file 'preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.0.1
+## Created by: Qt User Interface Compiler version 6.1.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from PySide6.QtCore import *  # type: ignore
+from PySide6.QtGui import *  # type: ignore
+from PySide6.QtWidgets import *  # type: ignore
 
 from .colorwidget import ColorWidget
 from .linkeditwidget import LinkEditWidget
