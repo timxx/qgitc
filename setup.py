@@ -67,8 +67,12 @@ class BuildQt(Command):
             self._fix_import(pyFile, pattern)
 
     def compile_ts(self):
-        lrelease = find_executable(
-            "lrelease-qt6", ENV_PATH) or find_executable("lrelease", ENV_PATH)
+        lrelease = find_executable("lrelease-qt6", ENV_PATH)
+        if not lrelease:
+            path = ENV_PATH
+            if os.name == "posix":
+                path = "/usr/lib/qt6/bin" + os.pathsep + ENV_PATH
+            lrelease = find_executable("lrelease", path)
         if not lrelease:
             raise DistutilsExecError("Missing lrelease")
 
