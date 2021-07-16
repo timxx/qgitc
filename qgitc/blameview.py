@@ -767,11 +767,11 @@ class BlameView(QWidget):
         super().__init__(parent)
 
         mainLayout = QVBoxLayout(self)
-        mainLayout.setMargin(0)
+        mainLayout.setContentsMargins(0, 0, 0, 0)
 
         sourceWidget = QWidget(self)
         layout = QVBoxLayout(sourceWidget)
-        layout.setMargin(0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self._headerWidget = HeaderWidget(self)
         layout.addWidget(self._headerWidget)
