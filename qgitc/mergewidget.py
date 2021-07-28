@@ -233,7 +233,7 @@ class MergeWidget(QWidget):
         self.updateList()
 
     def __onFilterChanged(self, text):
-        self.proxyModel.setFilterRegExp(text)
+        self.proxyModel.setFilterRegularExpression(text)
         self.__updateFilterCount()
 
     def __onAutoLogChanged(self, state):

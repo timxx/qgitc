@@ -609,7 +609,7 @@ class DiffView(QWidget):
         self.fetcher.cwd = branchDir
 
     def _onFileListFilterChanged(self, text):
-        self.fileListProxy.setFilterRegExp(text)
+        self.fileListProxy.setFilterRegularExpression(text)
 
         if not text:
             # restore previus row
