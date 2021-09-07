@@ -236,7 +236,7 @@ class Git():
             args = ["diff-tree", "-r", "--root", sha1]
 
         args.extend(["-p", "--textconv", "--submodule",
-                     "-C", "--cc", "--no-commit-id", "-U3"])
+                     "-C", "--no-commit-id", "-U3"])
 
         if gitArgs:
             args.extend(gitArgs)
