@@ -194,7 +194,7 @@ class MergeWidget(QWidget):
                                                   total))
 
     def __updateFilterCount(self):
-        text = self.proxyModel.filterRegExp().pattern()
+        text = self.proxyModel.filterRegularExpression().pattern()
         count = self.proxyModel.rowCount() if text else 0
         self.lbFilter.setText("{}".format(count))
 
