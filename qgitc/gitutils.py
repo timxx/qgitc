@@ -309,7 +309,7 @@ class Git():
             return None
 
         name = None
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             line = f.readline()
             m = re.match("Merge.* '(.*)'.*", line)
             if m:
