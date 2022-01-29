@@ -79,9 +79,7 @@ class Ref():
         if not string or len(string) < 46:
             return None
 
-        sha1 = string[0:40]
         name = string[41:]
-
         if not name.startswith("refs/"):
             return None
 
