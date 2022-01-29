@@ -751,7 +751,7 @@ class PatchViewer(SourceViewer):
         super().endReading()
         if self.findWidget and self.findWidget.isVisible():
             # redo a find
-            self._onFind(self.findWidget.text)
+            self._onFind(self.findWidget.text, self.findWidget.flags)
 
     def toTextLine(self, item):
         type, content = item
@@ -916,16 +916,16 @@ class PatchViewer(SourceViewer):
             url += self._link.data
         QDesktopServices.openUrl(QUrl(url))
 
-    def _onFind(self, text):
+    def _onFind(self, text, flags):
         self.findWidget.updateFindResult([])
         self.highlightFindResult([])
 
         if self.textLineCount() > 3000:
             self.curIndexFound = False
-            if self.findAllAsync(text):
+            if self.findAllAsync(text, flags):
                 self.findWidget.findStarted()
         else:
-            findResult = self.findAll(text)
+            findResult = self.findAll(text, flags)
             if findResult:
                 self._onFindResultAvailable(findResult, FindPart.All)
 

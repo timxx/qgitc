@@ -106,7 +106,7 @@ class BlameWindow(StateWindow):
         else:
             self._view.viewer.selectAll()
 
-    def _onFindFind(self, text):
+    def _onFindFind(self, text, flags):
         viewer = self._view.viewer
 
         self._findWidget.updateFindResult([])
@@ -114,10 +114,10 @@ class BlameWindow(StateWindow):
 
         if viewer.textLineCount() > 3000:
             self._curIndexFound = False
-            if viewer.findAllAsync(text):
+            if viewer.findAllAsync(text, flags):
                 self._findWidget.findStarted()
         else:
-            findResult = viewer.findAll(text)
+            findResult = viewer.findAll(text, flags)
             if findResult:
                 self._onFindResultAvailable(findResult, FindPart.All)
 
@@ -135,7 +135,7 @@ class BlameWindow(StateWindow):
     def _onBlameFileChanged(self, file):
         if self._findWidget and self._findWidget.isVisible():
             # redo a find
-            self._onFindFind(self._findWidget.text)
+            self._onFindFind(self._findWidget.text, self._findWidget.flags)
 
     def _onFindResultAvailable(self, result, findPart):
         curFindIndex = 0 if findPart == FindPart.All else -1

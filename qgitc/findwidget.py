@@ -7,13 +7,35 @@ from PySide6.QtCore import *
 from .stylehelper import dpiScaled
 from .textcursor import TextCursor
 from .waitingspinnerwidget import QtWaitingSpinner
-from .textviewer import FindPart
+from .textviewer import FindPart, FindFlags
+from .toggleimagebutton import ToggleImageButton
 
 import bisect
 
 
+def _genMatchCaseImages(font, size):
+    imageOff = QImage(size, QImage.Format_ARGB32)
+    imageOff.fill(Qt.transparent)
+    painter = QPainter(imageOff)
+    painter.setRenderHint(QPainter.TextAntialiasing)
+    painter.setFont(font)
+    painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "Aa")
+    painter.end()
+
+    imageOn = QImage(size, QImage.Format_ARGB32)
+    imageOn.fill(Qt.black)
+    painter = QPainter(imageOn)
+    painter.setRenderHint(QPainter.TextAntialiasing)
+    painter.setFont(font)
+    painter.setPen(Qt.white)
+    painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "Aa")
+    painter.end()
+
+    return imageOff, imageOn
+
+
 class FindWidget(QWidget):
-    find = Signal(str)
+    find = Signal(str, int)
     cursorChanged = Signal(TextCursor)
     afterHidden = Signal()
 
@@ -24,6 +46,7 @@ class FindWidget(QWidget):
         self._findResult = []
         self._curIndex = 0
         self._searching = False
+        self._flags = 0
 
         self._setupUi()
         self._setupSignals()
@@ -75,7 +98,18 @@ class FindWidget(QWidget):
         self._tbNext.setText('🡫')
         self._tbClose.setText('⨉')
 
+        self._setupFindEdit()
         self.resize(self._getShowSize())
+
+    def _setupFindEdit(self):
+        height = self._leFind.height()
+        size = QSize(height, height)
+        imageOff, imageOn = _genMatchCaseImages(self.font(), size)
+        self._matchCaseSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
+        self._matchCaseSwitch.setFixedSize(size)
+        action = QWidgetAction(self._leFind)
+        action.setDefaultWidget(self._matchCaseSwitch)
+        self._leFind.addAction(action, QLineEdit.TrailingPosition)
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self._onDelayFind)
@@ -84,6 +118,8 @@ class FindWidget(QWidget):
         self._tbPrev.clicked.connect(self._onPreviousClicked)
         self._tbNext.clicked.connect(self._onNextClicked)
         self._tbClose.clicked.connect(self.hideAnimate)
+
+        self._matchCaseSwitch.toggled.connect(self._onFindFlagsChanged)
 
     def _updateButtons(self, enable):
         self._tbNext.setEnabled(enable)
@@ -112,7 +148,7 @@ class FindWidget(QWidget):
         self.move(self._getShowPos())
 
     def _doFind(self):
-        self.find.emit(self._leFind.text())
+        self.find.emit(self._leFind.text(), self.flags)
 
     def _onDelayFind(self, text):
         self._delayTimer.start(200)
@@ -138,6 +174,12 @@ class FindWidget(QWidget):
 
         self._updateStatus()
         self.cursorChanged.emit(self._findResult[self._curIndex])
+
+    def _onFindFlagsChanged(self, checked):
+        self._flags = 0
+        if self._matchCaseSwitch.isChecked():
+            self._flags |= FindFlags.CaseSenitively
+        self._doFind()
 
     def _updateStatus(self):
         if self._findResult:
@@ -183,6 +225,10 @@ class FindWidget(QWidget):
     @property
     def text(self):
         return self._leFind.text()
+
+    @property
+    def flags(self):
+        return self._flags
 
     def updateFindResult(self, result, curIndex=0, part=FindPart.All):
         if part in [FindPart.CurrentPage, FindPart.All]:
