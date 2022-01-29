@@ -74,7 +74,7 @@ class FindWidget(QWidget):
         self._spinner = QtWaitingSpinner(self)
 
         leFindHeight = self._leFind.sizeHint().height()
-        self._leFind.setFixedSize(dpiScaled(100), leFindHeight)
+        self._leFind.setFixedSize(dpiScaled(130), leFindHeight)
 
         height = self._leFind.height() // 6
         self._spinner.setLineLength(height)
