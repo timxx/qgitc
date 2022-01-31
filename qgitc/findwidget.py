@@ -8,68 +8,10 @@ from .stylehelper import dpiScaled
 from .textcursor import TextCursor
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import FindPart, FindFlags
-from .toggleimagebutton import ToggleImageButton
+from .toggleiconbutton import ToggleIconButton
+from .common import dataDirPath
 
 import bisect
-
-
-def _genMatchCaseImages(font, size):
-    def _genImage(bgColor, fgColor):
-        image = QImage(size, QImage.Format_ARGB32)
-        image.fill(bgColor)
-        painter = QPainter(image)
-        painter.setRenderHint(QPainter.TextAntialiasing)
-        painter.setFont(font)
-        painter.setPen(fgColor)
-        painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "Aa")
-        painter.end()
-        return image
-
-    imageOff = _genImage(Qt.transparent, Qt.black)
-    imageOn = _genImage(Qt.black, Qt.white)
-
-    return imageOff, imageOn
-
-
-def _genMatchWholeWordImages(font, size):
-    def _genImage(bgColor, fgColor):
-        image = QImage(size, QImage.Format_ARGB32)
-        image.fill(bgColor)
-        painter = QPainter(image)
-        painter.setRenderHint(QPainter.TextAntialiasing)
-        painter.setFont(font)
-        painter.setPen(fgColor)
-        br = painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "ab")
-
-        h = dpiScaled(2)
-        painter.drawLine(QPoint(0, br.bottom()), QPoint(size.width(), br.bottom()))
-        painter.drawLine(QPoint(0, br.bottom()), QPoint(0, br.bottom() - h))
-        painter.drawLine(QPoint(size.width(), br.bottom()), QPoint(size.width() - dpiScaled(1), br.bottom() - h))
-
-        painter.end()
-        return image
-
-    imageOff = _genImage(Qt.transparent, Qt.black)
-    imageOn = _genImage(Qt.black, Qt.white)
-    return imageOff, imageOn
-
-
-def _genMatchRegexImages(font, size):
-    def _genImage(bgColor, fgColor):
-        image = QImage(size, QImage.Format_ARGB32)
-        image.fill(bgColor)
-        painter = QPainter(image)
-        painter.setRenderHint(QPainter.TextAntialiasing)
-        painter.setFont(font)
-        painter.setPen(fgColor)
-        painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "▖*")
-        painter.end()
-        return image
-
-    imageOff = _genImage(Qt.transparent, Qt.black)
-    imageOn = _genImage(Qt.black, Qt.white)
-
-    return imageOff, imageOn
 
 
 class FindWidget(QWidget):
@@ -140,30 +82,23 @@ class FindWidget(QWidget):
         self.resize(self._getShowSize())
 
     def _setupFindEdit(self):
-        height = self._leFind.height()
-        size = QSize(height, height)
-        font = self.font()
+        width = self.style().pixelMetric(QStyle.PM_LineEditIconSize)
+        size = QSize(width, width)
 
-        imageOff, imageOn = _genMatchRegexImages(font, size)
-        self._matchRegexSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
-        self._matchRegexSwitch.setFixedSize(size)
-        action = QWidgetAction(self._leFind)
-        action.setDefaultWidget(self._matchRegexSwitch)
-        self._leFind.addAction(action, QLineEdit.TrailingPosition)
+        def _addAction(iconPath):
+            icon = QIcon(iconPath)
+            button = ToggleIconButton(icon, size, self._leFind)
+            action = QWidgetAction(self._leFind)
+            action.setDefaultWidget(button)
+            self._leFind.addAction(action, QLineEdit.TrailingPosition)
+            return button
 
-        imageOff, imageOn = _genMatchWholeWordImages(font, size)
-        self._matchWholeWordSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
-        self._matchWholeWordSwitch.setFixedSize(size)
-        action = QWidgetAction(self._leFind)
-        action.setDefaultWidget(self._matchWholeWordSwitch)
-        self._leFind.addAction(action, QLineEdit.TrailingPosition)
-
-        imageOff, imageOn = _genMatchCaseImages(font, size)
-        self._matchCaseSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
-        self._matchCaseSwitch.setFixedSize(size)
-        action = QWidgetAction(self._leFind)
-        action.setDefaultWidget(self._matchCaseSwitch)
-        self._leFind.addAction(action, QLineEdit.TrailingPosition)
+        iconPath = dataDirPath() + "/icons"
+        self._matchRegexSwitch = _addAction(iconPath + "/find-regex.svg")
+        self._matchWholeWordSwitch = _addAction(
+            iconPath + "/find-whole-words.svg")
+        self._matchCaseSwitch = _addAction(
+            iconPath + "/find-case-senitively.svg")
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self._onDelayFind)
