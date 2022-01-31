@@ -85,20 +85,25 @@ class FindWidget(QWidget):
         width = self.style().pixelMetric(QStyle.PM_LineEditIconSize)
         size = QSize(width, width)
 
-        def _addAction(iconPath):
+        def _addAction(iconPath, tooltip):
             icon = QIcon(iconPath)
             button = ToggleIconButton(icon, size, self._leFind)
+            button.setToolTip(tooltip)
             action = QWidgetAction(self._leFind)
             action.setDefaultWidget(button)
             self._leFind.addAction(action, QLineEdit.TrailingPosition)
             return button
 
         iconPath = dataDirPath() + "/icons"
-        self._matchRegexSwitch = _addAction(iconPath + "/find-regex.svg")
+        self._matchRegexSwitch = _addAction(
+            iconPath + "/find-regex.svg",
+            self.tr("Use Regular Expression"))
         self._matchWholeWordSwitch = _addAction(
-            iconPath + "/find-whole-words.svg")
+            iconPath + "/find-whole-words.svg",
+            self.tr("Match Whole Word"))
         self._matchCaseSwitch = _addAction(
-            iconPath + "/find-case-senitively.svg")
+            iconPath + "/find-case-senitively.svg",
+            self.tr("Match Case"))
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self._onDelayFind)
