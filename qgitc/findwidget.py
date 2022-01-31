@@ -54,6 +54,24 @@ def _genMatchWholeWordImages(font, size):
     return imageOff, imageOn
 
 
+def _genMatchRegexImages(font, size):
+    def _genImage(bgColor, fgColor):
+        image = QImage(size, QImage.Format_ARGB32)
+        image.fill(bgColor)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.TextAntialiasing)
+        painter.setFont(font)
+        painter.setPen(fgColor)
+        painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "▖*")
+        painter.end()
+        return image
+
+    imageOff = _genImage(Qt.transparent, Qt.black)
+    imageOn = _genImage(Qt.black, Qt.white)
+
+    return imageOff, imageOn
+
+
 class FindWidget(QWidget):
     find = Signal(str, int)
     cursorChanged = Signal(TextCursor)
@@ -126,6 +144,13 @@ class FindWidget(QWidget):
         size = QSize(height, height)
         font = self.font()
 
+        imageOff, imageOn = _genMatchRegexImages(font, size)
+        self._matchRegexSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
+        self._matchRegexSwitch.setFixedSize(size)
+        action = QWidgetAction(self._leFind)
+        action.setDefaultWidget(self._matchRegexSwitch)
+        self._leFind.addAction(action, QLineEdit.TrailingPosition)
+
         imageOff, imageOn = _genMatchWholeWordImages(font, size)
         self._matchWholeWordSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
         self._matchWholeWordSwitch.setFixedSize(size)
@@ -150,6 +175,7 @@ class FindWidget(QWidget):
 
         self._matchCaseSwitch.toggled.connect(self._onFindFlagsChanged)
         self._matchWholeWordSwitch.toggled.connect(self._onFindFlagsChanged)
+        self._matchRegexSwitch.toggled.connect(self._onFindFlagsChanged)
 
     def _updateButtons(self, enable):
         self._tbNext.setEnabled(enable)
@@ -211,6 +237,8 @@ class FindWidget(QWidget):
             self._flags |= FindFlags.CaseSenitively
         if self._matchWholeWordSwitch.isChecked():
             self._flags |= FindFlags.WholeWords
+        if self._matchRegexSwitch.isChecked():
+            self._flags |= FindFlags.UseRegExp
         self._doFind()
 
     def _updateStatus(self):
