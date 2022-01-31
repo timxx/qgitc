@@ -14,23 +14,43 @@ import bisect
 
 
 def _genMatchCaseImages(font, size):
-    imageOff = QImage(size, QImage.Format_ARGB32)
-    imageOff.fill(Qt.transparent)
-    painter = QPainter(imageOff)
-    painter.setRenderHint(QPainter.TextAntialiasing)
-    painter.setFont(font)
-    painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "Aa")
-    painter.end()
+    def _genImage(bgColor, fgColor):
+        image = QImage(size, QImage.Format_ARGB32)
+        image.fill(bgColor)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.TextAntialiasing)
+        painter.setFont(font)
+        painter.setPen(fgColor)
+        painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "Aa")
+        painter.end()
+        return image
 
-    imageOn = QImage(size, QImage.Format_ARGB32)
-    imageOn.fill(Qt.black)
-    painter = QPainter(imageOn)
-    painter.setRenderHint(QPainter.TextAntialiasing)
-    painter.setFont(font)
-    painter.setPen(Qt.white)
-    painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "Aa")
-    painter.end()
+    imageOff = _genImage(Qt.transparent, Qt.black)
+    imageOn = _genImage(Qt.black, Qt.white)
 
+    return imageOff, imageOn
+
+
+def _genMatchWholeWordImages(font, size):
+    def _genImage(bgColor, fgColor):
+        image = QImage(size, QImage.Format_ARGB32)
+        image.fill(bgColor)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.TextAntialiasing)
+        painter.setFont(font)
+        painter.setPen(fgColor)
+        br = painter.drawText(QRect(QPoint(0, 0), size), Qt.AlignCenter, "ab")
+
+        h = dpiScaled(2)
+        painter.drawLine(QPoint(0, br.bottom()), QPoint(size.width(), br.bottom()))
+        painter.drawLine(QPoint(0, br.bottom()), QPoint(0, br.bottom() - h))
+        painter.drawLine(QPoint(size.width(), br.bottom()), QPoint(size.width() - dpiScaled(1), br.bottom() - h))
+
+        painter.end()
+        return image
+
+    imageOff = _genImage(Qt.transparent, Qt.black)
+    imageOn = _genImage(Qt.black, Qt.white)
     return imageOff, imageOn
 
 
@@ -104,7 +124,16 @@ class FindWidget(QWidget):
     def _setupFindEdit(self):
         height = self._leFind.height()
         size = QSize(height, height)
-        imageOff, imageOn = _genMatchCaseImages(self.font(), size)
+        font = self.font()
+
+        imageOff, imageOn = _genMatchWholeWordImages(font, size)
+        self._matchWholeWordSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
+        self._matchWholeWordSwitch.setFixedSize(size)
+        action = QWidgetAction(self._leFind)
+        action.setDefaultWidget(self._matchWholeWordSwitch)
+        self._leFind.addAction(action, QLineEdit.TrailingPosition)
+
+        imageOff, imageOn = _genMatchCaseImages(font, size)
         self._matchCaseSwitch = ToggleImageButton(imageOff, imageOn, self._leFind)
         self._matchCaseSwitch.setFixedSize(size)
         action = QWidgetAction(self._leFind)
@@ -120,6 +149,7 @@ class FindWidget(QWidget):
         self._tbClose.clicked.connect(self.hideAnimate)
 
         self._matchCaseSwitch.toggled.connect(self._onFindFlagsChanged)
+        self._matchWholeWordSwitch.toggled.connect(self._onFindFlagsChanged)
 
     def _updateButtons(self, enable):
         self._tbNext.setEnabled(enable)
@@ -179,6 +209,8 @@ class FindWidget(QWidget):
         self._flags = 0
         if self._matchCaseSwitch.isChecked():
             self._flags |= FindFlags.CaseSenitively
+        if self._matchWholeWordSwitch.isChecked():
+            self._flags |= FindFlags.WholeWords
         self._doFind()
 
     def _updateStatus(self):
