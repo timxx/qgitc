@@ -54,7 +54,7 @@ class FindWidget(QWidget):
         self._spinner = QtWaitingSpinner(self)
 
         leFindHeight = self._leFind.sizeHint().height()
-        self._leFind.setFixedSize(dpiScaled(130), leFindHeight)
+        self._leFind.setFixedSize(dpiScaled(230), leFindHeight)
 
         height = self._leFind.height() // 6
         self._spinner.setLineLength(height)
@@ -117,7 +117,7 @@ class FindWidget(QWidget):
         self._tbPrev.setEnabled(enable)
 
     def _getShowSize(self):
-        width = dpiScaled(300)
+        width = dpiScaled(400)
         leFindHeight = self._leFind.sizeHint().height()
         margin = dpiScaled(3)
         heigth = leFindHeight + margin * 2
