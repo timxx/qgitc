@@ -31,7 +31,7 @@ class ColorWidget(QPushButton):
 
     def _onClicked(self, checked):
         colorDlg = QColorDialog(self.color, self)
-        if colorDlg.exec_() != QDialog.Accepted:
+        if colorDlg.exec() != QDialog.Accepted:
             return
 
         self.color = colorDlg.currentColor()

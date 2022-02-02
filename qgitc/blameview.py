@@ -400,7 +400,7 @@ class RevisionPanel(TextViewer):
 
         rev = self._revs[self._hoveredLine]
         self._acBlamePrevCommit.setEnabled(rev.previous is not None)
-        self._menu.exec_(event.globalPos())
+        self._menu.exec(event.globalPos())
 
     def update(self):
         self.viewport().update()

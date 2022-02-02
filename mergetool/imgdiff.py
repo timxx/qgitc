@@ -452,7 +452,7 @@ class DiffWindow(QMainWindow):
 
     def __onMenuOpen(self):
         dlg = NewDiffDlg(self)
-        if dlg.exec_() == QDialog.Accepted:
+        if dlg.exec() == QDialog.Accepted:
             self._diffView.diff(dlg.imageA(), dlg.imageB(),
                                 dlg.imageC(), dlg.imageO())
             self.setBase('A')
@@ -563,7 +563,7 @@ def main():
 
     window.showMaximized()
 
-    return app.exec_()
+    return app.exec()
 
 
 if __name__ == "__main__":

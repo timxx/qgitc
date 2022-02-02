@@ -87,7 +87,7 @@ class BlameWindow(StateWindow):
         gotoDialog.setRange(1,
                             viewer.textLineCount(),
                             viewer.currentLineNo + 1)
-        ret = gotoDialog.exec_()
+        ret = gotoDialog.exec()
         if ret != QDialog.Accepted:
             return
 

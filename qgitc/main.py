@@ -136,7 +136,7 @@ def _do_log(args):
     else:
         window.showMaximized()
 
-    return app.exec_()
+    return app.exec()
 
 
 def _do_blame(args):
@@ -152,7 +152,7 @@ def _do_blame(args):
 
     window.blame(args.file, args.rev, args.line_number)
 
-    return app.exec_()
+    return app.exec()
 
 
 def _update_scale_factor():

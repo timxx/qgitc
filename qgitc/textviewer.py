@@ -910,7 +910,7 @@ class TextViewer(QAbstractScrollArea):
     def contextMenuEvent(self, event):
         menu = self.contextMenu
         self.updateContextMenu(event.pos())
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def keyPressEvent(self, event):
         if event.matches(QKeySequence.Copy):

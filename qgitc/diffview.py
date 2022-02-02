@@ -492,7 +492,7 @@ class DiffView(QWidget):
         if self.__isCommentItem(index):
             return
 
-        self.twMenu.exec_(self.fileListView.mapToGlobal(pos))
+        self.twMenu.exec(self.fileListView.mapToGlobal(pos))
 
     def __onDiffAvailable(self, lineItems, fileItems):
         self.__addToFileListView(fileItems)

@@ -342,7 +342,7 @@ class MergeWidget(QWidget):
                              QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
-            r = msgBox.exec_()
+            r = msgBox.exec()
             if r == QMessageBox.AcceptRole:
                 if isCreated:
                     self.process.write(b"c\n")
@@ -363,7 +363,7 @@ class MergeWidget(QWidget):
             msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
-            r = msgBox.exec_()
+            r = msgBox.exec()
             if r == QMessageBox.AcceptRole:
                 self.process.write(b"l\n")
             elif r == QMessageBox.RejectRole:
@@ -472,7 +472,7 @@ class MergeWidget(QWidget):
             self.acUndoMerge.setEnabled(enabled)
             self.acUseOurs.setEnabled(not self.isResolving())
             self.acUseTheirs.setEnabled(not self.isResolving())
-        self.menu.exec_(event.globalPos())
+        self.menu.exec(event.globalPos())
 
     def paintEvent(self, event):
         super().paintEvent(event)

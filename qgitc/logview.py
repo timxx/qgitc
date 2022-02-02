@@ -778,7 +778,7 @@ class LogView(QAbstractScrollArea):
         self.acClearMarks.setVisible(hasMark)
 
         globalPos = self.mapToGlobal(pos)
-        self.menu.exec_(globalPos)
+        self.menu.exec(globalPos)
 
     def updateSettings(self):
         settings = QApplication.instance().settings()

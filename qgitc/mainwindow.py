@@ -283,7 +283,7 @@ class MainWindow(StateWindow):
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
         preferences = Preferences(settings, self)
-        if preferences.exec_() == QDialog.Accepted:
+        if preferences.exec() == QDialog.Accepted:
             preferences.save()
             if settings.gitBinPath() != GitProcess.GIT_BIN:
                 qApp.postEvent(qApp, GitBinChanged())
@@ -352,7 +352,7 @@ class MainWindow(StateWindow):
 
     def __onAboutTriggered(self):
         aboutDlg = AboutDialog(self)
-        aboutDlg.exec_()
+        aboutDlg.exec()
 
     def __onRequestResolve(self, filePath):
         self.setFilterFile(filePath)

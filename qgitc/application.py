@@ -189,7 +189,7 @@ class Application(QApplication):
 
         parent = self.activeWindow()
         versionDlg = NewVersionDialog(version, parent)
-        versionDlg.exec_()
+        versionDlg.exec()
 
     def _onVersionCheckFinished(self):
         self._checker = None

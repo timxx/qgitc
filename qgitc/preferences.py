@@ -344,7 +344,7 @@ class Preferences(QDialog):
         linkEdit.setBugUrl(bugUrl)
         linkEdit.setBugPattern(bugPattern)
 
-        if linkEditDlg.exec_() == QDialog.Accepted:
+        if linkEditDlg.exec() == QDialog.Accepted:
             self.settings.setCommitUrl(None, linkEdit.commitUrl())
             self.settings.setBugUrl(None, linkEdit.bugUrl())
             self.settings.setBugPattern(None, linkEdit.bugPattern())
