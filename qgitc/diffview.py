@@ -291,7 +291,12 @@ class DiffView(QWidget):
         listViewWrapper = QWidget(self)
         vbox = QVBoxLayout(listViewWrapper)
         vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(fileListFilter)
+
+        self.filterStatus = QLabel("0", self)
+        hbox = QHBoxLayout()
+        hbox.addWidget(fileListFilter)
+        hbox.addWidget(self.filterStatus)
+        vbox.addLayout(hbox)
         vbox.addWidget(self.fileListView)
 
         self.splitter.addWidget(listViewWrapper)
@@ -514,6 +519,8 @@ class DiffView(QWidget):
         else:
             self.fileListModel.addFile(args[0], args[1])
 
+        self._updateFilterStatus()
+
     def __commitDesc(self, sha1):
         if sha1 == Git.LUC_SHA1:
             subject = self.tr(
@@ -587,6 +594,7 @@ class DiffView(QWidget):
     def clear(self):
         self.fileListModel.clear()
         self.viewer.clear()
+        self._updateFilterStatus()
 
     def setFilterPath(self, path):
         # no need update
@@ -620,6 +628,16 @@ class DiffView(QWidget):
         else:
             index = self.fileListProxy.index(0, 0)
             self.fileListView.setCurrentIndex(index)
+
+        self._updateFilterStatus()
+
+    def _updateFilterStatus(self):
+        if not self.fileListProxy.filterRegularExpression().pattern():
+            self.filterStatus.setText(str(self.fileListProxy.rowCount()))
+        else:
+            self.filterStatus.setText("{}/{}".format(
+                self.fileListProxy.rowCount(),
+                self.fileListModel.rowCount()))
 
     def eventFilter(self, obj, event):
         if obj == self.fileListView and \
