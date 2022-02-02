@@ -7,7 +7,6 @@ from PySide6.QtCore import *
 from .ui_preferences import *
 from .mergetool import MergeTool
 from .comboboxitemdelegate import ComboBoxItemDelegate
-from .stylehelper import dpiScaled
 from .linkeditdialog import LinkEditDialog
 from .gitutils import Git, GitProcess
 
@@ -164,7 +163,7 @@ class Preferences(QDialog):
         self.ui.setupUi(self)
         self.settings = settings
 
-        self.resize(dpiScaled(QSize(655, 396)))
+        self.resize(QSize(655, 396))
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)

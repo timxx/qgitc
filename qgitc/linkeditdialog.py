@@ -8,7 +8,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QSize
 
 from .linkeditwidget import LinkEditWidget
-from .stylehelper import dpiScaled
 
 
 class LinkEditDialog(QDialog):
@@ -31,4 +30,4 @@ class LinkEditDialog(QDialog):
         buttonBox.rejected.connect(self.reject)
 
     def sizeHint(self):
-        return QSize(dpiScaled(400), 0)
+        return QSize(400, 0)

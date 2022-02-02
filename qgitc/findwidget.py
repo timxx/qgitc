@@ -4,7 +4,6 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 
-from .stylehelper import dpiScaled
 from .textcursor import TextCursor
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import FindPart, FindFlags
@@ -32,8 +31,8 @@ class FindWidget(QWidget):
         self._setupSignals()
 
         effect = QGraphicsDropShadowEffect(self)
-        effect.setBlurRadius(dpiScaled(15))
-        offset = dpiScaled(1)
+        effect.setBlurRadius(15)
+        offset = 1
         effect.setOffset(offset, offset)
         self.setGraphicsEffect(effect)
 
@@ -54,7 +53,7 @@ class FindWidget(QWidget):
         self._spinner = QtWaitingSpinner(self)
 
         leFindHeight = self._leFind.sizeHint().height()
-        self._leFind.setFixedSize(dpiScaled(230), leFindHeight)
+        self._leFind.setFixedSize(230, leFindHeight)
 
         height = self._leFind.height() // 6
         self._spinner.setLineLength(height)
@@ -62,14 +61,14 @@ class FindWidget(QWidget):
         self._spinner.setNumberOfLines(14)
 
         hlayout = QHBoxLayout(self)
-        margin = dpiScaled(3)
+        margin = 3
         hlayout.setContentsMargins(margin, margin, margin, margin)
         hlayout.setSpacing(margin)
 
         hlayout.addWidget(self._leFind)
         hlayout.addWidget(self._spinner)
         hlayout.addWidget(self._lbStatus)
-        hlayout.addSpacing(dpiScaled(5))
+        hlayout.addSpacing(5)
         hlayout.addWidget(self._tbPrev)
         hlayout.addWidget(self._tbNext)
         hlayout.addWidget(self._tbClose)
@@ -122,9 +121,9 @@ class FindWidget(QWidget):
         self._tbPrev.setEnabled(enable)
 
     def _getShowSize(self):
-        width = dpiScaled(400)
+        width = 400
         leFindHeight = self._leFind.sizeHint().height()
-        margin = dpiScaled(3)
+        margin = 3
         heigth = leFindHeight + margin * 2
 
         return QSize(width, heigth)
@@ -133,7 +132,7 @@ class FindWidget(QWidget):
         pos = self._host.rect().topLeft()
         offset = self._host.width() - self.width()
         pos.setX(pos.x() + offset)
-        pos.setY(pos.y() + dpiScaled(1))
+        pos.setY(pos.y() + 1)
 
         pos = self._host.mapToGlobal(pos)
         pos = self.parentWidget().mapFromGlobal(pos)
@@ -274,8 +273,7 @@ class FindWidget(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        onePixel = dpiScaled(1)
-        rc = self.rect().adjusted(0, 0, -onePixel, -onePixel)
+        rc = self.rect().adjusted(0, 0, -1, -1)
         painter.fillRect(rc, Qt.white)
         painter.setPen(Qt.gray)
         painter.drawRect(rc)

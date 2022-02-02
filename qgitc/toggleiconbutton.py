@@ -4,8 +4,6 @@ from PySide6.QtWidgets import QToolButton
 from PySide6.QtGui import (QPainter, QIcon, QPen)
 from PySide6.QtCore import (QRect, QPoint, Qt)
 
-from .stylehelper import dpiScaled
-
 
 class ToggleIconButton(QToolButton):
 
@@ -21,8 +19,8 @@ class ToggleIconButton(QToolButton):
 
         if self.isChecked():
             oldPen = painter.pen()
-            painter.setPen(QPen(Qt.black, dpiScaled(1)))
-            rc = self.rect().adjusted(dpiScaled(1), dpiScaled(1), dpiScaled(-1), dpiScaled(-1))
+            painter.setPen(QPen(Qt.black, 1))
+            rc = self.rect().adjusted(1, 1, -1, -1)
             painter.drawRect(rc)
             painter.setPen(oldPen)
 

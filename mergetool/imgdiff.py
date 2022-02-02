@@ -4,11 +4,6 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 
-try:
-    from qgitc.stylehelper import dpiScaled
-except ImportError:
-    pass
-
 import sys
 import argparse
 import shutil
@@ -28,7 +23,7 @@ class NewDiffDlg(QDialog):
     def __init__(self, parent=None):
         super(NewDiffDlg, self).__init__(parent)
         self.setWindowTitle(self.tr("New Image Diff"))
-        self.resize(dpiScaled(QSize(580, 150)))
+        self.resize(QSize(580, 150))
 
         screen = QApplication.primaryScreen()
         if screen:
@@ -126,7 +121,7 @@ class ImageViewer(QWidget):
         self.lbName = QLabel(self)
         self.lePath = QLineEdit(self)
         self.btnBrowse = QPushButton("...", self)
-        self.btnBrowse.setFixedWidth(dpiScaled(30))
+        self.btnBrowse.setFixedWidth(30)
         self.orgImage = QPixmap()
 
         hlayout = QHBoxLayout()
@@ -572,7 +567,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # for local run only
-    sys.path += [os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))]
-    from qgitc.stylehelper import dpiScaled
     main()

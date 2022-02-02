@@ -7,7 +7,6 @@ from PySide6.QtCore import *
 from .common import *
 from .gitutils import *
 from .datafetcher import DataFetcher
-from .stylehelper import dpiScaled
 from .events import CopyConflictCommit
 
 import re
@@ -503,7 +502,7 @@ class LogGraph(QWidget):
         self.update()
 
     def sizeHint(self):
-        return dpiScaled(QSize(25, 100))
+        return QSize(25, 100)
 
     def paintEvent(self, event):
         if self._graphImage:
@@ -537,9 +536,9 @@ class LogView(QAbstractScrollArea):
 
         self.checkThread = None
 
-        self.lineSpace = dpiScaled(5)
-        self.marginX = dpiScaled(3)
-        self.marginY = dpiScaled(3)
+        self.lineSpace = 5
+        self.marginX = 3
+        self.marginY = 3
 
         # commit history graphs
         self.graphs = {}
@@ -1171,7 +1170,7 @@ class LogView(QAbstractScrollArea):
 
         flags = Qt.AlignLeft | Qt.AlignVCenter
         br = painter.boundingRect(rect, flags, text)
-        br.adjust(0, dpiScaled(-1), dpiScaled(4), dpiScaled(1))
+        br.adjust(0, -1, 4, 1)
 
         painter.fillRect(br, color)
         painter.setPen(Qt.black)
@@ -1188,7 +1187,7 @@ class LogView(QAbstractScrollArea):
 
         flags = Qt.AlignLeft | Qt.AlignVCenter
         br = painter.boundingRect(rect, flags, text)
-        br.adjust(0, dpiScaled(-1), dpiScaled(4), dpiScaled(1))
+        br.adjust(0, -1, 4, 1)
 
         h = br.height()
         w = int(h / 2)
@@ -1361,8 +1360,6 @@ class LogView(QAbstractScrollArea):
         lanePen.setColor(activeColor)
         painter.setPen(lanePen)
 
-        onePixel = dpiScaled(1)
-
         # horizontal line
         if lane == Lane.MERGE_FORK or \
                 lane == Lane.JOIN or \
@@ -1403,13 +1400,13 @@ class LogView(QAbstractScrollArea):
         elif lane == Lane.UNAPPLIED:
             painter.setPen(Qt.NoPen)
             painter.setBrush(Qt.red)
-            painter.drawRect(m - r, h - onePixel, d, dpiScaled(2))
+            painter.drawRect(m - r, h - 1, d, 2)
 
         elif lane == Lane.APPLIED:
             painter.setPen(Qt.NoPen)
             painter.setBrush(Qt.darkGreen)
-            painter.drawRect(m - r, h - onePixel, d, dpiScaled(2))
-            painter.drawRect(m - onePixel, h - r, dpiScaled(2), d)
+            painter.drawRect(m - r, h - 1, d, 2)
+            painter.drawRect(m - 1, h - r, 2, d)
 
         elif lane == Lane.BOUNDARY:
             painter.setPen(Qt.black)
@@ -1726,7 +1723,7 @@ class LogView(QAbstractScrollArea):
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
         for i in range(startLine, endLine):
             rect = self.__itemRect(i)
-            rect.adjust(dpiScaled(2), 0, 0, 0)
+            rect.adjust(2, 0, 0, 0)
 
             self.__drawGraph(painter, graphPainter, rect, i)
 
@@ -1742,7 +1739,7 @@ class LogView(QAbstractScrollArea):
                 text = commit.authorDate.split(' ')[0]
                 color = QColor(140, 208, 80)
                 self.__drawTag(painter, rect, color, text)
-                rect.adjust(dpiScaled(4), 0, 0, 0)
+                rect.adjust(4, 0, 0, 0)
 
             # marker
             self.marker.draw(i, painter, rect)
@@ -1754,7 +1751,7 @@ class LogView(QAbstractScrollArea):
                 if self.hasFocus():
                     painter.setPen(QPen(Qt.DotLine))
                     painter.drawRect(rect.adjusted(
-                        0, 0, dpiScaled(-1), dpiScaled(-1)))
+                        0, 0, -1, -1))
                 painter.setPen(palette.color(QPalette.HighlightedText))
             else:
                 painter.setPen(palette.color(QPalette.WindowText))

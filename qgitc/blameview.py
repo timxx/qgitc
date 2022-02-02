@@ -27,7 +27,6 @@ from PySide6.QtCore import (
 
 from datetime import datetime
 from .datafetcher import DataFetcher
-from .stylehelper import dpiScaled
 from .sourceviewer import SourceViewer
 from .textline import LinkTextLine, Link
 from .gitutils import Git
@@ -337,8 +336,7 @@ class RevisionPanel(TextViewer):
         painter.setClipRect(eventRect)
         painter.setFont(self._font)
 
-        onePixel = dpiScaled(1)
-        painter.fillRect(self.rect().adjusted(onePixel, onePixel, 0, 0),
+        painter.fillRect(self.rect().adjusted(1, 1, 0, 0),
                          QColor(250, 250, 250))
 
         y = 0
@@ -518,7 +516,7 @@ class BlameSourceViewer(SourceViewer):
         lineRect.translate(offset)
         lineRect.setRight(self.viewport().rect().width()
                           - offset.x()
-                          - dpiScaled(1))
+                          - 1)
 
         return lineRect.toRect()
 
@@ -559,10 +557,10 @@ class BlameSourceViewer(SourceViewer):
         # offset <= 2 is not working as the paintEvent rect
         # is not high enough for repaint
         # even if the update rect seems OK LoL
-        offset = dpiScaled(3)
+        offset = 3
         self.viewport().update(r.adjusted(-offset, -offset, offset, offset))
         r = self._lineRect(newLine)
-        offset = dpiScaled(1)
+        offset = 1
         self.viewport().update(r.adjusted(-offset, -offset, offset, offset))
 
     def paintEvent(self, event):

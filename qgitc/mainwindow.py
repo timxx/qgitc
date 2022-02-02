@@ -15,7 +15,6 @@ from .gitutils import Git, GitProcess
 from .diffview import PatchViewer
 from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
-from .stylehelper import dpiScaled
 from .statewindow import StateWindow
 from .logview import LogView
 from .events import GitBinChanged
@@ -93,7 +92,7 @@ class MainWindow(StateWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.resize(dpiScaled(QSize(800, 600)))
+        self.resize(QSize(800, 600))
 
         self.gitViewB = None
 

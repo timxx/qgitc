@@ -5,7 +5,6 @@ from PySide6.QtCore import QSize
 from .ui_aboutdialog import Ui_AboutDialog
 from .common import dataDirPath
 from .version import VERSION
-from .stylehelper import dpiScaled
 
 
 class AboutDialog(QDialog, Ui_AboutDialog):
@@ -16,14 +15,14 @@ class AboutDialog(QDialog, Ui_AboutDialog):
         self.setupUi(self)
 
         icon = qApp.windowIcon()
-        self.appIcon.setPixmap(icon.pixmap(dpiScaled(64), dpiScaled(64)))
+        self.appIcon.setPixmap(icon.pixmap(64, 64))
 
         self.tbAbout.setOpenExternalLinks(True)
         self.tbLicense.setOpenExternalLinks(True)
 
         self.__initTabs()
 
-        self.resize(dpiScaled(QSize(465, 470)))
+        self.resize(QSize(465, 470))
 
     def __initTabs(self):
         about = "<center><h3>QGitc " + VERSION + "</h3></center>"

@@ -12,7 +12,6 @@ from PySide6.QtCore import (
     Qt)
 
 from .blameview import BlameView
-from .stylehelper import dpiScaled
 from .gotodialog import GotoDialog
 from .findwidget import FindWidget
 from .statewindow import StateWindow
@@ -30,7 +29,7 @@ class BlameWindow(StateWindow):
 
         centralWidget = QWidget(self)
         layout = QVBoxLayout(centralWidget)
-        margin = dpiScaled(5)
+        margin = 5
         layout.setContentsMargins(margin, margin, margin, margin)
 
         self._view = BlameView(self)

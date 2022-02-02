@@ -8,7 +8,6 @@ import PySide6
 from .ui_gitview import *
 from .common import *
 from .gitutils import Git
-from .stylehelper import dpiScaled
 from .events import BlameEvent
 
 import re
@@ -33,12 +32,6 @@ class GitView(QWidget):
         self.ui.logView.setLogGraph(self.ui.logGraph)
         self.ui.logWidget.setStretchFactor(0, 0)
         self.ui.logWidget.setStretchFactor(1, 1)
-
-        n = self.ui.logWidget.handleWidth()
-        self.ui.logWidget.setHandleWidth(dpiScaled(n))
-
-        n = self.ui.logWidget.lineWidth()
-        self.ui.logWidget.setLineWidth(dpiScaled(n))
 
         height = self.ui.splitter.sizeHint().height()
         sizes = [height * 1 / 4, height * 3 / 4]

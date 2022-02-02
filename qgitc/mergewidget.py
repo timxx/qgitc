@@ -4,7 +4,6 @@ from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 from .gitutils import Git, GitProcess
-from .stylehelper import dpiScaled
 from .conflictlog import (
     ConflictLogExcel,
     ConflictLogXlsx,
@@ -173,13 +172,13 @@ class MergeWidget(QWidget):
         self.btnChooseLog.clicked.connect(self.__onChooseLogFile)
 
     def __makeTextIcon(self, text, color):
-        img = QPixmap(dpiScaled(QSize(32, 32)))
+        img = QPixmap(QSize(32, 32))
         img.fill(Qt.transparent)
 
         painter = QPainter(img)
         painter.setPen(color)
         font = QFont()
-        font.setPixelSize(dpiScaled(32))
+        font.setPixelSize(32)
         painter.setFont(font)
         painter.drawText(img.rect(), Qt.AlignCenter, text)
         painter = None
@@ -482,7 +481,7 @@ class MergeWidget(QWidget):
             QTimer.singleShot(0, self.__onFirstShow)
 
     def sizeHint(self):
-        return dpiScaled(QSize(500, 700))
+        return QSize(500, 700)
 
     def updateList(self):
         if not Git.available():

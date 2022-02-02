@@ -9,7 +9,6 @@ from PySide6.QtCore import (
     QEvent)
 
 from .textline import SourceTextLineBase
-from .stylehelper import dpiScaled
 from .textviewer import TextViewer
 
 import re
@@ -92,10 +91,9 @@ class SourceViewer(TextViewer):
         if self._panel:
             rc = self.rect()
             width = self._panel.width()
-            onePixel = dpiScaled(1)
-            self.setViewportMargins(width + onePixel, 0, 0, 0)
-            self._panel.setGeometry(rc.left() + onePixel,
-                                    rc.top() + onePixel,
+            self.setViewportMargins(width + 1, 0, 0, 0)
+            self._panel.setGeometry(rc.left() + 1,
+                                    rc.top() + 1,
                                     width,
                                     self.viewport().height())
 
