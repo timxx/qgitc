@@ -20,3 +20,4 @@ class ColorSchema():
     Submodule = QColor(0, 160, 0)
     Submodule2 = QColor(255, 0, 0)
     FindResult = QColor(246, 185, 77)
+    SimilarWord = QColor(226, 230, 214)

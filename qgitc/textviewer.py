@@ -103,6 +103,8 @@ class TextViewer(QAbstractScrollArea):
         qApp.settings().fallbackGlobalChanged.connect(
             self.delayUpdateSettings)
 
+        self._similarWordPattern = None
+
     def updateFont(self, font):
         self._font = font
         fm = QFontMetrics(self._font)
@@ -190,6 +192,7 @@ class TextViewer(QAbstractScrollArea):
         self._cursor.clear()
         self._clickOnLink = False
         self._link = None
+        self._similarWordPattern = None
 
         self._convertIndex = 0
         if self._convertTimerId is not None:
@@ -598,6 +601,20 @@ class TextViewer(QAbstractScrollArea):
 
         return result
 
+    def _similarWordRange(self, textLine):
+        if not self._similarWordPattern:
+            return None
+
+        result = []
+        fmt = QTextCharFormat()
+        fmt.setBackground(ColorSchema.SimilarWord)
+
+        matches = self._similarWordPattern.finditer(textLine.text())
+        for m in matches:
+            result.append(createFormatRange(m.start(), m.end() - m.start(), fmt))
+
+        return result
+
     def _isLetter(self, char):
         if char >= 'a' and char <= 'z':
             return True
@@ -765,6 +782,10 @@ class TextViewer(QAbstractScrollArea):
 
             formats = []
 
+            similarWordRg = self._similarWordRange(textLine)
+            if similarWordRg:
+                formats.extend(similarWordRg)
+
             # find result
             findRg = self._findResultFormatRange(i, endLine)
             if findRg:
@@ -798,6 +819,12 @@ class TextViewer(QAbstractScrollArea):
 
         self._clickOnLink = self._link is not None
         self._invalidateSelection()
+
+        # FIXME: delay a while to avoid clearing by double click
+        # Qt.MouseEventCreatedDoubleClick flag doesn't help
+        if self._similarWordPattern is not None:
+            self._similarWordPattern = None
+            self.viewport().update()
 
         textLine = self.textLineForPos(event.pos())
         if not textLine:
@@ -854,8 +881,10 @@ class TextViewer(QAbstractScrollArea):
         end = offset
 
         # find the word
+        isWord = False
         content = textLine.text()
         if offset < len(content) and self._isLetter(content[offset]):
+            isWord = True
             for i in range(offset - 1, -1, -1):
                 if self._isLetter(content[i]):
                     begin = i
@@ -870,10 +899,19 @@ class TextViewer(QAbstractScrollArea):
 
         end += 1
         word = content[begin:end]
+        referWordPattern = None
         if word:
             self._cursor.moveTo(textLine.lineNo(), begin)
             self._cursor.selectTo(textLine.lineNo(), end)
             self._invalidateSelection()
+
+            word = word.strip()
+            if word:
+                referWordPattern = re.compile(r"\b{}\b".format(
+                    word)) if isWord else re.compile(r"{}".format(re.escape(word)))
+        if self._similarWordPattern != referWordPattern:
+            self._similarWordPattern = referWordPattern
+            self.viewport().update()
 
     def mouseMoveEvent(self, event):
         if self._clickTimer.isValid():
