@@ -74,7 +74,8 @@ class BuildQt(Command):
                 path = "/usr/lib/qt6/bin" + os.pathsep + ENV_PATH
             lrelease = find_executable("lrelease", path)
         if not lrelease:
-            raise DistutilsExecError("Missing lrelease")
+            print("Missing lrelease, no translation will be built.")
+            return
 
         path = os.path.realpath("qgitc/data/translations/qgitc.pro")
         spawn([lrelease, path])
