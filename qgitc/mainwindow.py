@@ -111,6 +111,7 @@ class MainWindow(StateWindow):
         self.__setupMenus()
 
     def __setupSignals(self):
+        self.ui.acReload.triggered.connect(self.reloadRepo)
         self.ui.acQuit.triggered.connect(self.close)
 
         self.ui.acPreferences.triggered.connect(
