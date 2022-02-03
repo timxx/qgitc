@@ -7,6 +7,7 @@ from distutils.command.build import build
 from distutils.spawn import find_executable, spawn
 from distutils.errors import DistutilsExecError
 from glob import glob
+from subprocess import call
 
 from qgitc.version import VERSION
 
@@ -47,7 +48,8 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        uic_bin = find_executable("pyside6-uic", ENV_PATH) or find_executable("uic", ENV_PATH)
+        uic_bin = find_executable(
+            "pyside6-uic", ENV_PATH) or find_executable("uic", ENV_PATH)
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
@@ -67,18 +69,13 @@ class BuildQt(Command):
             self._fix_import(pyFile, pattern)
 
     def compile_ts(self):
-        lrelease = find_executable("lrelease-qt6", ENV_PATH)
-        if not lrelease:
-            path = ENV_PATH
-            if os.name == "posix":
-                path = "/usr/lib/qt6/bin" + os.pathsep + ENV_PATH
-            lrelease = find_executable("lrelease", path)
+        lrelease = find_executable("pyside6-lrelease", ENV_PATH)
         if not lrelease:
             print("Missing lrelease, no translation will be built.")
             return
 
-        path = os.path.realpath("qgitc/data/translations/qgitc.pro")
-        spawn([lrelease, path])
+        path = os.path.realpath("qgitc/data/translations/qgitc.json")
+        call([lrelease, "-project", path], cwd="qgitc/data/translations")
 
     def _fix_import(self, pyFile, pattern):
         f = open(pyFile, "rb")
@@ -107,8 +104,9 @@ class UpdateTs(Command):
         if not lupdate:
             raise DistutilsExecError("Missing pyside6-lupdate")
 
-        path = os.path.realpath("qgitc/data/translations/qgitc.pro")
-        spawn([lupdate, path])
+        path = os.path.realpath("qgitc/data/translations/qgitc.json")
+        call([lupdate, path, "-extensions", "py,ui", "-ts",
+             "zh_CN.ts"], cwd="qgitc/data/translations")
 
 
 with open("README.md", "r") as f:

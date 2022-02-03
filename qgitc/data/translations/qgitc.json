@@ -1,0 +1,50 @@
+[
+    {
+        "excluded": [],
+        "includePaths": [
+            "../../"
+        ],
+        "projectFile": "qgitc.pro",
+        "sources": [
+            "../../aboutdialog.py",
+            "../../aboutdialog.ui",
+            "../../application.py",
+            "../../blameview.py",
+            "../../blamewindow.py",
+            "../../colorschema.py",
+            "../../colorwidget.py",
+            "../../comboboxitemdelegate.py",
+            "../../common.py",
+            "../../datafetcher.py",
+            "../../diffview.py",
+            "../../events.py",
+            "../../excepthandler.py",
+            "../../findwidget.py",
+            "../../gitutils.py",
+            "../../gitview.py",
+            "../../gitview.ui",
+            "../../gotodialog.py",
+            "../../linkeditdialog.py",
+            "../../linkeditwidget.py",
+            "../../logview.py",
+            "../../main.py",
+            "../../mainwindow.py",
+            "../../mainwindow.ui",
+            "../../mergetool.py",
+            "../../mergewidget.py",
+            "../../newversiondialog.py",
+            "../../preferences.py",
+            "../../preferences.ui",
+            "../../settings.py",
+            "../../sourceviewer.py",
+            "../../statewindow.py",
+            "../../textcursor.py",
+            "../../textline.py",
+            "../../textviewer.py",
+            "../../waitingspinnerwidget.py"
+        ],
+        "translations": [
+            "zh_CN.ts"
+        ]
+    }
+]
