@@ -104,9 +104,8 @@ class UpdateTs(Command):
         if not lupdate:
             raise DistutilsExecError("Missing pyside6-lupdate")
 
-        path = os.path.realpath("qgitc/data/translations/qgitc.json")
-        call([lupdate, path, "-extensions", "py,ui", "-ts",
-             "zh_CN.ts"], cwd="qgitc/data/translations")
+        call([lupdate, "-extensions", "py,ui", "qgitc",
+             "-ts", "qgitc/data/translations/zh_CN.ts"])
 
 
 with open("README.md", "r") as f:
