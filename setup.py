@@ -48,8 +48,7 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        uic_bin = find_executable(
-            "pyside6-uic", ENV_PATH) or find_executable("uic", ENV_PATH)
+        uic_bin = find_executable("pyside6-uic", ENV_PATH)
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
