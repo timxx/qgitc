@@ -30,18 +30,6 @@ def setAppUserId(appId):
         pass
 
 
-def unsetEnv(varnames):
-    if hasattr(os, "unsetenv"):
-        for var in varnames:
-            os.unsetenv(var)
-    else:
-        for var in varnames:
-            try:
-                del os.environ[var]
-            except KeyError:
-                pass
-
-
 def _setup_argument(prog):
     parser = argparse.ArgumentParser(
         usage=prog + " [-h] <command> [<args>]")
@@ -155,38 +143,7 @@ def _do_blame(args):
     return app.exec()
 
 
-def _update_scale_factor():
-    if sys.platform != "linux":
-        return
-
-    # only xfce4 for the moment
-    if not isXfce4():
-        return
-
-    xfconf_query = shutil.which("xfconf-query")
-    if not xfconf_query:
-        return
-
-    def _query_conf(name):
-        v = subprocess.check_output(
-            [xfconf_query, "-c", "xsettings", "-p", name],
-            universal_newlines=True)
-        if v:
-            v = v.rstrip('\n')
-        return v
-
-    try:
-        if _query_conf("/Gdk/WindowScalingFactor") == "2" and \
-                _query_conf("/Xft/DPI") == "96":
-            os.environ["QT_SCALE_FACTOR"] = "2"
-    except subprocess.CalledProcessError:
-        pass
-
-
 def main():
-    unsetEnv(["QT_SCALE_FACTOR", "QT_AUTO_SCREEN_SCALE_FACTOR"])
-    _update_scale_factor()
-
     args = _setup_argument(os.path.basename(sys.argv[0]))
     return args.func(args)
 
