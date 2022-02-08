@@ -62,7 +62,7 @@ class VersionChecker(QObject):
             else:
                 if v[1] < VERSION_MINOR:
                     pass
-                if v[1] > VERSION_MINOR:
+                elif v[1] > VERSION_MINOR:
                     newVersion = True
                 elif v[2] > VERSION_PATCH:
                     newVersion = True
