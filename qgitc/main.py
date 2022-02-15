@@ -2,8 +2,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QStyle,
-    QMessageBox)
+    QStyle)
 
 from .gitutils import Git
 from .excepthandler import ExceptHandler
@@ -15,8 +14,6 @@ from .common import isXfce4
 import os
 import sys
 import argparse
-import shutil
-import subprocess
 
 
 def setAppUserId(appId):

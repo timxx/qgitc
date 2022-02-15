@@ -3,7 +3,6 @@
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 from PySide6.QtCore import *
-import PySide6
 
 from .ui_gitview import *
 from .common import *

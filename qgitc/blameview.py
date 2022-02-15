@@ -22,15 +22,13 @@ from PySide6.QtCore import (
     Signal,
     QRect,
     QRectF,
-    QPointF,
-    QUrl)
+    QPointF)
 
 from datetime import datetime
 from .datafetcher import DataFetcher
 from .sourceviewer import SourceViewer
 from .textline import LinkTextLine, Link
 from .gitutils import Git
-from .colorschema import ColorSchema
 from .events import (
     BlameEvent,
     ShowCommitEvent,
@@ -40,7 +38,6 @@ from .textviewer import TextViewer
 from .common import decodeFileData
 
 import re
-import os
 
 
 __all__ = ["BlameView"]

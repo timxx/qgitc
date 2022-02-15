@@ -11,8 +11,6 @@ from PySide6.QtCore import (
 from .textline import SourceTextLineBase
 from .textviewer import TextViewer
 
-import re
-
 
 __all__ = ["SourceViewer"]
 

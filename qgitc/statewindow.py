@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtWidgets import (
-    QMainWindow,
-    QApplication)
+    QMainWindow)
 from PySide6.QtCore import Qt
 
 
