@@ -374,7 +374,10 @@ class DiffView(QWidget):
                 path = os.path.join(Git.REPO_DIR, path)
             if asWin:
                 path = path.replace('/', '\\')
-            paths += path + "\n"
+            if paths:
+                paths += "\n" + path
+            else:
+                paths += path
 
         if paths:
             clipboard = QApplication.clipboard()
