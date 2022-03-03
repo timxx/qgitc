@@ -71,12 +71,12 @@
 <context>
     <name>BlameSourceViewer</name>
     <message>
-        <location filename="../../blameview.py" line="454"/>
+        <location filename="../../blameview.py" line="451"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="457"/>
+        <location filename="../../blameview.py" line="454"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -127,22 +127,22 @@
 <context>
     <name>CommitPanel</name>
     <message>
-        <location filename="../../blameview.py" line="592"/>
+        <location filename="../../blameview.py" line="589"/>
         <source>Commit: </source>
         <translation>记录： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="596"/>
+        <location filename="../../blameview.py" line="593"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="601"/>
+        <location filename="../../blameview.py" line="598"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="607"/>
+        <location filename="../../blameview.py" line="604"/>
         <source>Previous: </source>
         <translation>前一条记录： </translation>
     </message>
@@ -165,37 +165,37 @@
         <translation>查看此文件记录(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="538"/>
+        <location filename="../../diffview.py" line="541"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="542"/>
+        <location filename="../../diffview.py" line="545"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="547"/>
+        <location filename="../../diffview.py" line="550"/>
         <source>Parent: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="580"/>
+        <location filename="../../diffview.py" line="583"/>
         <source>Comments</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="552"/>
+        <location filename="../../diffview.py" line="555"/>
         <source>Child: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="528"/>
+        <location filename="../../diffview.py" line="531"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="531"/>
+        <location filename="../../diffview.py" line="534"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
@@ -214,7 +214,7 @@
         <translation>Blame父记录</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="462"/>
+        <location filename="../../diffview.py" line="465"/>
         <source>The external diff tool crashed!</source>
         <translation>外部diff工具崩溃了！</translation>
     </message>
@@ -242,27 +242,33 @@
 <context>
     <name>FindWidget</name>
     <message>
-        <location filename="../../findwidget.py" line="99"/>
+        <location filename="../../findwidget.py" line="100"/>
         <source>Use Regular Expression</source>
         <translation>使用正则表达式</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="102"/>
+        <location filename="../../findwidget.py" line="103"/>
         <source>Match Whole Word</source>
         <translation>全字匹配</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="105"/>
+        <location filename="../../findwidget.py" line="106"/>
         <source>Match Case</source>
         <translation>匹配大小写</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="193"/>
+        <location filename="../../findwidget.py" line="196"/>
+        <location filename="../../findwidget.py" line="217"/>
         <source>No results</source>
         <translation>无查找结果</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="190"/>
+        <location filename="../../findwidget.py" line="203"/>
+        <source>Invalid regular expression: </source>
+        <translation>无效的正则表达式：</translation>
+    </message>
+    <message>
+        <location filename="../../findwidget.py" line="214"/>
         <source>Finding...</source>
         <translation>正在查找...</translation>
     </message>
@@ -325,22 +331,22 @@
         <translation>查找下一条</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="99"/>
+        <location filename="../../gitview.py" line="98"/>
         <source>Can&apos;t get branch</source>
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="235"/>
+        <location filename="../../gitview.py" line="234"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="266"/>
+        <location filename="../../gitview.py" line="265"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="269"/>
+        <location filename="../../gitview.py" line="268"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -955,7 +961,7 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="829"/>
+        <location filename="../../diffview.py" line="832"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
@@ -1290,12 +1296,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>RevisionPanel</name>
     <message>
-        <location filename="../../blameview.py" line="394"/>
+        <location filename="../../blameview.py" line="391"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="397"/>
+        <location filename="../../blameview.py" line="394"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>

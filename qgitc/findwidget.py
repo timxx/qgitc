@@ -11,6 +11,7 @@ from .toggleiconbutton import ToggleIconButton
 from .common import dataDirPath
 
 import bisect
+import re
 
 
 class FindWidget(QWidget):
@@ -146,6 +147,9 @@ class FindWidget(QWidget):
         self.find.emit(self._leFind.text(), self.flags)
 
     def _onDelayFind(self, text):
+        if self.flags & FindFlags.UseRegExp:
+            if not self._verifyPattern(text):
+                return
         self._delayTimer.start(200)
 
     def _onPreviousClicked(self):
@@ -178,7 +182,27 @@ class FindWidget(QWidget):
             self._flags |= FindFlags.WholeWords
         if self._matchRegexSwitch.isChecked():
             self._flags |= FindFlags.UseRegExp
+            if not self._verifyPattern(self._leFind.text()):
+                return
         self._doFind()
+
+    def _verifyPattern(self, pattern):
+        try:
+            re.compile(pattern)
+            if QToolTip.isVisible():
+                QToolTip.hideText()
+            return True
+        except re.error as e:
+            self._lbStatus.setText(self.tr("No results"))
+            palette = self._lbStatus.palette()
+            palette.setColor(self._lbStatus.foregroundRole(), Qt.red)
+            self._lbStatus.setPalette(palette)
+
+            pos = self.mapToGlobal(QPoint(0, 10))
+            text = self.tr("Invalid regular expression: ")
+            text += e.msg
+            QToolTip.showText(pos, text)
+            return False
 
     def _updateStatus(self):
         if self._findResult:
