@@ -393,8 +393,9 @@ class MergeWidget(QWidget):
                                   else RESOLVE_FAILED)
 
         self.leFilter.setEnabled(True)
-        self.cbAutoLog.setEnabled(True)
-        self.__onAutoLogChanged(self.cbAutoLog.checkState())
+        if HAVE_EXCEL_API or HAVE_XLSX_WRITER:
+            self.cbAutoLog.setEnabled(True)
+            self.__onAutoLogChanged(self.cbAutoLog.checkState())
         # auto next only when success
         if exitCode != 0:
             if errorData:
@@ -521,8 +522,9 @@ class MergeWidget(QWidget):
 
         # since we saved the index, so disabled ...
         self.leFilter.setEnabled(False)
-        self.cbAutoLog.setEnabled(False)
-        self.__onAutoLogChanged(Qt.Unchecked)
+        if HAVE_XLSX_WRITER or HAVE_EXCEL_API:
+            self.cbAutoLog.setEnabled(False)
+            self.__onAutoLogChanged(Qt.Unchecked)
         self.resolveIndex = index.row()
         file = index.data()
         args = ["mergetool", "--no-prompt"]
