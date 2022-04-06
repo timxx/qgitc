@@ -130,19 +130,19 @@ def _fix_data(data, encoding):
     return data
 
 
-def decodeFileData(data, encoding="utf-8"):
+def decodeFileData(data, preferEncoding="utf-8"):
     if not data:
-        return data.decode("utf-8"), encoding
+        return data.decode("utf-8"), "utf-8"
 
     try:
-        data = _fix_data(data, encoding)
-        return data.decode(encoding), encoding
+        data = _fix_data(data, preferEncoding)
+        return data.decode(preferEncoding), preferEncoding
     except UnicodeDecodeError:
         pass
 
     encodings = ["utf-8", "gb18030", "utf16"]
-    if encoding in encodings:
-        encodings.remove(encoding)
+    if preferEncoding in encodings:
+        encodings.remove(preferEncoding)
 
     # try the prefer encodings first
     for e in encodings:
@@ -162,7 +162,7 @@ def decodeFileData(data, encoding="utf-8"):
 
     # the last chance
     print(b"Warning: can't decode '%s'" % data)
-    return data.decode(encoding, "replace"), None
+    return data.decode(preferEncoding, "replace"), None
 
 
 def appDirPath():
