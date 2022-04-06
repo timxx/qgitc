@@ -9,7 +9,6 @@ from .excepthandler import ExceptHandler
 from .application import Application
 from .mainwindow import MainWindow
 from .shell import setup_shell_args
-from .common import isXfce4
 
 import os
 import sys
@@ -89,6 +88,18 @@ def _init_gui():
     return app
 
 
+def _detect_and_fix_repo(filterFile):
+    needFix = False
+    if Git.REPO_DIR:
+        needFix = Git.repoTopLevelDir(Git.REPO_DIR) is None
+    else:
+        needFix = True
+    if needFix:
+        repoDir = Git.repoTopLevelDir(os.path.dirname(filterFile))
+        if repoDir:
+            Git.REPO_DIR = repoDir
+
+
 def _do_log(args):
     app = _init_gui()
 
@@ -107,6 +118,8 @@ def _do_log(args):
             filterFile = args.file
             if not os.path.isabs(filterFile):
                 filterFile = os.path.abspath(filterFile)
+
+            _detect_and_fix_repo(filterFile)
 
             if Git.REPO_DIR:
                 normPath = os.path.normcase(os.path.normpath(filterFile))
@@ -134,6 +147,8 @@ def _do_blame(args):
         window.show()
     else:
         window.showMaximized()
+
+    _detect_and_fix_repo(args.file)
 
     window.blame(args.file, args.rev, args.line_number)
 
