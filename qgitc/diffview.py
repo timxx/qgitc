@@ -371,7 +371,8 @@ class DiffView(QWidget):
         for index in indexList:
             path = index.data()
             if absPath and Git.REPO_DIR:
-                path = os.path.join(Git.REPO_DIR, path)
+                repoDir = Git.repoTopLevelDir(Git.REPO_DIR) or Git.REPO_DIR
+                path = repoDir + "/" + path
             if asWin:
                 path = path.replace('/', '\\')
             if paths:
