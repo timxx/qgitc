@@ -268,6 +268,12 @@ class DiffView(QWidget):
             copyMenu.addAction(self.tr("As W&indows absolute"),
                                self.__onCopyWinAbsPath)
         self.twMenu.addSeparator()
+
+        self.twMenu.addAction(
+            self.tr("&Open Containing Folder"),
+            self.__onOpenContainingFolder)
+
+        self.twMenu.addSeparator()
         self.twMenu.addAction(self.tr("&Log this file"),
                               self.__onFilterPath)
         self.twMenu.addAction(self.tr("&Blame this file"),
@@ -395,6 +401,21 @@ class DiffView(QWidget):
 
     def __onCopyWinAbsPath(self):
         self.__doCopyPath(True, absPath=True)
+
+    def __onOpenContainingFolder(self):
+        index = self.fileListView.currentIndex()
+        if not index.isValid():
+            return
+
+        filePath = index.data()
+        repoDir = Git.repoTopLevelDir(Git.REPO_DIR) or Git.REPO_DIR
+        fullPath = repoDir + "/" + filePath
+        if os.name == "nt":
+            args = ["/select,", fullPath.replace("/", "\\")]
+            QProcess.startDetached("explorer", args)
+        else:
+            dir = QFileInfo(fullPath).absolutePath()
+            QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
 
     def __onFilterPath(self):
         index = self.fileListView.currentIndex()
@@ -645,7 +666,7 @@ class DiffView(QWidget):
 
     def eventFilter(self, obj, event):
         if obj == self.fileListView and \
-            event.type() == QEvent.KeyPress:
+                event.type() == QEvent.KeyPress:
             if event.matches(QKeySequence.SelectAll):
                 self.fileListView.selectAll()
                 return True
