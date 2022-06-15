@@ -12,7 +12,6 @@ from .gitutils import Git, GitProcess
 
 import sys
 import os
-import re
 import subprocess
 
 
@@ -232,9 +231,9 @@ class Preferences(QDialog):
 
         repoName = qApp.repoName()
         self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
-        self.ui.linkEditWidget.setBugUrl(self.settings.bugUrl(repoName))
-        self.ui.linkEditWidget.setBugPattern(
-            self.settings.bugPattern(repoName))
+
+        self.ui.linkEditWidget.setBugPatterns(
+            self.settings.bugPatterns(repoName))
         self.ui.cbFallback.setChecked(
             self.settings.fallbackGlobalLinks(repoName))
 
@@ -336,18 +335,15 @@ class Preferences(QDialog):
     def _onBtnGlobalClicked(self, clicked):
         linkEditDlg = LinkEditDialog(self)
         commitUrl = self.settings.commitUrl(None)
-        bugUrl = self.settings.bugUrl(None)
-        bugPattern = self.settings.bugPattern(None)
+        bugPatterns = self.settings.bugPatterns(None)
 
         linkEdit = linkEditDlg.linkEdit
         linkEdit.setCommitUrl(commitUrl)
-        linkEdit.setBugUrl(bugUrl)
-        linkEdit.setBugPattern(bugPattern)
+        linkEdit.setBugPatterns(bugPatterns)
 
         if linkEditDlg.exec() == QDialog.Accepted:
             self.settings.setCommitUrl(None, linkEdit.commitUrl())
-            self.settings.setBugUrl(None, linkEdit.bugUrl())
-            self.settings.setBugPattern(None, linkEdit.bugPattern())
+            self.settings.setBugPatterns(None, linkEdit.bugPatterns())
 
     def _onBtnDetectClicked(self):
         url, name, user = self._parseRepo()
@@ -359,30 +355,27 @@ class Preferences(QDialog):
 
         linkEdit = self.ui.linkEditWidget
         if self._isQt5Repo(name):
-            linkEdit.setBugUrl("https://bugreports.qt.io/browse/")
-            linkEdit.setBugPattern("(QTBUG-[0-9]{5,6})")
+            linkEdit.setBugPatterns(
+                [("(QTBUG-[0-9]{5,6})", "https://bugreports.qt.io/browse/")])
             if user and self._isGithubRepo(url):
                 linkEdit.setCommitUrl(
                     "https://github.com/{}/{}/commit/".format(user, name))
         elif self._isGithubRepo(url):
-            linkEdit.setBugPattern("(#([0-9]+))")
             if user:
-                linkEdit.setBugUrl(
-                    "https://github.com/{}/{}/issues/".format(user, name))
+                linkEdit.setBugPatterns(
+                    [("(#([0-9]+))", "https://github.com/{}/{}/issues/".format(user, name))])
                 linkEdit.setCommitUrl(
                     "https://github.com/{}/{}/commit/".format(user, name))
         elif self._isGiteeRepo(url):
-            linkEdit.setBugPattern("(I[A-Z0-9]{4,})")
             if user:
-                linkEdit.setBugUrl(
-                    "https://gitee.com/{}/{}/issues/".format(user, name))
+                linkEdit.setBugPatterns(
+                    [("(I[A-Z0-9]{4,})", "https://gitee.com/{}/{}/issues/".format(user, name))])
                 linkEdit.setCommitUrl(
                     "https://gitee.com/{}/{}/commit/".format(user, name))
         elif self._isGitlabRepo(url):
-            linkEdit.setBugPattern("(#([0-9]+))")
             if user:
-                linkEdit.setBugUrl(
-                    "https://gitlab.com/{}/{}/-/issues/".format(user, name))
+                linkEdit.setBugPatterns(
+                    [("(#([0-9]+))", "https://gitlab.com/{}/{}/-/issues/".format(user, name))])
                 linkEdit.setCommitUrl(
                     "https://gitlab.com/{}/{}/-/commit/".format(user, name))
         else:
@@ -414,14 +407,6 @@ class Preferences(QDialog):
                 error)
 
     def _onAccepted(self):
-        if not self._checkBugPattern():
-            QMessageBox.critical(
-                self, self.window().windowTitle(),
-                self.tr("The bug pattern is invalid, please check again."))
-            self.ui.tabWidget.setCurrentWidget(self.ui.tabSummary)
-            self.ui.linkEditWidget.leBugPattern.setFocus()
-            return
-
         if not self._checkTool(True):
             QMessageBox.critical(
                 self, self.window().windowTitle(),
@@ -466,17 +451,6 @@ class Preferences(QDialog):
             self.tr("Choose Git"))
         if f:
             self.ui.leGitPath.setText(f)
-
-    def _checkBugPattern(self):
-        value = self.ui.linkEditWidget.bugPattern().strip()
-        if not value:
-            return True
-
-        try:
-            re.compile(value)
-            return True
-        except:
-            return False
 
     def _checkTool(self, isDiff):
         if isDiff:
@@ -603,11 +577,8 @@ class Preferences(QDialog):
         repoName = qApp.repoName()
         self.settings.setCommitUrl(repoName, value)
 
-        value = self.ui.linkEditWidget.bugUrl().strip()
-        self.settings.setBugUrl(repoName, value)
-
-        value = self.ui.linkEditWidget.bugPattern().strip()
-        self.settings.setBugPattern(repoName, value)
+        value = self.ui.linkEditWidget.bugPatterns()
+        self.settings.setBugPatterns(repoName, value)
 
         value = self.ui.cbFallback.isChecked()
         self.settings.setFallbackGlobalLinks(repoName, value)

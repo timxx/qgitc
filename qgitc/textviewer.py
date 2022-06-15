@@ -117,29 +117,35 @@ class TextViewer(QAbstractScrollArea):
     def reloadBugPattern(self):
         repoName = qApp.repoName()
         sett = qApp.settings()
-        pattern = sett.bugPattern(repoName)
-        globalPattern = sett.bugPattern(
+        patterns = sett.bugPatterns(repoName)
+        globalPatterns = sett.bugPatterns(
             None) if sett.fallbackGlobalLinks(repoName) else None
 
-        self._bugPattern = None
-        if pattern == globalPattern:
-            if pattern:
-                self._bugPattern = re.compile(pattern)
-        elif pattern and globalPattern:
-            self._bugPattern = re.compile(pattern + '|' + globalPattern)
-        elif pattern:
-            self._bugPattern = re.compile(pattern)
-        elif globalPattern:
-            self._bugPattern = re.compile(globalPattern)
+        self._bugPatterns = []
+        filtered = set()
+
+        def _combine(patterns):
+            if not patterns:
+                return
+            for pattern, url in patterns:
+                if pattern not in filtered:
+                    filtered.add(pattern)
+                    try:
+                        re_pattern = re.compile(pattern)
+                        self._bugPatterns.append((Link.BugId, re_pattern, url))
+                    except re.error:
+                        continue
+
+        _combine(patterns)
+        _combine(globalPatterns)
 
     def toTextLine(self, text):
         return TextLine(text, self._font, self._option)
 
     def initTextLine(self, textLine, lineNo):
         textLine.setLineNo(lineNo)
-        if textLine.useBuiltinPatterns and self._bugPattern:
-            patterns = {Link.BugId: self._bugPattern}
-            textLine.setCustomLinkPatterns(patterns)
+        if textLine.useBuiltinPatterns and self._bugPatterns:
+            textLine.setCustomLinkPatterns(self._bugPatterns)
 
     def appendLine(self, line):
         self.appendLines([line])
@@ -631,10 +637,7 @@ class TextViewer(QAbstractScrollArea):
 
     def _reloadTextLine(self, textLine):
         if textLine.useBuiltinPatterns:
-            pattern = None
-            if self._bugPattern:
-                pattern = {Link.BugId: self._bugPattern}
-            textLine.setCustomLinkPatterns(pattern)
+            textLine.setCustomLinkPatterns(self._bugPatterns)
 
     def _toFindPattern(self, text, flags):
         exp = text

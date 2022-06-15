@@ -4,7 +4,147 @@ from PySide6.QtWidgets import (
     QWidget,
     QGridLayout,
     QLabel,
-    QLineEdit)
+    QLineEdit,
+    QVBoxLayout,
+    QTableView,
+    QHeaderView,
+    QHBoxLayout,
+    QPushButton,
+    QSpacerItem,
+    QSizePolicy,
+    QMessageBox)
+
+from PySide6.QtGui import (
+    QBrush)
+
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    Qt)
+
+import re
+
+
+class BugPattern:
+    def __init__(self, pattern=None, url=None):
+        self.pattern = pattern
+        self.url = url
+        self.error = None
+
+
+class BugPatternModel(QAbstractTableModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._data = []
+
+    def columnCount(self, parent=QModelIndex()):
+        return 2
+
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._data)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if orientation != Qt.Horizontal:
+            return None
+        if role != Qt.DisplayRole:
+            return None
+
+        if section == 0:
+            return self.tr("Bug Pattern")
+        if section == 1:
+            return self.tr("Bug Url")
+
+        return None
+
+    def flags(self, index):
+        f = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        f |= Qt.ItemIsEditable
+
+        return f
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+
+        data = self._data[index.row()]
+        col = index.column()
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            return data.pattern if col == 0 else data.url
+        if col == 0:
+            if role == Qt.ForegroundRole:
+                return QBrush(Qt.black) if data.error is None else QBrush(Qt.red)
+            elif role == Qt.ToolTipRole:
+                return data.error
+
+        return None
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if role != Qt.EditRole:
+            return False
+
+        value = value.strip()
+        if not value:
+            return False
+
+        row = index.row()
+        col = index.column()
+
+        if col == 0:
+            try:
+                if value:
+                    re.compile(value)
+                self._data[row].error = None
+            except re.error as e:
+                self._data[row].error = self.tr("Invalid regular expression: ") + e.msg
+            self._data[row].pattern = value
+        elif col == 1:
+            self._data[row].url = value
+
+        return True
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        self.beginInsertRows(parent, row, row + count - 1)
+
+        for i in range(count):
+            self._data.insert(row, BugPattern())
+
+        self.endInsertRows()
+
+        return True
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        if row >= len(self._data):
+            return False
+
+        self.beginRemoveRows(parent, row, row + count - 1)
+
+        for i in range(count - 1 + row, row - 1, -1):
+            if i < len(self._data):
+                del self._data[i]
+
+        self.endRemoveRows()
+
+        return True
+
+    def setPatterns(self, patterns):
+        parent = QModelIndex()
+
+        if self._data:
+            self.beginRemoveRows(parent, 0, len(self._data) - 1)
+            self._data = []
+            self.endRemoveRows()
+
+        if patterns:
+            self.beginInsertRows(parent, 0, len(patterns) - 1)
+            for pattern, url in patterns:
+                self._data.append(BugPattern(pattern, url))
+            self.endInsertRows()
+
+    def getPatterns(self):
+        patterns = []
+        for d in self._data:
+            patterns.append((d.pattern, d.url))
+        return patterns
 
 
 class LinkEditWidget(QWidget):
@@ -12,29 +152,41 @@ class LinkEditWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        layout = QGridLayout(self)
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        gridLayout = QGridLayout()
         label = QLabel(self.tr("Co&mmit Url:"), self)
-        layout.addWidget(label, 0, 0, 1, 1)
+        gridLayout.addWidget(label, 0, 0, 1, 1)
 
         self.leCommitUrl = QLineEdit(self)
-        layout.addWidget(self.leCommitUrl, 0, 1, 1, 1)
+        gridLayout.addWidget(self.leCommitUrl, 0, 1, 1, 1)
         label.setBuddy(self.leCommitUrl)
 
-        label = QLabel(self.tr("&Bug Url:"), self)
-        layout.addWidget(label, 1, 0, 1, 1)
+        layout.addLayout(gridLayout)
 
-        self.leBugUrl = QLineEdit(self)
-        layout.addWidget(self.leBugUrl, 1, 1, 1, 1)
-        label.setBuddy(self.leBugUrl)
+        self._setupUi()
 
-        label = QLabel(self.tr("Bug &Pattern:"), self)
-        layout.addWidget(label, 2, 0, 1, 1)
+    def _setupUi(self):
+        model = BugPatternModel()
+        self.tableView = QTableView(self)
+        self.tableView.setModel(model)
+        self.tableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.tableView.setSelectionBehavior(QTableView.SelectRows)
 
-        self.leBugPattern = QLineEdit(self)
-        layout.addWidget(self.leBugPattern, 2, 1, 1, 1)
-        label.setBuddy(self.leBugPattern)
+        self.layout().addWidget(self.tableView)
+
+        hbox = QHBoxLayout()
+        btnAdd = QPushButton(self.tr("Add"), self)
+        btnRemove = QPushButton(self.tr("Remove"), self)
+        hbox.addWidget(btnAdd)
+        hbox.addWidget(btnRemove)
+        hbox.addSpacerItem(QSpacerItem(
+            0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed))
+        self.layout().addLayout(hbox)
+
+        btnAdd.clicked.connect(self._onBtnAddClicked)
+        btnRemove.clicked.connect(self._onBtnRemoveClicked)
 
     def commitUrl(self):
         return self.leCommitUrl.text()
@@ -42,14 +194,39 @@ class LinkEditWidget(QWidget):
     def setCommitUrl(self, url):
         self.leCommitUrl.setText(url)
 
-    def bugUrl(self):
-        return self.leBugUrl.text()
+    def setBugPatterns(self, patterns):
+        self.tableView.model().setPatterns(patterns)
 
-    def setBugUrl(self, url):
-        self.leBugUrl.setText(url)
+    def bugPatterns(self):
+        return self.tableView.model().getPatterns()
 
-    def bugPattern(self):
-        return self.leBugPattern.text()
+    def _onBtnAddClicked(self, checked=False):
+        model = self.tableView.model()
+        row = model.rowCount()
+        if not model.insertRow(row):
+            return
+        index = model.index(row, 0)
+        self.tableView.edit(index)
 
-    def setBugPattern(self, pattern):
-        self.leBugPattern.setText(pattern)
+    def _onBtnRemoveClicked(self, checked=False):
+        indexes = self.tableView.selectionModel().selectedRows()
+        if not indexes:
+            QMessageBox.information(
+                self,
+                qApp.applicationName(),
+                self.tr("Please select one row at least to remove."))
+            return
+
+        if len(indexes) > 1:
+            text = self.tr(
+                "You have selected more than one row, do you really want remove all of them?")
+            r = QMessageBox.question(self, qApp.applicationName(),
+                                     text,
+                                     QMessageBox.Yes,
+                                     QMessageBox.No)
+            if r != QMessageBox.Yes:
+                return
+
+        indexes.sort(reverse=True)
+        for index in indexes:
+            self.tableView.model().removeRow(index.row())

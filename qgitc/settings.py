@@ -102,18 +102,21 @@ class Settings(QSettings):
     def setCommitUrl(self, repoName, url):
         self.setLinkValue(repoName, "commitUrl", url)
 
-    def bugUrl(self, repoName):
-        return self.getLinkValue(repoName, "bugUrl", "")
+    def setBugPatterns(self, repoName, patterns):
+        self.setLinkValue(repoName, "bugPatterns", patterns)
+        self.bugPatternChanged.emit(patterns)
 
-    def setBugUrl(self, repoName, url):
-        self.setLinkValue(repoName, "bugUrl", url)
+    def bugPatterns(self, repoName):
+        patterns = self.getLinkValue(repoName, "bugPatterns", None)
+        if patterns is not None:
+            return patterns
 
-    def bugPattern(self, repoName):
-        return self.getLinkValue(repoName, "bugPattern", "")
-
-    def setBugPattern(self, repoName, pattern):
-        self.setLinkValue(repoName, "bugPattern", pattern)
-        self.bugPatternChanged.emit(pattern)
+        # keep the old settings
+        url = self.getLinkValue(repoName, "bugUrl", "")
+        pattern = self.getLinkValue(repoName, "bugPattern", "")
+        if pattern:
+            return [(pattern, url)]
+        return None
 
     def fallbackGlobalLinks(self, repoName):
         return self.getLinkValue(repoName, "fallback", True, type=bool)

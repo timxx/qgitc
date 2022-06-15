@@ -92,7 +92,7 @@ class TextLine():
             return links
 
         foundLinks = []
-        for linkType, pattern in patterns.items():
+        for linkType, pattern, url, in patterns:
             matches = pattern.finditer(text)
             for m in matches:
                 found = False
@@ -108,7 +108,12 @@ class TextLine():
                     continue
 
                 link = Link(m.start(), m.end(), linkType)
-                if pattern.groups == 0 or m.lastindex is None:
+                if url:
+                    if pattern.groups == 1:
+                        link.setData(url + m.group(1))
+                    else:
+                        link.setData(url + m.group(2))
+                elif pattern.groups == 0 or m.lastindex is None:
                     link.setData(m.group(0))
                 else:
                     link.setData(m.group(m.lastindex))
@@ -182,10 +187,13 @@ class TextLine():
             if self._defOption:
                 self._layout.setTextOption(self._defOption)
 
-            patterns = TextLine.builtinPatterns() if \
+            builtinPatterns = TextLine.builtinPatterns() if \
                 self._useBuiltinPatterns else {}
+            patterns = []
+            for type, pattern in builtinPatterns.items():
+                patterns.append((type, pattern, None))
             if self._patterns:
-                patterns.update(self._patterns)
+                patterns.extend(self._patterns)
             self._findLinks(patterns)
 
         if self._rehighlight:
@@ -228,13 +236,14 @@ class TextLine():
 
     def setCustomLinkPatterns(self, patterns):
         self._links.clear()
-        self._patterns = patterns
+        self._patterns = list(patterns)
 
         if self._layout:
             if patterns:
-                patterns[Link.Sha1] = sha1_re
-                patterns[Link.Email] = email_re
-                patterns[Link.Url] = url_re
+                patterns = list(patterns)
+                patterns.append((Link.Sha1, sha1_re, None))
+                patterns.append((Link.Email, email_re, None))
+                patterns.append((Link.Url, url_re, None))
                 self._findLinks(patterns)
             self.rehighlight()
         else:
@@ -350,4 +359,4 @@ class LinkTextLine(TextLine):
         self.useBuiltinPatterns = False
         patterns = TextLine.builtinPatterns()
         self.setCustomLinkPatterns(
-            {linkType: patterns[linkType]})
+            [(linkType, patterns[linkType], None)])

@@ -1089,13 +1089,6 @@ class LogView(QAbstractScrollArea):
         sett = qApp.settings()
         repoName = qApp.repoName()
 
-        fallback = sett.fallbackGlobalLinks(repoName)
-        bugUrl = sett.bugUrl(repoName)
-        bugUrlGlobal = sett.bugUrl(None) if fallback else None
-
-        if not bugUrl and not bugUrlGlobal:
-            return text
-
         def _toRe(pattern):
             if not pattern:
                 return None
@@ -1112,26 +1105,24 @@ class LogView(QAbstractScrollArea):
                 return bugRe.sub('<a href="{0}\\2">\\1</a>'.format(
                     url), text)
 
-        bugPattern = sett.bugPattern(repoName)
-        bugRe = _toRe(bugPattern)
-        if bugRe:
-            newText = _replace(bugRe, bugUrl if bugUrl else bugUrlGlobal)
-            if newText != text:
-                return newText
+        def _toUrl(patterns):
+            if not patterns:
+                return None
 
-        # global pattern follows only with global url
-        if not bugUrlGlobal:
-            return text
+            for pattern, url in patterns:
+                bugRe = _toRe(pattern)
+                if bugRe:
+                    newText = _replace(bugRe, url)
+                    if newText != text:
+                        return newText
 
-        bugPatternGlobal = sett.bugPattern(None) if fallback else None
-        if bugPatternGlobal == bugPattern:
-            return text
+            return None
 
-        bugRe = _toRe(bugPatternGlobal)
-        if not bugRe:
-            return text
+        url = _toUrl(sett.bugPatterns(repoName))
+        if not url and sett.fallbackGlobalLinks(repoName):
+            url = _toUrl(sett.bugPattern(None))
 
-        return _replace(bugRe, bugUrlGlobal)
+        return url or text
 
     def __mailTo(self, author, email):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))

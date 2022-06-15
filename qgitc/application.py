@@ -28,7 +28,6 @@ from datetime import datetime
 from .findwidget import FindWidget
 
 import os
-import re
 import shutil
 
 
@@ -130,39 +129,6 @@ class Application(QApplication):
             link = event.link
             if link.type == Link.Email:
                 url = "mailto:" + link.data
-            elif link.type == Link.BugId:
-                # FIXME: bind the url with pattern?
-                repoName = self.repoName()
-                sett = self.settings()
-                bugPattern = sett.bugPattern(repoName)
-                fallback = True
-
-                def _linkData(bugRe, m):
-                    if bugRe.groups == 1:
-                        return m.group(1)
-                    return m.group(2)
-
-                if bugPattern:
-                    bugRe = re.compile(bugPattern)
-                    m = bugRe.search(link.data)
-                    if m:
-                        fallback = False
-                        bugUrl = sett.bugUrl(repoName)
-                        if not bugUrl and sett.fallbackGlobalLinks(repoName):
-                            bugUrl = sett.bugUrl(None)
-                        if bugUrl:
-                            url = bugUrl + _linkData(bugRe, m)
-
-                if fallback and sett.fallbackGlobalLinks(repoName):
-                    bugPattern = sett.bugPattern(None)
-                    bugUrl = sett.bugUrl(None)
-                    if not bugPattern or not bugUrl:
-                        return True
-
-                    bugRe = re.compile(bugPattern)
-                    m = bugRe.search(link.data)
-                    if m:
-                        url = bugUrl + _linkData(bugRe, m)
             else:
                 url = link.data
 

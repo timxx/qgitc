@@ -190,7 +190,7 @@ class RevisionPanel(TextViewer):
     def toTextLine(self, text):
         textLine = super().toTextLine(text)
         textLine.useBuiltinPatterns = False
-        textLine.setCustomLinkPatterns({Link.Sha1: self._sha1Pattern})
+        textLine.setCustomLinkPatterns([(Link.Sha1, self._sha1Pattern, None)])
         return textLine
 
     def reloadSettings(self):
