@@ -74,12 +74,12 @@ class ToolTableModel(QAbstractTableModel):
 
         tool = self._data[index.row()]
         col = index.column()
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             if col == self.Col_Suffix:
                 return tool.suffix
             if col == self.Col_Tool:
                 return tool.command
-            if col == self.Col_Scenes:
+            if col == self.Col_Scenes and role == Qt.DisplayRole:
                 return self._scenes[tool.capabilities]
 
         return None
