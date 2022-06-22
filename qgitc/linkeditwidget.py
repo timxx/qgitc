@@ -24,6 +24,8 @@ from PySide6.QtCore import (
 
 import re
 
+from .gitutils import Git
+
 
 class BugPattern:
     def __init__(self, pattern=None, url=None):
@@ -95,7 +97,8 @@ class BugPatternModel(QAbstractTableModel):
                     re.compile(value)
                 self._data[row].error = None
             except re.error as e:
-                self._data[row].error = self.tr("Invalid regular expression: ") + e.msg
+                self._data[row].error = self.tr(
+                    "Invalid regular expression: ") + e.msg
             self._data[row].pattern = value
         elif col == 1:
             self._data[row].url = value
@@ -177,16 +180,21 @@ class LinkEditWidget(QWidget):
         self.layout().addWidget(self.tableView)
 
         hbox = QHBoxLayout()
-        btnAdd = QPushButton(self.tr("Add"), self)
-        btnRemove = QPushButton(self.tr("Remove"), self)
+        btnAdd = QPushButton(self.tr("&Add"), self)
+        btnRemove = QPushButton(self.tr("&Remove"), self)
+        btnDetect = QPushButton(self.tr("Auto &Detect"), self)
         hbox.addWidget(btnAdd)
         hbox.addWidget(btnRemove)
+        hbox.addWidget(btnDetect)
         hbox.addSpacerItem(QSpacerItem(
             0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed))
         self.layout().addLayout(hbox)
 
         btnAdd.clicked.connect(self._onBtnAddClicked)
         btnRemove.clicked.connect(self._onBtnRemoveClicked)
+
+        btnDetect.clicked.connect(
+            self._onBtnDetectClicked)
 
     def commitUrl(self):
         return self.leCommitUrl.text()
@@ -230,3 +238,97 @@ class LinkEditWidget(QWidget):
         indexes.sort(reverse=True)
         for index in indexes:
             self.tableView.model().removeRow(index.row())
+
+    def _onBtnDetectClicked(self):
+        url, name, user = self._parseRepo()
+        if not url or not name:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("Unable to detect current repo's name"))
+            return
+
+        if self._isQt5Repo(name):
+            self.setBugPatterns(
+                [("(QTBUG-[0-9]{5,6})", "https://bugreports.qt.io/browse/")])
+            if user and self._isGithubRepo(url):
+                self.setCommitUrl(
+                    "https://github.com/{}/{}/commit/".format(user, name))
+        elif self._isGithubRepo(url):
+            if user:
+                self.setBugPatterns(
+                    [("(#([0-9]+))", "https://github.com/{}/{}/issues/".format(user, name))])
+                self.setCommitUrl(
+                    "https://github.com/{}/{}/commit/".format(user, name))
+        elif self._isGiteeRepo(url):
+            if user:
+                self.setBugPatterns(
+                    [("(I[A-Z0-9]{4,})", "https://gitee.com/{}/{}/issues/".format(user, name))])
+                self.setCommitUrl(
+                    "https://gitee.com/{}/{}/commit/".format(user, name))
+        elif self._isGitlabRepo(url):
+            if user:
+                self.setBugPatterns(
+                    [("(#([0-9]+))", "https://gitlab.com/{}/{}/-/issues/".format(user, name))])
+                self.setCommitUrl(
+                    "https://gitlab.com/{}/{}/-/commit/".format(user, name))
+        else:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("Unsupported repository"))
+
+    def _parseRepo(self):
+        url = Git.repoUrl()
+        name = None
+        user = None
+        if not url:
+            return None, None, None
+
+        index = url.rfind('/')
+        if index != -1:
+            name = url[index+1:]
+            if name.endswith(".git"):
+                name = name[:-4]
+
+        # unsupported
+        if index == -1 or url.startswith("ssh://"):
+            return url, name, user
+
+        if url.startswith("git@"):
+            index2 = url.rfind(':', 0, index)
+            if index2 != -1:
+                user = url[index2+1:index]
+        else:
+            index2 = url.rfind('/', 0, index)
+            if index2 != -1:
+                user = url[index2+1:index]
+
+        return url, name, user
+
+    def _isQt5Repo(self, repoName):
+        return repoName in [
+            "qt5", "qt3d", "qtactiveqt", "qtandroidextras",
+            "qtbase", "qtcanvas3d", "qtcharts",
+            "qtconnectivity", "qtdatavis3d", "qtdeclarative",
+            "qtdoc", "qtgamepad", "qtgraphicaleffects",
+            "qtimageformats", "qtlocation", "qtmacextras",
+            "qtmultimedia", "qtnetworkauth", "qtpurchasing",
+            "qtqa", "qtquickcontrols", "qtquickcontrols2",
+            "qtremoteobjects", "qtrepotools", "qtscript",
+            "qtscxml", "qtsensors", "qtserialbus",
+            "qtserialport", "qtspeech", "qtsvg",
+            "qttools", "qttranslations", "qtvirtualkeyboard",
+            "qtwayland", "qtwebchannel", "qtwebengine",
+            "qtwebglplugin", "qtwebsockets", "qtwebview",
+            "qtwinextras", "qtx11extras", "qtxmlpatterns"]
+
+    def _isGithubRepo(self, repoUrl):
+        return repoUrl.startswith("git@github.com:") or \
+            repoUrl.startswith("https://github.com/")
+
+    def _isGiteeRepo(self, repoUrl):
+        return repoUrl.startswith("git@gitee.com:") or \
+            repoUrl.startswith("https://gitee.com/")
+
+    def _isGitlabRepo(self, repoUrl):
+        return repoUrl.startswith("git@gitlab.com:") or \
+            repoUrl.startswith("https://gitlab.com/")

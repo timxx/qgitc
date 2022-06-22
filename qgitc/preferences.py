@@ -189,8 +189,6 @@ class Preferences(QDialog):
 
         self.ui.btnGlobal.clicked.connect(
             self._onBtnGlobalClicked)
-        self.ui.btnDetect.clicked.connect(
-            self._onBtnDetectClicked)
 
         self.ui.lbConfigImgDiff.linkActivated.connect(
             self._onConfigImgDiff)
@@ -345,44 +343,6 @@ class Preferences(QDialog):
             self.settings.setCommitUrl(None, linkEdit.commitUrl())
             self.settings.setBugPatterns(None, linkEdit.bugPatterns())
 
-    def _onBtnDetectClicked(self):
-        url, name, user = self._parseRepo()
-        if not url or not name:
-            QMessageBox.critical(
-                self, self.window().windowTitle(),
-                self.tr("Unable to detect current repo's name"))
-            return
-
-        linkEdit = self.ui.linkEditWidget
-        if self._isQt5Repo(name):
-            linkEdit.setBugPatterns(
-                [("(QTBUG-[0-9]{5,6})", "https://bugreports.qt.io/browse/")])
-            if user and self._isGithubRepo(url):
-                linkEdit.setCommitUrl(
-                    "https://github.com/{}/{}/commit/".format(user, name))
-        elif self._isGithubRepo(url):
-            if user:
-                linkEdit.setBugPatterns(
-                    [("(#([0-9]+))", "https://github.com/{}/{}/issues/".format(user, name))])
-                linkEdit.setCommitUrl(
-                    "https://github.com/{}/{}/commit/".format(user, name))
-        elif self._isGiteeRepo(url):
-            if user:
-                linkEdit.setBugPatterns(
-                    [("(I[A-Z0-9]{4,})", "https://gitee.com/{}/{}/issues/".format(user, name))])
-                linkEdit.setCommitUrl(
-                    "https://gitee.com/{}/{}/commit/".format(user, name))
-        elif self._isGitlabRepo(url):
-            if user:
-                linkEdit.setBugPatterns(
-                    [("(#([0-9]+))", "https://gitlab.com/{}/{}/-/issues/".format(user, name))])
-                linkEdit.setCommitUrl(
-                    "https://gitlab.com/{}/{}/-/commit/".format(user, name))
-        else:
-            QMessageBox.critical(
-                self, self.window().windowTitle(),
-                self.tr("Unsupported repository"))
-
     def _onConfigImgDiff(self, link):
         path = self._imgDiffBin()
         if not path:
@@ -491,63 +451,6 @@ class Preferences(QDialog):
             return _quote(path)
 
         return None
-
-    def _parseRepo(self):
-        url = Git.repoUrl()
-        name = None
-        user = None
-        if not url:
-            return None, None, None
-
-        index = url.rfind('/')
-        if index != -1:
-            name = url[index+1:]
-            if name.endswith(".git"):
-                name = name[:-4]
-
-        # unsupported
-        if index == -1 or url.startswith("ssh://"):
-            return url, name, user
-
-        if url.startswith("git@"):
-            index2 = url.rfind(':', 0, index)
-            if index2 != -1:
-                user = url[index2+1:index]
-        else:
-            index2 = url.rfind('/', 0, index)
-            if index2 != -1:
-                user = url[index2+1:index]
-
-        return url, name, user
-
-    def _isQt5Repo(self, repoName):
-        return repoName in [
-            "qt5", "qt3d", "qtactiveqt", "qtandroidextras",
-            "qtbase", "qtcanvas3d", "qtcharts",
-            "qtconnectivity", "qtdatavis3d", "qtdeclarative",
-            "qtdoc", "qtgamepad", "qtgraphicaleffects",
-            "qtimageformats", "qtlocation", "qtmacextras",
-            "qtmultimedia", "qtnetworkauth", "qtpurchasing",
-            "qtqa", "qtquickcontrols", "qtquickcontrols2",
-            "qtremoteobjects", "qtrepotools", "qtscript",
-            "qtscxml", "qtsensors", "qtserialbus",
-            "qtserialport", "qtspeech", "qtsvg",
-            "qttools", "qttranslations", "qtvirtualkeyboard",
-            "qtwayland", "qtwebchannel", "qtwebengine",
-            "qtwebglplugin", "qtwebsockets", "qtwebview",
-            "qtwinextras", "qtx11extras", "qtxmlpatterns"]
-
-    def _isGithubRepo(self, repoUrl):
-        return repoUrl.startswith("git@github.com:") or \
-            repoUrl.startswith("https://github.com/")
-
-    def _isGiteeRepo(self, repoUrl):
-        return repoUrl.startswith("git@gitee.com:") or \
-            repoUrl.startswith("https://gitee.com/")
-
-    def _isGitlabRepo(self, repoUrl):
-        return repoUrl.startswith("git@gitlab.com:") or \
-            repoUrl.startswith("https://gitlab.com/")
 
     def save(self):
         # TODO: only update those values that really changed
