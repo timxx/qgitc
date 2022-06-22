@@ -149,6 +149,17 @@ class BugPatternModel(QAbstractTableModel):
             patterns.append((d.pattern, d.url))
         return patterns
 
+    def addPattern(self, pattern, url):
+        for d in self._data:
+            if d.pattern == pattern and d.url == url:
+                return
+
+        parent = QModelIndex()
+        last = len(self._data)
+        self.beginInsertRows(parent, last, last)
+        self._data.append(BugPattern(pattern, url))
+        self.endInsertRows()
+
 
 class LinkEditWidget(QWidget):
 
@@ -247,28 +258,29 @@ class LinkEditWidget(QWidget):
                 self.tr("Unable to detect current repo's name"))
             return
 
+        model = self.tableView.model()
         if self._isQt5Repo(name):
-            self.setBugPatterns(
-                [("(QTBUG-[0-9]{5,6})", "https://bugreports.qt.io/browse/")])
+            model.addPattern(
+                "(QTBUG-[0-9]{5,6})", "https://bugreports.qt.io/browse/")
             if user and self._isGithubRepo(url):
                 self.setCommitUrl(
                     "https://github.com/{}/{}/commit/".format(user, name))
         elif self._isGithubRepo(url):
             if user:
-                self.setBugPatterns(
-                    [("(#([0-9]+))", "https://github.com/{}/{}/issues/".format(user, name))])
+                model.addPattern(
+                    "(#([0-9]+))", "https://github.com/{}/{}/issues/".format(user, name))
                 self.setCommitUrl(
                     "https://github.com/{}/{}/commit/".format(user, name))
         elif self._isGiteeRepo(url):
             if user:
-                self.setBugPatterns(
-                    [("(I[A-Z0-9]{4,})", "https://gitee.com/{}/{}/issues/".format(user, name))])
+                model.addPattern(
+                    "(I[A-Z0-9]{4,})", "https://gitee.com/{}/{}/issues/".format(user, name))
                 self.setCommitUrl(
                     "https://gitee.com/{}/{}/commit/".format(user, name))
         elif self._isGitlabRepo(url):
             if user:
-                self.setBugPatterns(
-                    [("(#([0-9]+))", "https://gitlab.com/{}/{}/-/issues/".format(user, name))])
+                model.addPattern(
+                    "(#([0-9]+))", "https://gitlab.com/{}/{}/-/issues/".format(user, name))
                 self.setCommitUrl(
                     "https://gitlab.com/{}/{}/-/commit/".format(user, name))
         else:
