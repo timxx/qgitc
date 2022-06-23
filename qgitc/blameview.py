@@ -61,7 +61,6 @@ class BlameLine:
         self.committerMail = None
         self.committerTime = None
 
-        self.summary = None
         self.previous = None
         self.prevFileName = None
         self.filename = None
@@ -121,7 +120,7 @@ class BlameFetcher(DataFetcher):
                 else:
                     print("Invalid line:", line)
             elif line[0] == 115:  # "summary "
-                self._curLine.summary = _decode(line[8:])
+                pass  # useless
             elif line[0] == 112:  # "previous "
                 parts = line.split(b' ')
                 self._curLine.previous = _decode(parts[1])
@@ -300,7 +299,6 @@ class RevisionPanel(TextViewer):
                 rev.committer = r.committer
                 rev.committerMail = r.committerMail
                 rev.committerTime = r.committerTime
-                rev.summary = r.summary
                 rev.previous = r.previous
                 rev.prevFileName = r.prevFileName
                 rev.filename = r.filename
@@ -605,13 +603,10 @@ class CommitPanel(TextViewer):
             textLine = LinkTextLine(text, self._font, Link.Sha1)
             self.appendTextLine(textLine)
 
-        self.appendLine("")
-        self.appendLine(rev.summary)
-
         if rev.sha1 in self._bodyCache:
             text = self._bodyCache[rev.sha1]
         else:
-            args = ["show", "-s", "--pretty=format:%b", rev.sha1]
+            args = ["show", "-s", "--pretty=format:%B", rev.sha1]
             data = Git.checkOutput(args)
             text = _decode(data) if data else None
             self._bodyCache[rev.sha1] = text
