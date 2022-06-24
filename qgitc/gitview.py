@@ -311,10 +311,12 @@ class GitView(QWidget):
 
     def filterLog(self, args):
         paths = []
-        # FIXME: file args should always the last one
-        for arg in args:
-            if not arg.startswith("-"):
-                paths.append(arg)
+        for arg in reversed(args):
+            if arg.startswith("-"):
+                if paths and self._isArgNeedValue(arg):
+                    del paths[0]
+                break
+            paths.insert(0, arg)
 
         self.ui.diffView.setFilterPath(paths)
         self.ui.logView.setFilterPath(paths)
@@ -331,6 +333,21 @@ class GitView(QWidget):
 
             if preSha1:
                 self.ui.logView.switchToCommit(preSha1)
+
+    def _isArgNeedValue(self, arg):
+        if arg.find('=') != -1:
+            return False
+        if len(arg) == 2 and arg[1] == '-':
+            return False
+        known_args = [
+            "--decorate-refs", "--decorate-refs-exclude",
+            "--max-count", "--skip", "--since", "--after", "--until", "--before",
+            "--author", "--committer", "--grep-reflog", "--grep",
+            "--min-parents", "--max-parents", "--glob", "--exclude",
+            "--format", "--encoding", "--date"
+            # "--branches", "--tags", "--remotes"
+        ]
+        return arg in known_args
 
     def saveState(self, settings, isBranchA):
         state = self.ui.splitter.saveState()
