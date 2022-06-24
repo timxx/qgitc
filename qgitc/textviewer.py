@@ -128,6 +128,9 @@ class TextViewer(QAbstractScrollArea):
             if not patterns:
                 return
             for pattern, url in patterns:
+                if not pattern:
+                    continue
+
                 if pattern not in filtered:
                     filtered.add(pattern)
                     try:

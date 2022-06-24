@@ -146,6 +146,8 @@ class BugPatternModel(QAbstractTableModel):
     def getPatterns(self):
         patterns = []
         for d in self._data:
+            if not d.pattern and not d.url:
+                continue
             patterns.append((d.pattern, d.url))
         return patterns
 
