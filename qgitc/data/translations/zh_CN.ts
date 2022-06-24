@@ -63,7 +63,7 @@
 <context>
     <name>Application</name>
     <message>
-        <location filename="../../application.py" line="254"/>
+        <location filename="../../application.py" line="220"/>
         <source>No git found, please check your settings.</source>
         <translation>未找到git，请检查您的设置项。</translation>
     </message>
@@ -71,12 +71,12 @@
 <context>
     <name>BlameSourceViewer</name>
     <message>
-        <location filename="../../blameview.py" line="451"/>
+        <location filename="../../blameview.py" line="449"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="454"/>
+        <location filename="../../blameview.py" line="452"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -125,24 +125,42 @@
     </message>
 </context>
 <context>
+    <name>BugPatternModel</name>
+    <message>
+        <location filename="../../linkeditwidget.py" line="56"/>
+        <source>Bug Pattern</source>
+        <translation>Bug模式</translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="59"/>
+        <source>Bug Url</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="101"/>
+        <source>Invalid regular expression: </source>
+        <translation>无效的正则表达式：</translation>
+    </message>
+</context>
+<context>
     <name>CommitPanel</name>
     <message>
-        <location filename="../../blameview.py" line="589"/>
+        <location filename="../../blameview.py" line="587"/>
         <source>Commit: </source>
         <translation>记录： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="593"/>
+        <location filename="../../blameview.py" line="591"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="598"/>
+        <location filename="../../blameview.py" line="596"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="604"/>
+        <location filename="../../blameview.py" line="602"/>
         <source>Previous: </source>
         <translation>前一条记录： </translation>
     </message>
@@ -418,19 +436,52 @@
 <context>
     <name>LinkEditWidget</name>
     <message>
-        <location filename="../../linkeditwidget.py" line="18"/>
+        <location filename="../../linkeditwidget.py" line="175"/>
         <source>Co&amp;mmit Url:</source>
         <translation>记录URL(&amp;M)：</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="25"/>
-        <source>&amp;Bug Url:</source>
-        <translation>&amp;BUG URL：</translation>
+        <location filename="../../linkeditwidget.py" line="196"/>
+        <source>&amp;Add</source>
+        <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="32"/>
+        <location filename="../../linkeditwidget.py" line="197"/>
+        <source>&amp;Remove</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="198"/>
+        <source>Auto &amp;Detect</source>
+        <translation>自动识别(&amp;D)</translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="238"/>
+        <source>Please select one row at least to remove.</source>
+        <translation>请至少选择一行来删除。</translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="244"/>
+        <source>You have selected more than one row, do you really want remove all of them?</source>
+        <translation>您选择超过了一条记录，是否全部都要删除？</translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="260"/>
+        <source>Unable to detect current repo&apos;s name</source>
+        <translation>无法识别当前仓库</translation>
+    </message>
+    <message>
+        <location filename="../../linkeditwidget.py" line="291"/>
+        <source>Unsupported repository</source>
+        <translation>暂不支持自动识别此仓库</translation>
+    </message>
+    <message>
+        <source>&amp;Bug Url:</source>
+        <translation type="vanished">&amp;BUG URL：</translation>
+    </message>
+    <message>
         <source>Bug &amp;Pattern:</source>
-        <translation>BUG模式(&amp;P)：</translation>
+        <translation type="vanished">BUG模式(&amp;P)：</translation>
     </message>
 </context>
 <context>
@@ -1122,79 +1173,75 @@ Run `{1}` for getting the latest version.</source>
         <translation type="obsolete">合并(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="445"/>
+        <location filename="../../preferences.ui" line="418"/>
         <source>Tools</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="467"/>
+        <location filename="../../preferences.ui" line="440"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="474"/>
+        <location filename="../../preferences.ui" line="447"/>
         <source>&amp;Delete</source>
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="314"/>
+        <location filename="../../preferences.py" line="311"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="320"/>
+        <location filename="../../preferences.py" line="317"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="334"/>
+        <location filename="../../preferences.py" line="331"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="451"/>
+        <location filename="../../preferences.ui" line="424"/>
         <source>You must add the tool to git config mergetool/difftool section to make it works.</source>
         <translation>您必需将“工具”添加到git配置文件的mergetool/difftool配置项以使其可用。</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="439"/>
+        <location filename="../../preferences.ui" line="412"/>
         <source>&amp;Tools</source>
         <translation>工具(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="373"/>
         <source>Audo detect current repo&apos;s settings</source>
-        <translation>自动识别填写当前仓库配置项</translation>
+        <translation type="vanished">自动识别填写当前仓库配置项</translation>
+    </message>
+    <message>
+        <source>Auto &amp;Detect</source>
+        <translation type="vanished">自动识别(&amp;D)</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="376"/>
-        <source>Auto &amp;Detect</source>
-        <translation>自动识别(&amp;D)</translation>
-    </message>
-    <message>
-        <location filename="../../preferences.ui" line="403"/>
         <source>Use global settings when no match current setting</source>
         <translation>当前设置项无法匹配时使用全局设置</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="406"/>
+        <location filename="../../preferences.ui" line="379"/>
         <source>Fallbac&amp;k to Global</source>
         <translation>使用全局配置(&amp;K)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="413"/>
+        <location filename="../../preferences.ui" line="386"/>
         <source>&amp;Edit Global</source>
         <translation>编辑全局配置(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="357"/>
         <source>Unable to detect current repo&apos;s name</source>
-        <translation>无法识别当前仓库</translation>
+        <translation type="vanished">无法识别当前仓库</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="391"/>
         <source>Unsupported repository</source>
-        <translation>暂不支持自动识别此仓库</translation>
+        <translation type="vanished">暂不支持自动识别此仓库</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="52"/>
@@ -1207,73 +1254,72 @@ Run `{1}` for getting the latest version.</source>
         <translation>天</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="494"/>
+        <location filename="../../preferences.ui" line="467"/>
         <source>&lt;a href=&apos;#config&apos;&gt;Config imgdiff as tool for diff or merge&lt;/a&gt;</source>
         <translation>&lt;a href=&apos;#config&apos;&gt;将imgdiff配置为diff和merge工具&lt;/a&gt;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="503"/>
+        <location filename="../../preferences.ui" line="476"/>
         <source>Diff</source>
         <translation>Diff</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="524"/>
-        <location filename="../../preferences.ui" line="682"/>
+        <location filename="../../preferences.ui" line="497"/>
+        <location filename="../../preferences.ui" line="655"/>
         <source>Name:</source>
         <translation>名称:</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="531"/>
+        <location filename="../../preferences.ui" line="504"/>
         <source>Specify diff tool name or choose default one</source>
         <translation>指定diff工具的名称或从默认列表选择一个</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="643"/>
-        <location filename="../../preferences.ui" line="801"/>
+        <location filename="../../preferences.ui" line="616"/>
+        <location filename="../../preferences.ui" line="774"/>
         <source>Command:</source>
         <translation>命令行:</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="650"/>
+        <location filename="../../preferences.ui" line="623"/>
         <source>The command line and arguments, for example:
 imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</source>
         <translation>命令行路径和参数，比如：
 imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="661"/>
+        <location filename="../../preferences.ui" line="634"/>
         <source>Merge</source>
         <translation>合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="689"/>
+        <location filename="../../preferences.ui" line="662"/>
         <source>Specify merge tool name or choose default one</source>
         <translation>指定merge工具的名称或从默认列表选择一个</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="808"/>
+        <location filename="../../preferences.ui" line="781"/>
         <source>The command line and arguments, for example:
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</source>
         <translation>命令行路径和参数，比如：
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="398"/>
+        <location filename="../../preferences.py" line="351"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="420"/>
         <source>The bug pattern is invalid, please check again.</source>
-        <translation>Bug模式无效，请检查确认。</translation>
+        <translation type="vanished">Bug模式无效，请检查确认。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="428"/>
+        <location filename="../../preferences.py" line="373"/>
         <source>The diff tool name can&apos;t be empty!</source>
         <translation>diff工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="436"/>
+        <location filename="../../preferences.py" line="381"/>
         <source>The merge tool name can&apos;t be empty!</source>
         <translation>merge工具名称不能为空！</translation>
     </message>
@@ -1288,12 +1334,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>浏览(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="445"/>
+        <location filename="../../preferences.py" line="390"/>
         <source>The git path you specified is invalid.</source>
         <translation>无效的git路径。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="466"/>
+        <location filename="../../preferences.py" line="411"/>
         <source>Choose Git</source>
         <translation>选择Git</translation>
     </message>
@@ -1301,12 +1347,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>RevisionPanel</name>
     <message>
-        <location filename="../../blameview.py" line="391"/>
+        <location filename="../../blameview.py" line="389"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="394"/>
+        <location filename="../../blameview.py" line="392"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -1314,12 +1360,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>TextViewer</name>
     <message>
-        <location filename="../../textviewer.py" line="467"/>
+        <location filename="../../textviewer.py" line="476"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="473"/>
+        <location filename="../../textviewer.py" line="482"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
@@ -1331,37 +1377,37 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="obsolete">启用</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="61"/>
+        <location filename="../../preferences.py" line="60"/>
         <source>Suffix</source>
         <translation>后缀</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="64"/>
+        <location filename="../../preferences.py" line="63"/>
         <source>Tool</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="30"/>
+        <location filename="../../preferences.py" line="29"/>
         <source>Disabled</source>
         <translation>禁用</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="31"/>
+        <location filename="../../preferences.py" line="30"/>
         <source>Diff</source>
         <translation>Diff</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="32"/>
+        <location filename="../../preferences.py" line="31"/>
         <source>Merge</source>
         <translation>合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="35"/>
+        <location filename="../../preferences.py" line="34"/>
         <source>Both</source>
         <translation>Diff和合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="59"/>
+        <location filename="../../preferences.py" line="58"/>
         <source>Scenes</source>
         <translation>场景</translation>
     </message>
