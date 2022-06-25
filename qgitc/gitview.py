@@ -372,3 +372,8 @@ class GitView(QWidget):
 
     def closeFindWidget(self):
         return self.ui.diffView.closeFindWidget()
+
+    def queryClose(self):
+        self.ui.logView.queryClose()
+        self.ui.diffView.queryClose()
+        return True

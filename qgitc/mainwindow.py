@@ -457,6 +457,10 @@ class MainWindow(StateWindow):
                 return
             self.mergeWidget.close()
 
+        self.ui.gitViewA.queryClose()
+        if self.gitViewB is not None:
+            self.gitViewB.queryClose()
+
         super().closeEvent(event)
 
     def setFilterFile(self, filePath):

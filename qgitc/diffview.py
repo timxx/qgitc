@@ -679,6 +679,10 @@ class DiffView(QWidget):
     def closeFindWidget(self):
         return self.viewer.closeFindWidget()
 
+    def queryClose(self):
+        self.fetcher.cancel()
+        return True
+
 
 class DiffTextLine(SourceTextLineBase):
 

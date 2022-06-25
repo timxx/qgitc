@@ -1850,3 +1850,6 @@ class LogView(QAbstractScrollArea):
 
     def copy(self):
         self.__onCopyCommitSummary()
+
+    def queryClose(self):
+        self.fetcher.cancel()
