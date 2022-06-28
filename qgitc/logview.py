@@ -1110,6 +1110,8 @@ class LogView(QAbstractScrollArea):
                 return None
 
             for pattern, url in patterns:
+                if not pattern:
+                    continue
                 bugRe = _toRe(pattern)
                 if bugRe:
                     newText = _replace(bugRe, url)
@@ -1120,7 +1122,7 @@ class LogView(QAbstractScrollArea):
 
         url = _toUrl(sett.bugPatterns(repoName))
         if not url and sett.fallbackGlobalLinks(repoName):
-            url = _toUrl(sett.bugPattern(None))
+            url = _toUrl(sett.bugPatterns(None))
 
         return url or text
 
