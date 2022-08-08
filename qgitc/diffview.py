@@ -221,7 +221,7 @@ class DiffFetcher(DataFetcher):
             git_args.extend(["diff-tree", "-r", "--root", sha1])
 
         git_args.extend(["-p", "--textconv", "--submodule",
-                         "-C", "--no-commit-id", "-U3"])
+                         "-C", "--cc", "--no-commit-id", "-U3"])
 
         if gitArgs:
             git_args.extend(gitArgs)
