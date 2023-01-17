@@ -67,6 +67,14 @@ class BlameLine:
         self.text = None
 
 
+class BlameHistory:
+
+    def __init__(self, file, rev=None, lineNo=0):
+        self.file = file
+        self.rev = rev
+        self.lineNo = lineNo
+
+
 def _timeStr(data):
     dt = datetime.fromtimestamp(float(data))
     return "%d-%02d-%02d %02d:%02d:%02d" % (
@@ -405,6 +413,7 @@ class RevisionPanel(TextViewer):
 class BlameSourceViewer(SourceViewer):
 
     revisionActivated = Signal(BlameLine)
+    currentLineChanged = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -558,6 +567,8 @@ class BlameSourceViewer(SourceViewer):
         offset = 1
         self.viewport().update(r.adjusted(-offset, -offset, offset, offset))
 
+        self.currentLineChanged.emit(newLine)
+
     def paintEvent(self, event):
         super().paintEvent(event)
         if self._cursor.isValid() and \
@@ -681,7 +692,9 @@ class HeaderWidget(QWidget):
             file = ""
             rev = ""
         else:
-            file, rev = self._histories[self._curIndex]
+            history = self._histories[self._curIndex]
+            rev = history.rev
+            file = history.file
             if rev is None:
                 rev = ""
 
@@ -702,8 +715,8 @@ class HeaderWidget(QWidget):
 
     def _blameCurrent(self):
         self._blockAdd = True
-        file, rev = self._histories[self._curIndex]
-        self._view.blame(file, rev)
+        history = self._histories[self._curIndex]
+        self._view.blame(history.file, history.rev, history.lineNo)
         self._blockAdd = False
 
     def _onPrevious(self):
@@ -720,14 +733,14 @@ class HeaderWidget(QWidget):
         self._histories.clear()
         self._updateInfo()
 
-    def addBlameInfo(self, file, rev):
+    def addBlameInfo(self, file, rev, lineNo):
         if self._blockAdd:
             return
 
         index = -1
         for i in range(len(self._histories)):
-            f, r = self._histories[i]
-            if file == f and rev == r:
+            history = self._histories[i]
+            if file == history.file and rev == history.rev:
                 index = i
                 break
 
@@ -735,7 +748,8 @@ class HeaderWidget(QWidget):
             self._curIndex = index
         else:
             self._curIndex += 1
-            self._histories.insert(self._curIndex, (file, rev))
+            self._histories.insert(
+                self._curIndex, BlameHistory(file, rev, lineNo))
             if self._curIndex >= len(self._histories):
                 self._curIndex = len(self._histories) - 1
 
@@ -746,6 +760,10 @@ class HeaderWidget(QWidget):
 
     def notifyFecthingFinished(self):
         self._waitingSpinner.stop()
+
+    def updateCurPos(self, lineNo):
+        assert(0 <= self._curIndex < len(self._histories))
+        self._histories[self._curIndex].lineNo = lineNo + 1
 
 
 class BlameView(QWidget):
@@ -798,6 +816,9 @@ class BlameView(QWidget):
         self._viewer.revisionActivated.connect(
             self._commitPanel.showRevision)
 
+        self.viewer.currentLineChanged.connect(
+            self._headerWidget.updateCurPos)
+
     def _onLinkActivated(self, link):
         if link.type == Link.Sha1:
             if self._rev != link.data:
@@ -846,7 +867,7 @@ class BlameView(QWidget):
         self._rev = rev
         self._lineNo = lineNo
 
-        self._headerWidget.addBlameInfo(file, rev)
+        self._headerWidget.addBlameInfo(file, rev, lineNo)
 
     @property
     def viewer(self):
