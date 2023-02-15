@@ -241,3 +241,9 @@ class Settings(QSettings):
 
     def setGitBinPath(self, path):
         self.setValue("gitBin", path)
+
+    def isFullCommitMessage(self):
+        return self.value("fullCommitMsg", False, type=bool)
+
+    def setFullCommitMessage(self, full):
+        self.setValue("fullCommitMsg", full)

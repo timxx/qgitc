@@ -99,7 +99,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -139,6 +139,8 @@
     <addaction name="menuIgnoreWhitespace"/>
     <addaction name="separator"/>
     <addaction name="acCompare"/>
+    <addaction name="separator"/>
+    <addaction name="acFullCommitMsg"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
     <property name="title">
@@ -328,6 +330,14 @@
    </property>
    <property name="shortcut">
     <string>F5</string>
+   </property>
+  </action>
+  <action name="acFullCommitMsg">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Full Commit &amp;Message</string>
    </property>
   </action>
  </widget>

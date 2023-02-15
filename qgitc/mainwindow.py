@@ -153,6 +153,9 @@ class MainWindow(StateWindow):
         self.ui.acVisualizeWhitespace.triggered.connect(
             self.__onAcVisualizeWhitespaceTriggered)
 
+        self.ui.acFullCommitMsg.triggered.connect(
+            self.__onAcFullCommitMsgTriggered)
+
         self.ui.leOpts.returnPressed.connect(
             self.__onOptsReturnPressed)
 
@@ -320,6 +323,12 @@ class MainWindow(StateWindow):
         else:
             self.setMode(MainWindow.LogMode)
 
+    def __onAcFullCommitMsgTriggered(self, checked):
+        qApp.settings().setFullCommitMessage(checked)
+        self.ui.gitViewA.logView.updateView()
+        if self.gitViewB:
+            self.gitViewB.logView.updateView()
+
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
         self.filterOpts(opts, self.ui.gitViewA)
@@ -417,6 +426,9 @@ class MainWindow(StateWindow):
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
         self.ui.acVisualizeWhitespace.setChecked(
             sett.showWhitespace())
+
+        self.ui.acFullCommitMsg.setChecked(
+            sett.isFullCommitMessage())
 
         return True
 

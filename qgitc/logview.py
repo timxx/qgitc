@@ -32,6 +32,9 @@ GRAPH_COLORS = [Qt.black,
 HALF_LINE_PERCENT = 0.76
 
 
+log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
+
+
 class LogsFetcher(DataFetcher):
 
     logsAvailable = Signal(list)
@@ -787,7 +790,10 @@ class LogView(QAbstractScrollArea):
         self.lineHeight = QFontMetrics(self.font).height() + self.lineSpace
 
         self.updateGeometries()
-        self.viewport().update()
+        self.updateView()
+
+    def updateView(self):
+        return self.viewport().update()
 
     def __onCopyCommitSummary(self):
         if self.curIdx == -1:
@@ -1712,6 +1718,12 @@ class LogView(QAbstractScrollArea):
             graphPainter = QPainter(graphImage)
             graphPainter.setRenderHints(QPainter.Antialiasing)
 
+        isFullMessage = qApp.settings().isFullCommitMessage()
+        def makeMessage(commit):
+            if isFullMessage:
+                return commit.comments.replace('\n', ' ')
+            return commit.comments.split('\n')[0]
+
         painter.setFont(self.font)
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
         for i in range(startLine, endLine):
@@ -1749,7 +1761,7 @@ class LogView(QAbstractScrollArea):
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
-            content = commit.comments.split('\n')[0]
+            content = makeMessage(commit)
 
             # bold find result
             # it seems that *in* already fast, so no bsearch

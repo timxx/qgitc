@@ -7,7 +7,6 @@ import os
 import chardet
 
 
-log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 html_escape_table = {
     "&": "&amp;",
     '"': "&quot;",

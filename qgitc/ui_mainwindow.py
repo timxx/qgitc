@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.3.1
+## Created by: Qt User Interface Compiler version 6.4.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,7 +36,7 @@ class Ui_MainWindow(object):
             icon = QIcon.fromTheme(iconThemeName)
         else:
             icon.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+
         self.acQuit.setIcon(icon)
 #if QT_CONFIG(shortcut)
         self.acQuit.setShortcut(u"Ctrl+W")
@@ -49,7 +49,7 @@ class Ui_MainWindow(object):
             icon1 = QIcon.fromTheme(iconThemeName)
         else:
             icon1.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+
         self.acAbout.setIcon(icon1)
         self.acPreferences = QAction(MainWindow)
         self.acPreferences.setObjectName(u"acPreferences")
@@ -59,7 +59,7 @@ class Ui_MainWindow(object):
             icon2 = QIcon.fromTheme(iconThemeName)
         else:
             icon2.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+
         self.acPreferences.setIcon(icon2)
         self.actionIgnore_whitespace_changes = QAction(MainWindow)
         self.actionIgnore_whitespace_changes.setObjectName(u"actionIgnore_whitespace_changes")
@@ -83,7 +83,7 @@ class Ui_MainWindow(object):
             icon3 = QIcon.fromTheme(iconThemeName)
         else:
             icon3.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+
         self.acCopy.setIcon(icon3)
         self.acSelectAll = QAction(MainWindow)
         self.acSelectAll.setObjectName(u"acSelectAll")
@@ -93,7 +93,7 @@ class Ui_MainWindow(object):
             icon4 = QIcon.fromTheme(iconThemeName)
         else:
             icon4.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+
         self.acSelectAll.setIcon(icon4)
         self.acFind = QAction(MainWindow)
         self.acFind.setObjectName(u"acFind")
@@ -103,7 +103,7 @@ class Ui_MainWindow(object):
             icon5 = QIcon.fromTheme(iconThemeName)
         else:
             icon5.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-        
+
         self.acFind.setIcon(icon5)
         self.acCompare = QAction(MainWindow)
         self.acCompare.setObjectName(u"acCompare")
@@ -122,6 +122,9 @@ class Ui_MainWindow(object):
         self.acCopyLogB.setObjectName(u"acCopyLogB")
         self.acReload = QAction(MainWindow)
         self.acReload.setObjectName(u"acReload")
+        self.acFullCommitMsg = QAction(MainWindow)
+        self.acFullCommitMsg.setObjectName(u"acFullCommitMsg")
+        self.acFullCommitMsg.setCheckable(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -189,7 +192,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 22))
+        self.menubar.setGeometry(QRect(0, 0, 800, 26))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menu_Help = QMenu(self.menubar)
@@ -229,6 +232,8 @@ class Ui_MainWindow(object):
         self.menu_View.addAction(self.menuIgnoreWhitespace.menuAction())
         self.menu_View.addSeparator()
         self.menu_View.addAction(self.acCompare)
+        self.menu_View.addSeparator()
+        self.menu_View.addAction(self.acFullCommitMsg)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreNone)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreEOL)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreAll)
@@ -287,6 +292,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.acReload.setShortcut(QCoreApplication.translate("MainWindow", u"F5", None))
 #endif // QT_CONFIG(shortcut)
+        self.acFullCommitMsg.setText(QCoreApplication.translate("MainWindow", u"Full Commit &Message", None))
 #if QT_CONFIG(tooltip)
         self.leOpts.setToolTip(QCoreApplication.translate("MainWindow", u"See the GIT-LOG options for more information.", None))
 #endif // QT_CONFIG(tooltip)
