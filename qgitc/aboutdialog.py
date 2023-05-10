@@ -7,18 +7,19 @@ from .common import dataDirPath
 from .version import VERSION
 
 
-class AboutDialog(QDialog, Ui_AboutDialog):
+class AboutDialog(QDialog):
 
     def __init__(self, parent=None):
         super(AboutDialog, self).__init__(parent)
 
-        self.setupUi(self)
+        self.ui = Ui_AboutDialog()
+        self.ui.setupUi(self)
 
         icon = qApp.windowIcon()
-        self.appIcon.setPixmap(icon.pixmap(64, 64))
+        self.ui.appIcon.setPixmap(icon.pixmap(64, 64))
 
-        self.tbAbout.setOpenExternalLinks(True)
-        self.tbLicense.setOpenExternalLinks(True)
+        self.ui.tbAbout.setOpenExternalLinks(True)
+        self.ui.tbLicense.setOpenExternalLinks(True)
 
         self.__initTabs()
 
@@ -34,8 +35,8 @@ class AboutDialog(QDialog, Ui_AboutDialog):
         about += "</a></center><br/>"
         about += "<center>Copyright © 2016-2023 Weitian Leung</center>"
 
-        self.tbAbout.setHtml(about)
+        self.ui.tbAbout.setHtml(about)
 
         licenseFile = dataDirPath() + "/licenses/Apache-2.0.html"
         with open(licenseFile) as f:
-            self.tbLicense.setHtml(f.read())
+            self.ui.tbLicense.setHtml(f.read())
