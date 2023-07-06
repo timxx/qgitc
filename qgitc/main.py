@@ -148,9 +148,10 @@ def _do_blame(args):
     else:
         window.showMaximized()
 
-    _detect_and_fix_repo(args.file)
+    file = os.path.abspath(args.file)
+    _detect_and_fix_repo(file)
 
-    window.blame(args.file, args.rev, args.line_number)
+    window.blame(file, args.rev, args.line_number)
 
     return app.exec()
 
