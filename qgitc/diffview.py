@@ -582,8 +582,7 @@ class DiffView(QWidget):
 
         comments = commit.comments.split('\n')
         for comment in comments:
-            content = comment if not comment else "    " + comment
-            self.viewer.addNormalTextLine(content)
+            self.viewer.addSummaryTextLine(comment)
 
         self.viewer.addNormalTextLine("", False)
 
@@ -773,6 +772,19 @@ class Sha1TextLine(LinkTextLine):
         return self._isParent
 
 
+class SummaryTextLine(TextLine):
+
+    def __init__(self, text, font, option=None):
+        super().__init__(text, font, option)
+
+    def _relayout(self):
+        self._layout.beginLayout()
+        line = self._layout.createLine()
+        width = QFontMetricsF(self._font).averageCharWidth() * 4
+        line.setPosition(QPointF(width, 0))
+        self._layout.endLayout()
+
+
 class PatchViewer(SourceViewer):
     fileRowChanged = Signal(int)
     requestCommit = Signal(str, bool, bool)
@@ -830,6 +842,11 @@ class PatchViewer(SourceViewer):
     def addNormalTextLine(self, text, useBuiltinPatterns=True):
         textLine = TextLine(text, self._font)
         textLine.useBuiltinPatterns = useBuiltinPatterns
+        self.appendTextLine(textLine)
+
+    def addSummaryTextLine(self, text):
+        textLine = SummaryTextLine(text, self._font)
+        textLine.useBuiltinPatterns = True
         self.appendTextLine(textLine)
 
     def drawLineBackground(self, painter, textLine, lineRect):
