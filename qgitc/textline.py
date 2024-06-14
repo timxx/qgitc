@@ -91,6 +91,13 @@ class TextLine():
         if not text or not patterns:
             return links
 
+        def _drop_link(start, end):
+            for i in range(len(links)):
+                link = links[i]
+                if link.start == start and link.end == end:
+                    del links[i]
+                    break
+
         foundLinks = []
         for linkType, pattern, url, in patterns:
             matches = pattern.finditer(text)
@@ -101,7 +108,12 @@ class TextLine():
                     start, end = foundLinks[x]
                     if (start <= m.start() and m.start() <= end) \
                             or (start <= m.end() and m.end() <= end):
-                        found = True
+                        # full contains the previous one
+                        if (m.start() < start and m.end() >= end) or (m.start() == start and m.end() > end):
+                            del foundLinks[x]
+                            _drop_link(start, end)
+                        else:
+                            found = True
                         break
                 # not allow links in the same range
                 if found:
