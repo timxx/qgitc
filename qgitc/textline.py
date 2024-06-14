@@ -125,9 +125,9 @@ class TextLine():
 
     @staticmethod
     def builtinPatterns():
-        patterns = {Link.Sha1: sha1_re,
-                    Link.Email: email_re,
-                    Link.Url: url_re}
+        patterns = {Link.Email: email_re,
+                    Link.Url: url_re,
+                    Link.Sha1: sha1_re}
         return patterns
 
     def createLinksFormats(self):
@@ -189,11 +189,9 @@ class TextLine():
 
             builtinPatterns = TextLine.builtinPatterns() if \
                 self._useBuiltinPatterns else {}
-            patterns = []
+            patterns = self._patterns or []
             for type, pattern in builtinPatterns.items():
                 patterns.append((type, pattern, None))
-            if self._patterns:
-                patterns.extend(self._patterns)
             self._findLinks(patterns)
 
         if self._rehighlight:
@@ -241,9 +239,7 @@ class TextLine():
         if self._layout:
             if patterns:
                 patterns = list(patterns)
-                patterns.append((Link.Sha1, sha1_re, None))
-                patterns.append((Link.Email, email_re, None))
-                patterns.append((Link.Url, url_re, None))
+                patterns.extend(list(self.builtinPatterns()))
                 self._findLinks(patterns)
             self.rehighlight()
         else:
