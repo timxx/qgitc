@@ -10,10 +10,9 @@ on:
 
 jobs:
  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -32,9 +31,5 @@ jobs:
           
       - name: Upload
         if: ${{ github.ref_type == 'tag' }}
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          twine upload --skip-existing dist/qgitc-*-py3-none-any.whl
+        uses: pypa/gh-action-pypi-publish@release/v1
         
