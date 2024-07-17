@@ -64,6 +64,7 @@ class ChatThread(QThread):
 
     responseAvailable = Signal(AiModelBase, AiResponse)
     responseFinish = Signal()
+    serviceUnavailable = Signal(AiModelBase)
 
     def __init__(self, model: AiModelBase, parent=None):
         super().__init__(parent)
@@ -74,6 +75,8 @@ class ChatThread(QThread):
 
         self._model.responseAvailable.connect(
             self._onResponseAvailable, Qt.UniqueConnection)
+        self._model.serviceUnavailable.connect(
+            self._onServiceUnavailable, Qt.UniqueConnection)
 
     def addTask(self, params: AiParameters):
         self._task_queue.put(params)
@@ -101,6 +104,9 @@ class ChatThread(QThread):
 
     def _onResponseAvailable(self, response):
         self.responseAvailable.emit(self._model, response)
+
+    def _onServiceUnavailable(self):
+        self.serviceUnavailable.emit(self._model)
 
 
 class ChatEdit(QWidget):
@@ -315,6 +321,8 @@ class AiChatWindow(QWidget):
             self._onMessageReady)
         chatThread.responseFinish.connect(
             self._onResponseFinish)
+        chatThread.serviceUnavailable.connect(
+            self._onServiceUnavailable)
         chatThread.start()
 
         self._chatThreads[index] = chatThread
@@ -418,6 +426,31 @@ class AiChatWindow(QWidget):
         if clear:
             self.statusBar.clearMessage()
         self.usrInput.setFocus()
+
+    def _onServiceUnavailable(self, model):
+        index = -1
+        if model is None:
+            index = self.cbBots.currentIndex()
+        else:
+            index = self._ai_models.index(model)
+
+        assert (index != -1)
+        messages = self.stackWidget.widget(index)
+
+        cursor = messages.textCursor()
+        cursor.movePosition(QTextCursor.End)
+
+        format = QTextBlockFormat()
+        roleFormat = QTextCharFormat()
+        roleFormat.setFontWeight(QFont.Bold)
+        cursor.insertBlock(format, roleFormat)
+        cursor.insertText("System:")
+
+        errorFormat = QTextCharFormat()
+        errorFormat.setForeground(Qt.red)
+        cursor.insertBlock(QTextBlockFormat(), errorFormat)
+        cursor.insertText(self.tr("Service Unavailable"))
+        cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
 
     def _onModelChanged(self, index):
         self.stackWidget.setCurrentIndex(index)

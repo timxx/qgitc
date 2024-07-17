@@ -40,6 +40,7 @@ class AiChatMode:
 class AiModelBase(QObject):
     responseAvailable = Signal(AiResponse)
     nameChanged = Signal()
+    serviceUnavailable = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -95,6 +96,8 @@ class ChatGPTModel(AiModelBase):
 
         try:
             self._doQuery(payload, params.stream)
+        except requests.exceptions.ConnectionError as e:
+            self.serviceUnavailable.emit()
         except Exception as e:
             print(e)
 
