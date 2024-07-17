@@ -10,10 +10,12 @@ from PySide6.QtCore import (
     QUrl,
     QTimer)
 
+from .aichatwindow import AiChatWindow
 from .common import dataDirPath
 from .settings import Settings
 from .events import (
     BlameEvent,
+    CodeReviewEvent,
     ShowCommitEvent,
     OpenLinkEvent,
     GitBinChanged)
@@ -35,6 +37,7 @@ class Application(QApplication):
 
     LogWindow = 1
     BlameWindow = 2
+    AiAssistant= 3
 
     def __init__(self, argv):
         super(Application, self).__init__(argv)
@@ -51,6 +54,7 @@ class Application(QApplication):
 
         self._logWindow = None
         self._blameWindow = None
+        self._aiChatWindow = None
 
         gitBin = self._settings.gitBinPath() or shutil.which("git")
         if not gitBin or not os.path.exists(gitBin):
@@ -96,6 +100,12 @@ class Application(QApplication):
                 self._blameWindow.destroyed.connect(
                     self._onBlameWindowDestroyed)
             window = self._blameWindow
+        elif type == Application.AiAssistant:
+            if not self._aiChatWindow:
+                self._aiChatWindow = AiChatWindow()
+                self._aiChatWindow.destroyed.connect(
+                    self._onAiChatWindowDestroyed)
+            window = self._aiChatWindow
 
         return window
 
@@ -140,6 +150,11 @@ class Application(QApplication):
             if self._logWindow:
                 self._logWindow.reloadRepo()
 
+        elif type == CodeReviewEvent.Type:
+            window = self.getWindow(Application.AiAssistant)
+            window.show()
+            window.codeReview(event.sha1)
+
         return super().event(event)
 
     def _onLogWindowDestroyed(self, obj):
@@ -147,6 +162,9 @@ class Application(QApplication):
 
     def _onBlameWindowDestroyed(self, obj):
         self._blameWindow = None
+
+    def _onAiChatWindowDestroyed(self, obj):
+        self._aiChatWindow = None
 
     def _onNewVersionAvailable(self, version):
         ignoredVersion = self.settings().ignoredVersion()

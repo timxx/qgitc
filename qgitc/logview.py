@@ -7,7 +7,7 @@ from PySide6.QtCore import *
 from .common import *
 from .gitutils import *
 from .datafetcher import DataFetcher
-from .events import CopyConflictCommit
+from .events import CodeReviewEvent, CopyConflictCommit
 
 import re
 import bisect
@@ -630,6 +630,9 @@ class LogView(QAbstractScrollArea):
             self.__onResetHard)
         self.resetMenu = resetMenu
 
+        self.menu.addSeparator()
+        self.menu.addAction(self.tr("&Code Review"), self.__onCodeReview)
+
     def setBranchB(self):
         self.branchA = False
 
@@ -958,6 +961,16 @@ class LogView(QAbstractScrollArea):
 
     def __onResetHard(self):
         self.__resetToCurCommit("hard")
+
+    def __onCodeReview(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        event = CodeReviewEvent(commit.sha1)
+        qApp.postEvent(qApp, event)
 
     def __onFindDataAvailable(self):
         data = self.findProc.readAllStandardOutput()
