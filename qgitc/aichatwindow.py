@@ -10,6 +10,7 @@ import requests
 
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
+from .statewindow import StateWindow
 
 
 class LocalLLMTokensCalculator(QThread):
@@ -171,7 +172,7 @@ class ChatEdit(QWidget):
         return super().keyPressEvent(event)
 
 
-class AiChatWindow(QWidget):
+class AiChatWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -285,8 +286,6 @@ class AiChatWindow(QWidget):
             self._onModelChanged)
         self.cbChatMode.currentIndexChanged.connect(
             self._onChatModeChanged)
-
-        self.setWindowTitle(self.tr("AI Assistant"))
 
         QWidget.setTabOrder(self.usrInput, self.btnSend)
         QWidget.setTabOrder(self.btnSend, self.btnClear)
@@ -524,3 +523,16 @@ class AiChatWindow(QWidget):
 
         diff = data.decode("utf-8", errors="replace")
         self._doRequest(diff, AiChatMode.CodeReview)
+
+
+class AiChatWindow(StateWindow):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle(self.tr("AI Assistant"))
+        centralWidget = AiChatWidget(self)
+        self.setCentralWidget(centralWidget)
+
+    def codeReview(self, sha1):
+        self.centralWidget().codeReview(sha1)

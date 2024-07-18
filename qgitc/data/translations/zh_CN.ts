@@ -2,37 +2,6 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_CN">
 <context>
-    <name></name>
-    <message>
-        <source>Choose repository directory</source>
-        <translation type="vanished">选择仓库目录</translation>
-    </message>
-    <message>
-        <source>The directory you choosen is not a git repository!</source>
-        <translation type="vanished">您选择的目录不是一个有效的Git仓库！</translation>
-    </message>
-    <message>
-        <source>&apos;{0}&apos; is not a git repository</source>
-        <translation type="vanished">&apos;{0}&apos;不是一个有效的Git仓库</translation>
-    </message>
-    <message>
-        <source>Branch</source>
-        <translation type="vanished">分支</translation>
-    </message>
-    <message>
-        <source>Branch A:</source>
-        <translation type="vanished">分支A：</translation>
-    </message>
-    <message>
-        <source>Branch B:</source>
-        <translation type="vanished">分支B：</translation>
-    </message>
-    <message>
-        <source>No git found, please check your settings.</source>
-        <translation type="vanished">未找到git，请检查您的设置项。</translation>
-    </message>
-</context>
-<context>
     <name>AboutDialog</name>
     <message>
         <location filename="../../aboutdialog.ui" line="14"/>
@@ -61,92 +30,95 @@
     </message>
 </context>
 <context>
-    <name>AiChatWindow</name>
+    <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwindow.py" line="184"/>
+        <location filename="../../aichatwindow.py" line="185"/>
         <source>Enter the query prompt here</source>
         <translation>请在此输入请求提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="195"/>
+        <location filename="../../aichatwindow.py" line="196"/>
         <source>User</source>
         <translation>用户</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="205"/>
+        <location filename="../../aichatwindow.py" line="206"/>
         <source>Max Tokens</source>
         <translation>最大Token数</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="211"/>
+        <location filename="../../aichatwindow.py" line="212"/>
         <source>Max tokens to generate</source>
         <translation>生成的最大Token数量</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="214"/>
+        <location filename="../../aichatwindow.py" line="215"/>
         <source>Temperature</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="245"/>
+        <location filename="../../aichatwindow.py" line="246"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="246"/>
+        <location filename="../../aichatwindow.py" line="247"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="247"/>
+        <location filename="../../aichatwindow.py" line="248"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="248"/>
+        <location filename="../../aichatwindow.py" line="249"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="249"/>
+        <location filename="../../aichatwindow.py" line="250"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="251"/>
+        <location filename="../../aichatwindow.py" line="252"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="266"/>
+        <location filename="../../aichatwindow.py" line="267"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="268"/>
+        <location filename="../../aichatwindow.py" line="269"/>
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="289"/>
-        <source>AI Assistant</source>
-        <translation>AI助手</translation>
-    </message>
-    <message>
-        <location filename="../../aichatwindow.py" line="358"/>
+        <location filename="../../aichatwindow.py" line="357"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="450"/>
+        <location filename="../../aichatwindow.py" line="449"/>
         <source>Service Unavailable</source>
         <translation>服务不可用</translation>
     </message>
 </context>
 <context>
+    <name>AiChatWindow</name>
+    <message>
+        <location filename="../../aichatwindow.py" line="533"/>
+        <source>AI Assistant</source>
+        <translation>AI助手</translation>
+    </message>
+</context>
+<context>
     <name>Application</name>
     <message>
-        <location filename="../../application.py" line="239"/>
+        <location filename="../../application.py" line="238"/>
         <source>No git found, please check your settings.</source>
         <translation>未找到git，请检查您的设置项。</translation>
     </message>
@@ -531,7 +503,7 @@
     <message>
         <location filename="../../linkeditwidget.py" line="197"/>
         <source>&amp;Remove</source>
-        <translation></translation>
+        <translation>删除(&amp;R)</translation>
     </message>
     <message>
         <location filename="../../linkeditwidget.py" line="198"/>
@@ -557,14 +529,6 @@
         <location filename="../../linkeditwidget.py" line="291"/>
         <source>Unsupported repository</source>
         <translation>暂不支持自动识别此仓库</translation>
-    </message>
-    <message>
-        <source>&amp;Bug Url:</source>
-        <translation type="vanished">&amp;BUG URL：</translation>
-    </message>
-    <message>
-        <source>Bug &amp;Pattern:</source>
-        <translation type="vanished">BUG模式(&amp;P)：</translation>
     </message>
 </context>
 <context>
@@ -1316,14 +1280,6 @@ Run `{1}` for getting the latest version.</source>
         <translation>工具(&amp;T)</translation>
     </message>
     <message>
-        <source>Audo detect current repo&apos;s settings</source>
-        <translation type="vanished">自动识别填写当前仓库配置项</translation>
-    </message>
-    <message>
-        <source>Auto &amp;Detect</source>
-        <translation type="vanished">自动识别(&amp;D)</translation>
-    </message>
-    <message>
         <location filename="../../preferences.ui" line="376"/>
         <source>Use global settings when no match current setting</source>
         <translation>当前设置项无法匹配时使用全局设置</translation>
@@ -1337,14 +1293,6 @@ Run `{1}` for getting the latest version.</source>
         <location filename="../../preferences.ui" line="386"/>
         <source>&amp;Edit Global</source>
         <translation>编辑全局配置(&amp;E)</translation>
-    </message>
-    <message>
-        <source>Unable to detect current repo&apos;s name</source>
-        <translation type="vanished">无法识别当前仓库</translation>
-    </message>
-    <message>
-        <source>Unsupported repository</source>
-        <translation type="vanished">暂不支持自动识别此仓库</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="52"/>
@@ -1411,10 +1359,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <location filename="../../preferences.py" line="353"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
-    </message>
-    <message>
-        <source>The bug pattern is invalid, please check again.</source>
-        <translation type="vanished">Bug模式无效，请检查确认。</translation>
     </message>
     <message>
         <location filename="../../preferences.py" line="375"/>
