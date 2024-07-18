@@ -42,10 +42,10 @@ class AiModelBase(QObject):
     nameChanged = Signal()
     serviceUnavailable = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, url, parent=None):
         super().__init__(parent)
         self._history = []
-        self.url_base = "http://127.0.0.1:23719/v1"
+        self.url_base = url
 
     def clear(self):
         self._history.clear()
@@ -63,9 +63,8 @@ class AiModelBase(QObject):
 
 class ChatGPTModel(AiModelBase):
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.url = None
+    def __init__(self, url, parent=None):
+        super().__init__(url, parent)
         self.api_token = None
 
     def query(self, params: AiParameters):
@@ -201,8 +200,8 @@ class LocalLLMNameFetcher(QThread):
 
 class LocalLLM(ChatGPTModel):
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, url, parent=None):
+        super().__init__(url, parent)
         self.model = "local-llm"
         self._name = "Local LLM"
 

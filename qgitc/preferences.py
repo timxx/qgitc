@@ -262,6 +262,8 @@ class Preferences(QDialog):
             git = GitProcess.GIT_BIN
         self.ui.leGitPath.setText(git)
 
+        self.ui.leServerUrl.setText(self.settings.llmServer())
+
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
@@ -528,3 +530,5 @@ class Preferences(QDialog):
 
         value = self.ui.leGitPath.text()
         self.settings.setGitBinPath(value)
+
+        self.settings.setLlmServer(self.ui.leServerUrl.text().strip())

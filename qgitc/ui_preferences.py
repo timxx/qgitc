@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.1
+## Created by: Qt User Interface Compiler version 6.6.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -444,6 +444,26 @@ class Ui_Preferences(object):
         self.verticalLayout_7.addWidget(self.groupBox_7)
 
         self.tabWidget.addTab(self.tabTools, "")
+        self.tabLLM = QWidget()
+        self.tabLLM.setObjectName(u"tabLLM")
+        self.verticalLayout_12 = QVBoxLayout(self.tabLLM)
+        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
+        self.gridLayout_2 = QGridLayout()
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.label_16 = QLabel(self.tabLLM)
+        self.label_16.setObjectName(u"label_16")
+
+        self.gridLayout_2.addWidget(self.label_16, 1, 0, 1, 1)
+
+        self.leServerUrl = QLineEdit(self.tabLLM)
+        self.leServerUrl.setObjectName(u"leServerUrl")
+
+        self.gridLayout_2.addWidget(self.leServerUrl, 1, 1, 1, 1)
+
+
+        self.verticalLayout_12.addLayout(self.gridLayout_2)
+
+        self.tabWidget.addTab(self.tabLLM, "")
 
         self.verticalLayout_2.addWidget(self.tabWidget)
 
@@ -482,7 +502,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(4)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -553,5 +573,7 @@ class Ui_Preferences(object):
 "imgdiff \"$BASE\" \"$LOCAL\" \"$REMOTE\" -o \"$MERGED\"", None))
 #endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
+        self.label_16.setText(QCoreApplication.translate("Preferences", u"Server:", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
     # retranslateUi
 

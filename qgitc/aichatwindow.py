@@ -12,17 +12,14 @@ from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
 
 
-# TODO
-LOCAL_LLM_URL = "http://127.0.0.1:23719/v1"
-
-
 class LocalLLMTokensCalculator(QThread):
 
     calcTokensFinished = Signal(int)
 
-    def __init__(self):
+    def __init__(self, url):
         super().__init__()
         self._tasks = queue.Queue()
+        self._server_url = url
 
     def calc_async(self, model, text):
         self._tasks.put((model, text))
@@ -33,12 +30,13 @@ class LocalLLMTokensCalculator(QThread):
             if model is None:
                 break
 
-            tokens = LocalLLMTokensCalculator.calc_tokens(model, text)
+            tokens = LocalLLMTokensCalculator.calc_tokens(
+                self._server_url, model, text)
             self.calcTokensFinished.emit(tokens)
 
     @staticmethod
-    def calc_tokens(model, text):
-        url = f"{LOCAL_LLM_URL}/tokens"
+    def calc_tokens(url, model, text):
+        url = f"{url}/tokens"
         payload = {
             "text": text,
             "model": model,
@@ -225,7 +223,7 @@ class AiChatWindow(QWidget):
         self.cbBots.setMinimumWidth(130)
 
         self._ai_models = [
-            LocalLLM(self),
+            LocalLLM(qApp.settings().llmServer(), self),
         ]
 
         self._ai_models[0].nameChanged.connect(
@@ -478,7 +476,8 @@ class AiChatWindow(QWidget):
             return
 
         if self._tokenCalculator is None:
-            self._tokenCalculator = LocalLLMTokensCalculator()
+            self._tokenCalculator = LocalLLMTokensCalculator(
+                qApp.settings().llmServer())
             self._tokenCalculator.start()
             self._tokenCalculator.calcTokensFinished.connect(
                 self._onCalcTokensFinished)

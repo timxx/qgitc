@@ -247,3 +247,9 @@ class Settings(QSettings):
 
     def setFullCommitMessage(self, full):
         self.setValue("fullCommitMsg", full)
+
+    def llmServer(self):
+        return self.value("llmServer", "http://127.0.0.1:23719/v1")
+
+    def setLlmServer(self, server):
+        self.setValue("llmServer", server)
