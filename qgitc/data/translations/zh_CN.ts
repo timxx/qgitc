@@ -50,20 +50,103 @@
         <translation>许可证(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="31"/>
+        <location filename="../../aboutdialog.py" line="32"/>
         <source>Git file conflicts and logs viewer</source>
         <translation>Git文件冲突、日志查看器</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="34"/>
+        <location filename="../../aboutdialog.py" line="35"/>
         <source>Visit project host</source>
         <translation>访问项目主页</translation>
     </message>
 </context>
 <context>
+    <name>AiChatWindow</name>
+    <message>
+        <location filename="../../aichatwindow.py" line="184"/>
+        <source>Enter the query prompt here</source>
+        <translation>请在此输入请求提示词</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="195"/>
+        <source>User</source>
+        <translation>用户</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="205"/>
+        <source>Max Tokens</source>
+        <translation>最大Token数</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="211"/>
+        <source>Max tokens to generate</source>
+        <translation>生成的最大Token数量</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="214"/>
+        <source>Temperature</source>
+        <translation>温度</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="245"/>
+        <source>Chat</source>
+        <translation>对话</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="246"/>
+        <source>Completion</source>
+        <translation>补全</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="247"/>
+        <source>Infilling</source>
+        <translation>填充</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="248"/>
+        <source>Code Review</source>
+        <translation>代码审查</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="249"/>
+        <source>Code Fix</source>
+        <translation>代码修复</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="251"/>
+        <source>Code Explanation</source>
+        <translation>代码解释</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="266"/>
+        <source>Send</source>
+        <translation>发送</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="268"/>
+        <source>Clear</source>
+        <translation>清除</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="289"/>
+        <source>AI Assistant</source>
+        <translation>AI助手</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="358"/>
+        <source>Work in progress...</source>
+        <translation>正在请求中……</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="450"/>
+        <source>Service Unavailable</source>
+        <translation>服务不可用</translation>
+    </message>
+</context>
+<context>
     <name>Application</name>
     <message>
-        <location filename="../../application.py" line="220"/>
+        <location filename="../../application.py" line="239"/>
         <source>No git found, please check your settings.</source>
         <translation>未找到git，请检查您的设置项。</translation>
     </message>
@@ -203,7 +286,7 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="605"/>
+        <location filename="../../diffview.py" line="604"/>
         <source>Comments</source>
         <translation></translation>
     </message>
@@ -507,12 +590,12 @@
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1029"/>
+        <location filename="../../logview.py" line="1042"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1050"/>
+        <location filename="../../logview.py" line="1063"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
@@ -552,12 +635,17 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="902"/>
+        <location filename="../../logview.py" line="634"/>
+        <source>&amp;Code Review</source>
+        <translation>代码审查(&amp;C)</translation>
+    </message>
+    <message>
+        <location filename="../../logview.py" line="905"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="915"/>
+        <location filename="../../logview.py" line="918"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
     </message>
@@ -1022,7 +1110,7 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="858"/>
+        <location filename="../../diffview.py" line="875"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
@@ -1162,6 +1250,16 @@ Run `{1}` for getting the latest version.</source>
         <translation>链接</translation>
     </message>
     <message>
+        <location filename="../../preferences.ui" line="796"/>
+        <source>&amp;LLM</source>
+        <translation>大语言模型(&amp;L)</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="804"/>
+        <source>Server:</source>
+        <translation>服务器：</translation>
+    </message>
+    <message>
         <source>C&amp;ommit URL:</source>
         <translation type="obsolete">记录URL(&amp;O)：</translation>
     </message>
@@ -1193,17 +1291,17 @@ Run `{1}` for getting the latest version.</source>
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="311"/>
+        <location filename="../../preferences.py" line="313"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="317"/>
+        <location filename="../../preferences.py" line="319"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="331"/>
+        <location filename="../../preferences.py" line="333"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
@@ -1310,7 +1408,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="351"/>
+        <location filename="../../preferences.py" line="353"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
     </message>
@@ -1319,12 +1417,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">Bug模式无效，请检查确认。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="373"/>
+        <location filename="../../preferences.py" line="375"/>
         <source>The diff tool name can&apos;t be empty!</source>
         <translation>diff工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="381"/>
+        <location filename="../../preferences.py" line="383"/>
         <source>The merge tool name can&apos;t be empty!</source>
         <translation>merge工具名称不能为空！</translation>
     </message>
@@ -1339,12 +1437,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>浏览(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="390"/>
+        <location filename="../../preferences.py" line="392"/>
         <source>The git path you specified is invalid.</source>
         <translation>无效的git路径。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="411"/>
+        <location filename="../../preferences.py" line="413"/>
         <source>Choose Git</source>
         <translation>选择Git</translation>
     </message>
