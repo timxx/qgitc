@@ -52,6 +52,7 @@ class GitBinChanged(QEvent):
 class CodeReviewEvent(QEvent):
     Type = QEvent.User + 6
 
-    def __init__(self, sha1):
+    def __init__(self, sha1, args=None):
         super().__init__(QEvent.Type(CodeReviewEvent.Type))
         self.sha1 = sha1
+        self.args = args

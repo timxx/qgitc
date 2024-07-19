@@ -516,8 +516,8 @@ class AiChatWidget(QWidget):
     def isLocalLLM(self):
         return self.cbBots.currentIndex() == 0
 
-    def codeReview(self, sha1):
-        data: bytes = Git.commitRawDiff(sha1)
+    def codeReview(self, sha1, args):
+        data: bytes = Git.commitRawDiff(sha1, gitArgs=args)
         if not data:
             return
 
@@ -534,5 +534,5 @@ class AiChatWindow(StateWindow):
         centralWidget = AiChatWidget(self)
         self.setCentralWidget(centralWidget)
 
-    def codeReview(self, sha1):
-        self.centralWidget().codeReview(sha1)
+    def codeReview(self, sha1, args=None):
+        self.centralWidget().codeReview(sha1, args)

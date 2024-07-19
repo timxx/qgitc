@@ -482,6 +482,11 @@ class MainWindow(StateWindow):
             self.ui.leOpts.setText(filePath)
         self.__onOptsReturnPressed()
 
+    def getFilterArgs(self):
+        text = self.ui.leOpts.text().strip()
+        args = shlex.split(text, posix=sys.platform != "win32")
+        return args
+
     def setMode(self, mode):
         hasMergeMenu = False
         if mode == MainWindow.LogMode:

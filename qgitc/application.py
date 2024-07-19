@@ -153,7 +153,7 @@ class Application(QApplication):
         elif type == CodeReviewEvent.Type:
             window = self.getWindow(Application.AiAssistant)
             self._ensureVisible(window)
-            window.codeReview(event.sha1)
+            window.codeReview(event.sha1, event.args)
 
         return super().event(event)
 
