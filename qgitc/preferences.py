@@ -353,6 +353,9 @@ class Preferences(QDialog):
                 self.tr("Unable to find the path of imgdiff!"))
             return
 
+        if os.name == "nt":
+            path = path.replace("\\", "/")
+
         ret, error = Git.setDiffTool(
             "imgdiff", '%s "$LOCAL" "$REMOTE"' % path)
         if ret != 0:
