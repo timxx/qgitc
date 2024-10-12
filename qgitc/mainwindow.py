@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QDialog)
 
+from .findwidget import FindWidget
+
 from .ui_mainwindow import Ui_MainWindow
 from .gitview import GitView
 from .preferences import Preferences
@@ -147,6 +149,12 @@ class MainWindow(StateWindow):
         self.ui.acFind.triggered.connect(
             self.__onFindTriggered)
 
+        self.ui.acFindNext.triggered.connect(
+            self.__onFindNextTriggered)
+
+        self.ui.acFindPrevious.triggered.connect(
+            self.__onFindPreviousTriggered)
+
         self.ui.menu_Edit.aboutToShow.connect(
             self.__updateEditMenu)
 
@@ -195,6 +203,8 @@ class MainWindow(StateWindow):
         self.ui.acCopy.setEnabled(False)
         self.ui.acSelectAll.setEnabled(False)
         self.ui.acFind.setEnabled(False)
+        self.ui.acFindNext.setEnabled(False)
+        self.ui.acFindPrevious.setEnabled(False)
         enabled = self.mergeWidget is not None and self.mergeWidget.isResolving()
         self.ui.acCopyLog.setEnabled(False)
         self.ui.acCopyLogA.setEnabled(enabled)
@@ -206,13 +216,21 @@ class MainWindow(StateWindow):
             self.ui.acCopy.setEnabled(fw.hasSelection())
             self.ui.acSelectAll.setEnabled(True)
             self.ui.acFind.setEnabled(True)
+            self.ui.acFindNext.setEnabled(fw.canFindNext())
+            self.ui.acFindPrevious.setEnabled(fw.canFindPrevious())
         elif isinstance(fw, QLineEdit):
             self.ui.acCopy.setEnabled(fw.hasSelectedText())
             self.ui.acSelectAll.setEnabled(True)
             self.ui.acFind.setEnabled(False)
+            if isinstance(fw.parentWidget(), FindWidget):
+                self.ui.acFindNext.setEnabled(fw.parentWidget().canFindNext())
+                self.ui.acFindPrevious.setEnabled(fw.parentWidget().canFindPrevious())
         elif isinstance(fw, LogView):
             self.ui.acCopy.setEnabled(fw.isCurrentCommitted())
             self.ui.acCopyLog.setEnabled(enabled)
+        elif isinstance(fw, FindWidget):
+            self.ui.acFindNext.setEnabled(fw.canFindNext())
+            self.ui.acFindPrevious.setEnabled(fw.canFindPrevious())
 
     def __onBtnRepoBrowseClicked(self, checked):
         repoDir = QFileDialog.getExistingDirectory(self,
@@ -359,6 +377,20 @@ class MainWindow(StateWindow):
         fw = qApp.focusWidget()
         assert fw and isinstance(fw, PatchViewer)
         fw.executeFind()
+
+    def __onFindNextTriggered(self):
+        fw = qApp.focusWidget()
+        if isinstance(fw, QLineEdit) and isinstance(fw.parentWidget(), FindWidget):
+            fw.parentWidget().findNext()
+        else:
+            fw.findNext()
+
+    def __onFindPreviousTriggered(self):
+        fw = qApp.focusWidget()
+        if isinstance(fw, QLineEdit) and isinstance(fw.parentWidget(), FindWidget):
+            fw.parentWidget().findPrevious()
+        else:
+            fw.findPrevious()
 
     def __onAboutTriggered(self):
         aboutDlg = AboutDialog(self)

@@ -307,3 +307,15 @@ class FindWidget(QWidget):
             self._updatePos()
 
         return super().eventFilter(obj, event)
+
+    def canFindNext(self):
+        return self._tbNext.isEnabled()
+
+    def canFindPrevious(self):
+        return self._tbPrev.isEnabled()
+
+    def findNext(self):
+        self._onNextClicked()
+
+    def findPrevious(self):
+        self._onPreviousClicked()

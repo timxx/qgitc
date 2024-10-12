@@ -99,7 +99,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>26</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -150,6 +150,8 @@
     <addaction name="acSelectAll"/>
     <addaction name="separator"/>
     <addaction name="acFind"/>
+    <addaction name="acFindNext"/>
+    <addaction name="acFindPrevious"/>
    </widget>
    <widget class="QMenu" name="menu_Merge">
     <property name="title">
@@ -175,8 +177,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="acQuit">
    <property name="icon">
-    <iconset theme="window-close">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="window-close"/>
    </property>
    <property name="text">
     <string>Close &amp;Window</string>
@@ -187,8 +188,7 @@
   </action>
   <action name="acAbout">
    <property name="icon">
-    <iconset theme="help-about">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="help-about"/>
    </property>
    <property name="text">
     <string>&amp;About QGitc</string>
@@ -196,8 +196,7 @@
   </action>
   <action name="acPreferences">
    <property name="icon">
-    <iconset theme="preferences-system">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="preferences-system"/>
    </property>
    <property name="text">
     <string>&amp;Preferences...</string>
@@ -242,8 +241,7 @@
   </action>
   <action name="acCopy">
    <property name="icon">
-    <iconset theme="edit-copy">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-copy"/>
    </property>
    <property name="text">
     <string>&amp;Copy</string>
@@ -254,8 +252,7 @@
   </action>
   <action name="acSelectAll">
    <property name="icon">
-    <iconset theme="edit-select-all">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-select-all"/>
    </property>
    <property name="text">
     <string>Select &amp;All</string>
@@ -266,8 +263,7 @@
   </action>
   <action name="acFind">
    <property name="icon">
-    <iconset theme="edit-find">
-     <normaloff>.</normaloff>.</iconset>
+    <iconset theme="edit-find"/>
    </property>
    <property name="text">
     <string>&amp;Find</string>
@@ -338,6 +334,22 @@
    </property>
    <property name="text">
     <string>Full Commit &amp;Message</string>
+   </property>
+  </action>
+  <action name="acFindNext">
+   <property name="text">
+    <string>Find &amp;Next</string>
+   </property>
+   <property name="shortcut">
+    <string>F3</string>
+   </property>
+  </action>
+  <action name="acFindPrevious">
+   <property name="text">
+    <string>Find &amp;Previous</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+F3</string>
    </property>
   </action>
  </widget>

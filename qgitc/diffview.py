@@ -1056,3 +1056,21 @@ class PatchViewer(SourceViewer):
             self.findWidget.hideAnimate()
             return True
         return False
+
+    def canFindNext(self):
+        if not self.findWidget:
+            return False
+        return self.findWidget.isVisible() and self.findWidget.canFindNext()
+
+    def canFindPrevious(self):
+        if not self.findWidget:
+            return False
+        return self.findWidget.isVisible() and self.findWidget.canFindPrevious()
+
+    def findNext(self):
+        if self.findWidget:
+            self.findWidget.findNext()
+
+    def findPrevious(self):
+        if self.findWidget:
+            self.findWidget.findPrevious()

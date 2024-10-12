@@ -30,36 +30,18 @@ class Ui_MainWindow(object):
         MainWindow.resize(800, 600)
         self.acQuit = QAction(MainWindow)
         self.acQuit.setObjectName(u"acQuit")
-        icon = QIcon()
-        iconThemeName = u"window-close"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon = QIcon.fromTheme(iconThemeName)
-        else:
-            icon.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-
+        icon = QIcon(QIcon.fromTheme(u"window-close"))
         self.acQuit.setIcon(icon)
 #if QT_CONFIG(shortcut)
         self.acQuit.setShortcut(u"Ctrl+W")
 #endif // QT_CONFIG(shortcut)
         self.acAbout = QAction(MainWindow)
         self.acAbout.setObjectName(u"acAbout")
-        icon1 = QIcon()
-        iconThemeName = u"help-about"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon1 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon1.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-
+        icon1 = QIcon(QIcon.fromTheme(u"help-about"))
         self.acAbout.setIcon(icon1)
         self.acPreferences = QAction(MainWindow)
         self.acPreferences.setObjectName(u"acPreferences")
-        icon2 = QIcon()
-        iconThemeName = u"preferences-system"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon2 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon2.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-
+        icon2 = QIcon(QIcon.fromTheme(u"preferences-system"))
         self.acPreferences.setIcon(icon2)
         self.actionIgnore_whitespace_changes = QAction(MainWindow)
         self.actionIgnore_whitespace_changes.setObjectName(u"actionIgnore_whitespace_changes")
@@ -77,33 +59,15 @@ class Ui_MainWindow(object):
         self.acIgnoreNone.setCheckable(True)
         self.acCopy = QAction(MainWindow)
         self.acCopy.setObjectName(u"acCopy")
-        icon3 = QIcon()
-        iconThemeName = u"edit-copy"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon3 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon3.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-
+        icon3 = QIcon(QIcon.fromTheme(u"edit-copy"))
         self.acCopy.setIcon(icon3)
         self.acSelectAll = QAction(MainWindow)
         self.acSelectAll.setObjectName(u"acSelectAll")
-        icon4 = QIcon()
-        iconThemeName = u"edit-select-all"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon4 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon4.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-
+        icon4 = QIcon(QIcon.fromTheme(u"edit-select-all"))
         self.acSelectAll.setIcon(icon4)
         self.acFind = QAction(MainWindow)
         self.acFind.setObjectName(u"acFind")
-        icon5 = QIcon()
-        iconThemeName = u"edit-find"
-        if QIcon.hasThemeIcon(iconThemeName):
-            icon5 = QIcon.fromTheme(iconThemeName)
-        else:
-            icon5.addFile(u".", QSize(), QIcon.Normal, QIcon.Off)
-
+        icon5 = QIcon(QIcon.fromTheme(u"edit-find"))
         self.acFind.setIcon(icon5)
         self.acCompare = QAction(MainWindow)
         self.acCompare.setObjectName(u"acCompare")
@@ -125,6 +89,10 @@ class Ui_MainWindow(object):
         self.acFullCommitMsg = QAction(MainWindow)
         self.acFullCommitMsg.setObjectName(u"acFullCommitMsg")
         self.acFullCommitMsg.setCheckable(True)
+        self.acFindNext = QAction(MainWindow)
+        self.acFindNext.setObjectName(u"acFindNext")
+        self.acFindPrevious = QAction(MainWindow)
+        self.acFindPrevious.setObjectName(u"acFindPrevious")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -192,7 +160,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 26))
+        self.menubar.setGeometry(QRect(0, 0, 800, 22))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menu_Help = QMenu(self.menubar)
@@ -241,6 +209,8 @@ class Ui_MainWindow(object):
         self.menu_Edit.addAction(self.acSelectAll)
         self.menu_Edit.addSeparator()
         self.menu_Edit.addAction(self.acFind)
+        self.menu_Edit.addAction(self.acFindNext)
+        self.menu_Edit.addAction(self.acFindPrevious)
         self.menu_Merge.addAction(self.menuCopy_To_Conflict_Log.menuAction())
         self.menuCopy_To_Conflict_Log.addAction(self.acCopyLog)
         self.menuCopy_To_Conflict_Log.addAction(self.acCopyLogA)
@@ -293,6 +263,14 @@ class Ui_MainWindow(object):
         self.acReload.setShortcut(QCoreApplication.translate("MainWindow", u"F5", None))
 #endif // QT_CONFIG(shortcut)
         self.acFullCommitMsg.setText(QCoreApplication.translate("MainWindow", u"Full Commit &Message", None))
+        self.acFindNext.setText(QCoreApplication.translate("MainWindow", u"Find &Next", None))
+#if QT_CONFIG(shortcut)
+        self.acFindNext.setShortcut(QCoreApplication.translate("MainWindow", u"F3", None))
+#endif // QT_CONFIG(shortcut)
+        self.acFindPrevious.setText(QCoreApplication.translate("MainWindow", u"Find &Previous", None))
+#if QT_CONFIG(shortcut)
+        self.acFindPrevious.setShortcut(QCoreApplication.translate("MainWindow", u"Shift+F3", None))
+#endif // QT_CONFIG(shortcut)
 #if QT_CONFIG(tooltip)
         self.leOpts.setToolTip(QCoreApplication.translate("MainWindow", u"See the GIT-LOG options for more information.", None))
 #endif // QT_CONFIG(tooltip)
