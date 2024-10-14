@@ -68,18 +68,30 @@ class BlameWindow(StateWindow):
         ac.setIcon(QIcon.fromTheme("go-jump"))
         ac = editMenu.addAction(self.tr("&Find"),
                                 self.showFindWidget,
-                                QKeySequence("Ctrl+F"))
+                                QKeySequence(QKeySequence.StandardKey.Find))
         ac.setIcon(QIcon.fromTheme("edit-find"))
+
+        self.acFindNext = editMenu.addAction(
+            self.tr("Find &Next"),
+            self.findNext,
+            QKeySequence(QKeySequence.StandardKey.FindNext))
+        self.acFindPrev = editMenu.addAction(
+            self.tr("Find &Previous"),
+            self.findPrevious,
+            QKeySequence(QKeySequence.StandardKey.FindPrevious))
+
         editMenu.addSeparator()
         ac = editMenu.addAction(self.tr("&Copy"),
                                 self._onCopy,
-                                QKeySequence("Ctrl+C"))
+                                QKeySequence(QKeySequence.StandardKey.Copy))
         ac.setIcon(QIcon.fromTheme("edit-copy"))
         editMenu.addSeparator()
         ac = editMenu.addAction(self.tr("Select &All"),
                                 self._onSelectAll,
-                                QKeySequence("Ctrl+A"))
+                                QKeySequence(QKeySequence.StandardKey.SelectAll))
         ac.setIcon(QIcon.fromTheme("edit-select-all"))
+
+        editMenu.aboutToShow.connect(self._onEditMenuAboutToShow)
 
     def _onGotoLine(self):
         gotoDialog = GotoDialog(self)
@@ -200,3 +212,21 @@ class BlameWindow(StateWindow):
                     return
 
         super().keyPressEvent(event)
+
+    def findNext(self):
+        if self._findWidget:
+            self._findWidget.findNext()
+
+    def findPrevious(self):
+        if self._findWidget:
+            self._findWidget.findPrevious()
+
+    def _onEditMenuAboutToShow(self):
+        enabled = self._findWidget is not None and self._findWidget.isVisible()
+        if not enabled:
+            self.acFindNext.setEnabled(False)
+            self.acFindPrev.setEnabled(False)
+            return
+
+        self.acFindNext.setEnabled(self._findWidget.canFindNext())
+        self.acFindPrev.setEnabled(self._findWidget.canFindPrevious())
