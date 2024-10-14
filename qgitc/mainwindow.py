@@ -190,6 +190,8 @@ class MainWindow(StateWindow):
         self._delayTimer.timeout.connect(
             self.__onDelayTimeout)
 
+        self.ui.cbSelfCommits.stateChanged.connect(self.__onSelfCommitsStateChanged)
+
     def __setupMenus(self):
         acGroup = QActionGroup(self)
         acGroup.addAction(self.ui.acIgnoreNone)
@@ -470,6 +472,8 @@ class MainWindow(StateWindow):
 
         # don't knonw if cygwin works or not
         args = shlex.split(opts, posix=sys.platform != "win32")
+        if self.ui.cbSelfCommits.isChecked():
+            args.append(f"--author={Git.userName()}")
         gitView.filterLog(args)
 
     def showMessage(self, msg, timeout=5000):
@@ -586,3 +590,6 @@ class MainWindow(StateWindow):
             return True
 
         return False
+
+    def __onSelfCommitsStateChanged(self, state):
+        self.__onOptsReturnPressed()

@@ -16,10 +16,11 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QGridLayout,
-    QLabel, QLayout, QLineEdit, QMainWindow,
-    QMenu, QMenuBar, QPushButton, QSizePolicy,
-    QSplitter, QStatusBar, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFrame,
+    QGridLayout, QLabel, QLayout, QLineEdit,
+    QMainWindow, QMenu, QMenuBar, QPushButton,
+    QSizePolicy, QSplitter, QStatusBar, QVBoxLayout,
+    QWidget)
 
 from .gitview import GitView
 
@@ -142,6 +143,11 @@ class Ui_MainWindow(object):
         self.cbSubmodule.setObjectName(u"cbSubmodule")
 
         self.gridLayout_2.addWidget(self.cbSubmodule, 1, 2, 1, 1)
+
+        self.cbSelfCommits = QCheckBox(self.gridFrame)
+        self.cbSelfCommits.setObjectName(u"cbSelfCommits")
+
+        self.gridLayout_2.addWidget(self.cbSelfCommits, 2, 3, 1, 1)
 
 
         self.verticalLayout.addWidget(self.gridFrame)
@@ -279,6 +285,7 @@ class Ui_MainWindow(object):
         self.btnRepoBrowse.setText(QCoreApplication.translate("MainWindow", u"&Browse...", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Repository:", None))
         self.lbSubmodule.setText(QCoreApplication.translate("MainWindow", u"Submodule:", None))
+        self.cbSelfCommits.setText(QCoreApplication.translate("MainWindow", u"Your Commits", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.menu_Help.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))
         self.menu_Settings.setTitle(QCoreApplication.translate("MainWindow", u"&Settings", None))

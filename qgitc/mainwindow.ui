@@ -74,6 +74,13 @@
        <item row="1" column="2">
         <widget class="QComboBox" name="cbSubmodule"/>
        </item>
+       <item row="2" column="3">
+        <widget class="QCheckBox" name="cbSelfCommits">
+         <property name="text">
+          <string>Your Commits</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
     </item>

@@ -553,3 +553,7 @@ class Git():
             return ""
 
         return Git.getConfigValue("mergetool.%s.cmd" % name)
+
+    @staticmethod
+    def userName():
+        return Git.getConfigValue("user.name", False)
