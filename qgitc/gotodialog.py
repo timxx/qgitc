@@ -39,6 +39,7 @@ class GotoDialog(QDialog):
 
         self._lineEdit.setText("1")
         self._lineEdit.selectAll()
+        self._lineEdit.setFocus()
 
     def setRange(self, minLine, maxLine, curLine):
         if maxLine < minLine:
