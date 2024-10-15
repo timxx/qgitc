@@ -401,6 +401,33 @@ class TextViewer(QAbstractScrollArea):
         if x1 < offset or x2 > (offset + viewWidth):
             hbar.setValue(x1)
 
+    def ensureSelectionVisible(self):
+        if not self.hasTextLines():
+            return
+        if not self._cursor.isValid():
+            return
+
+        startLine = self.firstVisibleLine()
+        endLine = startLine + self._linesPerPage()
+        endLine = min(self.textLineCount(), endLine)
+
+        if self._cursor._endLine > endLine:
+            self.verticalScrollBar().setValue(self._cursor._endLine - endLine + startLine)
+        elif self._cursor._endLine < startLine:
+            self.verticalScrollBar().setValue(self._cursor._endLine)
+
+        textLine = self.textLineAt(self._cursor._endLine)
+        x = textLine.offsetToX(self._cursor._endPos)
+
+        hbar = self.horizontalScrollBar()
+        viewWidth = self.viewport().width()
+        offset = hbar.value()
+
+        if x > (offset + viewWidth):
+            hbar.setValue(x - viewWidth + offset)
+        elif x < offset:
+            hbar.setValue(x)
+
     def findAll(self, text, flags=0):
         if not text or not self.hasTextLines():
             return []
@@ -975,9 +1002,19 @@ class TextViewer(QAbstractScrollArea):
                 QScrollBar.SliderPageStepAdd)
         elif event.matches(QKeySequence.StandardKey.SelectNextChar):
             self._cursor.selectNextChar()
+            self.ensureSelectionVisible()
             self.viewport().update()
         elif event.matches(QKeySequence.StandardKey.SelectPreviousChar):
             self._cursor.selectPreviousChar()
+            self.ensureSelectionVisible()
+            self.viewport().update()
+        elif event.matches(QKeySequence.StandardKey.SelectNextLine):
+            self._cursor.selectNextLine()
+            self.ensureSelectionVisible()
+            self.viewport().update()
+        elif event.matches(QKeySequence.StandardKey.SelectPreviousLine):
+            self._cursor.selectPreviousLine()
+            self.ensureSelectionVisible()
             self.viewport().update()
         else:
             super().keyPressEvent(event)

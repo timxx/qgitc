@@ -123,6 +123,9 @@ class TextCursor():
         return text
 
     def selectPreviousChar(self):
+        if not self._viewer.hasTextLines():
+            return
+
         if self._endPos == 0:
             if self._endLine > 0:
                 self._endLine -= 1
@@ -132,6 +135,9 @@ class TextCursor():
             self._endPos -= 1
 
     def selectNextChar(self):
+        if not self._viewer.hasTextLines():
+            return
+
         text = self._viewer.textLineAt(self._endLine).text()
         if len(text) == 0 or self._endPos == len(text):
             if (self._endLine + 1) < self._viewer.textLineCount():
@@ -139,3 +145,21 @@ class TextCursor():
                 self._endPos = 0
         else:
             self._endPos += 1
+
+    def selectNextLine(self):
+        if not self._viewer.hasTextLines():
+            return
+
+        if (self._endLine + 1) < self._viewer.textLineCount():
+            self._endLine += 1
+        else:
+            self._endPos = len(self._viewer.textLineAt(self._endLine).text())
+
+    def selectPreviousLine(self):
+        if not self._viewer.hasTextLines():
+            return
+
+        if self._endLine > 0:
+            self._endLine -= 1
+        else:
+            self._endPos = 0
