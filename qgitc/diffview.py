@@ -869,6 +869,12 @@ class PatchViewer(SourceViewer):
 
     def createContextMenu(self):
         menu = super().createContextMenu()
+        action = QAction(self.tr("Copy Plain &Text"), self)
+        action.triggered.connect(self.copyPlainText)
+        menu.insertAction(self._acCopy, action)
+        menu.removeAction(self._acCopy)
+        menu.insertAction(action, self._acCopy)
+
         menu.addSeparator()
 
         self._acOpenCommit = menu.addAction(
@@ -1074,3 +1080,21 @@ class PatchViewer(SourceViewer):
     def findPrevious(self):
         if self.findWidget:
             self.findWidget.findPrevious()
+
+    def copyPlainText(self):
+        text = self._cursor.selectedText()
+        if not text:
+            return
+
+        lines = text.split('\n')
+        newText = ""
+        for line in lines:
+            if line and line[0] in ['+', '-', ' ']:
+                newText += line[1:] + '\n'
+            else:
+                newText += line + '\n'
+
+        clipboard = QApplication.clipboard()
+        mimeData = QMimeData()
+        mimeData.setText(newText)
+        clipboard.setMimeData(mimeData)

@@ -154,6 +154,7 @@
      <string>&amp;Edit</string>
     </property>
     <addaction name="acCopy"/>
+    <addaction name="acCopyPlainText"/>
     <addaction name="acSelectAll"/>
     <addaction name="separator"/>
     <addaction name="acFind"/>
@@ -357,6 +358,11 @@
    </property>
    <property name="shortcut">
     <string>Shift+F3</string>
+   </property>
+  </action>
+  <action name="acCopyPlainText">
+   <property name="text">
+    <string>Copy Plain &amp;Text</string>
    </property>
   </action>
  </widget>

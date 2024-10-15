@@ -135,6 +135,8 @@ class MainWindow(StateWindow):
 
         self.ui.acCopy.triggered.connect(
             self.__onCopyTriggered)
+        self.ui.acCopyPlainText.triggered.connect(
+            self.__onCopyPlainTextTriggered)
 
         self.ui.acCopyLog.triggered.connect(
             self.__onCopyLogTriggered)
@@ -211,6 +213,8 @@ class MainWindow(StateWindow):
         self.ui.acCopyLog.setEnabled(False)
         self.ui.acCopyLogA.setEnabled(enabled)
         self.ui.acCopyLogB.setEnabled(enabled)
+        self.ui.acCopyPlainText.setVisible(False)
+        self.ui.acCopyPlainText.setEnabled(False)
 
         if not fw:
             pass
@@ -220,6 +224,8 @@ class MainWindow(StateWindow):
             self.ui.acFind.setEnabled(True)
             self.ui.acFindNext.setEnabled(fw.canFindNext())
             self.ui.acFindPrevious.setEnabled(fw.canFindPrevious())
+            self.ui.acCopyPlainText.setVisible(True)
+            self.ui.acCopyPlainText.setEnabled(fw.hasSelection())
         elif isinstance(fw, QLineEdit):
             self.ui.acCopy.setEnabled(fw.hasSelectedText())
             self.ui.acSelectAll.setEnabled(True)
@@ -358,6 +364,11 @@ class MainWindow(StateWindow):
         fw = qApp.focusWidget()
         assert fw
         fw.copy()
+
+    def __onCopyPlainTextTriggered(self):
+        fw = qApp.focusWidget()
+        assert fw
+        fw.copyPlainText()
 
     def __onCopyLogTriggered(self):
         fw = qApp.focusWidget()
