@@ -697,122 +697,127 @@
         <translation type="obsolete">退出(&amp;Q)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="201"/>
+        <location filename="../../mainwindow.ui" line="202"/>
         <source>&amp;About QGitc</source>
         <translation>关于QGitc(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="209"/>
+        <location filename="../../mainwindow.ui" line="210"/>
         <source>&amp;Preferences...</source>
         <translation>首选项(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="214"/>
+        <location filename="../../mainwindow.ui" line="215"/>
         <source>Ignore whitespace changes</source>
         <translation>忽略空白改动</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="222"/>
+        <location filename="../../mainwindow.ui" line="223"/>
         <source>&amp;Visualize whitespace</source>
         <translation>显示空白字符(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="230"/>
+        <location filename="../../mainwindow.ui" line="231"/>
         <source>At &amp;end of line</source>
         <translation>行末(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="238"/>
+        <location filename="../../mainwindow.ui" line="239"/>
         <source>&amp;All</source>
         <translation>全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="246"/>
+        <location filename="../../mainwindow.ui" line="247"/>
         <source>&amp;None</source>
         <translation>无(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="254"/>
+        <location filename="../../mainwindow.ui" line="255"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="265"/>
+        <location filename="../../mainwindow.ui" line="266"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="276"/>
+        <location filename="../../mainwindow.ui" line="277"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="287"/>
+        <location filename="../../mainwindow.ui" line="288"/>
         <source>&amp;Compare Mode</source>
         <translation>比较模式(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="332"/>
+        <location filename="../../mainwindow.ui" line="333"/>
         <source>&amp;Reload Repository</source>
         <translation>重新加载仓库(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="335"/>
+        <location filename="../../mainwindow.ui" line="336"/>
         <source>F5</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="343"/>
+        <location filename="../../mainwindow.ui" line="344"/>
         <source>Full Commit &amp;Message</source>
         <translation>完整的记录消息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="348"/>
+        <location filename="../../mainwindow.ui" line="349"/>
         <source>Find &amp;Next</source>
         <translation>查找下一个(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="351"/>
+        <location filename="../../mainwindow.ui" line="352"/>
         <source>F3</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="356"/>
+        <location filename="../../mainwindow.ui" line="357"/>
         <source>Find &amp;Previous</source>
         <translation>查找上一个(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="359"/>
+        <location filename="../../mainwindow.ui" line="360"/>
         <source>Shift+F3</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="240"/>
+        <location filename="../../mainwindow.ui" line="365"/>
+        <source>Copy Plain &amp;Text</source>
+        <translation>复制纯文本(&amp;T)</translation>
+    </message>
+    <message>
+        <location filename="../../mainwindow.py" line="246"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="249"/>
+        <location filename="../../mainwindow.py" line="255"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="264"/>
+        <location filename="../../mainwindow.py" line="270"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="540"/>
+        <location filename="../../mainwindow.py" line="551"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="541"/>
+        <location filename="../../mainwindow.py" line="552"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="529"/>
+        <location filename="../../mainwindow.py" line="540"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -825,12 +830,12 @@
         <translation type="obsolete">提交者</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="298"/>
+        <location filename="../../mainwindow.ui" line="299"/>
         <source>Show &amp;graph</source>
         <translation>显示分支图(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="303"/>
+        <location filename="../../mainwindow.ui" line="304"/>
         <source>About &amp;Qt</source>
         <translation>关于&amp;Qt</translation>
     </message>
@@ -860,37 +865,37 @@
         <translation>子仓库：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="257"/>
+        <location filename="../../mainwindow.ui" line="258"/>
         <source>Ctrl+C</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="268"/>
+        <location filename="../../mainwindow.ui" line="269"/>
         <source>Ctrl+A</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="279"/>
+        <location filename="../../mainwindow.ui" line="280"/>
         <source>Ctrl+F</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="190"/>
+        <location filename="../../mainwindow.ui" line="191"/>
         <source>Close &amp;Window</source>
         <translation>关闭窗口(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="169"/>
+        <location filename="../../mainwindow.ui" line="170"/>
         <source>Copy To Conflict &amp;Log</source>
         <translation>复制到冲突记录(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="311"/>
+        <location filename="../../mainwindow.ui" line="312"/>
         <source>Ctrl+D</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="165"/>
+        <location filename="../../mainwindow.ui" line="166"/>
         <source>&amp;Merge</source>
         <translation>合并(&amp;M)</translation>
     </message>
@@ -900,27 +905,27 @@
         <translation>你的记录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="308"/>
+        <location filename="../../mainwindow.ui" line="309"/>
         <source>From Current &amp;View</source>
         <translation>当前Log视图(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="316"/>
+        <location filename="../../mainwindow.ui" line="317"/>
         <source>From &amp;A</source>
         <translation>&amp;A分支</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="319"/>
+        <location filename="../../mainwindow.ui" line="320"/>
         <source>Ctrl+1</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="324"/>
+        <location filename="../../mainwindow.ui" line="325"/>
         <source>From &amp;B</source>
         <translation>&amp;B分支</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="327"/>
+        <location filename="../../mainwindow.ui" line="328"/>
         <source>Ctrl+2</source>
         <translation></translation>
     </message>
@@ -1109,7 +1114,12 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="875"/>
+        <location filename="../../diffview.py" line="872"/>
+        <source>Copy Plain &amp;Text</source>
+        <translation>复制纯文本(&amp;T)</translation>
+    </message>
+    <message>
+        <location filename="../../diffview.py" line="881"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>
@@ -1442,12 +1452,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>TextViewer</name>
     <message>
-        <location filename="../../textviewer.py" line="476"/>
+        <location filename="../../textviewer.py" line="503"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="482"/>
+        <location filename="../../textviewer.py" line="509"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
