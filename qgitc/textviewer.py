@@ -973,6 +973,12 @@ class TextViewer(QAbstractScrollArea):
         elif event.matches(QKeySequence.MoveToNextPage):
             self.verticalScrollBar().triggerAction(
                 QScrollBar.SliderPageStepAdd)
+        elif event.matches(QKeySequence.StandardKey.SelectNextChar):
+            self._cursor.selectNextChar()
+            self.viewport().update()
+        elif event.matches(QKeySequence.StandardKey.SelectPreviousChar):
+            self._cursor.selectPreviousChar()
+            self.viewport().update()
         else:
             super().keyPressEvent(event)
 
