@@ -20,6 +20,7 @@ A file conflict viewer for git
 - [x] Builtin image diff tool for easy finding the difference.
 - [ ] Auto finding which commit cause conflicts.
 - [x] File blame support
+- [x] AI intergrated
 
 
 ## Requirements
