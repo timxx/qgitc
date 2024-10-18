@@ -1,8 +1,38 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-from PySide6.QtCore import *
+from PySide6.QtGui import (
+    QStandardItemModel,
+    QKeySequence,
+    QPixmap,
+    QPainter,
+    QFont,
+    QIcon,
+    QStandardItem)
+from PySide6.QtWidgets import (
+    QWidget,
+    QListView,
+    QAbstractItemView,
+    QLineEdit,
+    QLabel,
+    QHBoxLayout,
+    QVBoxLayout,
+    QCheckBox,
+    QSpacerItem,
+    QPushButton,
+    QMenu,
+    QSizePolicy,
+    QMessageBox,
+    QFileDialog)
+from PySide6.QtCore import (
+    Qt,
+    Signal,
+    QSortFilterProxyModel,
+    QStandardPaths,
+    QDir,
+    QSize,
+    QTimer,
+    QProcess,
+    QEvent)
 from .gitutils import Git, GitProcess
 from .conflictlog import (
     ConflictLogExcel,

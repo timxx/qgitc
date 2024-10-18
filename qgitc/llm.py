@@ -1,5 +1,8 @@
 import json
-from PySide6.QtCore import *
+from PySide6.QtCore import (
+    QObject,
+    Signal,
+    QThread)
 import requests
 
 

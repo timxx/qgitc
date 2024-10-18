@@ -1,6 +1,32 @@
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from PySide6.QtWidgets import (
+    QWidget,
+    QHBoxLayout,
+    QPlainTextEdit,
+    QSizePolicy,
+    QVBoxLayout,
+    QStackedWidget,
+    QGridLayout,
+    QLabel,
+    QSpinBox,
+    QDoubleSpinBox,
+    QSpacerItem,
+    QTextBrowser,
+    QComboBox,
+    QPushButton,
+    QStatusBar,
+    QScrollBar)
+
+from PySide6.QtGui import (
+    QTextCursor,
+    QTextBlockFormat,
+    QTextCharFormat,
+    QFont)
+
+from PySide6.QtCore import (
+    QThread,
+    Signal,
+    QSize,
+    Qt)
 
 import json
 import queue as queue

@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-from PySide6.QtCore import *
+# from PySide6.QtGui import (
+# )
+from PySide6.QtWidgets import (
+    QMessageBox,
+    QFileDialog)
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    Signal,
+    QModelIndex,
+    QSize)
 
 from .ui_preferences import *
 from .mergetool import MergeTool

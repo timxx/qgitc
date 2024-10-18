@@ -1,8 +1,28 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-from PySide6.QtCore import *
+from PySide6.QtGui import (
+    QIcon,
+    QPainter)
+from PySide6.QtWidgets import (
+    QWidget,
+    QGraphicsDropShadowEffect,
+    QLineEdit,
+    QToolButton,
+    QLabel,
+    QHBoxLayout,
+    QStyle,
+    QWidgetAction,
+    QToolTip)
+from PySide6.QtCore import (
+    Signal,
+    QTimer,
+    QSize,
+    Qt,
+    QPoint,
+    QPropertyAnimation,
+    QRect,
+    QAbstractAnimation,
+    QEvent)
 
 from .textcursor import TextCursor
 from .waitingspinnerwidget import QtWaitingSpinner

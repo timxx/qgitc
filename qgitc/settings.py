@@ -2,10 +2,13 @@
 
 from PySide6.QtCore import (
     QSettings,
-    Signal
-)
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+    Signal)
+from PySide6.QtGui import (
+    QFont,
+    QFontInfo,
+    QColor)
+from PySide6.QtWidgets import (
+    QApplication)
 from .mergetool import MergeTool
 
 import os

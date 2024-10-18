@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-from PySide6.QtCore import *
+from PySide6.QtWidgets import (
+    QCompleter,
+    QWidget)
+from PySide6.QtCore import (
+    Signal,
+    QTimer)
 
 from .ui_gitview import *
 from .common import *

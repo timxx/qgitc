@@ -1,8 +1,35 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-from PySide6.QtCore import *
+from PySide6.QtGui import (
+    QColor,
+    QPalette,
+    QPainter,
+    QFontMetrics,
+    QPen,
+    QPainterPath,
+    QConicalGradient,
+    QPixmap)
+from PySide6.QtWidgets import (
+    QWidget,
+    QAbstractScrollArea,
+    QFrame,
+    QMenu,
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QScrollBar)
+from PySide6.QtCore import (
+    Qt,
+    Signal,
+    QThread,
+    QSize,
+    QMimeData,
+    QProcess,
+    QRect,
+    QPoint,
+    QTemporaryFile,
+    QObject,
+    SIGNAL)
 
 from .common import *
 from .gitutils import *
