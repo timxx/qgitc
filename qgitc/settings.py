@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 from .mergetool import MergeTool
 
 import os
+import platform
 
 
 is_win = (os.name == "nt")
@@ -19,7 +20,14 @@ is_win = (os.name == "nt")
 
 def fixedFont(pointSize):
     """return a fixed font if available"""
-    font = QFont("monospace", pointSize)
+    if is_win:
+        default_font = "Consolas"
+    elif platform.system() == "Darwin":
+        default_font = "Menlo"
+    else:
+        default_font = "Monospace"
+
+    font = QFont(default_font, pointSize)
 
     font.setStyleHint(QFont.TypeWriter)
     fontInfo = QFontInfo(font)
@@ -31,8 +39,7 @@ def fixedFont(pointSize):
     if fontInfo.fixedPitch():
         return QFont(fontInfo.family(), pointSize)
 
-    # for Windows
-    font.setFamily("Courier")
+    font.setFamily("Courier New")
     return font
 
 
@@ -53,7 +60,7 @@ class Settings(QSettings):
             "qgitc",
             parent=parent)
 
-        self._fixedFont = fixedFont(QApplication.font().pointSize())
+        self._fixedFont = None
 
     def logViewFont(self):
         return self.value("lvFont", QApplication.font())
@@ -63,7 +70,11 @@ class Settings(QSettings):
         self.logViewFontChanged.emit(font)
 
     def diffViewFont(self):
-        font = self.value("dvFont", self._fixedFont)
+        font = self.value("dvFont", None, QFont)
+        if font is None:
+            if self._fixedFont is None:
+                self._fixedFont = fixedFont(QApplication.font().pointSize())
+            return self._fixedFont
         return font
 
     def setDiffViewFont(self, font):
