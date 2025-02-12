@@ -76,7 +76,6 @@ class FindSubmoduleThread(QThread):
                 dir = root.replace(self._repoDir + os.sep, "")
                 if dir:
                     submodules.append(dir)
-                del subdirs[:]
 
             if root.count(os.path.sep) >= max_level or root.endswith(".git"):
                 del subdirs[:]
