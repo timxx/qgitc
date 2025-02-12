@@ -135,7 +135,11 @@ setup(name="qgitc",
               "imgdiff=mergetool.imgdiff:main"
           ]
       },
-      install_requires=["PySide6-Essentials>=6.3.0", "chardet", "requests"],
+      install_requires=[
+          "PySide6-Essentials>=6.3.0; sys_platform != 'linux'",
+          "PySide6>=6.2.0; sys_platform == 'linux'",
+          "chardet", "requests"
+      ],
       classifiers=[
           "License :: OSI Approved :: Apache Software License",
           "Operating System :: POSIX",
