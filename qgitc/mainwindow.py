@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
     QLineEdit,
     QMessageBox,
     QFileDialog,
@@ -114,6 +116,13 @@ class MainWindow(StateWindow):
 
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
+
+        self.ui.cbSubmodule.setInsertPolicy(QComboBox.NoInsert)
+        self.ui.cbSubmodule.setEditable(True)
+
+        self.ui.cbSubmodule.completer().setFilterMode(Qt.MatchContains)
+        self.ui.cbSubmodule.completer().setCompletionMode(
+            QCompleter.PopupCompletion)
 
         self.__setupSignals()
         self.__setupMenus()
