@@ -183,3 +183,28 @@ def isXfce4():
                 return v == "XFCE"
 
     return False
+
+
+def attachConsole():
+    if os.name != "nt":
+        return
+
+    import ctypes
+    import psutil
+    import sys
+
+    STD_OUTPUT_HANDLE = -11
+    std_out_handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+    if std_out_handle > 0:
+        return
+
+    try:
+        # first parent must be qgitc itself
+        p = psutil.Process(os.getppid()).parent()
+        if ctypes.windll.kernel32.AttachConsole(p.pid):
+            conout = open('CONOUT$', 'w')
+            sys.stdout = conout
+            sys.stderr = conout
+            sys.stdin = open("CONIN$", "r")
+    except:
+        pass

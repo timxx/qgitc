@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QStyle)
 
+from .common import attachConsole
 from .gitutils import Git
 from .excepthandler import ExceptHandler
 from .application import Application
@@ -157,6 +158,7 @@ def _do_blame(args):
 
 
 def main():
+    attachConsole()
     args = _setup_argument(os.path.basename(sys.argv[0]))
     return args.func(args)
 
