@@ -15,7 +15,8 @@ from PySide6.QtCore import (
     QThread,
     QSize,
     QTimer,
-    Qt)
+    Qt,
+    QEvent)
 
 from .findwidget import FindWidget
 
@@ -123,6 +124,7 @@ class MainWindow(StateWindow):
         self.ui.cbSubmodule.completer().setFilterMode(Qt.MatchContains)
         self.ui.cbSubmodule.completer().setCompletionMode(
             QCompleter.PopupCompletion)
+        self.ui.cbSubmodule.installEventFilter(self)
 
         self.__setupSignals()
         self.__setupMenus()
@@ -619,3 +621,9 @@ class MainWindow(StateWindow):
 
     def __onSelfCommitsStateChanged(self, state):
         self.__onOptsReturnPressed()
+
+    def eventFilter(self, obj, event):
+        if obj == self.ui.cbSubmodule:
+            if event.type() == QEvent.FocusIn and event.reason() == Qt.MouseFocusReason:
+                obj.showPopup()
+        return super().eventFilter(obj, event)
