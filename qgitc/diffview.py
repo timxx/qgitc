@@ -435,6 +435,7 @@ class DiffView(QWidget):
             self.fetcher.resetRow(self.viewer.textLineCount())
             if repoDir != ".":
                 self.fetcher.cwd = os.path.join(Git.REPO_DIR, repoDir)
+                self.fetcher.repoDir = repoDir
             self.fetcher.fetch(sha1, self.filterPath, self.gitArgs)
         else:
             self.fetcher.cwd = self.branchDir or Git.REPO_DIR
@@ -524,6 +525,7 @@ class DiffView(QWidget):
         self.fetcher.resetRow(self.viewer.textLineCount())
         if commit.repoDir and commit.repoDir != ".":
             self.fetcher.cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
+            self.fetcher.repoDir = commit.repoDir
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         # FIXME: delay showing the spinner when loading small diff to avoid flicker
         self.beginFetch.emit()

@@ -16,6 +16,8 @@ class DiffFetcher(DataFetcher):
         self._isDiffContent = False
         self._row = 0
         self._firstPatch = True
+        self.repoDir = None
+        self.repoDirBytes = None
 
     def parse(self, data):
         lineItems = []
@@ -40,13 +42,15 @@ class DiffFetcher(DataFetcher):
                     self._row += 1
                 self._firstPatch = False
 
-                fileItems[fileA.decode(diff_encoding)] = self._row
+                fullFileA = self.makeFilePath(fileA)
+                fileItems[fullFileA.decode(diff_encoding)] = self._row
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
-                    lineItems.append((DiffType.File, fileB))
-                    fileItems[fileB.decode(diff_encoding)] = self._row
+                    fullFileB = self.makeFilePath(fileB)
+                    lineItems.append((DiffType.File, fullFileB))
+                    fileItems[fullFileB.decode(diff_encoding)] = self._row
                 else:
-                    lineItems.append((DiffType.File, fileA))
+                    lineItems.append((DiffType.File, fullFileA))
 
                 self._row += 1
                 self._isDiffContent = False
@@ -125,3 +129,10 @@ class DiffFetcher(DataFetcher):
             git_args.extend(filePath)
 
         return git_args
+
+    def makeFilePath(self, file):
+        if not self.repoDir:
+            return file
+        if self.repoDirBytes is None:
+            self.repoDirBytes = self.repoDir.replace("\\", "/").encode("utf-8") + b"/"
+        return self.repoDirBytes + file
