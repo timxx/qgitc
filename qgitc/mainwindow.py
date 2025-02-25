@@ -636,3 +636,14 @@ class MainWindow(StateWindow):
             if event.type() == QEvent.FocusIn and event.reason() == Qt.MouseFocusReason:
                 obj.showPopup()
         return super().eventFilter(obj, event)
+
+    def submodules(self):
+        if not self.ui.cbSubmodule.isVisible():
+            return []
+
+        submodules = []
+        count = self.ui.cbSubmodule.count()
+        for i in range(count):
+            submodules.append(self.ui.cbSubmodule.itemText(i))
+
+        return submodules

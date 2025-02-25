@@ -52,6 +52,7 @@ class Settings(QSettings):
     bugPatternChanged = Signal(str)
     fallbackGlobalChanged = Signal(bool)
     tabSizeChanged = Signal(int)
+    compositeLogChanged = Signal(bool)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -273,3 +274,4 @@ class Settings(QSettings):
     
     def setCompositeLog(self, composite):
         self.setValue("compositeLog", composite)
+        self.compositeLogChanged.emit(composite)

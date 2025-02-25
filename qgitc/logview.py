@@ -33,7 +33,7 @@ from PySide6.QtCore import (
 
 from .common import *
 from .gitutils import *
-from .datafetcher import DataFetcher
+from .logsfetcher import LogsFetcher
 from .events import CodeReviewEvent, CopyConflictCommit
 
 import re
@@ -57,49 +57,6 @@ GRAPH_COLORS = [Qt.black,
 
 
 HALF_LINE_PERCENT = 0.76
-
-
-log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
-
-
-class LogsFetcher(DataFetcher):
-
-    logsAvailable = Signal(list)
-
-    def __init__(self, parent=None):
-        super(LogsFetcher, self).__init__(parent)
-        self.separator = b'\0'
-
-    def parse(self, data):
-        logs = data.rstrip(self.separator) \
-            .decode("utf-8", "replace") \
-            .split('\0')
-        commits = [Commit.fromRawString(log) for log in logs]
-        self.logsAvailable.emit(commits)
-
-    def makeArgs(self, args):
-        branch = args[0]
-        logArgs = args[1]
-
-        if branch and branch.startswith("(HEAD detached"):
-            branch = None
-
-        git_args = ["log", "-z", "--topo-order",
-                    "--parents",
-                    "--no-color",
-                    "--pretty=format:{0}".format(log_fmt)]
-        if branch:
-            git_args.append(branch)
-
-        if logArgs:
-            git_args.extend(logArgs)
-        else:
-            git_args.append("--boundary")
-
-        return git_args
-
-    def isLoading(self):
-        return self.process is not None
 
 
 class Marker():
@@ -605,6 +562,8 @@ class LogView(QAbstractScrollArea):
 
         qApp.settings().logViewFontChanged.connect(
             self.updateSettings)
+        qApp.settings().compositeLogChanged.connect(
+            self.__onCompositeLogChanged)
 
     def __del__(self):
         self.cancelFindCommit()
@@ -674,19 +633,28 @@ class LogView(QAbstractScrollArea):
     def showLogs(self, branch, args=None):
         self.curBranch = branch
         self.args = args
-        self.fetcher.fetch(branch, args)
-        self.beginFetch.emit()
 
-        if self.checkThread:
-            self.checkThread.disconnect(self)
-            self.checkThread.requestInterruption()
-            self.checkThread.wait()
-            self.checkThread = None
+        useCompositeMode = False
+        if qApp.settings().isCompositeLog():
+            submodules = self.window().submodules()
+            if submodules:
+                useCompositeMode = True
+                self.__showCompositeLog(submodules)
+        
+        if not useCompositeMode:
+            self.fetcher.fetch(branch, args)
+            self.beginFetch.emit()
 
-        if not args:
-            self.checkThread = CheckLocalChangesThread(self.curBranch, self)
-            self.checkThread.checkFinished.connect(self.__onCheckFinished)
-            self.checkThread.start()
+            if self.checkThread:
+                self.checkThread.disconnect(self)
+                self.checkThread.requestInterruption()
+                self.checkThread.wait()
+                self.checkThread = None
+
+            if not args:
+                self.checkThread = CheckLocalChangesThread(self.curBranch, self)
+                self.checkThread.checkFinished.connect(self.__onCheckFinished)
+                self.checkThread.start()
 
     def clear(self):
         self.data.clear()
@@ -1907,3 +1875,11 @@ class LogView(QAbstractScrollArea):
 
     def queryClose(self):
         self.fetcher.cancel()
+
+    def __onCompositeLogChanged(self):
+        self.clear()
+        self.showLogs(self.curBranch, self.args)
+
+    def __showCompositeLog(self, submodules):
+        assert len(submodules) > 0
+        self.beginFetch.emit()

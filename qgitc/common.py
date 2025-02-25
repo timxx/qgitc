@@ -28,6 +28,8 @@ class Commit():
         self.committerDate = ""
         self.parents = []
         self.children = None
+        self.repoDir = None
+        self.subCommits = {}  # repoDir: sha1
 
     def __str__(self):
         return "Commit: {0}\n"  \
