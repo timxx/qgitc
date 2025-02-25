@@ -16,7 +16,8 @@ from PySide6.QtCore import (
     QSize,
     QTimer,
     Qt,
-    QEvent)
+    QEvent,
+    Signal)
 
 from .findwidget import FindWidget
 
@@ -96,6 +97,8 @@ class MainWindow(StateWindow):
     LogMode = 1
     CompareMode = 2
     MergeMode = 3
+
+    submoduleAvailable = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -459,6 +462,8 @@ class MainWindow(StateWindow):
         hasSubmodule = len(submodules) > 0
         self.ui.cbSubmodule.setVisible(hasSubmodule)
         self.ui.lbSubmodule.setVisible(hasSubmodule)
+        if submodules:
+            self.submoduleAvailable.emit()
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()

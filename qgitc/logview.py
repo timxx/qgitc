@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import List
 from PySide6.QtGui import (
     QColor,
     QPalette,
@@ -511,7 +512,7 @@ class LogView(QAbstractScrollArea):
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFrameStyle(QFrame.NoFrame)
 
-        self.data = []
+        self.data: List[Commit] = []
         self.fetcher = LogsFetcher(self)
         self.curIdx = -1
         self.branchA = True
@@ -563,6 +564,9 @@ class LogView(QAbstractScrollArea):
         qApp.settings().logViewFontChanged.connect(
             self.updateSettings)
         qApp.settings().compositeLogChanged.connect(
+            self.__onCompositeLogChanged)
+
+        self.window().submoduleAvailable.connect(
             self.__onCompositeLogChanged)
 
     def __del__(self):
@@ -634,27 +638,26 @@ class LogView(QAbstractScrollArea):
         self.curBranch = branch
         self.args = args
 
-        useCompositeMode = False
         if qApp.settings().isCompositeLog():
             submodules = self.window().submodules()
-            if submodules:
-                useCompositeMode = True
-                self.__showCompositeLog(submodules)
-        
-        if not useCompositeMode:
-            self.fetcher.fetch(branch, args)
-            self.beginFetch.emit()
+            self.fetcher.setSubmodules(submodules)
+        else:
+            self.fetcher.setSubmodules([])
 
-            if self.checkThread:
-                self.checkThread.disconnect(self)
-                self.checkThread.requestInterruption()
-                self.checkThread.wait()
-                self.checkThread = None
+        self.fetcher.fetch(branch, args)
+        self.beginFetch.emit()
 
-            if not args:
-                self.checkThread = CheckLocalChangesThread(self.curBranch, self)
-                self.checkThread.checkFinished.connect(self.__onCheckFinished)
-                self.checkThread.start()
+        # TODO:
+        if self.checkThread:
+            self.checkThread.disconnect(self)
+            self.checkThread.requestInterruption()
+            self.checkThread.wait()
+            self.checkThread = None
+
+        if not args:
+            self.checkThread = CheckLocalChangesThread(self.curBranch, self)
+            self.checkThread.checkFinished.connect(self.__onCheckFinished)
+            self.checkThread.start()
 
     def clear(self):
         self.data.clear()
@@ -1166,7 +1169,7 @@ class LogView(QAbstractScrollArea):
 
         return rect
 
-    def __drawTag(self, painter, rect, color, text, bold=False):
+    def __drawTag(self, painter, rect, color, text, bold=False, textColor=Qt.black):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, False)
 
@@ -1180,9 +1183,9 @@ class LogView(QAbstractScrollArea):
         br.adjust(0, -1, 4, 1)
 
         painter.fillRect(br, color)
-        painter.setPen(Qt.black)
         painter.drawRect(br)
 
+        painter.setPen(textColor)
         painter.drawText(br, Qt.AlignCenter, text)
 
         painter.restore()
@@ -1732,17 +1735,36 @@ class LogView(QAbstractScrollArea):
                 return commit.comments.replace('\n', ' ')
             return commit.comments.split('\n')[0]
 
+        def makeRepoName(repoDir):
+            index = repoDir.rfind(os.sep)
+            if index != -1:
+                repoDir = repoDir[index + 1:]
+            if repoDir == ".":
+                repoDir = "<main>"
+            return repoDir
+
         painter.setFont(self.font)
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
         for i in range(startLine, endLine):
             rect = self.__itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
+            # TODO: useless if in composite mode
             self.__drawGraph(painter, graphPainter, rect, i)
 
             commit = self.data[i]
 
             if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
+                # sub-repo name
+                if commit.repoDir:
+                    text = makeRepoName(commit.repoDir)
+                    color = QColor(0xe9e8dd)
+                    textColor = QColor(0xf54c27)
+                    self.__drawTag(painter, rect, color, text, textColor=textColor)
+                    for repoDir, _ in commit.subCommits.items():
+                        text = makeRepoName(repoDir)
+                        self.__drawTag(painter, rect, color,
+                                       text, textColor=textColor)
                 # author
                 text = self.authorRe.sub("\\1", commit.author)
                 color = Qt.gray
@@ -1879,7 +1901,3 @@ class LogView(QAbstractScrollArea):
     def __onCompositeLogChanged(self):
         self.clear()
         self.showLogs(self.curBranch, self.args)
-
-    def __showCompositeLog(self, submodules):
-        assert len(submodules) > 0
-        self.beginFetch.emit()
