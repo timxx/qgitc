@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import Tuple
 from PySide6.QtGui import (
     QDesktopServices,
     QKeySequence,
@@ -146,6 +147,9 @@ class DiffView(QWidget):
         self.branchDir = None
         self.gitArgs = []
         self.fetcher = DiffFetcher(self)
+        # sub commit to fetch
+        self._commitList: Tuple[str, str] = []
+        self._commitIndex = -1
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
@@ -424,8 +428,18 @@ class DiffView(QWidget):
         self.viewer.appendLines(lineItems)
 
     def __onFetchFinished(self, exitCode):
-        self.viewer.endReading()
-        self.endFetch.emit()
+        # TODO: use multiprocessing maybe is better
+        if self._commitList and self._commitIndex < len(self._commitList) - 1:
+            self._commitIndex += 1
+            repoDir, sha1 = self._commitList[self._commitIndex]
+            self.fetcher.resetRow(self.viewer.textLineCount())
+            if repoDir != ".":
+                self.fetcher.cwd = os.path.join(Git.REPO_DIR, repoDir)
+            self.fetcher.fetch(sha1, self.filterPath, self.gitArgs)
+        else:
+            self.fetcher.cwd = self.branchDir or Git.REPO_DIR
+            self.viewer.endReading()
+            self.endFetch.emit()
 
         if exitCode != 0 and self.fetcher.errorData:
             QMessageBox.critical(self, self.window().windowTitle(),
@@ -494,7 +508,7 @@ class DiffView(QWidget):
 
         return qApp.settings().diffToolName()
 
-    def showCommit(self, commit):
+    def showCommit(self, commit: Commit):
         self.clear()
         self.commit = commit
 
@@ -508,9 +522,14 @@ class DiffView(QWidget):
         self.viewer.setParentCount(len(commit.parents))
         self.viewer.beginReading()
         self.fetcher.resetRow(self.viewer.textLineCount())
+        if commit.repoDir and commit.repoDir != ".":
+            self.fetcher.cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         # FIXME: delay showing the spinner when loading small diff to avoid flicker
         self.beginFetch.emit()
+
+        self._commitList = list(commit.subCommits.items())
+        self._commitIndex = -1
 
     def clear(self):
         self.fileListModel.clear()
