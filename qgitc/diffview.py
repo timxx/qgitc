@@ -578,7 +578,7 @@ class DiffView(QWidget):
 
         self._updateFilterStatus()
 
-    def __commitDesc(self, sha1):
+    def __commitDesc(self, sha1, repoDir=None):
         if sha1 == Git.LUC_SHA1:
             subject = self.tr(
                 "Local uncommitted changes, not checked in to index")
@@ -586,11 +586,13 @@ class DiffView(QWidget):
             subject = self.tr(
                 "Local changes checked in to index but not committed")
         else:
-            subject = Git.commitSubject(sha1).decode("utf-8")
+            if repoDir and repoDir != ".":
+                repoDir = os.path.join(Git.REPO_DIR, repoDir)
+            subject = Git.commitSubject(sha1, repoDir).decode("utf-8")
 
         return " (" + subject + ")"
 
-    def __commitToTextLines(self, commit):
+    def __commitToTextLines(self, commit: Commit):
         if not commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
             content = self.tr("Author: ") + commit.author + \
                 " " + commit.authorDate
@@ -602,12 +604,12 @@ class DiffView(QWidget):
 
         for parent in commit.parents:
             content = self.tr("Parent: ") + parent
-            content += self.__commitDesc(parent)
+            content += self.__commitDesc(parent, commit.repoDir)
             self.viewer.addSHA1Line(content, True)
 
         for child in commit.children:
             content = self.tr("Child: ") + child
-            content += self.__commitDesc(child)
+            content += self.__commitDesc(child, commit.repoDir)
             self.viewer.addSHA1Line(content, False)
 
         self.viewer.addNormalTextLine("", False)

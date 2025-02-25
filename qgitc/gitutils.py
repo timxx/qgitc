@@ -121,12 +121,12 @@ class Git():
         return GitProcess.GIT_BIN is not None
 
     @staticmethod
-    def run(args, text=None):
-        return GitProcess(Git.REPO_DIR, args, text)
+    def run(args, text=None, repoDir=None):
+        return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None):
-        process = Git.run(args, text)
+    def checkOutput(args, text=None, repoDir=None):
+        process = Git.run(args, text, repoDir)
         data = process.communicate()[0]
         if process.returncode != 0:
             return None
@@ -216,9 +216,9 @@ class Git():
         return data.rstrip().decode("utf-8")
 
     @staticmethod
-    def commitSubject(sha1):
+    def commitSubject(sha1, repoDir=None):
         args = ["show", "-s", "--pretty=format:%s", sha1]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
 
         return data
 
