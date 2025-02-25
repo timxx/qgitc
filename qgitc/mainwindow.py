@@ -183,6 +183,9 @@ class MainWindow(StateWindow):
         self.ui.acFullCommitMsg.triggered.connect(
             self.__onAcFullCommitMsgTriggered)
 
+        self.ui.acCompositeLog.triggered.connect(
+            self.__onAcCompositeLogTriggered)
+
         self.ui.leOpts.returnPressed.connect(
             self.__onOptsReturnPressed)
 
@@ -372,6 +375,9 @@ class MainWindow(StateWindow):
         if self.gitViewB:
             self.gitViewB.logView.updateView()
 
+    def __onAcCompositeLogTriggered(self, checked):
+        qApp.settings().setCompositeLog(checked)
+
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
         self.filterOpts(opts, self.ui.gitViewA)
@@ -491,6 +497,9 @@ class MainWindow(StateWindow):
 
         self.ui.acFullCommitMsg.setChecked(
             sett.isFullCommitMessage())
+
+        self.ui.acCompositeLog.setChecked(
+            sett.isCompositeLog())
 
         return True
 

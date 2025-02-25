@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -96,21 +96,24 @@ class Ui_MainWindow(object):
         self.acFindPrevious.setObjectName(u"acFindPrevious")
         self.acCopyPlainText = QAction(MainWindow)
         self.acCopyPlainText.setObjectName(u"acCopyPlainText")
+        self.acCompositeLog = QAction(MainWindow)
+        self.acCompositeLog.setObjectName(u"acCompositeLog")
+        self.acCompositeLog.setCheckable(True)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.gridFrame = QFrame(self.centralwidget)
         self.gridFrame.setObjectName(u"gridFrame")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.gridFrame.sizePolicy().hasHeightForWidth())
         self.gridFrame.setSizePolicy(sizePolicy)
-        self.gridFrame.setFrameShape(QFrame.StyledPanel)
+        self.gridFrame.setFrameShape(QFrame.Shape.StyledPanel)
         self.gridLayout_2 = QGridLayout(self.gridFrame)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.gridLayout_2.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.gridLayout_2.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.leRepo = QLineEdit(self.gridFrame)
         self.leRepo.setObjectName(u"leRepo")
 
@@ -156,9 +159,9 @@ class Ui_MainWindow(object):
 
         self.splitter = QSplitter(self.centralwidget)
         self.splitter.setObjectName(u"splitter")
-        self.splitter.setFrameShape(QFrame.StyledPanel)
-        self.splitter.setFrameShadow(QFrame.Plain)
-        self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setFrameShape(QFrame.Shape.StyledPanel)
+        self.splitter.setFrameShadow(QFrame.Shadow.Plain)
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
         self.gitViewA = GitView(self.splitter)
         self.gitViewA.setObjectName(u"gitViewA")
         self.splitter.addWidget(self.gitViewA)
@@ -168,7 +171,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 22))
+        self.menubar.setGeometry(QRect(0, 0, 800, 33))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menu_Help = QMenu(self.menubar)
@@ -210,6 +213,7 @@ class Ui_MainWindow(object):
         self.menu_View.addAction(self.acCompare)
         self.menu_View.addSeparator()
         self.menu_View.addAction(self.acFullCommitMsg)
+        self.menu_View.addAction(self.acCompositeLog)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreNone)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreEOL)
         self.menuIgnoreWhitespace.addAction(self.acIgnoreAll)
@@ -281,6 +285,7 @@ class Ui_MainWindow(object):
         self.acFindPrevious.setShortcut(QCoreApplication.translate("MainWindow", u"Shift+F3", None))
 #endif // QT_CONFIG(shortcut)
         self.acCopyPlainText.setText(QCoreApplication.translate("MainWindow", u"Copy Plain &Text", None))
+        self.acCompositeLog.setText(QCoreApplication.translate("MainWindow", u"Composite &Log", None))
 #if QT_CONFIG(tooltip)
         self.leOpts.setToolTip(QCoreApplication.translate("MainWindow", u"See the GIT-LOG options for more information.", None))
 #endif // QT_CONFIG(tooltip)

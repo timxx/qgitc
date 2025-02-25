@@ -267,3 +267,9 @@ class Settings(QSettings):
 
     def setLlmServer(self, server):
         self.setValue("llmServer", server)
+
+    def isCompositeLog(self):
+        return self.value("compositeLog", False, type=bool)
+    
+    def setCompositeLog(self, composite):
+        self.setValue("compositeLog", composite)

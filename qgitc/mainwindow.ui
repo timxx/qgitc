@@ -24,11 +24,11 @@
        </sizepolicy>
       </property>
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::Shape::StyledPanel</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <property name="sizeConstraint">
-        <enum>QLayout::SetDefaultConstraint</enum>
+        <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
        </property>
        <item row="0" column="2">
         <widget class="QLineEdit" name="leRepo"/>
@@ -87,13 +87,13 @@
     <item>
      <widget class="QSplitter" name="splitter">
       <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+       <enum>QFrame::Shape::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Plain</enum>
+       <enum>QFrame::Shadow::Plain</enum>
       </property>
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <widget class="GitView" name="gitViewA" native="true"/>
      </widget>
@@ -106,7 +106,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>33</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -148,6 +148,7 @@
     <addaction name="acCompare"/>
     <addaction name="separator"/>
     <addaction name="acFullCommitMsg"/>
+    <addaction name="acCompositeLog"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
     <property name="title">
@@ -363,6 +364,14 @@
   <action name="acCopyPlainText">
    <property name="text">
     <string>Copy Plain &amp;Text</string>
+   </property>
+  </action>
+  <action name="acCompositeLog">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Composite &amp;Log</string>
    </property>
   </action>
  </widget>
