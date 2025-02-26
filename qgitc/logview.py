@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 from PySide6.QtGui import (
     QColor,
@@ -461,7 +462,7 @@ class CheckLocalChangesThread(QThread):
     def __init__(self, branch, submodules, parent=None):
         super().__init__(parent)
         self._branch = branch
-        self._submodules = submodules or [None]
+        self._submodules = submodules
 
     def run(self):
         if self.isInterruptionRequested():
@@ -470,41 +471,59 @@ class CheckLocalChangesThread(QThread):
         lccCommit = Commit()
         lucCommit = Commit()
 
-        for submodule in self._submodules:
-            if self.isInterruptionRequested():
-                return
-            hasLCC, hasLUC = self.fetchLocalChanges(submodule)
-            if hasLCC:
-                lccCommit.sha1 = Git.LCC_SHA1
-                if not lccCommit.repoDir:
-                    lccCommit.repoDir = submodule
-                else:
-                    subCommit = Commit()
-                    subCommit.sha1 = Git.LCC_SHA1
-                    subCommit.repoDir = submodule
-                    lccCommit.subCommits.append(subCommit)
+        if not self._submodules:
+            hasLCC, hasLUC, _ = self.fetchLocalChanges()
+            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+        else:
+            executor = ThreadPoolExecutor()
+            tasks = []
+            for submodule in self._submodules:
+                if self.isInterruptionRequested():
+                    return
+                task = executor.submit(self.fetchLocalChanges, submodule)
+                tasks.append(task)
 
-            if hasLUC:
-                lucCommit.sha1 = Git.LUC_SHA1
-                if not lucCommit.repoDir:
-                    lucCommit.repoDir = submodule
-                else:
-                    subCommit = Commit()
-                    subCommit.sha1 = Git.LUC_SHA1
-                    subCommit.repoDir = submodule
-                    lucCommit.subCommits.append(subCommit)
+            for task in as_completed(tasks):
+                if self.isInterruptionRequested():
+                    return
+                hasLCC, hasLUC, repoDir = task.result()
+                self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
 
         if not self.isInterruptionRequested():
             self.checkFinished.emit(lccCommit, lucCommit)
 
     def fetchLocalChanges(self, repoDir=None):
-            hasLCC = Git.hasLocalChanges(self._branch, True, repoDir)
+            repoPath = repoDir
+            if repoPath:
+                repoPath = os.path.join(Git.REPO_DIR, repoDir)
+            hasLCC = Git.hasLocalChanges(self._branch, True, repoPath)
             if self.isInterruptionRequested():
-                return False, False
-            hasLUC = Git.hasLocalChanges(self._branch, repoDir=repoDir)
+                return False, False, repoDir
+            hasLUC = Git.hasLocalChanges(self._branch, repoDir=repoPath)
             if self.isInterruptionRequested():
-                return False, False
-            return hasLCC, hasLUC
+                return False, False, repoDir
+            return hasLCC, hasLUC, repoDir
+
+    def makeCommits(self, lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
+        if hasLCC:
+            lccCommit.sha1 = Git.LCC_SHA1
+            if not lccCommit.repoDir:
+                lccCommit.repoDir = repoDir
+            else:
+                subCommit = Commit()
+                subCommit.sha1 = Git.LCC_SHA1
+                subCommit.repoDir = repoDir
+                lccCommit.subCommits.append(subCommit)
+
+        if hasLUC:
+            lucCommit.sha1 = Git.LUC_SHA1
+            if not lucCommit.repoDir:
+                lucCommit.repoDir = repoDir
+            else:
+                subCommit = Commit()
+                subCommit.sha1 = Git.LUC_SHA1
+                subCommit.repoDir = repoDir
+                lucCommit.subCommits.append(subCommit)
 
 
 class LogGraph(QWidget):
