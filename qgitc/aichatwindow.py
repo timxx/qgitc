@@ -553,8 +553,7 @@ class AiChatWidget(QWidget):
             repoDir = commitRepoDir(subCommit)
             subData = Git.commitRawDiff(subCommit.sha1, gitArgs=args, repoDir=repoDir)
             if subData:
-                data += subData
-                data += b"\n"
+                data += b"\n" + subData
 
         diff = data.decode("utf-8", errors="replace")
         self._doRequest(diff, AiChatMode.CodeReview)

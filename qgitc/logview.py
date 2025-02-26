@@ -958,9 +958,20 @@ class LogView(QAbstractScrollArea, CommitSource):
             self,
             self.tr("Save Patch"))
         if f:
-           # TODO: generate with subCommits?
-           repoDir = commitRepoDir(commit)
-           Git.generatePatch(commit.sha1, f, repoDir)
+            repoDir = commitRepoDir(commit)
+            patch = Git.commitRawPatch(commit.sha1, repoDir)
+            if patch is None:
+                patch = b''
+
+            for subCommit in commit.subCommits:
+                repoDir = commitRepoDir(subCommit)
+                subPatch = Git.commitRawPatch(subCommit.sha1, repoDir)
+                if subPatch:
+                    patch += b'\n' + subPatch
+
+            if patch:
+                with open(f, "wb+") as h:
+                    h.write(patch)
 
     def __onGenerateDiff(self):
         if self.curIdx == -1:
@@ -973,9 +984,19 @@ class LogView(QAbstractScrollArea, CommitSource):
             self,
             self.tr("Save Diff"))
         if f:
-            # TODO: generate with subCommits?
             repoDir = commitRepoDir(commit)
-            Git.generateDiff(commit.sha1, f, repoDir)
+            diff = Git.commitRawDiff(commit.sha1, repoDir=repoDir)
+            if diff is None:
+                diff = b''
+            for subCommit in commit.subCommits:
+                repoDir = commitRepoDir(subCommit)
+                subDiff = Git.commitRawDiff(subCommit.sha1, repoDir=repoDir)
+                if subDiff:
+                    diff += b'\n' + subDiff
+
+            if diff:
+                with open(f, "wb+") as h:
+                    h.write(diff)
 
     def __onRevertCommit(self):
         if self.curIdx == -1:

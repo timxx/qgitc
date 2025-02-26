@@ -413,10 +413,13 @@ class Git():
         return True
 
     @staticmethod
-    def generatePatch(sha1, filePath, repoDir=None):
+    def commitRawPatch(sha1, repoDir=None):
         args = ["format-patch", "-1", "--stdout", sha1]
+        return Git.checkOutput(args, repoDir=repoDir)
 
-        data = Git.checkOutput(args, repoDir=repoDir)
+    @staticmethod
+    def generatePatch(sha1, filePath, repoDir=None):
+        data = Git.commitRawPatch(sha1, repoDir=repoDir)
         if not data:
             return False
 
