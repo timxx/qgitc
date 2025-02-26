@@ -2,7 +2,6 @@
 
 from datetime import date, datetime, timedelta
 import os
-import time
 from typing import List
 from PySide6.QtCore import (
     Signal,
@@ -125,7 +124,7 @@ class LogsFetcherThread(QThread):
         self.start()
 
     def run(self):
-        profile = MyProfile()
+        # profile = MyProfile()
         self._eventLoop = QEventLoop()
         mergedLogs: List[Commit] = []
 
@@ -160,7 +159,6 @@ class LogsFetcherThread(QThread):
         self._logs = dict(sorted(self._logs.items(), key=lambda item: len(item[1]), reverse=True))
         firstRepo = True
 
-        b = time.time()
         for _, logs in self._logs.items():
             for log in logs:
                 if self.isInterruptionRequested():
@@ -178,12 +176,12 @@ class LogsFetcherThread(QThread):
                     insort_logs(mergedLogs, log)
             firstRepo = False
 
-        print("merge time:", time.time() - b)
         if mergedLogs:
             self.logsAvailable.emit(mergedLogs)
         self.fetchFinished.emit(self._exitCode)
-        profile = None
+        # profile = None
 
+    #TODO: binary search???
     def mergeLog(self, mergedLogs: List[Commit], target: Commit):
         for log in mergedLogs:
             if self.isInterruptionRequested():
@@ -200,9 +198,9 @@ class LogsFetcherThread(QThread):
             if target.author == log.author and target.comments == log.comments:
                 log.subCommits.append(target)
                 # require same day at least
-                return targetDate.year == logDate.year and \
+                return targetDate.day == logDate.day and \
                     targetDate.month == logDate.month and \
-                    targetDate.day == logDate.day
+                    targetDate.year == logDate.year
         return False
 
     def cancel(self):
