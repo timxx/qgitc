@@ -266,6 +266,7 @@ class LogsFetcher(QObject):
 
     def fetch(self, *args):
         self.cancel()
+        self._errorData = b''
         self._thread = LogsFetcherThread(self._submodules, self)
         self._thread.logsAvailable.connect(self.logsAvailable)
         self._thread.fetchFinished.connect(self._onFetchFinished)
@@ -282,9 +283,10 @@ class LogsFetcher(QObject):
             self._thread.isRunning()
 
     def _onFetchFinished(self, exitCode):
-        self._errorData = self._thread.errorData
-        self._thread = None
-        self.fetchFinished.emit(exitCode)
+        if self._thread:
+            self._errorData = self._thread.errorData
+            self._thread = None
+            self.fetchFinished.emit(exitCode)
 
     @property
     def errorData(self):
