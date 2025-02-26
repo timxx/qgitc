@@ -287,8 +287,9 @@ class GitView(QWidget):
         rev = sha1 if sha1 else self.currentBranch()
         if realCommit.repoDir:
             filePath = filePath[len(realCommit.repoDir) + 1:]
+        repoDir = commitRepoDir(realCommit)
         QCoreApplication.postEvent(
-            qApp, BlameEvent(filePath, rev, repoDir=realCommit.repoDir))
+            qApp, BlameEvent(filePath, rev, repoDir=repoDir))
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)

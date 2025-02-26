@@ -329,7 +329,8 @@ class RevisionPanel(TextViewer):
             pass
 
         file = self.getFileBySHA1(rev.previous)
-        event = BlameEvent(file, rev.previous, rev.oldLineNo)
+        event = BlameEvent(file, rev.previous,
+                           rev.oldLineNo, self._viewer.repoDir)
         qApp.postEvent(qApp, event)
 
     def paintEvent(self, event):
@@ -427,6 +428,7 @@ class BlameSourceViewer(SourceViewer):
         self._curIndexForMenu = -1
         self._preferEncoding = "utf-8"
         self._detected = False
+        self.repoDir: str = None
 
     def clear(self):
         super().clear()
@@ -502,7 +504,7 @@ class BlameSourceViewer(SourceViewer):
             pass
 
         file = self._panel.getFileBySHA1(rev.previous)
-        event = BlameEvent(file, rev.previous, rev.oldLineNo)
+        event = BlameEvent(file, rev.previous, rev.oldLineNo, self.repoDir)
         qApp.postEvent(qApp, event)
 
     def _lineRect(self, lineNo):
@@ -716,7 +718,8 @@ class HeaderWidget(QWidget):
     def _blameCurrent(self):
         self._blockAdd = True
         history = self._histories[self._curIndex]
-        self._view.blame(history.file, history.rev, history.lineNo)
+        self._view.blame(history.file, history.rev,
+                         history.lineNo, self._view.viewer.repoDir)
         self._blockAdd = False
 
     def _onPrevious(self):
@@ -823,7 +826,7 @@ class BlameView(QWidget):
         if link.type == Link.Sha1:
             if self._rev != link.data:
                 file = self._findFileBySHA1(link.data)
-                self.blame(file, link.data)
+                self.blame(file, link.data, repoDir=self._viewer.repoDir)
         else:
             qApp.postEvent(qApp, OpenLinkEvent(link))
 
@@ -860,6 +863,7 @@ class BlameView(QWidget):
         self._headerWidget.notifyFecthingStarted()
         self.blameFileAboutToChange.emit(file)
         self.clear()
+        self._viewer.repoDir = repoDir
         self._viewer.beginReading()
         self._fetcher.cwd = repoDir or Git.REPO_DIR
         self._fetcher.fetch(file, rev)
