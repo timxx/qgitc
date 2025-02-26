@@ -99,6 +99,8 @@ class CompositeLogsThread(QThread):
     def run(self):
         for _, logs in self.logs.items():
             for log in logs:
+                if self.isInterruptionRequested():
+                    return
                 if self.mergeLog(log):
                     continue
                 logDate = datetime.fromisoformat(log.committerDate)
