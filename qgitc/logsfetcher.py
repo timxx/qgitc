@@ -74,15 +74,19 @@ class LogsFetcherImpl(DataFetcher):
         return self.process is not None
 
 
+def makeDateTime(dateStr: str):
+    return datetime.strptime(dateStr, "%Y-%m-%d %H:%M:%S %z")
+
+
 # the builtin bisect key required python >= 3.10
 def insort_logs(a: List[Commit], x: Commit):
     lo = 0
     hi = len(a)
 
-    xDate = datetime.fromisoformat(x.committerDate)
+    xDate = makeDateTime(x.committerDate)
     while lo < hi:
         mid = (lo + hi) // 2
-        t = datetime.fromisoformat(a[mid].committerDate)
+        t = makeDateTime(a[mid].committerDate)
         if xDate < t:
             lo = mid + 1
         else:
@@ -162,18 +166,18 @@ class LogsFetcher(QThread):
                     return
                 if self.mergeLog(log):
                     continue
-                logDate = datetime.fromisoformat(log.committerDate)
-                if len(self.mergedLogs) == 0 or logDate < datetime.fromisoformat(self.mergedLogs[-1].committerDate):
+                logDate = makeDateTime(log.committerDate)
+                if len(self.mergedLogs) == 0 or logDate < makeDateTime(self.mergedLogs[-1].committerDate):
                     self.mergedLogs.append(log)
-                elif logDate > datetime.fromisoformat(self.mergedLogs[0].committerDate):
+                elif logDate > makeDateTime(self.mergedLogs[0].committerDate):
                     self.mergedLogs.insert(0, log)
                 else:
                     insort_logs(self.mergedLogs, log)
 
     def mergeLog(self, target: Commit):
         for log in self.mergedLogs:
-            targetDate = datetime.fromisoformat(target.committerDate)
-            logDate = datetime.fromisoformat(log.committerDate)
+            targetDate = makeDateTime(target.committerDate)
+            logDate = makeDateTime(log.committerDate)
             # since mergedLogs is sorted by committerDate, we can break here
             if targetDate.year > logDate.year or targetDate.month > logDate.month or targetDate.day > logDate.day:
                 return False
