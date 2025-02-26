@@ -351,16 +351,22 @@ class DiffView(QWidget):
             return
 
         filePath = index.data()
+        commit = fileRealCommit(filePath, self.commit)
+        if commit.repoDir:
+            filePath = filePath[len(commit.repoDir) + 1:]
         tool = self.__diffToolForFile(filePath)
 
-        cwd = self.branchDir if self.branchDir else Git.REPO_DIR
+        if commit.repoDir:
+            cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
+        else:
+            cwd = self.branchDir or Git.REPO_DIR
         args = ["difftool", "--no-prompt"]
-        if self.commit.sha1 == Git.LUC_SHA1:
+        if commit.sha1 == Git.LUC_SHA1:
             pass
-        elif self.commit.sha1 == Git.LCC_SHA1:
+        elif commit.sha1 == Git.LCC_SHA1:
             args.append("--cached")
         else:
-            args.append("{0}^..{0}".format(self.commit.sha1))
+            args.append("{0}^..{0}".format(commit.sha1))
 
         if tool:
             args.append("--tool={}".format(tool))
