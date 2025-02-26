@@ -34,6 +34,7 @@ import multiprocessing
 import threading
 import requests
 
+from .common import commitRepoDir
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
 from .statewindow import StateWindow
@@ -542,10 +543,18 @@ class AiChatWidget(QWidget):
     def isLocalLLM(self):
         return self.cbBots.currentIndex() == 0
 
-    def codeReview(self, sha1, args):
-        data: bytes = Git.commitRawDiff(sha1, gitArgs=args)
+    def codeReview(self, commit, args):
+        repoDir = commitRepoDir(commit)
+        data: bytes = Git.commitRawDiff(commit.sha1, gitArgs=args, repoDir=repoDir)
         if not data:
             return
+        
+        for subCommit in commit.subCommits:
+            repoDir = commitRepoDir(subCommit)
+            subData = Git.commitRawDiff(subCommit.sha1, gitArgs=args, repoDir=repoDir)
+            if subData:
+                data += subData
+                data += b"\n"
 
         diff = data.decode("utf-8", errors="replace")
         self._doRequest(diff, AiChatMode.CodeReview)
@@ -560,5 +569,5 @@ class AiChatWindow(StateWindow):
         centralWidget = AiChatWidget(self)
         self.setCentralWidget(centralWidget)
 
-    def codeReview(self, sha1, args=None):
-        self.centralWidget().codeReview(sha1, args)
+    def codeReview(self, commit, args=None):
+        self.centralWidget().codeReview(commit, args)

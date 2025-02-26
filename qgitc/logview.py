@@ -1038,7 +1038,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        event = CodeReviewEvent(commit.sha1, self.window().getFilterArgs())
+        event = CodeReviewEvent(commit, self.window().getFilterArgs())
         qApp.postEvent(qApp, event)
 
     def __onFindDataAvailable(self):
