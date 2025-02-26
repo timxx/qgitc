@@ -211,3 +211,14 @@ def attachConsole():
             sys.stdin = open("CONIN$", "r")
     except:
         pass
+
+
+def fileRealCommit(filePath: str, commit: Commit):
+    if not commit.repoDir:
+        return commit
+    if filePath.startswith(commit.repoDir.replace("\\", "/")):
+        return commit
+    for subCommit in commit.subCommits:
+        if filePath.startswith(subCommit.repoDir.replace("\\", "/")):
+            return subCommit
+    assert False, "No commit found for file: " + filePath
