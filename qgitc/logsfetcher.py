@@ -24,6 +24,7 @@ class LogsFetcherImpl(DataFetcher):
         super().__init__(parent)
         self.separator = b'\0'
         self.repoDir = repoDir
+        self._branch: bytes = None
 
     def parse(self, data):
         logs = data.rstrip(self.separator) \
@@ -41,6 +42,7 @@ class LogsFetcherImpl(DataFetcher):
     def makeArgs(self, args):
         branch = args[0]
         logArgs = args[1]
+        self._branch = branch.encode("utf-8") if branch else None
 
         if branch and branch.startswith("(HEAD detached"):
             branch = None
@@ -189,7 +191,8 @@ class LogsFetcher(DataFetcher):
     def _onFetchFinished(self, exitCode):
         sender: LogsFetcherImpl = self.sender()
         if sender.errorData and sender.errorData not in self._errors:
-            self._errors[sender.errorData] = sender.repoDir
+            if not self._needComposite or not self._isIgnoredError(sender.errorData, sender._branch):
+                self._errors[sender.errorData] = sender.repoDir
 
         self._fetchers.remove(sender)
         if not self._fetchers:
@@ -221,3 +224,7 @@ class LogsFetcher(DataFetcher):
 
     def _onMergeFinished(self):
         self.logsAvailable.emit(self._mergeThread.mergedLogs)
+
+    def _isIgnoredError(self, error: bytes, branch: bytes):
+        msg = b"fatal: ambiguous argument '%s': unknown revision or path" % branch
+        return error.startswith(msg)
