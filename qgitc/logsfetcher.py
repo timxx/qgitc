@@ -2,6 +2,7 @@
 
 from datetime import date, datetime, timedelta
 import os
+import time
 from typing import List
 from PySide6.QtCore import (
     Signal,
@@ -11,7 +12,7 @@ from PySide6.QtCore import (
     QObject
 )
 
-from .common import Commit
+from .common import Commit, MyProfile
 from .datafetcher import DataFetcher
 from .gitutils import Git
 
@@ -125,6 +126,7 @@ class LogsFetcherThread(QThread):
         self.start()
 
     def run(self):
+        profile = MyProfile()
         self._eventLoop = QEventLoop()
         mergedLogs: List[Commit] = []
 
@@ -156,12 +158,17 @@ class LogsFetcherThread(QThread):
         if not needComposite:
             return
 
+        self._logs = dict(sorted(self._logs.items(), key=lambda item: len(item[1]), reverse=True))
+        firstRepo = True
+
+        b = time.time()
         for _, logs in self._logs.items():
             for log in logs:
                 if self.isInterruptionRequested():
                     self._clearFetcher()
                     return
-                if self.mergeLog(mergedLogs, log):
+                # no need to merge for the first repo (all the logs from same repo)
+                if not firstRepo and self.mergeLog(mergedLogs, log):
                     continue
                 logDate = makeDateTime(log.committerDate)
                 if len(mergedLogs) == 0 or logDate < makeDateTime(mergedLogs[-1].committerDate):
@@ -170,10 +177,13 @@ class LogsFetcherThread(QThread):
                     mergedLogs.insert(0, log)
                 else:
                     insort_logs(mergedLogs, log)
+            firstRepo = False
 
+        print("merge time:", time.time() - b)
         if mergedLogs:
             self.logsAvailable.emit(mergedLogs)
         self.fetchFinished.emit(self._exitCode)
+        profile = None
 
     def mergeLog(self, mergedLogs: List[Commit], target: Commit):
         for log in mergedLogs:
