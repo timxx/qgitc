@@ -4,11 +4,13 @@ from PySide6.QtCore import (
     QObject,
     Signal,
     SIGNAL,
-    QProcess)
+    QProcess,
+    QThread,
+    QEventLoop)
 from .gitutils import Git, GitProcess
 
 
-class DataFetcher(QObject):
+class DataFetcher(QThread):
 
     fetchFinished = Signal(int)
 
@@ -19,6 +21,8 @@ class DataFetcher(QObject):
         self._separator = b'\n'
         self._errorData = b''
         self._cwd = None
+        self._git_args = None
+        self._eventLoop = None
 
     @property
     def process(self):
@@ -108,8 +112,11 @@ class DataFetcher(QObject):
         self.cancel()
         self.reset()
 
-        git_args = self.makeArgs(args)
+        self._git_args = self.makeArgs(args)
+        self.start()
 
+    def run(self):
+        self._eventLoop = QEventLoop()
         self._process = QProcess()
         cwd = self._cwd if self._cwd else Git.REPO_DIR
         self._process.setWorkingDirectory(cwd)
@@ -117,4 +124,7 @@ class DataFetcher(QObject):
         self._process.readyReadStandardError.connect(self.onProcessError)
         self._process.finished.connect(self.onDataFinished)
 
-        self._process.start(GitProcess.GIT_BIN, git_args)
+        self._process.finished.connect(self._eventLoop.quit)
+
+        self._process.start(GitProcess.GIT_BIN, self._git_args)
+        self._eventLoop.exec()
