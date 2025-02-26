@@ -825,6 +825,10 @@ class LogView(QAbstractScrollArea, CommitSource):
             enabled = not not branchDir
 
         self.acRevert.setEnabled(enabled)
+
+        # to avoid bad reset on each repo
+        if enabled and qApp.settings().isCompositeMode():
+            enabled = False
         self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
@@ -980,16 +984,27 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        ret, error = Git.revertCommit(self.curBranch, commit.sha1)
-        # ret == 1 with no error can happened but still reverted
-        if ret != 0 and error:
-            QMessageBox.critical(
-                self, self.window().windowTitle(),
-                error)
-        else:
-            # FIXME: fetch the new one only?
-            self.clear()
-            self.showLogs(self.curBranch, self.args)
+        def _doRevert(sha1, repoDir):
+            ret, error = Git.revertCommit(self.curBranch, sha1, repoDir)
+            # ret == 1 with no error can happened but still reverted
+            if ret != 0 and error:
+                QMessageBox.critical(
+                    self, self.window().windowTitle(),
+                    error)
+                return False
+            return True
+
+        repoDir = commitRepoDir(commit)
+        if not _doRevert(commit.sha1, repoDir):
+            return
+
+        for subCommit in commit.subCommits:
+            repoDir = commitRepoDir(subCommit)
+            _doRevert(subCommit.sha1, repoDir)
+
+        # FIXME: fetch the new one only?
+        self.clear()
+        self.showLogs(self.curBranch, self.args)
 
     def __resetToCurCommit(self, method):
         if self.curIdx == -1:

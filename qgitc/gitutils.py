@@ -426,8 +426,8 @@ class Git():
         return True
 
     @staticmethod
-    def revertCommit(branch, sha1):
-        branchDir = Git.branchDir(branch)
+    def revertCommit(branch, sha1, repoDir=None):
+        branchDir = Git.branchDir(branch, repoDir)
 
         args = ["revert", "--no-edit", sha1]
         process = GitProcess(branchDir, args)
