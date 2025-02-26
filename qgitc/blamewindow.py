@@ -198,8 +198,8 @@ class BlameWindow(StateWindow):
 
         self._findWidget.showAnimate()
 
-    def blame(self, file, rev=None, lineNo=0):
-        self._view.blame(file, rev, lineNo)
+    def blame(self, file, rev=None, lineNo=0, repoDir=None):
+        self._view.blame(file, rev, lineNo, repoDir)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

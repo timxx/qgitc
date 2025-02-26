@@ -276,17 +276,27 @@ class GitView(QWidget):
         else:
             self.ui.logView.switchToCommit(sha1)
 
-    def __onRequestBlame(self, filePath, toParent):
+    def __onRequestBlame(self, filePath: str, toParent: bool, commit: Commit):
         sha1 = None
+        realCommit = self._getFileRealCommit(filePath, commit)
         if toParent:
-            idx = self.ui.logView.currentIndex()
-            if idx != -1:
-                commit = self.ui.logView.getCommit(idx)
-                sha1 = commit.parents[0] if commit.parents else None
+            sha1 = realCommit.parents[0] if realCommit.parents else None
 
         rev = sha1 if sha1 else self.currentBranch()
-        QCoreApplication.postEvent(qApp,
-                                   BlameEvent(filePath, rev))
+        if realCommit.repoDir:
+            filePath = filePath[len(realCommit.repoDir) + 1:]
+        QCoreApplication.postEvent(
+            qApp, BlameEvent(filePath, rev, repoDir=realCommit.repoDir))
+
+    def _getFileRealCommit(self, filePath: str, commit: Commit):
+        if not commit.repoDir:
+            return commit
+        if filePath.startswith(commit.repoDir.replace("\\", "/")):
+            return commit
+        for subCommit in commit.subCommits:
+            if filePath.startswith(subCommit.repoDir.replace("\\", "/")):
+                return subCommit
+        assert False, "No commit found for file: " + filePath
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)

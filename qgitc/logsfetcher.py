@@ -185,7 +185,7 @@ class LogsFetcher(QThread):
             if log.repoDir == target.repoDir:
                 continue
             if target.author == log.author and target.comments == log.comments:
-                log.subCommits[target.repoDir] = target.sha1
+                log.subCommits.append(target)
                 # require same day at least
                 return targetDate.year == logDate.year and \
                     targetDate.month == logDate.month and \

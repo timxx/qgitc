@@ -1761,8 +1761,8 @@ class LogView(QAbstractScrollArea):
                     color = QColor(0xe9e8dd)
                     textColor = QColor(0xf54c27)
                     self.__drawTag(painter, rect, color, text, textColor=textColor)
-                    for repoDir, _ in commit.subCommits.items():
-                        text = makeRepoName(repoDir)
+                    for subCommit in commit.subCommits:
+                        text = makeRepoName(subCommit.repoDir)
                         self.__drawTag(painter, rect, color,
                                        text, textColor=textColor)
                 # author

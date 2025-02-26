@@ -126,7 +126,7 @@ class Application(QApplication):
         type = event.type()
         if type == BlameEvent.Type:
             window = self.getWindow(Application.BlameWindow)
-            window.blame(event.filePath, event.rev, event.lineNo)
+            window.blame(event.filePath, event.rev, event.lineNo, event.repoDir)
             self._ensureVisible(window)
             return True
         elif type == ShowCommitEvent.Type:

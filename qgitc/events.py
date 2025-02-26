@@ -7,11 +7,12 @@ class BlameEvent(QEvent):
 
     Type = QEvent.User + 1
 
-    def __init__(self, filePath, rev=None, lineNo=0):
+    def __init__(self, filePath, rev=None, lineNo=0, repoDir=None):
         super().__init__(QEvent.Type(BlameEvent.Type))
         self.filePath = filePath
         self.rev = rev
         self.lineNo = lineNo
+        self.repoDir = repoDir
 
 
 class ShowCommitEvent(QEvent):

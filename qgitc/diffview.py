@@ -131,7 +131,7 @@ class FileListModel(QAbstractListModel):
 
 class DiffView(QWidget):
     requestCommit = Signal(str, bool, bool)
-    requestBlame = Signal(str, bool)
+    requestBlame = Signal(str, bool, Commit)
 
     beginFetch = Signal()
     endFetch = Signal()
@@ -148,8 +148,7 @@ class DiffView(QWidget):
         self.gitArgs = []
         self.fetcher = DiffFetcher(self)
         # sub commit to fetch
-        self._commitList: Tuple[str, str] = []
-        self._commitIndex = -1
+        self._commitList: List[Commit] = []
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
@@ -329,14 +328,14 @@ class DiffView(QWidget):
         if not index.isValid():
             return
 
-        self.requestBlame.emit(index.data(), False)
+        self.requestBlame.emit(index.data(), False, self.commit)
 
     def __onBlameParentCommit(self):
         index = self.fileListView.currentIndex()
         if not index.isValid():
             return
 
-        self.requestBlame.emit(index.data(), True)
+        self.requestBlame.emit(index.data(), True, self.commit)
 
     def __isCommentItem(self, index):
         if not index.isValid():
@@ -429,14 +428,13 @@ class DiffView(QWidget):
 
     def __onFetchFinished(self, exitCode):
         # TODO: use multiprocessing maybe is better
-        if self._commitList and self._commitIndex < len(self._commitList) - 1:
-            self._commitIndex += 1
-            repoDir, sha1 = self._commitList[self._commitIndex]
+        if self._commitList:
+            commit = self._commitList.pop(0)
             self.fetcher.resetRow(self.viewer.textLineCount())
-            if repoDir != ".":
-                self.fetcher.cwd = os.path.join(Git.REPO_DIR, repoDir)
-                self.fetcher.repoDir = repoDir
-            self.fetcher.fetch(sha1, self.filterPath, self.gitArgs)
+            if commit.repoDir != ".":
+                self.fetcher.cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
+                self.fetcher.repoDir = commit.repoDir
+            self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         else:
             self.fetcher.cwd = self.branchDir or Git.REPO_DIR
             self.viewer.endReading()
@@ -530,8 +528,7 @@ class DiffView(QWidget):
         # FIXME: delay showing the spinner when loading small diff to avoid flicker
         self.beginFetch.emit()
 
-        self._commitList = list(commit.subCommits.items())
-        self._commitIndex = -1
+        self._commitList = commit.subCommits.copy()
 
     def clear(self):
         self.fileListModel.clear()
@@ -706,7 +703,7 @@ class SummaryTextLine(TextLine):
 class PatchViewer(SourceViewer):
     fileRowChanged = Signal(int)
     requestCommit = Signal(str, bool, bool)
-    requestBlame = Signal(str, bool)
+    requestBlame = Signal(str, bool, Commit)
 
     def __init__(self, parent=None):
         super().__init__(parent)

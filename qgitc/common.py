@@ -4,6 +4,7 @@ import cProfile
 import pstats
 import io
 import os
+from typing import List
 import chardet
 
 
@@ -26,10 +27,10 @@ class Commit():
         self.authorDate = ""
         self.committer = ""
         self.committerDate = ""
-        self.parents = []
-        self.children = None
-        self.repoDir = None
-        self.subCommits = {}  # repoDir: sha1
+        self.parents: List[str] = []
+        self.children: List[str] = None
+        self.repoDir: str = None
+        self.subCommits: List[Commit] = []
 
     def __str__(self):
         return "Commit: {0}\n"  \

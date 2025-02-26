@@ -850,7 +850,7 @@ class BlameView(QWidget):
         self._viewer.clear()
         self._commitPanel.clear()
 
-    def blame(self, file, rev=None, lineNo=0):
+    def blame(self, file, rev=None, lineNo=0, repoDir=None):
         if not Git.available():
             return
 
@@ -861,6 +861,7 @@ class BlameView(QWidget):
         self.blameFileAboutToChange.emit(file)
         self.clear()
         self._viewer.beginReading()
+        self._fetcher.cwd = repoDir or Git.REPO_DIR
         self._fetcher.fetch(file, rev)
 
         self._file = file
