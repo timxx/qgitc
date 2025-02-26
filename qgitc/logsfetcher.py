@@ -56,9 +56,9 @@ class LogsFetcherImpl(DataFetcher):
                     "--pretty=format:{0}".format(log_fmt)]
 
         # reduce commits to analyze
-        if self.repoDir:
-            last_week = date.today() - timedelta(days=7)
-            git_args.append(f"--since={last_week.isoformat()}")
+        if self.repoDir and not self.hasSinceArg(logArgs):
+            since = date.today() - timedelta(days=14)
+            git_args.append(f"--since={since.isoformat()}")
 
         if branch:
             git_args.append(branch)
@@ -72,6 +72,15 @@ class LogsFetcherImpl(DataFetcher):
 
     def isLoading(self):
         return self.process is not None
+
+    @staticmethod
+    def hasSinceArg(args: List[str]):
+        if not args:
+            return False
+        for arg in args:
+            if arg.startswith("--since"):
+                return True
+        return False
 
 
 def makeDateTime(dateStr: str):
