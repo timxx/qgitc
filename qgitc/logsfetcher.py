@@ -5,8 +5,10 @@ import os
 from typing import List
 from PySide6.QtCore import (
     Signal,
+    SIGNAL,
     QThread,
-    QEventLoop
+    QEventLoop,
+    QObject
 )
 
 from .common import Commit
@@ -103,55 +105,40 @@ def insort_logs(a: List[Commit], x: Commit):
     a.insert(lo, x)
 
 
-class LogsFetcher(QThread):
+class LogsFetcherThread(QThread):
 
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, submodules, parent=None):
         super().__init__(parent)
         self._errors = {}  # error: repo
         self._errorData = b''
         self._fetchers = []
         self._logs = {}  # repo: logs
-        self._needComposite = False
-        self._submodules = []
+        self._submodules = submodules.copy()
         self._eventLoop = None
-        self.mergedLogs: List[Commit] = []
         self._exitCode = 0
 
-        self.finished.connect(self._runFinished)
-
-    def setSubmodules(self, submodules):
-        self._errors = {}
-        self._submodules = submodules
-
-    def isLoading(self):
-        return self._eventLoop is not None
-
     def fetch(self, *args):
-        self._errorData = b''
-        self._logs.clear()
         self._args = args
-
         self.start()
 
     def run(self):
         self._eventLoop = QEventLoop()
-        submodules = self._submodules.copy()
-        self.mergedLogs.clear()
+        mergedLogs: List[Commit] = []
 
-        if not submodules:
+        needComposite = False
+        self._fetchers.clear()
+        if not self._submodules:
             fetcher = LogsFetcherImpl()
             fetcher.logsAvailable.connect(
                 self.logsAvailable)
             fetcher.fetchFinished.connect(self._onFetchFinished)
-            self._fetchers = [fetcher]
-            self._needComposite = False
+            self._fetchers.append(fetcher)
         else:
-            self._fetchers = []
-            self._needComposite = True
-            for submodule in submodules:
+            needComposite = True
+            for submodule in self._submodules:
                 fetcher = LogsFetcherImpl(submodule)
                 fetcher.logsAvailable.connect(self._onLogsAvailable)
                 fetcher.fetchFinished.connect(self._onFetchFinished)
@@ -166,25 +153,33 @@ class LogsFetcher(QThread):
         self._eventLoop.exec()
         self._eventLoop = None
 
-        if not self._needComposite:
+        if not needComposite:
             return
 
         for _, logs in self._logs.items():
             for log in logs:
                 if self.isInterruptionRequested():
+                    self._clearFetcher()
                     return
-                if self.mergeLog(log):
+                if self.mergeLog(mergedLogs, log):
                     continue
                 logDate = makeDateTime(log.committerDate)
-                if len(self.mergedLogs) == 0 or logDate < makeDateTime(self.mergedLogs[-1].committerDate):
-                    self.mergedLogs.append(log)
-                elif logDate > makeDateTime(self.mergedLogs[0].committerDate):
-                    self.mergedLogs.insert(0, log)
+                if len(mergedLogs) == 0 or logDate < makeDateTime(mergedLogs[-1].committerDate):
+                    mergedLogs.append(log)
+                elif logDate > makeDateTime(mergedLogs[0].committerDate):
+                    mergedLogs.insert(0, log)
                 else:
-                    insort_logs(self.mergedLogs, log)
+                    insort_logs(mergedLogs, log)
 
-    def mergeLog(self, target: Commit):
-        for log in self.mergedLogs:
+        if mergedLogs:
+            self.logsAvailable.emit(mergedLogs)
+        self.fetchFinished.emit(self._exitCode)
+
+    def mergeLog(self, mergedLogs: List[Commit], target: Commit):
+        for log in mergedLogs:
+            if self.isInterruptionRequested():
+                return True
+
             targetDate = makeDateTime(target.committerDate)
             logDate = makeDateTime(log.committerDate)
             # since mergedLogs is sorted by committerDate, we can break here
@@ -205,6 +200,9 @@ class LogsFetcher(QThread):
         self.requestInterruption()
         if self._eventLoop:
             self._eventLoop.quit()
+        self.wait(50)
+
+    def _clearFetcher(self):
         for fetcher in self._fetchers:
             fetcher.cancel()
 
@@ -214,8 +212,11 @@ class LogsFetcher(QThread):
 
     def _onFetchFinished(self, exitCode):
         sender: LogsFetcherImpl = self.sender()
+        if not sender:
+            return
+
         if sender.errorData and sender.errorData not in self._errors:
-            if not self._needComposite or not self._isIgnoredError(sender.errorData, sender._branch):
+            if not self._submodules or not self._isIgnoredError(sender.errorData, sender._branch):
                 self._errors[sender.errorData] = sender.repoDir
 
         self._fetchers.remove(sender)
@@ -226,7 +227,7 @@ class LogsFetcher(QThread):
                 self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
 
-            if not self._needComposite:
+            if not self._submodules:
                 if self._logs:
                     self.logsAvailable.emit(list(self._logs.keys()))
                 self.fetchFinished.emit(exitCode)
@@ -248,7 +249,43 @@ class LogsFetcher(QThread):
                 return True
         return False
 
-    def _runFinished(self):
-        if self.mergedLogs:
-            self.logsAvailable.emit(self.mergedLogs)
-        self.fetchFinished.emit(self._exitCode)
+
+class LogsFetcher(QObject):
+
+    logsAvailable = Signal(list)
+    fetchFinished = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._thread = None
+        self._submodules = []
+        self._errorData = b''
+
+    def setSubmodules(self, submodules):
+        self._submodules = submodules
+
+    def fetch(self, *args):
+        self.cancel()
+        self._thread = LogsFetcherThread(self._submodules, self)
+        self._thread.logsAvailable.connect(self.logsAvailable)
+        self._thread.fetchFinished.connect(self._onFetchFinished)
+        self._thread.fetch(*args)
+
+    def cancel(self):
+        if self._thread:
+            self._thread.disconnect(self)
+            self._thread.cancel()
+            self._thread = None
+
+    def isLoading(self):
+        return self._thread is not None and \
+            self._thread.isRunning()
+
+    def _onFetchFinished(self, exitCode):
+        self._errorData = self._thread.errorData
+        self._thread = None
+        self.fetchFinished.emit(exitCode)
+
+    @property
+    def errorData(self):
+        return self._errorData

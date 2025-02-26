@@ -73,6 +73,8 @@ class DataFetcher(QObject):
             self.parse(data)
 
     def onProcessError(self):
+        if not self._process:
+            return
         data = self._process.readAllStandardError().data()
         self._errorData += data
 
@@ -92,6 +94,8 @@ class DataFetcher(QObject):
             QObject.disconnect(self._process,
                                SIGNAL("finished(int, QProcess::ExitStatus)"),
                                self.onDataFinished)
+            QObject.disconnect(self._process, SIGNAL("readyReadStandardError()"),
+                               self.onProcessError)
             self._process.close()
             self._process = None
 
