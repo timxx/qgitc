@@ -232,8 +232,12 @@ class LogsFetcher(QThread):
             self._logs[repoDir] = logs
 
     def _isIgnoredError(self, error: bytes, branch: bytes):
-        msg = b"fatal: ambiguous argument '%s': unknown revision or path" % branch
-        return error.startswith(msg)
+        msgs = [b"fatal: ambiguous argument '%s': unknown revision or path" % branch,
+                b"fatal: bad revision '%s'" % branch]
+        for msg in msgs:
+            if error.startswith(msg):
+                return True
+        return False
 
     def _runFinished(self):
         if self.mergedLogs:
