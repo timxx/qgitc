@@ -853,7 +853,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        commit = Git.commitSummary(commit.sha1)
+        repoDir = commit.repoDir
+        if repoDir:
+            repoDir = os.path.join(Git.REPO_DIR, repoDir)
+
+        commit = Git.commitSummary(commit.sha1, repoDir)
         if not commit:
             return
 
@@ -911,7 +915,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        commit = Git.commitSummary(commit.sha1)
+        repoDir = commit.repoDir
+        if repoDir:
+            repoDir = os.path.join(Git.REPO_DIR, repoDir)
+
+        commit = Git.commitSummary(commit.sha1, repoDir)
         if not commit:
             return
 

@@ -189,13 +189,13 @@ class Git():
         return data.decode("utf-8").split('\n')
 
     @staticmethod
-    def commitSummary(sha1):
+    def commitSummary(sha1, repoDir=None):
         fmt = "%h%x01%s%x01%ad%x01%an%x01%ae"
         args = ["show", "-s",
                 "--pretty=format:{0}".format(fmt),
                 "--date=short", sha1]
 
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return None
 
