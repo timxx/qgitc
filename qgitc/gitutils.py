@@ -223,7 +223,7 @@ class Git():
         return data
 
     @staticmethod
-    def commitRawDiff(sha1, filePath=None, gitArgs=None):
+    def commitRawDiff(sha1, filePath=None, gitArgs=None, repoDir=None):
         if sha1 == Git.LCC_SHA1:
             args = ["diff-index", "--cached", "HEAD"]
         elif sha1 == Git.LUC_SHA1:
@@ -241,7 +241,7 @@ class Git():
             args.append("--")
             args.append(filePath)
 
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return None
 
@@ -402,8 +402,8 @@ class Git():
         return ""
 
     @staticmethod
-    def generateDiff(sha1, filePath):
-        data = Git.commitRawDiff(sha1)
+    def generateDiff(sha1, filePath, repoDir=None):
+        data = Git.commitRawDiff(sha1, repoDir=repoDir)
         if not data:
             return False
 
@@ -413,10 +413,10 @@ class Git():
         return True
 
     @staticmethod
-    def generatePatch(sha1, filePath):
+    def generatePatch(sha1, filePath, repoDir=None):
         args = ["format-patch", "-1", "--stdout", sha1]
 
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return False
 

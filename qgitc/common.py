@@ -7,6 +7,8 @@ import os
 from typing import List
 import chardet
 
+from .gitutils import Git
+
 
 html_escape_table = {
     "&": "&amp;",
@@ -225,3 +227,9 @@ def fileRealCommit(filePath: str, commit: Commit):
         if filePath.startswith(subCommit.repoDir.replace("\\", "/")):
             return subCommit
     assert False, "No commit found for file: " + filePath
+
+
+def commitRepoDir(commit: Commit):
+    if commit.repoDir:
+        return os.path.join(Git.REPO_DIR, commit.repoDir)
+    return None

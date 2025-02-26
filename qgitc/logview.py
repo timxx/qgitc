@@ -853,10 +853,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        repoDir = commit.repoDir
-        if repoDir:
-            repoDir = os.path.join(Git.REPO_DIR, repoDir)
-
+        repoDir = commitRepoDir(commit)
         commit = Git.commitSummary(commit.sha1, repoDir)
         if not commit:
             return
@@ -915,10 +912,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        repoDir = commit.repoDir
-        if repoDir:
-            repoDir = os.path.join(Git.REPO_DIR, repoDir)
-
+        repoDir = commitRepoDir(commit)
         commit = Git.commitSummary(commit.sha1, repoDir)
         if not commit:
             return
@@ -960,7 +954,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             self,
             self.tr("Save Patch"))
         if f:
-           Git.generatePatch(commit.sha1, f)
+           # TODO: generate with subCommits?
+           repoDir = commitRepoDir(commit)
+           Git.generatePatch(commit.sha1, f, repoDir)
 
     def __onGenerateDiff(self):
         if self.curIdx == -1:
@@ -973,7 +969,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             self,
             self.tr("Save Diff"))
         if f:
-            Git.generateDiff(commit.sha1, f)
+            # TODO: generate with subCommits?
+            repoDir = commitRepoDir(commit)
+            Git.generateDiff(commit.sha1, f, repoDir)
 
     def __onRevertCommit(self):
         if self.curIdx == -1:
