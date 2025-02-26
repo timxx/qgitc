@@ -62,6 +62,8 @@ class GitView(QWidget):
         self._delayTimer = QTimer(self)
         self._delayTimer.setSingleShot(True)
 
+        self.ui.diffView.setCommitSource(self.ui.logView)
+
         self.__setupSignals()
 
     def __setupSignals(self):

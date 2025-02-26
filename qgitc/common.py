@@ -59,6 +59,9 @@ class Commit():
 
         return commit
 
+    def isValid(self):
+        return len(self.sha1) > 0
+
 
 class MyProfile():
 

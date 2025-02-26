@@ -32,6 +32,7 @@ from PySide6.QtCore import (
     QObject,
     SIGNAL)
 
+from .commitsource import CommitSource
 from .common import *
 from .gitutils import *
 from .logsfetcher import LogsFetcher
@@ -455,23 +456,55 @@ class FindData():
 
 class CheckLocalChangesThread(QThread):
 
-    checkFinished = Signal(bool, bool)
+    checkFinished = Signal(Commit, Commit)
 
-    def __init__(self, branch, parent=None):
+    def __init__(self, branch, submodules, parent=None):
         super().__init__(parent)
         self._branch = branch
+        self._submodules = submodules or [None]
 
     def run(self):
         if self.isInterruptionRequested():
             return
-        hasLCC = Git.hasLocalChanges(self._branch, True)
 
-        if self.isInterruptionRequested():
-            return
-        hasLUC = Git.hasLocalChanges(self._branch)
+        lccCommit = Commit()
+        lucCommit = Commit()
+
+        for submodule in self._submodules:
+            if self.isInterruptionRequested():
+                return
+            hasLCC, hasLUC = self.fetchLocalChanges(submodule)
+            if hasLCC:
+                lccCommit.sha1 = Git.LCC_SHA1
+                if not lccCommit.repoDir:
+                    lccCommit.repoDir = submodule
+                else:
+                    subCommit = Commit()
+                    subCommit.sha1 = Git.LCC_SHA1
+                    subCommit.repoDir = submodule
+                    lccCommit.subCommits.append(subCommit)
+
+            if hasLUC:
+                lucCommit.sha1 = Git.LUC_SHA1
+                if not lucCommit.repoDir:
+                    lucCommit.repoDir = submodule
+                else:
+                    subCommit = Commit()
+                    subCommit.sha1 = Git.LUC_SHA1
+                    subCommit.repoDir = submodule
+                    lucCommit.subCommits.append(subCommit)
 
         if not self.isInterruptionRequested():
-            self.checkFinished.emit(hasLCC, hasLUC)
+            self.checkFinished.emit(lccCommit, lucCommit)
+
+    def fetchLocalChanges(self, repoDir=None):
+            hasLCC = Git.hasLocalChanges(self._branch, True, repoDir)
+            if self.isInterruptionRequested():
+                return False, False
+            hasLUC = Git.hasLocalChanges(self._branch, repoDir=repoDir)
+            if self.isInterruptionRequested():
+                return False, False
+            return hasLCC, hasLUC
 
 
 class LogGraph(QWidget):
@@ -498,7 +531,7 @@ class LogGraph(QWidget):
             painter.drawPixmap(0, 0, self._graphImage)
 
 
-class LogView(QAbstractScrollArea):
+class LogView(QAbstractScrollArea, CommitSource):
     currentIndexChanged = Signal(int)
     findFinished = Signal(int)
     findProgress = Signal(int)
@@ -638,16 +671,14 @@ class LogView(QAbstractScrollArea):
         self.curBranch = branch
         self.args = args
 
+        submodules = []
         if qApp.settings().isCompositeMode():
             submodules = self.window().submodules()
-            self.fetcher.setSubmodules(submodules)
-        else:
-            self.fetcher.setSubmodules([])
+        self.fetcher.setSubmodules(submodules)
 
         self.fetcher.fetch(branch, args)
         self.beginFetch.emit()
 
-        # TODO:
         if self.checkThread:
             self.checkThread.disconnect(self)
             self.checkThread.requestInterruption()
@@ -655,7 +686,7 @@ class LogView(QAbstractScrollArea):
             self.checkThread = None
 
         if not args:
-            self.checkThread = CheckLocalChangesThread(self.curBranch, self)
+            self.checkThread = CheckLocalChangesThread(self.curBranch, submodules, self)
             self.checkThread.checkFinished.connect(self.__onCheckFinished)
             self.checkThread.start()
 
@@ -1028,47 +1059,46 @@ class LogView(QAbstractScrollArea):
         else:
             self.viewport().update()
 
-    def __onCheckFinished(self, hasLCC, hasLUC):
+    def __onCheckFinished(self, lccCommit: Commit, lucCommit: Commit):
         parent_sha1 = self.data[0].sha1 if self.data else None
 
         self.delayUpdateParents = False
-        if hasLCC:
-            lcc_cmit = Commit()
-            lcc_cmit.sha1 = Git.LCC_SHA1
-            lcc_cmit.comments = self.tr(
-                "Local changes checked in to index but not committed")
-            lcc_cmit.parents = [parent_sha1] if parent_sha1 else []
-            lcc_cmit.children = [Git.LUC_SHA1] if hasLUC else []
+        hasLCC = lccCommit.isValid()
+        hasLUC = lucCommit.isValid()
 
-            self.data.insert(0, lcc_cmit)
-            parent_sha1 = lcc_cmit.sha1
-            self.delayUpdateParents = len(lcc_cmit.parents) == 0
+        if hasLCC:
+            lccCommit.comments = self.tr(
+                "Local changes checked in to index but not committed")
+            lccCommit.parents = [parent_sha1] if parent_sha1 else []
+            lccCommit.children = [Git.LUC_SHA1] if hasLUC else []
+
+            self.data.insert(0, lccCommit)
+            parent_sha1 = lccCommit.sha1
+            self.delayUpdateParents = len(lccCommit.parents) == 0
 
             if not self.delayUpdateParents:
                 if self.data[1].children is None:
                     self.data[1].children = []
 
-                self.data[1].children.append(lcc_cmit.sha1)
+                self.data[1].children.append(lccCommit.sha1)
 
             if self.curIdx > 0:
                 self.curIdx += 1
 
         if hasLUC:
-            luc_cmit = Commit()
-            luc_cmit.sha1 = Git.LUC_SHA1
-            luc_cmit.comments = self.tr(
+            lucCommit.comments = self.tr(
                 "Local uncommitted changes, not checked in to index")
-            luc_cmit.parents = [parent_sha1] if parent_sha1 else []
-            luc_cmit.children = []
+            lucCommit.parents = [parent_sha1] if parent_sha1 else []
+            lucCommit.children = []
 
-            self.data.insert(0, luc_cmit)
+            self.data.insert(0, lucCommit)
             self.delayUpdateParents = self.delayUpdateParents or len(
-                luc_cmit.parents) == 0
+                lucCommit.parents) == 0
 
             if not self.delayUpdateParents and not hasLCC:
                 if self.data[1].children is None:
                     self.data[1].children = []
-                self.data[1].children.append(luc_cmit.sha1)
+                self.data[1].children.append(lucCommit.sha1)
 
             if self.curIdx > 0:
                 self.curIdx += 1

@@ -1,0 +1,15 @@
+# -*- coding: utf-8 -*-
+
+from .common import Commit
+
+
+class CommitSource:
+
+    def findCommitIndex(self, sha1: str, begin=0, findNext=True) -> int:
+        raise NotImplemented
+
+    def getCommit(self, index: int) -> Commit:
+        raise NotImplemented
+
+    def getCount(self) -> int:
+        raise NotImplemented

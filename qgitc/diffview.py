@@ -37,6 +37,7 @@ from PySide6.QtCore import (
     QPointF,
     QMimeData)
 
+from .commitsource import CommitSource
 from .common import *
 from .gitutils import Git, GitProcess
 from .findwidget import FindWidget
@@ -149,6 +150,8 @@ class DiffView(QWidget):
         self.fetcher = DiffFetcher(self)
         # sub commit to fetch
         self._commitList: List[Commit] = []
+
+        self._commitSource: CommitSource = None
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
@@ -478,7 +481,8 @@ class DiffView(QWidget):
         return " (" + subject + ")"
 
     def __commitToTextLines(self, commit: Commit):
-        if not commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
+        isLocalChanges = commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]
+        if not isLocalChanges:
             content = self.tr("Author: ") + commit.author + \
                 " " + commit.authorDate
             self.viewer.addAuthorLine(content)
@@ -489,7 +493,14 @@ class DiffView(QWidget):
 
         for parent in commit.parents:
             content = self.tr("Parent: ") + parent
-            content += self.__commitDesc(parent, commit.repoDir)
+            repoDir = commit.repoDir
+            if isLocalChanges and repoDir:
+                index = self.commitSource.findCommitIndex(parent)
+                if index != -1:
+                    parentCommit = self.commitSource.getCommit(index)
+                    repoDir = parentCommit.repoDir
+
+            content += self.__commitDesc(parent, repoDir)
             self.viewer.addSHA1Line(content, True)
 
         for child in commit.children:
@@ -605,6 +616,9 @@ class DiffView(QWidget):
     def queryClose(self):
         self.fetcher.cancel()
         return True
+
+    def setCommitSource(self, source: CommitSource):
+        self.commitSource = source
 
 
 class DiffTextLine(SourceTextLineBase):

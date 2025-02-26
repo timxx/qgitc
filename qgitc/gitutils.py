@@ -351,12 +351,12 @@ class Git():
         return process.returncode == 0
 
     @staticmethod
-    def hasLocalChanges(branch, cached=False):
+    def hasLocalChanges(branch, cached=False, repoDir=None):
         # A remote branch should never have local changes
         if branch.startswith("remotes/"):
             return False
 
-        dir = Git.branchDir(branch)
+        dir = Git.branchDir(branch, repoDir)
         # only branch checked out can have local changes
         if not dir:
             return False
@@ -371,7 +371,7 @@ class Git():
         return process.returncode == 1
 
     @staticmethod
-    def branchDir(branch):
+    def branchDir(branch, repoDir=None):
         """returned the branch directory if it checked out
         otherwise returned an empty string"""
 
@@ -384,7 +384,7 @@ class Git():
             return Git.REPO_DIR
 
         args = ["worktree", "list"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return ""
 
