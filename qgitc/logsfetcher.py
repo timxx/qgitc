@@ -35,6 +35,8 @@ class LogsFetcherImpl(DataFetcher):
         commits = []
         for log in logs:
             commit = Commit.fromRawString(log)
+            if not commit.sha1:
+                continue
             commit.repoDir = self.repoDir
             commits.append(commit)
 
