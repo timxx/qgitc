@@ -16,7 +16,7 @@ class DiffFetcher(DataFetcher):
         self._isDiffContent = False
         self._row = 0
         self._firstPatch = True
-        self.repoDir = None
+        self._repoDir = None
         self.repoDirBytes = None
 
     def parse(self, data):
@@ -130,9 +130,19 @@ class DiffFetcher(DataFetcher):
 
         return git_args
 
-    def makeFilePath(self, file):
-        if not self.repoDir:
-            return file
-        if self.repoDirBytes is None:
+    @property
+    def repoDir(self):
+        return self._repoDir
+
+    @repoDir.setter
+    def repoDir(self, repoDir):
+        self._repoDir = repoDir
+        if repoDir:
             self.repoDirBytes = self.repoDir.replace("\\", "/").encode("utf-8") + b"/"
+        else:
+            self.repoDirBytes = None
+
+    def makeFilePath(self, file):
+        if not self.repoDirBytes:
+            return file
         return self.repoDirBytes + file
