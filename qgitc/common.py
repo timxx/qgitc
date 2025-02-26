@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import cProfile
+from datetime import datetime
 import pstats
 import io
 import os
@@ -29,6 +30,7 @@ class Commit():
         self.authorDate = ""
         self.committer = ""
         self.committerDate = ""
+        self.committerDateTime: datetime = None
         self.parents: List[str] = []
         self.children: List[str] = None
         self.repoDir: str = None

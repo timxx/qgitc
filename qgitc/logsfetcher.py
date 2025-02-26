@@ -41,6 +41,9 @@ class LogsFetcherImpl(DataFetcher):
             if not commit.sha1:
                 continue
             commit.repoDir = self.repoDir
+            if self.repoDir:
+                commit.committerDateTime = datetime.strptime(
+                    commit.committerDate, "%Y-%m-%d %H:%M:%S %z")
             commits.append(commit)
 
         self.logsAvailable.emit(commits)
@@ -86,19 +89,15 @@ class LogsFetcherImpl(DataFetcher):
         return False
 
 
-def makeDateTime(dateStr: str):
-    return datetime.strptime(dateStr, "%Y-%m-%d %H:%M:%S %z")
-
-
 # the builtin bisect key required python >= 3.10
 def insort_logs(a: List[Commit], x: Commit):
     lo = 0
     hi = len(a)
 
-    xDate = makeDateTime(x.committerDate)
+    xDate = x.committerDateTime
     while lo < hi:
         mid = (lo + hi) // 2
-        t = makeDateTime(a[mid].committerDate)
+        t = a[mid].committerDateTime
         if xDate < t:
             lo = mid + 1
         else:
@@ -170,10 +169,10 @@ class LogsFetcherThread(QThread):
                 # no need to merge for the first repo (all the logs from same repo)
                 if not firstRepo and self.mergeLog(mergedLogs, log):
                     continue
-                logDate = makeDateTime(log.committerDate)
-                if len(mergedLogs) == 0 or logDate < makeDateTime(mergedLogs[-1].committerDate):
+                logDate = log.committerDateTime
+                if len(mergedLogs) == 0 or logDate < mergedLogs[-1].committerDateTime:
                     mergedLogs.append(log)
-                elif logDate > makeDateTime(mergedLogs[0].committerDate):
+                elif logDate > mergedLogs[0].committerDateTime:
                     mergedLogs.insert(0, log)
                 else:
                     insort_logs(mergedLogs, log)
@@ -190,8 +189,8 @@ class LogsFetcherThread(QThread):
             if self.isInterruptionRequested():
                 return True
 
-            targetDate = makeDateTime(target.committerDate)
-            logDate = makeDateTime(log.committerDate)
+            targetDate = target.committerDateTime
+            logDate = log.committerDateTime
             # since mergedLogs is sorted by committerDate, we can break here
             if targetDate.year > logDate.year or targetDate.month > logDate.month or targetDate.day > logDate.day:
                 return False
