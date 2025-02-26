@@ -379,6 +379,15 @@ class MainWindow(StateWindow):
             self.gitViewB.logView.updateView()
 
     def __onAcCompositeModeTriggered(self, checked):
+        if checked:
+            # use top level repo dir
+            Git.REPO_DIR = Git.REPO_TOP_DIR
+        elif self.ui.cbSubmodule.count() > 0 and self.ui.cbSubmodule.currentIndex() > 0:
+            newRepo = os.path.join(
+                Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
+            Git.REPO_DIR = newRepo
+
+        self.ui.cbSubmodule.setEnabled(not checked)
         qApp.settings().setCompositeMode(checked)
 
     def __onOptsReturnPressed(self):
@@ -503,8 +512,9 @@ class MainWindow(StateWindow):
         self.ui.acFullCommitMsg.setChecked(
             sett.isFullCommitMessage())
 
-        self.ui.acCompositeMode.setChecked(
-            sett.isCompositeMode())
+        isCompositeMode = sett.isCompositeMode()
+        self.ui.acCompositeMode.setChecked(isCompositeMode)
+        self.ui.cbSubmodule.setEnabled(not isCompositeMode)
 
         return True
 
