@@ -146,9 +146,9 @@
     <addaction name="menuIgnoreWhitespace"/>
     <addaction name="separator"/>
     <addaction name="acCompare"/>
+    <addaction name="acCompositeMode"/>
     <addaction name="separator"/>
     <addaction name="acFullCommitMsg"/>
-    <addaction name="acCompositeLog"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
     <property name="title">
@@ -366,12 +366,12 @@
     <string>Copy Plain &amp;Text</string>
    </property>
   </action>
-  <action name="acCompositeLog">
+  <action name="acCompositeMode">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Composite &amp;Log</string>
+    <string>Com&amp;posite Mode</string>
    </property>
   </action>
  </widget>

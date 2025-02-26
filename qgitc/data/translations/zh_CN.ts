@@ -233,57 +233,57 @@
 <context>
     <name>DiffView</name>
     <message>
-        <location filename="../../diffview.py" line="287"/>
+        <location filename="../../diffview.py" line="154"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="291"/>
+        <location filename="../../diffview.py" line="158"/>
         <source>&amp;Copy path</source>
         <translation>复制路径(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="305"/>
+        <location filename="../../diffview.py" line="172"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="309"/>
+        <location filename="../../diffview.py" line="176"/>
         <source>&amp;Log this file</source>
         <translation>查看此文件记录(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="595"/>
+        <location filename="../../diffview.py" line="475"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="599"/>
+        <location filename="../../diffview.py" line="479"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="604"/>
+        <location filename="../../diffview.py" line="484"/>
         <source>Parent: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="636"/>
+        <location filename="../../diffview.py" line="516"/>
         <source>Comments</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="609"/>
+        <location filename="../../diffview.py" line="489"/>
         <source>Child: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="585"/>
+        <location filename="../../diffview.py" line="463"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="588"/>
+        <location filename="../../diffview.py" line="466"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
@@ -292,37 +292,37 @@
         <translation type="obsolete">复制成Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="311"/>
+        <location filename="../../diffview.py" line="178"/>
         <source>&amp;Blame this file</source>
         <translation>Blame此文件(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="313"/>
+        <location filename="../../diffview.py" line="180"/>
         <source>Blame parent commit</source>
         <translation>Blame父记录</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="519"/>
+        <location filename="../../diffview.py" line="386"/>
         <source>The external diff tool crashed!</source>
         <translation>外部diff工具崩溃了！</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="292"/>
+        <location filename="../../diffview.py" line="159"/>
         <source>As &amp;seen</source>
         <translation>相对路径(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="294"/>
+        <location filename="../../diffview.py" line="161"/>
         <source>As &amp;absolute</source>
         <translation>绝对路径(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="296"/>
+        <location filename="../../diffview.py" line="163"/>
         <source>As &amp;Windows</source>
         <translation>Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="300"/>
+        <location filename="../../diffview.py" line="167"/>
         <source>As W&amp;indows absolute</source>
         <translation>Windows绝对路径(&amp;I)</translation>
     </message>
@@ -544,92 +544,92 @@
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="619"/>
+        <location filename="../../logview.py" line="582"/>
         <source>&amp;Copy commit summary</source>
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="629"/>
+        <location filename="../../logview.py" line="592"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="631"/>
+        <location filename="../../logview.py" line="594"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="633"/>
+        <location filename="../../logview.py" line="596"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1069"/>
+        <location filename="../../logview.py" line="1040"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1090"/>
+        <location filename="../../logview.py" line="1061"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="638"/>
+        <location filename="../../logview.py" line="601"/>
         <source>Generate &amp;patch</source>
         <translation>生成&amp;patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="641"/>
+        <location filename="../../logview.py" line="604"/>
         <source>Generate &amp;diff</source>
         <translation>生成&amp;diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="646"/>
+        <location filename="../../logview.py" line="609"/>
         <source>Re&amp;vert this commit</source>
         <translation>回滚此记录(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="648"/>
+        <location filename="../../logview.py" line="611"/>
         <source>Re&amp;set to here</source>
         <translation>重置HEAD为此记录(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="650"/>
+        <location filename="../../logview.py" line="613"/>
         <source>&amp;Soft</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="653"/>
+        <location filename="../../logview.py" line="616"/>
         <source>&amp;Mixed</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="656"/>
+        <location filename="../../logview.py" line="619"/>
         <source>&amp;Hard</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="661"/>
+        <location filename="../../logview.py" line="624"/>
         <source>&amp;Code Review</source>
         <translation>代码审查(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="932"/>
+        <location filename="../../logview.py" line="903"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="945"/>
+        <location filename="../../logview.py" line="916"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="622"/>
+        <location filename="../../logview.py" line="585"/>
         <source>Copy &amp;abbrev commit</source>
         <translation>复制短SHA-1(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="625"/>
+        <location filename="../../logview.py" line="588"/>
         <source>Copy to conflict &amp;log</source>
         <translation>复制到冲突记录(&amp;L)</translation>
     </message>
@@ -793,36 +793,36 @@
     </message>
     <message>
         <location filename="../../mainwindow.ui" line="374"/>
-        <source>Composite &amp;Log</source>
-        <translation type="unfinished">聚合日志(&amp;L)</translation>
+        <source>Com&amp;posite Mode</source>
+        <translation>聚合模式(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="263"/>
+        <location filename="../../mainwindow.py" line="269"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="272"/>
+        <location filename="../../mainwindow.py" line="278"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="287"/>
+        <location filename="../../mainwindow.py" line="293"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="568"/>
+        <location filename="../../mainwindow.py" line="582"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="569"/>
+        <location filename="../../mainwindow.py" line="583"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="557"/>
+        <location filename="../../mainwindow.py" line="571"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -1119,12 +1119,12 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="904"/>
+        <location filename="../../diffview.py" line="790"/>
         <source>Copy Plain &amp;Text</source>
         <translation>复制纯文本(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="913"/>
+        <location filename="../../diffview.py" line="799"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>

@@ -52,7 +52,7 @@ class Settings(QSettings):
     bugPatternChanged = Signal(str)
     fallbackGlobalChanged = Signal(bool)
     tabSizeChanged = Signal(int)
-    compositeLogChanged = Signal(bool)
+    compositeModeChanged = Signal(bool)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -269,9 +269,9 @@ class Settings(QSettings):
     def setLlmServer(self, server):
         self.setValue("llmServer", server)
 
-    def isCompositeLog(self):
-        return self.value("compositeLog", False, type=bool)
+    def isCompositeMode(self):
+        return self.value("compositeMode", False, type=bool)
     
-    def setCompositeLog(self, composite):
-        self.setValue("compositeLog", composite)
-        self.compositeLogChanged.emit(composite)
+    def setCompositeMode(self, composite):
+        self.setValue("compositeMode", composite)
+        self.compositeModeChanged.emit(composite)

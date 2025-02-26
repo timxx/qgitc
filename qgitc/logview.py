@@ -563,11 +563,11 @@ class LogView(QAbstractScrollArea):
 
         qApp.settings().logViewFontChanged.connect(
             self.updateSettings)
-        qApp.settings().compositeLogChanged.connect(
-            self.__onCompositeLogChanged)
+        qApp.settings().compositeModeChanged.connect(
+            self.__onCompositeModeChanged)
 
         self.window().submoduleAvailable.connect(
-            self.__onCompositeLogChanged)
+            self.__onCompositeModeChanged)
 
     def __del__(self):
         self.cancelFindCommit()
@@ -638,7 +638,7 @@ class LogView(QAbstractScrollArea):
         self.curBranch = branch
         self.args = args
 
-        if qApp.settings().isCompositeLog():
+        if qApp.settings().isCompositeMode():
             submodules = self.window().submodules()
             self.fetcher.setSubmodules(submodules)
         else:
@@ -1898,6 +1898,6 @@ class LogView(QAbstractScrollArea):
     def queryClose(self):
         self.fetcher.cancel()
 
-    def __onCompositeLogChanged(self):
+    def __onCompositeModeChanged(self):
         self.clear()
         self.showLogs(self.curBranch, self.args)
