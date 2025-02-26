@@ -5,7 +5,8 @@ import os
 from typing import List
 from PySide6.QtCore import (
     Signal,
-    QThread
+    QThread,
+    QEventLoop
 )
 
 from .common import Commit
@@ -26,7 +27,7 @@ class LogsFetcherImpl(DataFetcher):
         self.repoDir = repoDir
         self._branch: bytes = None
 
-    def parse(self, data):
+    def parse(self, data: bytes):
         logs = data.rstrip(self.separator) \
             .decode("utf-8", "replace") \
             .split('\0')
@@ -87,19 +88,73 @@ def insort_logs(a: List[Commit], x: Commit):
     a.insert(lo, x)
 
 
-class CompositeLogsThread(QThread):
+class LogsFetcher(QThread):
+
+    logsAvailable = Signal(list)
+    fetchFinished = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.logs = {}
+        self._errors = {}  # error: repo
+        self._errorData = b''
+        self._fetchers = []
+        self._logs = {}  # repo: logs
+        self._needComposite = False
+        self._submodules = []
+        self._eventLoop = None
         self.mergedLogs: List[Commit] = []
+        self._exitCode = 0
 
-    def setLogs(self, logs):
-        self.logs = logs
-        self.mergedLogs.clear()
+        self.finished.connect(self._runFinished)
+
+    def setSubmodules(self, submodules):
+        self._errors = {}
+        self._submodules = submodules
+
+    def isLoading(self):
+        return self._eventLoop is not None
+
+    def fetch(self, *args):
+        self._errorData = b''
+        self._logs.clear()
+        self._args = args
+
+        self.start()
 
     def run(self):
-        for _, logs in self.logs.items():
+        self._eventLoop = QEventLoop()
+        submodules = self._submodules.copy()
+        self.mergedLogs.clear()
+
+        if not submodules:
+            fetcher = LogsFetcherImpl()
+            fetcher.logsAvailable.connect(
+                self.logsAvailable)
+            fetcher.fetchFinished.connect(self._onFetchFinished)
+            self._fetchers = [fetcher]
+            self._needComposite = False
+        else:
+            self._fetchers = []
+            self._needComposite = True
+            for submodule in submodules:
+                fetcher = LogsFetcherImpl(submodule)
+                fetcher.logsAvailable.connect(self._onLogsAvailable)
+                fetcher.fetchFinished.connect(self._onFetchFinished)
+                if submodule != '.':
+                    fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
+                self._fetchers.append(fetcher)
+        for fetcher in self._fetchers:
+            if self.isInterruptionRequested():
+                return
+            fetcher.fetch(*self._args)
+
+        self._eventLoop.exec()
+        self._eventLoop = None
+
+        if not self._needComposite:
+            return
+
+        for _, logs in self._logs.items():
             for log in logs:
                 if self.isInterruptionRequested():
                     return
@@ -131,58 +186,12 @@ class CompositeLogsThread(QThread):
                     targetDate.day == logDate.day
         return False
 
-
-class LogsFetcher(DataFetcher):
-
-    logsAvailable = Signal(list)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._errors = {}  # error: repo
-        self._errorData = b''
-        self._fetchers = []
-        self._logs = {}  # repo: logs
-        self._mergeThread = None
-        self._needComposite = False
-
-    def setSubmodules(self, submodules):
-        self._errors = {}
-        if not submodules:
-            fetcher = LogsFetcherImpl()
-            fetcher.logsAvailable.connect(self.logsAvailable)
-            fetcher.fetchFinished.connect(self._onFetchFinished)
-            self._fetchers = [fetcher]
-            self._needComposite = False
-        else:
-            self._fetchers = []
-            self._needComposite = True
-            for submodule in submodules:
-                fetcher = LogsFetcherImpl(submodule)
-                fetcher.logsAvailable.connect(self._onLogsAvailable)
-                fetcher.fetchFinished.connect(self._onFetchFinished)
-                if submodule != '.':
-                    fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-                self._fetchers.append(fetcher)
-
-    def isLoading(self):
-        return len(self._fetchers) > 0
-
-    def fetch(self, *args):
-        self._errorData = b''
-        self._logs.clear()
-
-        if self._mergeThread and self._mergeThread.isRunning():
-            self._mergeThread.requestInterruption()
-
-        for fetcher in self._fetchers:
-            fetcher.fetch(*args)
-
     def cancel(self):
+        self.requestInterruption()
+        if self._eventLoop:
+            self._eventLoop.quit()
         for fetcher in self._fetchers:
             fetcher.cancel()
-
-        if self._mergeThread and self._mergeThread.isRunning():
-            self._mergeThread.requestInterruption()
 
     @property
     def errorData(self):
@@ -196,24 +205,18 @@ class LogsFetcher(DataFetcher):
 
         self._fetchers.remove(sender)
         if not self._fetchers:
+            if self._eventLoop:
+                self._eventLoop.quit()
             for error, repo in self._errors.items():
                 self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
 
-            if self._logs:
-                if self._mergeThread is None:
-                    self._mergeThread = CompositeLogsThread()
-                    self._mergeThread.finished.connect(self._onMergeFinished)
-
-                if self._needComposite:
-                    if self._mergeThread.isRunning():
-                        self._mergeThread.requestInterruption()
-                    self._mergeThread.setLogs(self._logs)
-                    self._mergeThread.start()
-                else:
+            if not self._needComposite:
+                if self._logs:
                     self.logsAvailable.emit(list(self._logs.keys()))
+                self.fetchFinished.emit(exitCode)
 
-            self.fetchFinished.emit(exitCode)
+        self._exitCode |= exitCode
 
     def _onLogsAvailable(self, logs):
         repoDir = self.sender().repoDir
@@ -222,9 +225,11 @@ class LogsFetcher(DataFetcher):
         else:
             self._logs[repoDir] = logs
 
-    def _onMergeFinished(self):
-        self.logsAvailable.emit(self._mergeThread.mergedLogs)
-
     def _isIgnoredError(self, error: bytes, branch: bytes):
         msg = b"fatal: ambiguous argument '%s': unknown revision or path" % branch
         return error.startswith(msg)
+
+    def _runFinished(self):
+        if self.mergedLogs:
+            self.logsAvailable.emit(self.mergedLogs)
+        self.fetchFinished.emit(self._exitCode)
