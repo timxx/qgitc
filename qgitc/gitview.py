@@ -89,6 +89,8 @@ class GitView(QWidget):
 
         self._delayTimer.timeout.connect(self.__onDelayTimeOut)
 
+        qApp.settings().compositeModeChanged.connect(self.__onCompositeModeChanged)
+
     def __updateBranches(self, activeBranch=None):
         self.ui.cbBranch.clear()
         self.ui.logView.clear()
@@ -383,3 +385,8 @@ class GitView(QWidget):
         self.ui.logView.queryClose()
         self.ui.diffView.queryClose()
         return True
+
+    def __onCompositeModeChanged(self, checked):
+        branch = self.ui.cbBranch.currentText()
+        branchDir = Git.branchDir(branch)
+        self.ui.diffView.setBranchDir(branchDir)
