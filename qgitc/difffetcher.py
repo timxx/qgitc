@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import Dict
 from PySide6.QtCore import Signal
 
 from .datafetcher import DataFetcher
@@ -19,17 +20,34 @@ class DiffFetcher(DataFetcher):
         self._repoDir = None
         self.repoDirBytes = None
 
-    def parse(self, data):
+    def parse(self, data: bytes):
         lineItems = []
-        fileItems = {}
+        fileItems: Dict[str, FileInfo] = {}
 
         if data[-1] == ord(self.separator):
             data = data[:-1]
 
         lines = data.split(self.separator)
+        fullFileAStr = None
+        fullFileBStr = None
+        fileState = FileState.Normal
+
+        def _updateFileState():
+            nonlocal fullFileAStr, fullFileBStr, fileState
+            if fileState != FileState.Normal and fileItems:
+                if fullFileAStr and fullFileAStr in fileItems:
+                    fileItems[fullFileAStr].state = fileState
+                if fullFileBStr and fullFileBStr in fileItems:
+                    fileItems[fullFileBStr].state = fileState
+            fullFileAStr = None
+            fullFileBStr = None
+            fileState = FileState.Normal
+
         for line in lines:
             match = diff_re.search(line)
             if match:
+                # maybe renamed only
+                _updateFileState()
                 if match.group(4):  # diff --cc
                     fileA = match.group(4)
                     fileB = None
@@ -43,12 +61,14 @@ class DiffFetcher(DataFetcher):
                 self._firstPatch = False
 
                 fullFileA = self.makeFilePath(fileA)
-                fileItems[fullFileA.decode(diff_encoding)] = self._row
+                fullFileAStr = fullFileA.decode(diff_encoding)
+                fileItems[fullFileAStr] = FileInfo(self._row)
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
                     fullFileB = self.makeFilePath(fileB)
                     lineItems.append((DiffType.File, fullFileB))
-                    fileItems[fullFileB.decode(diff_encoding)] = self._row
+                    fullFileBStr = fullFileB.decode(diff_encoding)
+                    fileItems[fullFileBStr] = FileInfo(self._row)
                 else:
                     lineItems.append((DiffType.File, fullFileA))
 
@@ -66,7 +86,7 @@ class DiffFetcher(DataFetcher):
 
                 submodule = match.group(1)
                 lineItems.append((DiffType.File, submodule))
-                fileItems[submodule.decode(diff_encoding)] = self._row
+                fileItems[submodule.decode(diff_encoding)] = FileInfo(self._row)
                 self._row += 1
 
                 lineItems.append((DiffType.FileInfo, line))
@@ -80,17 +100,32 @@ class DiffFetcher(DataFetcher):
             elif diff_begin_bre.search(line):
                 self._isDiffContent = True
                 itemType = DiffType.Diff
+                _updateFileState()
             elif line.startswith(b"--- ") or line.startswith(b"+++ "):
                 continue
             elif not line:  # ignore the empty info line
                 continue
             else:
                 itemType = DiffType.FileInfo
+                if line.startswith(b"new file mode "):
+                    fileState = FileState.Added
+                elif line.startswith(b"deleted file mode "):
+                    fileState = FileState.Deleted
+                elif line.startswith(b"rename "):
+                    fileState = FileState.Renamed
+                elif line.startswith(b"index "):
+                    if fileState == FileState.Renamed:
+                        fileState = FileState.RenamedModified
+                    elif fileState == FileState.Normal:
+                        fileState = FileState.Modified
 
             if itemType != DiffType.Diff:
                 line = line.rstrip(b'\r')
             lineItems.append((itemType, line))
             self._row += 1
+
+        # maybe no diff (added blank file)
+        _updateFileState()
 
         if lineItems:
             self.diffAvailable.emit(lineItems, fileItems)

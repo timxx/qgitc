@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from typing import Tuple
 from PySide6.QtGui import (
     QDesktopServices,
     QKeySequence,
@@ -8,7 +7,10 @@ from PySide6.QtGui import (
     QFont,
     QBrush,
     QAction,
-    QFontMetricsF)
+    QFontMetricsF,
+    QIcon,
+    QPixmap,
+    QPainter)
 from PySide6.QtWidgets import (
     QWidget,
     QListView,
@@ -35,7 +37,8 @@ from PySide6.QtCore import (
     QProcess,
     QEvent,
     QPointF,
-    QMimeData)
+    QMimeData,
+    QSize)
 
 from .commitsource import CommitSource
 from .common import *
@@ -55,13 +58,37 @@ from .events import OpenLinkEvent
 from .diffutils import *
 
 
+def _makeTextIcon(text, textColor, font: QFont):
+    img = QPixmap(QSize(16, 16))
+    img.fill(Qt.transparent)
+
+    painter = QPainter(img)
+    painter.setPen(textColor)
+    painter.setFont(font)
+    painter.drawText(img.rect(), Qt.AlignCenter, text)
+    painter = None
+
+    return QIcon(img)
+
+
 class FileListModel(QAbstractListModel):
 
     RowRole = Qt.UserRole
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._fileList = []
+        self._fileList: List[(str, FileInfo)] = []
+
+        font: QFont = qApp.font()
+        font.setBold(True)
+        self._icons = [
+            None,  # normal
+            _makeTextIcon("A", ColorSchema.Adding, font),
+            _makeTextIcon("M", ColorSchema.Modified, font),
+            _makeTextIcon("D", ColorSchema.Deletion, font),
+            _makeTextIcon("R", ColorSchema.Renamed, font),
+            _makeTextIcon("R", ColorSchema.RenamedModified, font),
+        ]
 
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
@@ -101,7 +128,9 @@ class FileListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             return self._fileList[row][0]
         elif role == FileListModel.RowRole:
-            return self._fileList[row][1]
+            return self._fileList[row][1].row
+        elif role == Qt.DecorationRole:
+            return self._icons[self._fileList[row][1].state]
 
         return None
 
@@ -120,10 +149,10 @@ class FileListModel(QAbstractListModel):
 
         return False
 
-    def addFile(self, file, row):
+    def addFile(self, file, info: FileInfo):
         rowCount = self.rowCount()
         self.beginInsertRows(QModelIndex(), rowCount, rowCount)
-        self._fileList.append((file, row))
+        self._fileList.append((file, info))
         self.endInsertRows()
 
     def clear(self):
@@ -459,10 +488,10 @@ class DiffView(QWidget):
     def __addToFileListView(self, *args):
         """specify the @row number of the file in the viewer"""
         if len(args) == 1 and isinstance(args[0], dict):
-            for file, row in args[0].items():
-                self.fileListModel.addFile(file, row)
+            for file, info in args[0].items():
+                self.fileListModel.addFile(file, info)
         else:
-            self.fileListModel.addFile(args[0], args[1])
+            self.fileListModel.addFile(args[0], FileInfo(args[1]))
 
         self._updateFilterStatus()
 
