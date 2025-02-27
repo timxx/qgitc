@@ -474,7 +474,7 @@ class CheckLocalChangesThread(QThread):
         if not self._submodules or len(self._submodules) == 1:
             submodule = self._submodules[0] if self._submodules else None
             hasLCC, hasLUC, _ = self.fetchLocalChanges(submodule)
-            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC, submodule)
         else:
             # one for ui, one for logs, one for this thread
             max_workers = max(2, os.cpu_count() - 3)
@@ -488,7 +488,7 @@ class CheckLocalChangesThread(QThread):
                 tasks.append(task)
 
             hasLCC, hasLUC, _ = self.fetchLocalChanges(firstRepo)
-            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC, firstRepo)
 
             if self.isInterruptionRequested():
                 return
