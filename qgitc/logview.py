@@ -471,17 +471,27 @@ class CheckLocalChangesThread(QThread):
         lccCommit = Commit()
         lucCommit = Commit()
 
-        if not self._submodules:
-            hasLCC, hasLUC, _ = self.fetchLocalChanges()
+        if not self._submodules or len(self._submodules) == 1:
+            submodule = self._submodules[0] if self._submodules else None
+            hasLCC, hasLUC, _ = self.fetchLocalChanges(submodule)
             self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC)
         else:
-            executor = ThreadPoolExecutor()
+            # one for ui, one for logs, one for this thread
+            max_workers = max(2, os.cpu_count() - 3)
+            executor = ThreadPoolExecutor(max_workers=max_workers)
             tasks = []
+            firstRepo = self._submodules.pop(0)
             for submodule in self._submodules:
                 if self.isInterruptionRequested():
                     return
                 task = executor.submit(self.fetchLocalChanges, submodule)
                 tasks.append(task)
+
+            hasLCC, hasLUC, _ = self.fetchLocalChanges(firstRepo)
+            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+
+            if self.isInterruptionRequested():
+                return
 
             for task in as_completed(tasks):
                 if self.isInterruptionRequested():
@@ -495,7 +505,10 @@ class CheckLocalChangesThread(QThread):
     def fetchLocalChanges(self, repoDir=None):
             repoPath = repoDir
             if repoPath:
-                repoPath = os.path.join(Git.REPO_DIR, repoDir)
+                if repoPath == '.':
+                    repoPath = Git.REPO_DIR
+                else:
+                    repoPath = os.path.join(Git.REPO_DIR, repoDir)
             hasLCC = Git.hasLocalChanges(self._branch, True, repoPath)
             if self.isInterruptionRequested():
                 return False, False, repoDir
