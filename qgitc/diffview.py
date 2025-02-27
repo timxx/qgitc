@@ -359,10 +359,10 @@ class DiffView(QWidget):
             filePath = filePath[len(commit.repoDir) + 1:]
         tool = self.__diffToolForFile(filePath)
 
+        cwd = self.branchDir or Git.REPO_DIR
         if commit.repoDir:
-            cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
-        else:
-            cwd = self.branchDir or Git.REPO_DIR
+            cwd = os.path.join(cwd, commit.repoDir)
+
         args = ["difftool", "--no-prompt"]
         if commit.sha1 == Git.LUC_SHA1:
             pass
@@ -444,7 +444,7 @@ class DiffView(QWidget):
             commit = self._commitList.pop(0)
             self.fetcher.resetRow(self.viewer.textLineCount())
             if commit.repoDir != ".":
-                self.fetcher.cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
+                self.fetcher.cwd = os.path.join(self.branchDir or Git.REPO_DIR, commit.repoDir)
                 self.fetcher.repoDir = commit.repoDir
             self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         else:
@@ -542,7 +542,7 @@ class DiffView(QWidget):
         self.viewer.beginReading()
         self.fetcher.resetRow(self.viewer.textLineCount())
         if commit.repoDir and commit.repoDir != ".":
-            self.fetcher.cwd = os.path.join(Git.REPO_DIR, commit.repoDir)
+            self.fetcher.cwd = os.path.join(self.branchDir or Git.REPO_DIR, commit.repoDir)
             self.fetcher.repoDir = commit.repoDir
         self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         # FIXME: delay showing the spinner when loading small diff to avoid flicker
