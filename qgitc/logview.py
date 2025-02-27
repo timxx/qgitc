@@ -1845,17 +1845,20 @@ class LogView(QAbstractScrollArea, CommitSource):
 
             commit = self.data[i]
 
+            # sub-repo name
+            needMargin = False
+            if commit.repoDir:
+                text = makeRepoName(commit.repoDir)
+                color = QColor(0xe9e8dd)
+                textColor = QColor(0xf54c27)
+                self.__drawTag(painter, rect, color, text, textColor=textColor)
+                for subCommit in commit.subCommits:
+                    text = makeRepoName(subCommit.repoDir)
+                    self.__drawTag(painter, rect, color,
+                                    text, textColor=textColor)
+                needMargin = True
+
             if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
-                # sub-repo name
-                if commit.repoDir:
-                    text = makeRepoName(commit.repoDir)
-                    color = QColor(0xe9e8dd)
-                    textColor = QColor(0xf54c27)
-                    self.__drawTag(painter, rect, color, text, textColor=textColor)
-                    for subCommit in commit.subCommits:
-                        text = makeRepoName(subCommit.repoDir)
-                        self.__drawTag(painter, rect, color,
-                                       text, textColor=textColor)
                 # author
                 text = self.authorRe.sub("\\1", commit.author)
                 color = Qt.gray
@@ -1865,6 +1868,9 @@ class LogView(QAbstractScrollArea, CommitSource):
                 text = commit.authorDate.split(' ')[0]
                 color = QColor(140, 208, 80)
                 self.__drawTag(painter, rect, color, text)
+                needMargin = True
+
+            if needMargin:
                 rect.adjust(4, 0, 0, 0)
 
             # marker
