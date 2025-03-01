@@ -21,6 +21,7 @@ A file conflict viewer for git
 - [ ] Auto finding which commit cause conflicts.
 - [x] File blame support
 - [x] AI intergrated
+- [x] Composite mode
 
 
 ## Requirements
