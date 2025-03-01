@@ -1146,7 +1146,12 @@ class LogView(QAbstractScrollArea, CommitSource):
             lccCommit.parents = [parent_sha1] if parent_sha1 else []
             lccCommit.children = [Git.LUC_SHA1] if hasLUC else []
 
-            self.data.insert(0, lccCommit)
+            if len(self.data) > 0 and self.data[0].sha1 == Git.LCC_SHA1:
+                self.data[0] = lccCommit
+            elif len(self.data) > 1 and self.data[1].sha1 == Git.LCC_SHA1:
+                self.data[1] = lccCommit
+            else:
+                self.data.insert(0, lccCommit)
             parent_sha1 = lccCommit.sha1
             self.delayUpdateParents = len(lccCommit.parents) == 0
 
@@ -1165,7 +1170,10 @@ class LogView(QAbstractScrollArea, CommitSource):
             lucCommit.parents = [parent_sha1] if parent_sha1 else []
             lucCommit.children = []
 
-            self.data.insert(0, lucCommit)
+            if len(self.data) > 0 and self.data[0].sha1 == Git.LUC_SHA1:
+                self.data[0] = lucCommit
+            else:
+                self.data.insert(0, lucCommit)
             self.delayUpdateParents = self.delayUpdateParents or len(
                 lucCommit.parents) == 0
 
