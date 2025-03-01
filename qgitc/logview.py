@@ -1836,7 +1836,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         graphImage = None
         if self.logGraph and not self.logGraph.size().isEmpty() and \
                 eventRect.height() == self.viewport().height():
-            ratio = qApp.devicePixelRatio()
+            ratio = painter.device().devicePixelRatioF()
             graphImage = QImage(self.logGraph.size() * ratio, QImage.Format_ARGB32_Premultiplied)
             graphImage.setDevicePixelRatio(ratio)
             graphImage.fill(self.logGraph.palette().color(QPalette.Base))
