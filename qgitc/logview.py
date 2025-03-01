@@ -10,7 +10,7 @@ from PySide6.QtGui import (
     QPen,
     QPainterPath,
     QConicalGradient,
-    QPixmap)
+    QImage)
 from PySide6.QtWidgets import (
     QWidget,
     QAbstractScrollArea,
@@ -548,7 +548,7 @@ class LogGraph(QWidget):
         self.setBackgroundRole(QPalette.Base)
         self.setAutoFillBackground(True)
 
-        self._graphImage = None
+        self._graphImage: QImage = None
 
     def render(self, graphImage):
         self._graphImage = graphImage
@@ -560,7 +560,7 @@ class LogGraph(QWidget):
     def paintEvent(self, event):
         if self._graphImage:
             painter = QPainter(self)
-            painter.drawPixmap(0, 0, self._graphImage)
+            painter.drawImage(0, 0, self._graphImage)
 
 
 class LogView(QAbstractScrollArea, CommitSource):
@@ -1836,7 +1836,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         graphImage = None
         if self.logGraph and not self.logGraph.size().isEmpty() and \
                 eventRect.height() == self.viewport().height():
-            graphImage = QPixmap(self.logGraph.size())
+            ratio = qApp.devicePixelRatio()
+            graphImage = QImage(self.logGraph.size() * ratio, QImage.Format_ARGB32_Premultiplied)
+            graphImage.setDevicePixelRatio(ratio)
             graphImage.fill(self.logGraph.palette().color(QPalette.Base))
             graphPainter = QPainter(graphImage)
             graphPainter.setRenderHints(QPainter.Antialiasing)
