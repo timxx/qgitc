@@ -632,7 +632,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.__onCompositeModeChanged)
 
         self.window().submoduleAvailable.connect(
-            self.__onCompositeModeChanged)
+            self.__onSubmoduleAvailable)
 
     def __del__(self):
         self.cancelFindCommit()
@@ -2019,3 +2019,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onCompositeModeChanged(self):
         self.clear()
         self.showLogs(self.curBranch, self.args)
+
+    def __onSubmoduleAvailable(self):
+        if qApp.settings().isCompositeMode():
+            self.__onCompositeModeChanged()
