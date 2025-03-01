@@ -2019,6 +2019,10 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.fetcher.cancel()
 
     def __onCompositeModeChanged(self):
+        submodules = self.window().submodules()
+        if not submodules:
+            return
+
         self.clear()
         self.showLogs(self.curBranch, self.args)
 
