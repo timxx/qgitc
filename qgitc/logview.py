@@ -1305,7 +1305,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def __drawTriangleTag(self, painter, rect, color, text):
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, False)
+        painter.setRenderHint(QPainter.Antialiasing, True)
 
         flags = Qt.AlignLeft | Qt.AlignVCenter
         br = painter.boundingRect(rect, flags, text)
