@@ -64,6 +64,10 @@ class GitView(QWidget):
 
         self.ui.diffView.setCommitSource(self.ui.logView)
 
+        self._diffSpinnerDelayTimer = QTimer(self)
+        self._diffSpinnerDelayTimer.setSingleShot(True)
+        self._diffSpinnerDelayTimer.timeout.connect(self.ui.diffSpinner.start)
+
         self.__setupSignals()
 
     def __setupSignals(self):
@@ -181,13 +185,14 @@ class GitView(QWidget):
         if isinstance(o, LogView):
             self.ui.branchSpinner.start()
         elif isinstance(o, DiffView):
-            self.ui.diffSpinner.start()
+            self._diffSpinnerDelayTimer.start(1000)
 
     def __onEndFetch(self):
         o = self.sender()
         if isinstance(o, LogView):
             self.ui.branchSpinner.stop()
         elif isinstance(o, DiffView):
+            self._diffSpinnerDelayTimer.stop()
             self.ui.diffSpinner.stop()
 
     def __doFindCommit(self, beginCommit=0, findNext=True):
