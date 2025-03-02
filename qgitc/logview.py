@@ -1849,8 +1849,11 @@ class LogView(QAbstractScrollArea, CommitSource):
                 return commit.comments.replace('\n', ' ')
             return commit.comments.split('\n')[0]
 
-        def makeRepoName(repoDir):
+        def makeRepoName(repoDir: str):
             index = repoDir.rfind(os.sep)
+            # submodule returns '/' on windows
+            if index == -1 and os.sep == '\\':
+                index = repoDir.rfind('/')
             if index != -1:
                 repoDir = repoDir[index + 1:]
             if repoDir == ".":
