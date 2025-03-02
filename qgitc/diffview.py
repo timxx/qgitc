@@ -475,6 +475,8 @@ class DiffView(QWidget):
             if commit.repoDir != ".":
                 self.fetcher.cwd = os.path.join(self.branchDir or Git.REPO_DIR, commit.repoDir)
                 self.fetcher.repoDir = commit.repoDir
+            else:
+                self.fetcher.cwd = self.branchDir or Git.REPO_DIR
             self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
         else:
             self.fetcher.cwd = self.branchDir or Git.REPO_DIR
@@ -503,8 +505,7 @@ class DiffView(QWidget):
             subject = self.tr(
                 "Local changes checked in to index but not committed")
         else:
-            if repoDir and repoDir != ".":
-                repoDir = os.path.join(Git.REPO_DIR, repoDir)
+            repoDir = fullRepoDir(repoDir, self.branchDir)
             subject = Git.commitSubject(sha1, repoDir).decode("utf-8")
 
         return " (" + subject + ")"

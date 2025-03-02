@@ -231,7 +231,13 @@ def fileRealCommit(filePath: str, commit: Commit):
     assert False, "No commit found for file: " + filePath
 
 
+def fullRepoDir(repoDir: str, branchDir: str = None):
+    if not repoDir:
+        return None
+    if repoDir == ".":
+        return branchDir or Git.REPO_DIR
+    return os.path.join(branchDir or Git.REPO_DIR, repoDir)
+
+
 def commitRepoDir(commit: Commit):
-    if commit.repoDir:
-        return os.path.join(Git.REPO_DIR, commit.repoDir)
-    return None
+    return fullRepoDir(commit.repoDir)
