@@ -68,6 +68,8 @@ class GitView(QWidget):
         self._diffSpinnerDelayTimer.setSingleShot(True)
         self._diffSpinnerDelayTimer.timeout.connect(self.ui.diffSpinner.start)
 
+        self._logWidgetSizes = []
+
         self.__setupSignals()
 
     def __setupSignals(self):
@@ -94,6 +96,7 @@ class GitView(QWidget):
         self._delayTimer.timeout.connect(self.__onDelayTimeOut)
 
         qApp.settings().compositeModeChanged.connect(self.__onCompositeModeChanged)
+        self.window().submoduleAvailable.connect(self.__onSubmoduleAvailable)
 
     def __updateBranches(self, activeBranch=None):
         self.ui.cbBranch.clear()
@@ -395,3 +398,14 @@ class GitView(QWidget):
         branch = self.ui.cbBranch.currentText()
         branchDir = Git.branchDir(branch)
         self.ui.diffView.setBranchDir(branchDir)
+
+        if checked and self.window().submodules():
+            self._logWidgetSizes = self.ui.logWidget.sizes()
+            self.ui.logWidget.setSizes([0, 100])
+        elif self._logWidgetSizes:
+            self.ui.logWidget.setSizes(self._logWidgetSizes)
+
+    def __onSubmoduleAvailable(self):
+        self._logWidgetSizes = self.ui.logWidget.sizes()
+        if qApp.settings().isCompositeMode():
+            self.ui.logWidget.setSizes([0, 100])

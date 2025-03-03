@@ -1866,9 +1866,6 @@ class LogView(QAbstractScrollArea, CommitSource):
             rect = self.__itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
-            # TODO: useless if in composite mode
-            self.__drawGraph(painter, graphPainter, rect, i)
-
             commit = self.data[i]
 
             # sub-repo name
@@ -1883,6 +1880,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                     self.__drawTag(painter, rect, color,
                                     text, textColor=textColor)
                 needMargin = True
+            else:
+                self.__drawGraph(painter, graphPainter, rect, i)
 
             if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
                 # author
