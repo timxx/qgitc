@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import cProfile
-from line_profiler import LineProfiler
 from datetime import datetime
 import pstats
 import io
@@ -94,6 +93,7 @@ class MyProfile():
 
 class MyLineProfile():
     def __init__(self, func):
+        from line_profiler import LineProfiler
         self.pr = LineProfiler(func)
         self.pr.enable_by_count()
 

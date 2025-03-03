@@ -46,6 +46,8 @@ class LogsFetcherImpl(DataFetcher):
                 if version_info < (3, 11):
                     isoDate = commit.committerDate.replace(' ', 'T', 1).replace(' ', '', 1)
                     isoDate = isoDate[:-2] + ':' + isoDate[-2:]
+                else:
+                    isoDate = commit.committerDate
                 commit.committerDateTime = datetime.fromisoformat(isoDate)
             commit.buildHashValue()
             commits.append(commit)
