@@ -11,9 +11,10 @@ from PySide6.QtCore import (
     QObject
 )
 
-from .common import Commit, MyProfile
+from .common import Commit, MyProfile, MyLineProfile
 from .datafetcher import DataFetcher
 from .gitutils import Git
+from sys import version_info
 
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
@@ -41,8 +42,14 @@ class LogsFetcherImpl(DataFetcher):
                 continue
             commit.repoDir = self.repoDir
             if self.repoDir:
-                commit.committerDateTime = datetime.strptime(
-                    commit.committerDate, "%Y-%m-%d %H:%M:%S %z")
+                isoDate = ''
+                if version_info < (3, 11):
+                    isoDate = commit.committerDate.replace(' ', 'T', 1).replace(' ', '', 1)
+                    isoDate = isoDate[:-2] + ':' + isoDate[-2:]
+                else:
+                    isoDate = commit.committerDate
+                commit.committerDateTime = datetime.fromisoformat(isoDate)
+            commit.buildHashValue()
             commits.append(commit)
 
         self.logsAvailable.emit(commits)
@@ -62,8 +69,8 @@ class LogsFetcherImpl(DataFetcher):
 
         # reduce commits to analyze
         if self.repoDir and not self.hasSinceArg(logArgs):
-            since = date.today() - timedelta(days=14)
-            git_args.append(f"--since={since.isoformat()}")
+            since = date.today() - timedelta(days=180)
+            #git_args.append(f"--since={since.isoformat()}")
 
         if branch:
             git_args.append(branch)
@@ -124,9 +131,10 @@ class LogsFetcherThread(QThread):
         self.start()
 
     def run(self):
-        # profile = MyProfile()
+        #profile = MyProfile()
+        #lineProfile = MyLineProfile(LogsFetcherThread.mergeLog)
         self._eventLoop = QEventLoop()
-        mergedLogs: List[Commit] = []
+        mergedLogs = {}
 
         needComposite = False
         self._fetchers.clear()
@@ -164,43 +172,45 @@ class LogsFetcherThread(QThread):
                 if self.isInterruptionRequested():
                     self._clearFetcher()
                     return
+                # require same day at least
+                logDate = log.committerDateTime.date()
+                if logDate not in mergedLogs:
+                    mergedLogs[logDate] = []
+                dailyLogs = mergedLogs[logDate]
                 # no need to merge for the first repo (all the logs from same repo)
-                if not firstRepo and self.mergeLog(mergedLogs, log):
+                if not firstRepo and self.mergeLog(dailyLogs, log):
                     continue
-                logDate = log.committerDateTime
-                if len(mergedLogs) == 0 or logDate < mergedLogs[-1].committerDateTime:
-                    mergedLogs.append(log)
-                elif logDate > mergedLogs[0].committerDateTime:
-                    mergedLogs.insert(0, log)
+                if len(dailyLogs) == 0 or log.committerDateTime.time() <= dailyLogs[-1].committerDateTime.time():
+                    dailyLogs.append(log)
+                elif log.committerDateTime.time() >= dailyLogs[0].committerDateTime.time():
+                    dailyLogs.insert(0, log)
                 else:
-                    insort_logs(mergedLogs, log)
+                    insort_logs(dailyLogs, log)
             firstRepo = False
 
         if mergedLogs:
-            self.logsAvailable.emit(mergedLogs)
+            sortedLogs = []
+            for logDate in sorted(mergedLogs.keys(), reverse=True):
+                sortedLogs.extend(mergedLogs[logDate])
+            self.logsAvailable.emit(sortedLogs)
         self.fetchFinished.emit(self._exitCode)
-        # profile = None
 
-    #TODO: binary search???
-    def mergeLog(self, mergedLogs: List[Commit], target: Commit):
-        for log in mergedLogs:
-            if self.isInterruptionRequested():
+    def mergeLog(self, dailyLogs: List[Commit], target: Commit):
+        if not dailyLogs:
+            return False
+        repoDirHash = target.repoDirHash
+        authorHash = target.authorHash
+        commentsHash = target.commentsHash
+        interruptionInterval : int = 0
+        for log in dailyLogs:
+            interruptionInterval += 1
+            if interruptionInterval % 10 == 0 and self.isInterruptionRequested():
                 return True
-
-            targetDate = target.committerDateTime
-            logDate = log.committerDateTime
-            # since mergedLogs is sorted by committerDate, we can break here
-            if targetDate.year > logDate.year or targetDate.month > logDate.month or targetDate.day > logDate.day:
-                return False
-
-            if log.repoDir == target.repoDir:
+            if log.repoDirHash == repoDirHash:
                 continue
-            if target.author == log.author and target.comments == log.comments:
+            if authorHash == log.authorHash and commentsHash == log.commentsHash:
                 log.subCommits.append(target)
-                # require same day at least
-                return targetDate.day == logDate.day and \
-                    targetDate.month == logDate.month and \
-                    targetDate.year == logDate.year
+                return True
         return False
 
     def cancel(self):
