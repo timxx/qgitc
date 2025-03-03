@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import cProfile
+from line_profiler import LineProfiler
 from datetime import datetime
 import pstats
 import io
@@ -35,6 +36,10 @@ class Commit():
         self.children: List[str] = None
         self.repoDir: str = None
         self.subCommits: List[Commit] = []
+        # for fast compare
+        self.commentsHash: int = None
+        self.authorHash: int = None
+        self.repoDirHash: int = None
 
     def __str__(self):
         return "Commit: {0}\n"  \
@@ -63,6 +68,12 @@ class Commit():
 
         return commit
 
+    def buildHashValue(self):
+        self.commentsHash = hash(self.comments)
+        self.authorHash = hash(self.author)
+        if self.repoDir:
+            self.repoDirHash = hash(self.repoDir)
+
     def isValid(self):
         return len(self.sha1) > 0
 
@@ -80,6 +91,15 @@ class MyProfile():
         ps.print_stats()
         print(s.getvalue())
 
+
+class MyLineProfile():
+    def __init__(self, func):
+        self.pr = LineProfiler(func)
+        self.pr.enable_by_count()
+
+    def __del__(self):
+        self.pr.disable_by_count()
+        self.pr.print_stats()
 
 class FindField():
 
