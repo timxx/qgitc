@@ -649,7 +649,7 @@ class MainWindow(StateWindow):
     def eventFilter(self, obj, event):
         if obj == self.ui.cbSubmodule:
             if event.type() == QEvent.FocusIn and event.reason() == Qt.MouseFocusReason:
-                obj.showPopup()
+                QTimer.singleShot(150, obj.showPopup)
         return super().eventFilter(obj, event)
 
     def submodules(self):
