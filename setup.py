@@ -138,7 +138,8 @@ setup(name="qgitc",
       install_requires=[
           "PySide6-Essentials>=6.3.0; sys_platform != 'linux'",
           "PySide6>=6.2.0; sys_platform == 'linux'",
-          "chardet", "requests"
+          "chardet", "requests",
+          "psutil; sys_platform == 'win32'"
       ],
       classifiers=[
           "License :: OSI Approved :: Apache Software License",
