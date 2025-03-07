@@ -1144,7 +1144,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             lccCommit.comments = self.tr(
                 "Local changes checked in to index but not committed")
             lccCommit.parents = [parent_sha1] if parent_sha1 else []
-            lccCommit.children = [Git.LUC_SHA1] if hasLUC else []
+            lccCommit.children = [lucCommit] if hasLUC else []
 
             if len(self.data) > 0 and self.data[0].sha1 == Git.LCC_SHA1:
                 self.data[0] = lccCommit
@@ -1159,7 +1159,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 if self.data[1].children is None:
                     self.data[1].children = []
 
-                self.data[1].children.append(lccCommit.sha1)
+                self.data[1].children.append(lccCommit)
 
             if self.curIdx > 0:
                 self.curIdx += 1
@@ -1180,7 +1180,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             if not self.delayUpdateParents and not hasLCC:
                 if self.data[1].children is None:
                     self.data[1].children = []
-                self.data[1].children.append(lucCommit.sha1)
+                self.data[1].children.append(lucCommit)
 
             if self.curIdx > 0:
                 self.curIdx += 1
@@ -1626,7 +1626,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         for i in range(index - 1, -1, -1):
             child = self.data[i]
             if commit.sha1 in child.parents:
-                commit.children.append(child.sha1)
+                commit.children.append(child)
 
     def invalidateItem(self, index):
         rect = self.__itemRect(index)

@@ -32,7 +32,7 @@ class Commit():
         self.committerDate = ""
         self.committerDateTime: datetime = None
         self.parents: List[str] = []
-        self.children: List[str] = None
+        self.children: List[Commit] = None
         self.repoDir: str = None
         self.subCommits: List[Commit] = []
         # for fast compare
