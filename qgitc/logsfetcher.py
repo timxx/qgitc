@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 import os
 from typing import List
@@ -29,6 +30,7 @@ class LogsFetcherImpl(DataFetcher):
         self.separator = b'\0'
         self.repoDir = repoDir
         self._branch: bytes = None
+        self.commits = []
 
     def parse(self, data: bytes):
         logs = data.rstrip(self.separator) \
@@ -52,7 +54,10 @@ class LogsFetcherImpl(DataFetcher):
             commit.buildHashValue()
             commits.append(commit)
 
-        self.logsAvailable.emit(commits)
+        if self.repoDir:
+            self.commits.extend(commits)
+        else:
+            self.logsAvailable.emit(commits)
 
     def makeArgs(self, args):
         branch = args[0]
@@ -133,33 +138,47 @@ class LogsFetcherThread(QThread):
     def run(self):
         #profile = MyProfile()
         #lineProfile = MyLineProfile(LogsFetcherThread.mergeLog)
-        self._eventLoop = QEventLoop()
         mergedLogs = {}
+        import time
+        b = time.time()
 
         needComposite = False
         self._fetchers.clear()
         if not self._submodules:
+            self._eventLoop = QEventLoop()
+
             fetcher = LogsFetcherImpl()
             fetcher.logsAvailable.connect(
                 self.logsAvailable)
             fetcher.fetchFinished.connect(self._onFetchFinished)
             self._fetchers.append(fetcher)
+
+            fetcher.fetch(*self._args)
+            self._eventLoop.exec()
+            self._eventLoop = None
         else:
-            needComposite = True
-            for submodule in self._submodules:
+            def _fetch(submodule):
                 fetcher = LogsFetcherImpl(submodule)
-                fetcher.logsAvailable.connect(self._onLogsAvailable)
-                fetcher.fetchFinished.connect(self._onFetchFinished)
                 if submodule != '.':
                     fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-                self._fetchers.append(fetcher)
-        for fetcher in self._fetchers:
-            if self.isInterruptionRequested():
-                return
-            fetcher.fetch(*self._args)
+                fetcher.fetch(*self._args)
+                fetcher._process.waitForFinished()
+                return submodule, fetcher.commits
 
-        self._eventLoop.exec()
-        self._eventLoop = None
+            needComposite = True
+            max_workers = max(2, os.cpu_count() - 2)
+            executor = ThreadPoolExecutor(max_workers=max_workers)
+            tasks = [executor.submit(_fetch, submodule) for submodule in self._submodules]
+            for task in as_completed(tasks):
+                if self.isInterruptionRequested():
+                    return
+                repoDir, commits = task.result()
+                if repoDir in self._logs:
+                    self._logs[repoDir].extend(commits)
+                else:
+                    self._logs[repoDir] = commits
+
+            print(f"elapsed: {time.time() - b}")
 
         if not needComposite:
             return
