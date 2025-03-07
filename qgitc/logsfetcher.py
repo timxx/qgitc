@@ -125,16 +125,18 @@ class LogsFetcherThread(QThread):
         self._submodules = submodules.copy()
         self._eventLoop = None
         self._exitCode = 0
+        self._mergedLogs = {}  # date: logs
 
     def fetch(self, *args):
         self._args = args
         self.start()
 
     def run(self):
+        import time
+        b = time.time()
         #profile = MyProfile()
         #lineProfile = MyLineProfile(LogsFetcherThread.mergeLog)
         self._eventLoop = QEventLoop()
-        mergedLogs = {}
 
         needComposite = False
         self._fetchers.clear()
@@ -164,35 +166,15 @@ class LogsFetcherThread(QThread):
         if not needComposite:
             return
 
-        self._logs = dict(sorted(self._logs.items(), key=lambda item: len(item[1]), reverse=True))
-        firstRepo = True
-
-        for _, logs in self._logs.items():
-            for log in logs:
-                if self.isInterruptionRequested():
-                    self._clearFetcher()
-                    return
-                # require same day at least
-                logDate = log.committerDateTime.date()
-                if logDate not in mergedLogs:
-                    mergedLogs[logDate] = []
-                dailyLogs = mergedLogs[logDate]
-                # no need to merge for the first repo (all the logs from same repo)
-                if not firstRepo and self.mergeLog(dailyLogs, log):
-                    continue
-                if len(dailyLogs) == 0 or log.committerDateTime.time() <= dailyLogs[-1].committerDateTime.time():
-                    dailyLogs.append(log)
-                elif log.committerDateTime.time() >= dailyLogs[0].committerDateTime.time():
-                    dailyLogs.insert(0, log)
-                else:
-                    insort_logs(dailyLogs, log)
-            firstRepo = False
-
-        if mergedLogs:
+        print("fetch time:", time.time() - b)
+        if self._mergedLogs:
+            b = time.time()
             sortedLogs = []
-            for logDate in sorted(mergedLogs.keys(), reverse=True):
-                sortedLogs.extend(mergedLogs[logDate])
+            for logDate in sorted(self._mergedLogs.keys(), reverse=True):
+                sortedLogs.extend(self._mergedLogs[logDate])
             self.logsAvailable.emit(sortedLogs)
+            print("sort time:", time.time() - b)
+
         self.fetchFinished.emit(self._exitCode)
 
     def mergeLog(self, dailyLogs: List[Commit], target: Commit):
@@ -253,10 +235,31 @@ class LogsFetcherThread(QThread):
 
     def _onLogsAvailable(self, logs):
         repoDir = self.sender().repoDir
-        if repoDir in self._logs:
-            self._logs[repoDir].extend(logs)
+
+        if self._submodules:
+            self._sortDailyLogs(logs)
         else:
-            self._logs[repoDir] = logs
+            if repoDir in self._logs:
+                self._logs[repoDir].extend(logs)
+            else:
+                self._logs[repoDir] = logs
+
+    def _sortDailyLogs(self, logs: List[Commit]):
+        firstRepo = not self._mergedLogs
+        for log in logs:
+            logDate = log.committerDateTime.date()
+            if logDate not in self._mergedLogs:
+                self._mergedLogs[logDate] = []
+            dailyLogs: List[Commit] = self._mergedLogs[logDate]
+            # no need to merge for the first repo (all the logs from same repo)
+            if not firstRepo and self.mergeLog(dailyLogs, log):
+                continue
+            if len(dailyLogs) == 0 or log.committerDateTime.time() <= dailyLogs[-1].committerDateTime.time():
+                dailyLogs.append(log)
+            elif log.committerDateTime.time() >= dailyLogs[0].committerDateTime.time():
+                dailyLogs.insert(0, log)
+            else:
+                insort_logs(dailyLogs, log)
 
     def _isIgnoredError(self, error: bytes, branch: bytes):
         msgs = [b"fatal: ambiguous argument '%s': unknown revision or path" % branch,
@@ -282,6 +285,8 @@ class LogsFetcher(QObject):
         self._submodules = submodules
 
     def fetch(self, *args):
+        self.profile = MyProfile()
+
         self.cancel()
         self._errorData = b''
         self._thread = LogsFetcherThread(self._submodules, self)
@@ -300,6 +305,7 @@ class LogsFetcher(QObject):
             self._thread.isRunning()
 
     def _onFetchFinished(self, exitCode):
+        self.profile = None
         if self._thread:
             self._errorData = self._thread.errorData
             self._thread = None
