@@ -49,7 +49,6 @@ class LogsFetcherImpl(DataFetcher):
                 else:
                     isoDate = commit.committerDate
                 commit.committerDateTime = datetime.fromisoformat(isoDate)
-            commit.buildHashValue()
             commits.append(commit)
 
         self.logsAvailable.emit(commits)
@@ -132,9 +131,8 @@ class LogsFetcherThread(QThread):
 
     def run(self):
         #profile = MyProfile()
-        #lineProfile = MyLineProfile(LogsFetcherThread.mergeLog)
+        #lineProfile = MyLineProfile(Commit.fromRawString)
         self._eventLoop = QEventLoop()
-        mergedLogs = {}
 
         needComposite = False
         self._fetchers.clear()
@@ -164,54 +162,25 @@ class LogsFetcherThread(QThread):
         if not needComposite:
             return
 
-        self._logs = dict(sorted(self._logs.items(), key=lambda item: len(item[1]), reverse=True))
-        firstRepo = True
-
+        mergedLogs = {}
         for _, logs in self._logs.items():
             for log in logs:
                 if self.isInterruptionRequested():
                     self._clearFetcher()
                     return
                 # require same day at least
-                logDate = log.committerDateTime.date()
-                if logDate not in mergedLogs:
-                    mergedLogs[logDate] = []
-                dailyLogs = mergedLogs[logDate]
-                # no need to merge for the first repo (all the logs from same repo)
-                if not firstRepo and self.mergeLog(dailyLogs, log):
-                    continue
-                if len(dailyLogs) == 0 or log.committerDateTime.time() <= dailyLogs[-1].committerDateTime.time():
-                    dailyLogs.append(log)
-                elif log.committerDateTime.time() >= dailyLogs[0].committerDateTime.time():
-                    dailyLogs.insert(0, log)
+                key = (log.committerDateTime.date(), log.comments, log.author)
+                if key in mergedLogs.keys():
+                    mergedLogs[key].subCommits.append(log)
                 else:
-                    insort_logs(dailyLogs, log)
-            firstRepo = False
+                    mergedLogs[key] = log
 
         if mergedLogs:
             sortedLogs = []
-            for logDate in sorted(mergedLogs.keys(), reverse=True):
-                sortedLogs.extend(mergedLogs[logDate])
+            for log in sorted(mergedLogs.values(), key=lambda x: x.committerDateTime, reverse=True):
+                sortedLogs.append(log)
             self.logsAvailable.emit(sortedLogs)
         self.fetchFinished.emit(self._exitCode)
-
-    def mergeLog(self, dailyLogs: List[Commit], target: Commit):
-        if not dailyLogs:
-            return False
-        repoDirHash = target.repoDirHash
-        authorHash = target.authorHash
-        commentsHash = target.commentsHash
-        interruptionInterval : int = 0
-        for log in dailyLogs:
-            interruptionInterval += 1
-            if interruptionInterval % 10 == 0 and self.isInterruptionRequested():
-                return True
-            if log.repoDirHash == repoDirHash:
-                continue
-            if authorHash == log.authorHash and commentsHash == log.commentsHash:
-                log.subCommits.append(target)
-                return True
-        return False
 
     def cancel(self):
         self.requestInterruption()

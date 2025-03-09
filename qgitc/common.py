@@ -35,10 +35,6 @@ class Commit():
         self.children: List[Commit] = None
         self.repoDir: str = None
         self.subCommits: List[Commit] = []
-        # for fast compare
-        self.commentsHash: int = None
-        self.authorHash: int = None
-        self.repoDirHash: int = None
 
     def __str__(self):
         return "Commit: {0}\n"  \
@@ -66,12 +62,6 @@ class Commit():
         commit.parents = [x for x in parts[6].split(" ") if x]
 
         return commit
-
-    def buildHashValue(self):
-        self.commentsHash = hash(self.comments)
-        self.authorHash = hash(self.author)
-        if self.repoDir:
-            self.repoDirHash = hash(self.repoDir)
 
     def isValid(self):
         return len(self.sha1) > 0
