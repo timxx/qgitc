@@ -19,6 +19,7 @@ class DataFetcher(QObject):
         self._separator = b'\n'
         self._errorData = b''
         self._cwd = None
+        self._exitCode = 0
 
     @property
     def process(self):
@@ -83,6 +84,7 @@ class DataFetcher(QObject):
             self.parse(self._dataChunk)
 
         self._process = None
+        self._exitCode = exitCode
         self.fetchFinished.emit(exitCode)
 
     def cancel(self):

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 import os
+import time
 from typing import List
 from PySide6.QtCore import (
     Signal,
@@ -29,6 +31,7 @@ class LogsFetcherImpl(DataFetcher):
         self.separator = b'\0'
         self.repoDir = repoDir
         self._branch: bytes = None
+        self.commits = []
 
     def parse(self, data: bytes):
         logs = data.rstrip(self.separator) \
@@ -51,7 +54,10 @@ class LogsFetcherImpl(DataFetcher):
                 commit.committerDateTime = datetime.fromisoformat(isoDate)
             commits.append(commit)
 
-        self.logsAvailable.emit(commits)
+        if self.repoDir:
+            self.commits.extend(commits)
+        else:
+            self.logsAvailable.emit(commits)
 
     def makeArgs(self, args):
         branch = args[0]
@@ -123,50 +129,63 @@ class LogsFetcherThread(QThread):
         self._logs = {}  # repo: logs
         self._submodules = submodules.copy()
         self._eventLoop = None
-        self._exitCode = 0
 
     def fetch(self, *args):
         self._args = args
         self.start()
 
     def run(self):
-        #profile = MyProfile()
-        #lineProfile = MyLineProfile(Commit.fromRawString)
-        self._eventLoop = QEventLoop()
+        # profile = MyProfile()
+        # lineProfile = MyLineProfile(Commit.fromRawString)
 
-        needComposite = False
         self._fetchers.clear()
         if not self._submodules:
-            fetcher = LogsFetcherImpl()
-            fetcher.logsAvailable.connect(
-                self.logsAvailable)
-            fetcher.fetchFinished.connect(self._onFetchFinished)
-            self._fetchers.append(fetcher)
+            self._fetchNormal()
         else:
-            needComposite = True
-            for submodule in self._submodules:
-                fetcher = LogsFetcherImpl(submodule)
-                fetcher.logsAvailable.connect(self._onLogsAvailable)
-                fetcher.fetchFinished.connect(self._onFetchFinished)
-                if submodule != '.':
-                    fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-                self._fetchers.append(fetcher)
-        for fetcher in self._fetchers:
-            if self.isInterruptionRequested():
-                return
-            fetcher.fetch(*self._args)
+            self._fetchComposite()
 
+        # del profile
+
+    def _fetchNormal(self):
+        self._eventLoop = QEventLoop()
+
+        fetcher = LogsFetcherImpl()
+        fetcher.logsAvailable.connect(
+            self.logsAvailable)
+        fetcher.fetchFinished.connect(self._onFetchFinished)
+        self._fetchers.append(fetcher)
+
+        fetcher.fetch(*self._args)
         self._eventLoop.exec()
         self._eventLoop = None
 
-        if not needComposite:
-            return
+    def _fetchComposite(self):
+        def _fetch(submodule):
+            fetcher = LogsFetcherImpl(submodule)
+            if submodule != '.':
+                fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
+            fetcher.fetch(*self._args)
+            fetcher._process.waitForFinished()
+            return fetcher._exitCode, fetcher._errorData, \
+                fetcher._branch, fetcher.repoDir, fetcher.commits
+
+        # b = time.time()
+
+        max_workers = max(2, os.cpu_count() - 2)
+        executor = ThreadPoolExecutor(max_workers=max_workers)
+        tasks = [executor.submit(_fetch, submodule) for submodule in self._submodules]
 
         mergedLogs = {}
-        for _, logs in self._logs.items():
+        handleCount = 0
+        exitCode = 0
+
+        for task in as_completed(tasks):
+            if self.isInterruptionRequested():
+                return
+            code, errorData, branch, repoDir, logs = task.result()
             for log in logs:
-                if self.isInterruptionRequested():
-                    self._clearFetcher()
+                handleCount += 1
+                if handleCount % 100 == 0 and  self.isInterruptionRequested():
                     return
                 # require same day at least
                 key = (log.committerDateTime.date(), log.comments, log.author)
@@ -175,13 +194,23 @@ class LogsFetcherThread(QThread):
                 else:
                     mergedLogs[key] = log
 
+            exitCode |= code
+            self._handleError(errorData, branch, repoDir)
+
+        # print(f"fetch elapsed: {time.time() - b}")
+        # b = time.time()
+
         if mergedLogs:
             sortedLogs = []
             for log in sorted(mergedLogs.values(), key=lambda x: x.committerDateTime, reverse=True):
                 sortedLogs.append(log)
             self.logsAvailable.emit(sortedLogs)
 
-        self.fetchFinished.emit(self._exitCode)
+        # print(f"sort elapsed: {time.time() - b}")
+        for error, _ in self._errors.items():
+            self._errorData += error + b'\n'
+            self._errorData.rstrip(b'\n')
+        self.fetchFinished.emit(exitCode)
 
     def cancel(self):
         self.requestInterruption()
@@ -197,14 +226,17 @@ class LogsFetcherThread(QThread):
     def errorData(self):
         return self._errorData
 
+    def _handleError(self, errorData, branch, repoDir):
+        if errorData and errorData not in self._errors:
+            if not self._submodules or not self._isIgnoredError(errorData, branch):
+                self._errors[errorData] = repoDir
+
     def _onFetchFinished(self, exitCode):
         sender: LogsFetcherImpl = self.sender()
         if not sender:
             return
 
-        if sender.errorData and sender.errorData not in self._errors:
-            if not self._submodules or not self._isIgnoredError(sender.errorData, sender._branch):
-                self._errors[sender.errorData] = sender.repoDir
+        self._handleError(sender.errorData, sender._branch, sender.repoDir)
 
         self._fetchers.remove(sender)
         if not self._fetchers:
@@ -218,8 +250,6 @@ class LogsFetcherThread(QThread):
                 if self._logs:
                     self.logsAvailable.emit(list(self._logs.keys()))
                 self.fetchFinished.emit(exitCode)
-
-        self._exitCode |= exitCode
 
     def _onLogsAvailable(self, logs):
         repoDir = self.sender().repoDir
