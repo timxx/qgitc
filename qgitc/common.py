@@ -68,7 +68,7 @@ class Commit():
         authorDate = parts[3]
         committer = parts[4]
         committerDate = parts[5]
-        parents = str_split(parts[6], " ")
+        parents = [x for x in str_split(parts[6], " ") if x]
 
         return cls(sha1, comments, author, authorDate,
                    committer, committerDate, parents)
