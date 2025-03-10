@@ -185,7 +185,7 @@ class LogsFetcherThread(QThread):
             code, errorData, branch, repoDir, logs = task.result()
             for log in logs:
                 handleCount += 1
-                if handleCount % 100 == 0 and  self.isInterruptionRequested():
+                if handleCount % 100 == 0 and self.isInterruptionRequested():
                     return
                 # require same day at least
                 key = (log.committerDateTime.date(), log.comments, log.author)
@@ -201,9 +201,8 @@ class LogsFetcherThread(QThread):
         # b = time.time()
 
         if mergedLogs:
-            sortedLogs = []
-            for log in sorted(mergedLogs.values(), key=lambda x: x.committerDateTime, reverse=True):
-                sortedLogs.append(log)
+            sortedLogs = sorted(mergedLogs.values(),
+                                key=lambda x: x.committerDateTime, reverse=True)
             self.logsAvailable.emit(sortedLogs)
 
         # print(f"sort elapsed: {time.time() - b}")
