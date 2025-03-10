@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QTimer
 
 from .datafetcher import DataFetcher
 from .diffutils import *
@@ -15,6 +15,10 @@ class DiffFetcher(DataFetcher):
     def __init__(self, parent=None):
         super(DiffFetcher, self).__init__(parent)
         self._isDiffContent = False
+        self._emitTimer = QTimer(self)
+        self._emitTimer.timeout.connect(self._emitDiffAvailable)
+        self._lineItems = []
+        self._fileItems = {}
         self._row = 0
         self._firstPatch = True
         self._repoDir = None
@@ -128,7 +132,16 @@ class DiffFetcher(DataFetcher):
         _updateFileState()
 
         if lineItems:
-            self.diffAvailable.emit(lineItems, fileItems)
+            if not self._emitTimer.isActive():
+                self._emitTimer.start(16)
+            self._lineItems.extend(lineItems)
+            self._fileItems.update(fileItems)
+
+    def _emitDiffAvailable(self):
+        if self._lineItems:
+            self.diffAvailable.emit(self._lineItems, self._fileItems)
+            self._lineItems.clear()
+            self._fileItems.clear()
 
     def resetRow(self, row):
         self._row = row
@@ -137,6 +150,7 @@ class DiffFetcher(DataFetcher):
 
     def cancel(self):
         self._isDiffContent = False
+        self._emitTimer.stop()
         super(DiffFetcher, self).cancel()
 
     def makeArgs(self, args):
@@ -181,3 +195,9 @@ class DiffFetcher(DataFetcher):
         if not self.repoDirBytes:
             return file
         return self.repoDirBytes + file
+
+    def onDataFinished(self, exitCode, exitStatus):
+        self._emitTimer.stop()
+        # send the rest
+        self._emitDiffAvailable()
+        super().onDataFinished(exitCode, exitStatus)
