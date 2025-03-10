@@ -271,7 +271,13 @@ class Settings(QSettings):
 
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)
-    
+
     def setCompositeMode(self, composite):
         self.setValue("compositeMode", composite)
         self.compositeModeChanged.emit(composite)
+
+    def maxCompositeCommitsSince(self):
+        return self.value("maxCompositeCommitsSince", 365, type=int)
+
+    def setMaxCompositeCommitsSince(self, days):
+        self.setValue("maxCompositeCommitsSince", days)

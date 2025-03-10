@@ -212,6 +212,12 @@ class Preferences(QDialog):
         self.ui.btnChooseGit.clicked.connect(
             self._onBtnChooseGitClicked)
 
+        self.ui.cbCommitSince.addItem(self.tr("All"), 0)
+        self.ui.cbCommitSince.addItem(self.tr("1 Year"), 365)
+        self.ui.cbCommitSince.addItem(self.tr("2 Years"), 365 * 2)
+        self.ui.cbCommitSince.addItem(self.tr("3 Years"), 365 * 3)
+        self.ui.cbCommitSince.addItem(self.tr("5 Years"), 365 * 5)
+
         self._initSettings()
 
     def _initSettings(self):
@@ -270,6 +276,12 @@ class Preferences(QDialog):
         self.ui.leGitPath.setText(git)
 
         self.ui.leServerUrl.setText(self.settings.llmServer())
+
+        days = self.settings.maxCompositeCommitsSince()
+        for i in range(self.ui.cbCommitSince.count()):
+            if self.ui.cbCommitSince.itemData(i) == days:
+                self.ui.cbCommitSince.setCurrentIndex(i)
+                break
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -542,3 +554,6 @@ class Preferences(QDialog):
         self.settings.setGitBinPath(value)
 
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
+
+        value = self.ui.cbCommitSince.currentData()
+        self.settings.setMaxCompositeCommitsSince(value)

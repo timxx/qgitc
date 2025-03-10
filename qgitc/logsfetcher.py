@@ -74,9 +74,11 @@ class LogsFetcherImpl(DataFetcher):
                     "--pretty=format:{0}".format(log_fmt)]
 
         # reduce commits to analyze
-        # if self.repoDir and not self.hasSinceArg(logArgs):
-        #     since = date.today() - timedelta(days=180)
-        #     git_args.append(f"--since={since.isoformat()}")
+        if self.repoDir and not self.hasSinceArg(logArgs):
+            days = qApp.settings().maxCompositeCommitsSince()
+            if days > 0:
+                since = date.today() - timedelta(days=days)
+                git_args.append(f"--since={since.isoformat()}")
 
         if branch:
             git_args.append(branch)

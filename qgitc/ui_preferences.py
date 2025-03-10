@@ -238,7 +238,7 @@ class Ui_Preferences(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.colorB.sizePolicy().hasHeightForWidth())
         self.colorB.setSizePolicy(sizePolicy1)
-        self.colorB.setFocusPolicy(Qt.StrongFocus)
+        self.colorB.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.gridLayout.addWidget(self.colorB, 1, 1, 1, 1)
 
@@ -256,7 +256,7 @@ class Ui_Preferences(object):
         self.colorA.setObjectName(u"colorA")
         sizePolicy1.setHeightForWidth(self.colorA.sizePolicy().hasHeightForWidth())
         self.colorA.setSizePolicy(sizePolicy1)
-        self.colorA.setFocusPolicy(Qt.StrongFocus)
+        self.colorA.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.gridLayout.addWidget(self.colorA, 0, 1, 1, 1)
 
@@ -294,6 +294,27 @@ class Ui_Preferences(object):
 
         self.verticalLayout_3.addWidget(self.groupBox_2)
 
+        self.groupBox_10 = QGroupBox(self.tabSummary)
+        self.groupBox_10.setObjectName(u"groupBox_10")
+        self.horizontalLayout_5 = QHBoxLayout(self.groupBox_10)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.label_17 = QLabel(self.groupBox_10)
+        self.label_17.setObjectName(u"label_17")
+
+        self.horizontalLayout_5.addWidget(self.label_17)
+
+        self.cbCommitSince = QComboBox(self.groupBox_10)
+        self.cbCommitSince.setObjectName(u"cbCommitSince")
+
+        self.horizontalLayout_5.addWidget(self.cbCommitSince)
+
+        self.horizontalSpacer_5 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_5)
+
+
+        self.verticalLayout_3.addWidget(self.groupBox_10)
+
         self.tabWidget.addTab(self.tabSummary, "")
         self.tabTools = QWidget()
         self.tabTools.setObjectName(u"tabTools")
@@ -310,7 +331,7 @@ class Ui_Preferences(object):
 
         self.tableView = QTableView(self.groupBox_7)
         self.tableView.setObjectName(u"tableView")
-        self.tableView.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tableView.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
         self.verticalLayout_8.addWidget(self.tableView)
 
@@ -368,7 +389,7 @@ class Ui_Preferences(object):
         self.cbDiffName.addItem(u"emerge")
         self.cbDiffName.setObjectName(u"cbDiffName")
         self.cbDiffName.setEditable(True)
-        self.cbDiffName.setInsertPolicy(QComboBox.NoInsert)
+        self.cbDiffName.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
         self.horizontalLayout_6.addWidget(self.cbDiffName)
 
@@ -419,7 +440,7 @@ class Ui_Preferences(object):
         self.cbMergeName.addItem(u"emerge")
         self.cbMergeName.setObjectName(u"cbMergeName")
         self.cbMergeName.setEditable(True)
-        self.cbMergeName.setInsertPolicy(QComboBox.NoInsert)
+        self.cbMergeName.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
 
         self.horizontalLayout_7.addWidget(self.cbMergeName)
 
@@ -469,8 +490,8 @@ class Ui_Preferences(object):
 
         self.buttonBox = QDialogButtonBox(Preferences)
         self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
 
         self.verticalLayout_2.addWidget(self.buttonBox)
 
@@ -502,7 +523,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(4)
+        self.tabWidget.setCurrentIndex(2)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -544,6 +565,8 @@ class Ui_Preferences(object):
 #endif // QT_CONFIG(tooltip)
         self.cbFallback.setText(QCoreApplication.translate("Preferences", u"Fallbac&k to Global", None))
         self.btnGlobal.setText(QCoreApplication.translate("Preferences", u"&Edit Global", None))
+        self.groupBox_10.setTitle(QCoreApplication.translate("Preferences", u"Composite Log", None))
+        self.label_17.setText(QCoreApplication.translate("Preferences", u"Max Commits", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabSummary), QCoreApplication.translate("Preferences", u"Co&mmit", None))
         self.groupBox_7.setTitle(QCoreApplication.translate("Preferences", u"Tools", None))
         self.label_12.setText(QCoreApplication.translate("Preferences", u"You must add the tool to git config mergetool/difftool section to make it works.", None))
