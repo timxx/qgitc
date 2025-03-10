@@ -73,19 +73,21 @@ class LogsFetcherImpl(DataFetcher):
                     "--no-color",
                     "--pretty=format:{0}".format(log_fmt)]
 
+        needBoundary = True
         # reduce commits to analyze
         if self.repoDir and not self.hasSinceArg(logArgs):
             days = qApp.settings().maxCompositeCommitsSince()
             if days > 0:
                 since = date.today() - timedelta(days=days)
                 git_args.append(f"--since={since.isoformat()}")
+                needBoundary = False
 
         if branch:
             git_args.append(branch)
 
         if logArgs:
             git_args.extend(logArgs)
-        else:
+        elif needBoundary:
             git_args.append("--boundary")
 
         return git_args
