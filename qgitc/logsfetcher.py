@@ -38,7 +38,7 @@ class LogsFetcherImpl(DataFetcher):
         commits = []
         for log in logs:
             commit = Commit.fromRawString(log)
-            if not commit.sha1:
+            if not commit or not commit.sha1:
                 continue
             commit.repoDir = self.repoDir
             if self.repoDir:
@@ -180,6 +180,7 @@ class LogsFetcherThread(QThread):
             for log in sorted(mergedLogs.values(), key=lambda x: x.committerDateTime, reverse=True):
                 sortedLogs.append(log)
             self.logsAvailable.emit(sortedLogs)
+
         self.fetchFinished.emit(self._exitCode)
 
     def cancel(self):

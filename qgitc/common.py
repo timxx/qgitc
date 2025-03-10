@@ -20,18 +20,29 @@ html_escape_table = {
 }
 
 
+str_split = str.split
+str_strip = str.strip
+
+
 class Commit():
 
-    def __init__(self):
+    __slots__ = ("sha1", "comments", "author", "authorDate",
+                 "committer", "committerDate", "committerDateTime",
+                 "parents", "children", "repoDir", "subCommits")
 
-        self.sha1 = ""
-        self.comments = ""
-        self.author = ""
-        self.authorDate = ""
-        self.committer = ""
-        self.committerDate = ""
+    def __init__(self, sha1="", comments="",
+                 author="", authorDate="",
+                 committer="", committerDate="",
+                 parents=[]):
+
+        self.sha1 = sha1
+        self.comments = comments
+        self.author = author
+        self.authorDate = authorDate
+        self.committer = committer
+        self.committerDate = committerDate
         self.committerDateTime: datetime = None
-        self.parents: List[str] = []
+        self.parents: List[str] = parents
         self.children: List[Commit] = None
         self.repoDir: str = None
         self.subCommits: List[Commit] = []
@@ -46,22 +57,21 @@ class Commit():
                             self.comments)
 
     @classmethod
-    def fromRawString(cls, string):
-        commit = cls()
-
-        parts = string.split("\x01")
+    def fromRawString(cls, string: str):
+        parts = str_split(string, "\x01")
         if len(parts) != 7:
-            return commit
+            return None
 
-        commit.sha1 = parts[0]
-        commit.comments = parts[1].strip("\n")
-        commit.author = parts[2]
-        commit.authorDate = parts[3]
-        commit.committer = parts[4]
-        commit.committerDate = parts[5]
-        commit.parents = [x for x in parts[6].split(" ") if x]
+        sha1 = parts[0]
+        comments = str_strip(parts[1], "\n")
+        author = parts[2]
+        authorDate = parts[3]
+        committer = parts[4]
+        committerDate = parts[5]
+        parents = str_split(parts[6], " ")
 
-        return commit
+        return cls(sha1, comments, author, authorDate,
+                   committer, committerDate, parents)
 
     def isValid(self):
         return len(self.sha1) > 0
