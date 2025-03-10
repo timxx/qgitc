@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, QThread, QObject, QEventLoop
 
 from .datafetcher import DataFetcher
 from .diffutils import *
 from .gitutils import Git
 
 
-class DiffFetcher(DataFetcher):
+class DiffFetcherImpl(DataFetcher):
 
     diffAvailable = Signal(list, dict)
 
     def __init__(self, parent=None):
-        super(DiffFetcher, self).__init__(parent)
+        super().__init__(parent)
         self._isDiffContent = False
         self._row = 0
         self._firstPatch = True
@@ -86,7 +86,8 @@ class DiffFetcher(DataFetcher):
 
                 submodule = match.group(1)
                 lineItems.append((DiffType.File, submodule))
-                fileItems[submodule.decode(diff_encoding)] = FileInfo(self._row)
+                fileItems[submodule.decode(
+                    diff_encoding)] = FileInfo(self._row)
                 self._row += 1
 
                 lineItems.append((DiffType.FileInfo, line))
@@ -137,7 +138,7 @@ class DiffFetcher(DataFetcher):
 
     def cancel(self):
         self._isDiffContent = False
-        super(DiffFetcher, self).cancel()
+        super().cancel()
 
     def makeArgs(self, args):
         sha1 = args[0]
@@ -173,7 +174,8 @@ class DiffFetcher(DataFetcher):
     def repoDir(self, repoDir):
         self._repoDir = repoDir
         if repoDir:
-            self.repoDirBytes = self.repoDir.replace("\\", "/").encode("utf-8") + b"/"
+            self.repoDirBytes = self.repoDir.replace(
+                "\\", "/").encode("utf-8") + b"/"
         else:
             self.repoDirBytes = None
 
@@ -181,3 +183,82 @@ class DiffFetcher(DataFetcher):
         if not self.repoDirBytes:
             return file
         return self.repoDirBytes + file
+
+
+class DiffFetcherThread(QThread):
+
+    diffAvailable = Signal(list, dict)
+    fetchFinished = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.cwd = None
+        self.repoDir = None
+        self.row = 0
+        self.args = tuple()
+        self.errorData = b''
+
+    def fetch(self, cwd, repoDir, row, *args):
+        self.cwd = cwd
+        self.repoDir = repoDir
+        self.row = row
+        self.args = args
+        self.start()
+
+    def run(self):
+        eventLoop = QEventLoop()
+
+        fetcher = DiffFetcherImpl()
+        fetcher.cwd = self.cwd
+        fetcher.repoDir = self.repoDir
+        fetcher.resetRow(self.row)
+        fetcher.diffAvailable.connect(self.diffAvailable)
+        fetcher.fetchFinished.connect(self.fetchFinished)
+        fetcher.fetchFinished.connect(eventLoop.quit)
+        if self.isInterruptionRequested():
+            return
+        fetcher.fetch(*self.args)
+
+        eventLoop.exec()
+
+    def cancel(self):
+        self.requestInterruption()
+
+    def _onFetchFinished(self, exitCode):
+        fetcher = self.sender()
+        self.errorData = fetcher.errorData
+        self.fetchFinished.emit(exitCode)
+
+
+class DiffFetcher(QObject):
+    diffAvailable = Signal(list, dict)
+    fetchFinished = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._thread: DiffFetcherThread = None
+        self._errorData = b''
+        self.cwd = None
+        self.repoDir = None
+        self.row = 0
+
+    def resetRow(self, row: int):
+        self.row = row
+
+    @property
+    def errorData(self):
+        return self._errorData
+
+    def fetch(self, *args):
+        self.cancel()
+        self._errorData = b''
+        self._thread = DiffFetcherThread(self)
+        self._thread.diffAvailable.connect(self.diffAvailable)
+        self._thread.fetchFinished.connect(self.fetchFinished)
+        self._thread.fetch(self.cwd, self.repoDir, self.row, *args)
+
+    def cancel(self):
+        if self._thread:
+            self._thread.disconnect(self)
+            self._thread.cancel()
+            self._thread = None
