@@ -47,7 +47,8 @@ class LogsFetcherImpl(DataFetcher):
             if self.repoDir:
                 isoDate = ''
                 if version_info < (3, 11):
-                    isoDate = commit.committerDate.replace(' ', 'T', 1).replace(' ', '', 1)
+                    isoDate = commit.committerDate.replace(
+                        ' ', 'T', 1).replace(' ', '', 1)
                     isoDate = isoDate[:-2] + ':' + isoDate[-2:]
                 else:
                     isoDate = commit.committerDate
@@ -73,9 +74,9 @@ class LogsFetcherImpl(DataFetcher):
                     "--pretty=format:{0}".format(log_fmt)]
 
         # reduce commits to analyze
-        if self.repoDir and not self.hasSinceArg(logArgs):
-            since = date.today() - timedelta(days=180)
-            #git_args.append(f"--since={since.isoformat()}")
+        # if self.repoDir and not self.hasSinceArg(logArgs):
+        #     since = date.today() - timedelta(days=180)
+        #     git_args.append(f"--since={since.isoformat()}")
 
         if branch:
             git_args.append(branch)
@@ -98,22 +99,6 @@ class LogsFetcherImpl(DataFetcher):
             if arg.startswith("--since"):
                 return True
         return False
-
-
-# the builtin bisect key required python >= 3.10
-def insort_logs(a: List[Commit], x: Commit):
-    lo = 0
-    hi = len(a)
-
-    xDate = x.committerDateTime
-    while lo < hi:
-        mid = (lo + hi) // 2
-        t = a[mid].committerDateTime
-        if xDate < t:
-            lo = mid + 1
-        else:
-            hi = mid
-    a.insert(lo, x)
 
 
 class LogsFetcherThread(QThread):
@@ -173,7 +158,8 @@ class LogsFetcherThread(QThread):
 
         max_workers = max(2, os.cpu_count() - 2)
         executor = ThreadPoolExecutor(max_workers=max_workers)
-        tasks = [executor.submit(_fetch, submodule) for submodule in self._submodules]
+        tasks = [executor.submit(_fetch, submodule)
+                 for submodule in self._submodules]
 
         mergedLogs = {}
         handleCount = 0
