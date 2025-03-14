@@ -525,7 +525,7 @@ class MainWindow(StateWindow):
         # don't knonw if cygwin works or not
         args = shlex.split(opts, posix=sys.platform != "win32")
         if self.ui.cbSelfCommits.isChecked():
-            args.append(f"--author={Git.userName()}")
+            args.insert(0, f"--author={Git.userName()}")
         gitView.filterLog(args)
 
     def showMessage(self, msg, timeout=5000):
