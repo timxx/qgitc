@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 from PySide6.QtGui import (
     QColor,
@@ -23,7 +22,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import (
     Qt,
     Signal,
-    QThread,
     QSize,
     QMimeData,
     QProcess,
@@ -455,90 +453,6 @@ class FindData():
         return FIND_NOTFOUND
 
 
-class CheckLocalChangesThread(QThread):
-
-    checkFinished = Signal(Commit, Commit)
-
-    def __init__(self, branch, submodules, parent=None):
-        super().__init__(parent)
-        self._branch = branch
-        self._submodules = submodules
-
-    def run(self):
-        if self.isInterruptionRequested():
-            return
-
-        lccCommit = Commit()
-        lucCommit = Commit()
-
-        if not self._submodules or len(self._submodules) == 1:
-            submodule = self._submodules[0] if self._submodules else None
-            hasLCC, hasLUC, _ = self.fetchLocalChanges(submodule)
-            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC, submodule)
-        else:
-            # one for ui, one for logs, one for this thread
-            max_workers = max(2, os.cpu_count() - 3)
-            executor = ThreadPoolExecutor(max_workers=max_workers)
-            tasks = []
-            firstRepo = self._submodules.pop(0)
-            for submodule in self._submodules:
-                if self.isInterruptionRequested():
-                    return
-                task = executor.submit(self.fetchLocalChanges, submodule)
-                tasks.append(task)
-
-            hasLCC, hasLUC, _ = self.fetchLocalChanges(firstRepo)
-            self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC, firstRepo)
-
-            if self.isInterruptionRequested():
-                return
-
-            for task in as_completed(tasks):
-                if self.isInterruptionRequested():
-                    return
-                hasLCC, hasLUC, repoDir = task.result()
-                self.makeCommits(lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
-
-        if not self.isInterruptionRequested():
-            self.checkFinished.emit(lccCommit, lucCommit)
-
-    def fetchLocalChanges(self, repoDir=None):
-            repoPath = repoDir
-            if repoPath:
-                if repoPath == '.':
-                    repoPath = Git.REPO_DIR
-                else:
-                    repoPath = os.path.join(Git.REPO_DIR, repoDir)
-            hasLCC = Git.hasLocalChanges(self._branch, True, repoPath)
-            if self.isInterruptionRequested():
-                return False, False, repoDir
-            hasLUC = Git.hasLocalChanges(self._branch, repoDir=repoPath)
-            if self.isInterruptionRequested():
-                return False, False, repoDir
-            return hasLCC, hasLUC, repoDir
-
-    def makeCommits(self, lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
-        if hasLCC:
-            lccCommit.sha1 = Git.LCC_SHA1
-            if not lccCommit.repoDir:
-                lccCommit.repoDir = repoDir
-            else:
-                subCommit = Commit()
-                subCommit.sha1 = Git.LCC_SHA1
-                subCommit.repoDir = repoDir
-                lccCommit.subCommits.append(subCommit)
-
-        if hasLUC:
-            lucCommit.sha1 = Git.LUC_SHA1
-            if not lucCommit.repoDir:
-                lucCommit.repoDir = repoDir
-            else:
-                subCommit = Commit()
-                subCommit.sha1 = Git.LUC_SHA1
-                subCommit.repoDir = repoDir
-                lucCommit.subCommits.append(subCommit)
-
-
 class LogGraph(QWidget):
 
     def __init__(self, parent=None):
@@ -587,8 +501,6 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.delayVisible = False
         self.delayUpdateParents = False
 
-        self.checkThread = None
-
         self.lineSpace = 5
         self.marginX = 3
         self.marginY = 3
@@ -623,6 +535,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.__onLogsAvailable)
         self.fetcher.fetchFinished.connect(
             self.__onFetchFinished)
+        self.fetcher.localChangesAvailable.connect(
+            self.__onLocalChangesAvailable)
 
         self.updateSettings()
 
@@ -710,17 +624,6 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.fetcher.fetch(branch, args)
         self.beginFetch.emit()
-
-        if self.checkThread:
-            self.checkThread.disconnect(self)
-            self.checkThread.requestInterruption()
-            self.checkThread.wait()
-            self.checkThread = None
-
-        if not args:
-            self.checkThread = CheckLocalChangesThread(self.curBranch, submodules, self)
-            self.checkThread.checkFinished.connect(self.__onCheckFinished)
-            self.checkThread.start()
 
     def clear(self):
         self.data.clear()
@@ -1133,7 +1036,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         else:
             self.viewport().update()
 
-    def __onCheckFinished(self, lccCommit: Commit, lucCommit: Commit):
+    def __onLocalChangesAvailable(self, lccCommit: Commit, lucCommit: Commit):
         parent_sha1 = self.data[0].sha1 if self.data else None
 
         self.delayUpdateParents = False
@@ -1194,8 +1097,6 @@ class LogView(QAbstractScrollArea, CommitSource):
             # force update the diff
             self.currentIndexChanged.emit(0)
             self.viewport().update()
-
-        self.checkThread = None
 
     def __resetGraphs(self):
         self.graphs.clear()

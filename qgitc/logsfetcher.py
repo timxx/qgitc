@@ -107,6 +107,7 @@ class LogsFetcherImpl(DataFetcher):
 
 class LogsFetcherThread(QThread):
 
+    localChangesAvailable = Signal(Commit, Commit)
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
@@ -115,7 +116,6 @@ class LogsFetcherThread(QThread):
         self._errors = {}  # error: repo
         self._errorData = b''
         self._fetchers = []
-        self._logs = {}  # repo: logs
         self._submodules = submodules.copy()
         self._eventLoop = None
 
@@ -135,18 +135,70 @@ class LogsFetcherThread(QThread):
 
         # del profile
 
+    @staticmethod
+    def _fetchLocalChanges(branch: str, repoDir: str = None):
+        repoPath = repoDir
+        if repoPath:
+            if repoPath == '.':
+                repoPath = Git.REPO_DIR
+            else:
+                repoPath = os.path.join(Git.REPO_DIR, repoDir)
+        hasLCC = Git.hasLocalChanges(branch, True, repoPath)
+        hasLUC = Git.hasLocalChanges(branch, repoDir=repoPath)
+
+        return hasLCC, hasLUC
+
+    @staticmethod
+    def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
+        if hasLCC:
+            lccCommit.sha1 = Git.LCC_SHA1
+            if not lccCommit.repoDir:
+                lccCommit.repoDir = repoDir
+            else:
+                subCommit = Commit()
+                subCommit.sha1 = Git.LCC_SHA1
+                subCommit.repoDir = repoDir
+                lccCommit.subCommits.append(subCommit)
+
+        if hasLUC:
+            lucCommit.sha1 = Git.LUC_SHA1
+            if not lucCommit.repoDir:
+                lucCommit.repoDir = repoDir
+            else:
+                subCommit = Commit()
+                subCommit.sha1 = Git.LUC_SHA1
+                subCommit.repoDir = repoDir
+                lucCommit.subCommits.append(subCommit)
+
     def _fetchNormal(self):
         self._eventLoop = QEventLoop()
+
+        branch = self._args[0]
+        hasLCC, hasLUC = self._fetchLocalChanges(branch)
+        if hasLCC or hasLUC:
+            lccCommit = Commit()
+            lucCommit = Commit()
+            self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+            self.localChangesAvailable.emit(lccCommit, lucCommit)
 
         fetcher = LogsFetcherImpl()
         fetcher.logsAvailable.connect(
             self.logsAvailable)
-        fetcher.fetchFinished.connect(self._onFetchFinished)
+        fetcher.fetchFinished.connect(self._eventLoop.quit)
         self._fetchers.append(fetcher)
 
         fetcher.fetch(*self._args)
         self._eventLoop.exec()
         self._eventLoop = None
+
+        self._handleError(fetcher.errorData, fetcher._branch, fetcher.repoDir)
+
+        self._fetchers.remove(fetcher)
+        for error, _ in self._errors.items():
+            self._errorData += error + b'\n'
+            self._errorData.rstrip(b'\n')
+
+        self.fetchFinished.emit(fetcher._exitCode)
 
     def _fetchComposite(self):
         def _fetch(submodule):
@@ -154,9 +206,14 @@ class LogsFetcherThread(QThread):
             if submodule != '.':
                 fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
             fetcher.fetch(*self._args)
+
+            branch = self._args[0]
+            hasLCC, hasLUC = self._fetchLocalChanges(branch, submodule)
+
             fetcher._process.waitForFinished()
             return fetcher._exitCode, fetcher._errorData, \
-                fetcher._branch, fetcher.repoDir, fetcher.commits
+                fetcher._branch, fetcher.repoDir, fetcher.commits, \
+                hasLCC, hasLUC
 
         # b = time.time()
 
@@ -177,10 +234,16 @@ class LogsFetcherThread(QThread):
                     return True
             return False
 
+        lccCommit = Commit()
+        lucCommit = Commit()
+
         for task in as_completed(tasks):
             if self.isInterruptionRequested():
                 return
-            code, errorData, branch, repoDir, logs = task.result()
+
+            code, errorData, branch, repoDir, logs, hasLCC, hasLUC = task.result()
+            self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
+
             for log in logs:
                 handleCount += 1
                 if handleCount % 100 == 0 and self.isInterruptionRequested():
@@ -202,6 +265,8 @@ class LogsFetcherThread(QThread):
 
         # print(f"fetch elapsed: {time.time() - b}")
         # b = time.time()
+
+        self.localChangesAvailable.emit(lccCommit, lucCommit)
 
         if mergedLogs:
             sortedLogs = sorted(mergedLogs.values(),
@@ -233,33 +298,6 @@ class LogsFetcherThread(QThread):
             if not self._submodules or not self._isIgnoredError(errorData, branch):
                 self._errors[errorData] = repoDir
 
-    def _onFetchFinished(self, exitCode):
-        sender: LogsFetcherImpl = self.sender()
-        if not sender:
-            return
-
-        self._handleError(sender.errorData, sender._branch, sender.repoDir)
-
-        self._fetchers.remove(sender)
-        if not self._fetchers:
-            if self._eventLoop:
-                self._eventLoop.quit()
-            for error, repo in self._errors.items():
-                self._errorData += error + b'\n'
-            self._errorData.rstrip(b'\n')
-
-            if not self._submodules:
-                if self._logs:
-                    self.logsAvailable.emit(list(self._logs.keys()))
-                self.fetchFinished.emit(exitCode)
-
-    def _onLogsAvailable(self, logs):
-        repoDir = self.sender().repoDir
-        if repoDir in self._logs:
-            self._logs[repoDir].extend(logs)
-        else:
-            self._logs[repoDir] = logs
-
     def _isIgnoredError(self, error: bytes, branch: bytes):
         msgs = [b"fatal: ambiguous argument '%s': unknown revision or path" % branch,
                 b"fatal: bad revision '%s'" % branch]
@@ -271,6 +309,7 @@ class LogsFetcherThread(QThread):
 
 class LogsFetcher(QObject):
 
+    localChangesAvailable = Signal(Commit, Commit)
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
@@ -289,6 +328,7 @@ class LogsFetcher(QObject):
         self._thread = LogsFetcherThread(self._submodules, self)
         self._thread.logsAvailable.connect(self.logsAvailable)
         self._thread.fetchFinished.connect(self._onFetchFinished)
+        self._thread.localChangesAvailable.connect(self.localChangesAvailable)
         self._thread.fetch(*args)
 
     def cancel(self):
