@@ -21,6 +21,9 @@ class DataFetcher(QObject):
         self._cwd = None
         self._exitCode = 0
 
+    def __del__(self):
+        self.cancel()
+
     @property
     def process(self):
         return self._process
