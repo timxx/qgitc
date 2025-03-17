@@ -295,7 +295,7 @@ class GitView(QWidget):
             sha1 = realCommit.parents[0] if realCommit.parents else None
 
         rev = sha1 if sha1 else self.currentBranch()
-        if realCommit.repoDir:
+        if realCommit.repoDir and realCommit.repoDir != ".":
             filePath = filePath[len(realCommit.repoDir) + 1:]
         repoDir = commitRepoDir(realCommit)
         QCoreApplication.postEvent(

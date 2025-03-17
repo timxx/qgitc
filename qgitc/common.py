@@ -248,6 +248,9 @@ def fileRealCommit(filePath: str, commit: Commit):
     for subCommit in commit.subCommits:
         if filePath.startswith(subCommit.repoDir.replace("\\", "/")):
             return subCommit
+    # filePath isn't in any subCommit
+    if commit.repoDir == ".":
+        return commit
     assert False, "No commit found for file: " + filePath
 
 
