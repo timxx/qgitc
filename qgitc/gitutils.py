@@ -116,6 +116,10 @@ class Git():
     # local changes checked
     LCC_SHA1 = "0000000000000000000000000000000000000001"
 
+    VERSION_MAJOR = 0
+    VERSION_MINOR = 0
+    VERSION_PATCH = 0
+
     @staticmethod
     def available():
         return GitProcess.GIT_BIN is not None
@@ -361,9 +365,11 @@ class Git():
         if not dir:
             return False
 
-        args = ["diff", "--quiet"]
+        args = ["diff", "--quiet", "-s"]
         if cached:
             args.append("--cached")
+        if Git.versionGE(1, 7, 2):
+            args.append("--ignore-submodules=dirty")
 
         process = GitProcess(dir, args)
         process.communicate()
@@ -560,3 +566,36 @@ class Git():
     @staticmethod
     def userName():
         return Git.getConfigValue("user.name", False)
+
+    @staticmethod
+    def initGit(gitBin: str):
+        GitProcess.GIT_BIN = gitBin
+
+        version: bytes = Git.checkOutput(["version"])
+        if not version:
+            return
+
+        version_parts = version.strip().split()
+        if len(version_parts) >= 3:
+            version_number = version_parts[2]
+            version_components = version_number.split(b'.')
+            Git.VERSION_MAJOR = int(version_components[0]) if len(
+                version_components) > 0 else 0
+            Git.VERSION_MINOR = int(version_components[1]) if len(
+                version_components) > 1 else 0
+            Git.VERSION_PATCH = int(version_components[2]) if len(
+                version_components) > 2 else 0
+
+    @staticmethod
+    def versionGE(major: int, minor: int, patch: int):
+        if Git.VERSION_MAJOR > major:
+            return True
+        if Git.VERSION_MAJOR < major:
+            return False
+
+        if Git.VERSION_MINOR > minor:
+            return True
+        if Git.VERSION_MINOR < minor:
+            return False
+
+        return Git.VERSION_PATCH >= patch

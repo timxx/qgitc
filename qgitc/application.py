@@ -238,7 +238,7 @@ class Application(QApplication):
                 "No git found, please check your settings."))
 
     def _initGit(self, gitBin):
-        GitProcess.GIT_BIN = gitBin
+        Git.initGit(gitBin)
         cwd = os.getcwd()
         repoDir = Git.repoTopLevelDir(cwd)
         Git.REPO_DIR = repoDir or cwd
