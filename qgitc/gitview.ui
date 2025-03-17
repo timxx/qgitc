@@ -79,7 +79,7 @@
            <item>
             <widget class="QLabel" name="label">
              <property name="text">
-              <string>SHA1 ID:</string>
+              <string>Commit ID:</string>
              </property>
             </widget>
            </item>

@@ -185,7 +185,7 @@ class Ui_GitView(object):
     def retranslateUi(self, GitView):
         GitView.setWindowTitle(QCoreApplication.translate("GitView", u"GitView", None))
         self.lbBranch.setText(QCoreApplication.translate("GitView", u"Branch:", None))
-        self.label.setText(QCoreApplication.translate("GitView", u"SHA1 ID:", None))
+        self.label.setText(QCoreApplication.translate("GitView", u"Commit ID:", None))
         self.label_3.setText(QCoreApplication.translate("GitView", u"Find", None))
         self.label_2.setText(QCoreApplication.translate("GitView", u"commit", None))
         self.cbFindWhat.setItemText(0, QCoreApplication.translate("GitView", u"adding/removing string", None))

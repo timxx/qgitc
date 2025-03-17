@@ -395,6 +395,11 @@
         <translation>匹配改动的行</translation>
     </message>
     <message>
+        <location filename="../../gitview.ui" line="82"/>
+        <source>Commit ID:</source>
+        <translation>提交ID：</translation>
+    </message>
+    <message>
         <location filename="../../gitview.ui" line="145"/>
         <source>Press Enter to find commits</source>
         <translation>按下回车以查找记录</translation>
@@ -460,11 +465,6 @@
     <message>
         <location filename="../../gitview.ui" line="14"/>
         <source>GitView</source>
-        <translation></translation>
-    </message>
-    <message>
-        <location filename="../../gitview.ui" line="82"/>
-        <source>SHA1 ID:</source>
         <translation></translation>
     </message>
     <message>
