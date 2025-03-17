@@ -288,7 +288,8 @@ class MainWindow(StateWindow):
         if not Git.available():
             return
 
-        if not Git.repoTopLevelDir(repoDir):
+        topLevelDir = Git.repoTopLevelDir(repoDir)
+        if not topLevelDir:
             msg = self.tr("'{0}' is not a git repository")
             self.ui.statusbar.showMessage(
                 msg.format(repoDir),
@@ -302,8 +303,8 @@ class MainWindow(StateWindow):
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            Git.REPO_DIR = repoDir
-            Git.REPO_TOP_DIR = repoDir
+            Git.REPO_DIR = topLevelDir
+            Git.REPO_TOP_DIR = topLevelDir
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
 
@@ -315,7 +316,7 @@ class MainWindow(StateWindow):
         if repoDir:
             self.ui.leRepo.setReadOnly(True)
             self.ui.btnRepoBrowse.setDisabled(True)
-            self.findSubmoduleThread = FindSubmoduleThread(repoDir, self)
+            self.findSubmoduleThread = FindSubmoduleThread(topLevelDir, self)
             self.findSubmoduleThread.finished.connect(
                 self.__onFindSubmoduleFinished)
             self.findSubmoduleThread.start()
