@@ -169,6 +169,14 @@ class LogsFetcherThread(QThread):
         handleCount = 0
         exitCode = 0
 
+        def _isSameRepoCommit(commit: Commit, repoDir: str):
+            if commit.repoDir == repoDir:
+                return True
+            for commit in commit.subCommits:
+                if commit.repoDir == repoDir:
+                    return True
+            return False
+
         for task in as_completed(tasks):
             if self.isInterruptionRequested():
                 return
@@ -180,7 +188,12 @@ class LogsFetcherThread(QThread):
                 # require same day at least
                 key = (log.committerDateTime.date(), log.comments, log.author)
                 if key in mergedLogs.keys():
-                    mergedLogs[key].subCommits.append(log)
+                    main_commit = mergedLogs[key]
+                    # don't merge commits in same repo
+                    if _isSameRepoCommit(main_commit, repoDir):
+                        mergedLogs[log.sha1] = log
+                    else:
+                        main_commit.subCommits.append(log)
                 else:
                     mergedLogs[key] = log
 
