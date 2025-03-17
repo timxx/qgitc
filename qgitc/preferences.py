@@ -283,6 +283,8 @@ class Preferences(QDialog):
                 self.ui.cbCommitSince.setCurrentIndex(i)
                 break
 
+        self.ui.cbShowPC.setChecked(self.settings.showParentChild())
+
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
         sizes = fdb.pointSizes(family)
@@ -557,3 +559,6 @@ class Preferences(QDialog):
 
         value = self.ui.cbCommitSince.currentData()
         self.settings.setMaxCompositeCommitsSince(value)
+
+        value = self.ui.cbShowPC.isChecked()
+        self.settings.setShowParentChild(value)

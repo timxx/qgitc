@@ -29,7 +29,7 @@ class Ui_Preferences(object):
     def setupUi(self, Preferences):
         if not Preferences.objectName():
             Preferences.setObjectName(u"Preferences")
-        Preferences.resize(655, 396)
+        Preferences.resize(659, 404)
         self.verticalLayout_2 = QVBoxLayout(Preferences)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tabWidget = QTabWidget(Preferences)
@@ -152,6 +152,11 @@ class Ui_Preferences(object):
 
 
         self.verticalLayout_6.addLayout(self.horizontalLayout_3)
+
+        self.cbShowPC = QCheckBox(self.groupBox_5)
+        self.cbShowPC.setObjectName(u"cbShowPC")
+
+        self.verticalLayout_6.addWidget(self.cbShowPC)
 
 
         self.verticalLayout.addWidget(self.groupBox_5)
@@ -523,7 +528,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.setCurrentIndex(0)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -548,6 +553,7 @@ class Ui_Preferences(object):
         self.cbIgnoreWhitespace.setItemText(1, QCoreApplication.translate("Preferences", u"At end of line", None))
         self.cbIgnoreWhitespace.setItemText(2, QCoreApplication.translate("Preferences", u"All", None))
 
+        self.cbShowPC.setText(QCoreApplication.translate("Preferences", u"Show parent and child", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabGeneral), QCoreApplication.translate("Preferences", u"&General", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("Preferences", u"Log view", None))
         self.label_6.setText(QCoreApplication.translate("Preferences", u"&Family:", None))

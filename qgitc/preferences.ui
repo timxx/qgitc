@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>655</width>
-    <height>396</height>
+    <width>659</width>
+    <height>404</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -204,6 +204,13 @@
              </spacer>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cbShowPC">
+            <property name="text">
+             <string>Show parent and child</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

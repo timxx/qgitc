@@ -281,3 +281,9 @@ class Settings(QSettings):
 
     def setMaxCompositeCommitsSince(self, days):
         self.setValue("maxCompositeCommitsSince", days)
+
+    def showParentChild(self):
+        return self.value("showParentChild", True, type=bool)
+
+    def setShowParentChild(self, show):
+        self.setValue("showParentChild", show)

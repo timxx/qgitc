@@ -520,23 +520,26 @@ class DiffView(QWidget):
             content = self.tr("Committer: ") + commit.committer + \
                 " " + commit.committerDate
             self.viewer.addAuthorLine(content)
+        else:
+            self.viewer.addAuthorLine(self.tr("Author: ") + self.tr("You"))
 
-        for parent in commit.parents:
-            content = self.tr("Parent: ") + parent
-            repoDir = commit.repoDir
-            if isLocalChanges and repoDir:
-                index = self.commitSource.findCommitIndex(parent)
-                if index != -1:
-                    parentCommit = self.commitSource.getCommit(index)
-                    repoDir = parentCommit.repoDir
+        if qApp.settings().showParentChild():
+            for parent in commit.parents:
+                content = self.tr("Parent: ") + parent
+                repoDir = commit.repoDir
+                if isLocalChanges and repoDir:
+                    index = self.commitSource.findCommitIndex(parent)
+                    if index != -1:
+                        parentCommit = self.commitSource.getCommit(index)
+                        repoDir = parentCommit.repoDir
 
-            content += self.__commitDesc(parent, repoDir)
-            self.viewer.addSHA1Line(content, True)
+                content += self.__commitDesc(parent, repoDir)
+                self.viewer.addSHA1Line(content, True)
 
-        for child in commit.children:
-            content = self.tr("Child: ") + child.sha1
-            content += self.__commitDesc(child.sha1, child.repoDir)
-            self.viewer.addSHA1Line(content, False)
+            for child in commit.children:
+                content = self.tr("Child: ") + child.sha1
+                content += self.__commitDesc(child.sha1, child.repoDir)
+                self.viewer.addSHA1Line(content, False)
 
         self.viewer.addNormalTextLine("", False)
 
