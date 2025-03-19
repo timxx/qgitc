@@ -3,6 +3,7 @@
 from typing import Dict
 from PySide6.QtCore import Signal
 
+from .common import toSubmodulePath
 from .datafetcher import DataFetcher
 from .diffutils import *
 from .gitutils import Git
@@ -86,7 +87,8 @@ class DiffFetcher(DataFetcher):
 
                 submodule = match.group(1)
                 lineItems.append((DiffType.File, submodule))
-                fileItems[submodule.decode(diff_encoding)] = FileInfo(self._row)
+                fileItems[submodule.decode(
+                    diff_encoding)] = FileInfo(self._row)
                 self._row += 1
 
                 lineItems.append((DiffType.FileInfo, line))
@@ -161,7 +163,11 @@ class DiffFetcher(DataFetcher):
 
         if filePath:
             git_args.append("--")
-            git_args.extend(filePath)
+            if self._repoDir and self._repoDir != ".":
+                for path in filePath:
+                    git_args.append(toSubmodulePath(self._repoDir, path))
+            else:
+                git_args.extend(filePath)
 
         return git_args
 
@@ -173,7 +179,8 @@ class DiffFetcher(DataFetcher):
     def repoDir(self, repoDir):
         self._repoDir = repoDir
         if repoDir:
-            self.repoDirBytes = self.repoDir.replace("\\", "/").encode("utf-8") + b"/"
+            self.repoDirBytes = self.repoDir.replace(
+                "\\", "/").encode("utf-8") + b"/"
         else:
             self.repoDirBytes = None
 

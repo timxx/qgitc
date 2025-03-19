@@ -559,6 +559,8 @@ class LogView(QAbstractScrollArea, CommitSource):
     def showLogs(self, branch, args=None):
         self.curBranch = branch
         self.args = args
+        self._finder.cancel()
+        self._finder.clearResult()
 
         submodules = []
         if qApp.settings().isCompositeMode():
@@ -1505,7 +1507,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # start to find if not running
         if needRun:
-            self._finder.findAsync()
+            return self._finder.findAsync()
 
         return True
 

@@ -13,7 +13,7 @@ from PySide6.QtCore import (
     QObject
 )
 
-from .common import Commit, MyProfile, MyLineProfile
+from .common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath
 from .datafetcher import DataFetcher
 from .gitutils import Git
 from sys import version_info
@@ -86,7 +86,19 @@ class LogsFetcherImpl(DataFetcher):
             git_args.append(branch)
 
         if logArgs:
-            git_args.extend(logArgs)
+            if self.repoDir and self.repoDir != ".":
+                paths = extractFilePaths(logArgs)
+                if paths:
+                    for arg in logArgs:
+                        if arg not in paths and arg != "--":
+                            git_args.append(arg)
+                    git_args.append("--")
+                    for path in paths:
+                        git_args.append(toSubmodulePath(self.repoDir, path))
+                else:
+                    git_args.extend(logArgs)
+            else:
+                git_args.extend(logArgs)
         elif needBoundary:
             git_args.append("--boundary")
 
@@ -217,10 +229,14 @@ class LogsFetcherThread(QThread):
 
         # b = time.time()
 
+        logsArgs = self._args[1]
+        paths = extractFilePaths(logsArgs)
+        submodules = filterSubmoduleByPath(self._submodules, paths)
+
         max_workers = max(2, os.cpu_count() - 2)
         executor = ThreadPoolExecutor(max_workers=max_workers)
         tasks = [executor.submit(_fetch, submodule)
-                 for submodule in self._submodules]
+                 for submodule in submodules]
 
         mergedLogs = {}
         handleCount = 0

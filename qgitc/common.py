@@ -101,6 +101,7 @@ class MyLineProfile():
         self.pr.disable_by_count()
         self.pr.print_stats()
 
+
 class FindField():
 
     AddOrDel = 0
@@ -264,3 +265,82 @@ def fullRepoDir(repoDir: str, branchDir: str = None):
 
 def commitRepoDir(commit: Commit):
     return fullRepoDir(commit.repoDir)
+
+
+def _isArgNeedValue(arg: str):
+    if arg.find('=') != -1:
+        return False
+    if len(arg) == 2 and arg[1] == '-':
+        return False
+    known_args = [
+        "--decorate-refs", "--decorate-refs-exclude",
+        "--max-count", "--skip", "--since", "--after", "--until", "--before",
+        "--author", "--committer", "--grep-reflog", "--grep",
+        "--min-parents", "--max-parents", "--glob", "--exclude",
+        "--format", "--encoding", "--date"
+        # "--branches", "--tags", "--remotes"
+    ]
+    return arg in known_args
+
+
+def extractFilePaths(args: List[str]):
+    paths = []
+    if not args:
+        return paths
+
+    for arg in reversed(args):
+        if arg.startswith("-"):
+            if paths and _isArgNeedValue(arg):
+                del paths[0]
+            break
+        paths.insert(0, arg)
+
+    return paths
+
+
+def _selectSubmodule(submodules: List[str], path: str):
+    assert submodules and path
+
+    for submodule in submodules:
+        normalized = os.path.normpath(os.path.normcase(submodule))
+        if path.startswith(normalized):
+            return submodule
+    return None
+
+
+def toSubmodulePath(submodule: str, path: str):
+    if not submodule or submodule == ".":
+        return path
+
+    repoDir = os.path.normpath(os.path.normcase(Git.REPO_DIR))
+    normalized_path = os.path.normpath(os.path.normcase(path))
+    if normalized_path.startswith(repoDir):
+        normalized_path = normalized_path[len(repoDir)+1:]
+
+    normalized_submodule = os.path.normpath(os.path.normcase(submodule))
+    if normalized_path.startswith(normalized_submodule):
+        return normalized_path[len(submodule) + 1:]
+    return path
+
+
+def filterSubmoduleByPath(submodules: List[str], paths: List[str]):
+    if not paths or not submodules:
+        return submodules
+
+    result = []
+    repoDir = os.path.normpath(os.path.normcase(Git.REPO_DIR))
+    for path in paths:
+        normalized = os.path.normpath(os.path.normcase(path))
+        if normalized.startswith(repoDir):
+            normalized = normalized[len(repoDir)+1:]
+        submodule = _selectSubmodule(submodules, normalized)
+        if submodule:
+            result.append(submodule)
+        elif not os.path.isabs(path):
+            # the path can be in specific submodule, or in the main repo
+            # we can't determine it, so return all submodules
+            return submodules
+        elif "." in submodules:
+            # treat it as in the main repo
+            result.append(".")
+    return result

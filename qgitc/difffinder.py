@@ -6,7 +6,7 @@ from typing import List
 from PySide6.QtCore import QObject, Signal, SIGNAL, QProcess
 
 from .commitsource import CommitSource
-from .common import FIND_CANCELED, FIND_NOTFOUND, FIND_REGEXP, Commit, FindField, FindParameter
+from .common import FIND_CANCELED, FIND_NOTFOUND, FIND_REGEXP, Commit, FindField, FindParameter, filterSubmoduleByPath, toSubmodulePath
 from .gitutils import Git, GitProcess
 
 
@@ -37,7 +37,7 @@ class FindWorker(QObject):
                            self._onFinished)
         self._process.close()
 
-    def find(self, sha1s: List[str], param: FindParameter, filterPath: str = None):
+    def find(self, sha1s: List[str], param: FindParameter, filterPath: List[str] = None):
         assert len(sha1s) > 0
 
         args = ["diff-tree", "-r", "-s", "-m", "--stdin"]
@@ -51,7 +51,12 @@ class FindWorker(QObject):
 
         if filterPath:
             args.append("--")
-            args.extend(filterPath)
+
+            if self._submodule and self._submodule != ".":
+                for path in filterPath:
+                    args.append(toSubmodulePath(self._submodule, path))
+            else:
+                args.extend(filterPath)
 
         if not self._submodule or self._submodule == ".":
             cwd = Git.REPO_DIR
@@ -110,11 +115,11 @@ class DiffFinder(QObject):
         self._source = source
         self._result = []
         self._param: FindParameter = None
-        self._filterPath: str = None
+        self._filterPath: List[str] = None
         self._submodules: List[str] = None
         self._sha1IndexMap = {}
 
-    def updateParameters(self, param: FindParameter, filterPath: str, submodules: List[str]):
+    def updateParameters(self, param: FindParameter, filterPath: List[str], submodules: List[str]):
         """True if the parameters are updated, False otherwise."""
         if self._param == param and \
                 self._filterPath == filterPath and \
@@ -134,6 +139,8 @@ class DiffFinder(QObject):
         self.cancel()
 
         moduleSha1s = self._dispatchCommits()
+        if not moduleSha1s:
+            return False
 
         # TODO: limit the number of finders running at the same time
         for submodule, sha1s in moduleSha1s.items():
@@ -144,6 +151,8 @@ class DiffFinder(QObject):
                 self._onFindFinished)
             self._finders.append(finder)
             finder.find(sha1s, self._param, self._filterPath)
+
+        return True
 
     def cancel(self):
         for finder in self._finders:
@@ -201,12 +210,14 @@ class DiffFinder(QObject):
     def _dispatchCommits(self):
         moduleSha1s = {}
 
+        submodules = filterSubmoduleByPath(self._submodules, self._filterPath)
+
         def _consumeCommit(commit: Commit):
-            if not self._submodules:
+            if not submodules:
                 moduleSha1s.setdefault(None, []).append(commit.sha1)
                 return
 
-            for submodule in self._submodules:
+            for submodule in submodules:
                 if commit.repoDir == submodule:
                     moduleSha1s.setdefault(commit.repoDir, []).append(commit.sha1)
 

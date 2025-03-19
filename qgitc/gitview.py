@@ -73,7 +73,8 @@ class GitView(QWidget):
         self.__setupSignals()
 
     def __setupSignals(self):
-        self.ui.cbBranch.currentIndexChanged.connect(self.__onDelayBranchChanged)
+        self.ui.cbBranch.currentIndexChanged.connect(
+            self.__onDelayBranchChanged)
         self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.beginFetch.connect(self.__onBeginFetch)
@@ -326,14 +327,7 @@ class GitView(QWidget):
         return ""
 
     def filterLog(self, args):
-        paths = []
-        for arg in reversed(args):
-            if arg.startswith("-"):
-                if paths and self._isArgNeedValue(arg):
-                    del paths[0]
-                break
-            paths.insert(0, arg)
-
+        paths = extractFilePaths(args)
         self.ui.diffView.setFilterPath(paths)
         self.ui.logView.setFilterPath(paths)
 
@@ -349,21 +343,6 @@ class GitView(QWidget):
 
             if preSha1:
                 self.ui.logView.switchToCommit(preSha1)
-
-    def _isArgNeedValue(self, arg):
-        if arg.find('=') != -1:
-            return False
-        if len(arg) == 2 and arg[1] == '-':
-            return False
-        known_args = [
-            "--decorate-refs", "--decorate-refs-exclude",
-            "--max-count", "--skip", "--since", "--after", "--until", "--before",
-            "--author", "--committer", "--grep-reflog", "--grep",
-            "--min-parents", "--max-parents", "--glob", "--exclude",
-            "--format", "--encoding", "--date"
-            # "--branches", "--tags", "--remotes"
-        ]
-        return arg in known_args
 
     def saveState(self, settings, isBranchA):
         state = self.ui.splitter.saveState()
