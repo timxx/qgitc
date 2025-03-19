@@ -24,16 +24,13 @@ from PySide6.QtCore import (
     Signal,
     QSize,
     QMimeData,
-    QProcess,
     QRect,
-    QPoint,
-    QTemporaryFile,
-    QObject,
-    SIGNAL)
+    QPoint)
 
 from .commitsource import CommitSource
 from .common import *
 from .gitutils import *
+from .difffinder import DiffFinder
 from .logsfetcher import LogsFetcher
 from .events import CodeReviewEvent, CopyConflictCommit
 
@@ -395,64 +392,6 @@ class Lanes():
         self.types[self.activeLane] = Lane.ACTIVE
 
 
-class FindData():
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.param = None
-        self.filterPath = None
-        self.needUpdate = True
-        self.result = []
-        self.dataFragment = None
-        self.sha1IndexMap = {}
-
-    def parseData(self, data):
-        if self.dataFragment:
-            fullData = self.dataFragment
-            fullData += data
-            self.dataFragment = None
-        else:
-            fullData = data
-
-        # full sha1 length + newline
-        if len(fullData) < 41:
-            self.dataFragment = fullData
-            return False
-
-        parts = fullData.rstrip(b'\n').split(b'\n')
-        if len(parts[-1]) < 40:
-            self.dataFragment = parts[-1]
-            parts.pop()
-
-        for sha1 in parts:
-            index = self.sha1IndexMap[sha1.decode("utf-8")]
-            bisect.insort(self.result, index)
-
-        return True
-
-    def nextResult(self):
-        if not self.param.range or not self.result:
-            return FIND_NOTFOUND
-
-        x = self.param.range.start
-        if self.param.range.start > self.param.range.stop:
-            index = bisect.bisect_left(self.result, x)
-            if index < len(self.result) and self.result[index] <= x:
-                return self.result[index]
-            if index - 1 >= 0 and self.result[index - 1] <= x:
-                return self.result[index - 1]
-        else:
-            index = bisect.bisect_right(self.result, x)
-            if index - 1 >= 0 and self.result[index - 1] >= x:
-                return self.result[index - 1]
-            if index < len(self.result):
-                return self.result[index]
-
-        return FIND_NOTFOUND
-
-
 class LogGraph(QWidget):
 
     def __init__(self, parent=None):
@@ -514,9 +453,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.authorRe = re.compile("(.*) <.*>$")
 
-        self.findProc = None
-        self.isFindFinished = False
-        self.findData = FindData()
+        self._finder = DiffFinder(self, self)
+        self.needUpdateFindResult = True
 
         self.highlightPattern = None
         self.marker = Marker()
@@ -547,6 +485,11 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.window().submoduleAvailable.connect(
             self.__onSubmoduleAvailable)
+
+        self._finder.resultAvailable.connect(
+            self.__onFindResultAvailable)
+        self._finder.findFinished.connect(
+            self.__onFindFinished)
 
     def __del__(self):
         self.cancelFindCommit()
@@ -978,23 +921,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         event = CodeReviewEvent(commit, self.window().getFilterArgs())
         qApp.postEvent(qApp, event)
 
-    def __onFindDataAvailable(self):
-        data = self.findProc.readAllStandardOutput()
-        if self.findData.parseData(data.data()):
-            if self.findData.needUpdate:
-                index = self.findData.nextResult()
-                self.findFinished.emit(index)
+    def __onFindResultAvailable(self):
+        if self.needUpdateFindResult:
+            index = self._finder.nextResult()
+            self.findFinished.emit(index)
 
             self.viewport().update()
 
-    def __onFindFinished(self, exitCode, exitStatus):
-        self.findProc = None
-        self.isFindFinished = True
-
-        if exitCode != 0 and exitStatus != QProcess.NormalExit:
-            self.findFinished.emit(FIND_CANCELED)
-        elif not self.findData.result:
-            self.findFinished.emit(FIND_NOTFOUND)
+    def __onFindFinished(self, state):
+        self.findFinished.emit(state)
 
     def __onLogsAvailable(self, logs):
         self.data.extend(logs)
@@ -1550,70 +1485,27 @@ class LogView(QAbstractScrollArea, CommitSource):
         vScrollBar.setRange(0, totalLines - linesPerPage)
         vScrollBar.setPageStep(linesPerPage)
 
-    def findCommitAsync(self, findParam):
+    def findCommitAsync(self, findParam: FindParameter):
         # cancel the previous one if find changed
-        if self.findData.param != findParam or \
-                self.findData.filterPath != self.filterPath:
-            self.findData.reset()
+        needRun = False
+        if self._finder.updateParameters(findParam, self.filterPath, self.fetcher._submodules):
             self.cancelFindCommit()
+            needRun = True
 
-        self.findData.param = findParam
-        self.findData.filterPath = self.filterPath
         if not findParam.pattern:
             return False
 
-        result = self.findData.nextResult()
-        if result != FIND_NOTFOUND or self.isFindFinished:
+        result = self._finder.nextResult()
+        # found one or no more results
+        if result != FIND_NOTFOUND or (not self._finder.isRunning() and not needRun):
             self.findFinished.emit(result)
             return False
 
-        self.findData.needUpdate = True
-        if not self.findProc:
-            args = ["diff-tree", "-r", "-s", "-m", "--stdin"]
-            if findParam.field == FindField.AddOrDel:
-                args.append("-S" + findParam.pattern)
-                if findParam.flag == FIND_REGEXP:
-                    args.append("--pickaxe-regex")
-            else:
-                assert findParam.field == FindField.Changes
-                args.append("-G" + findParam.pattern)
+        self.needUpdateFindResult = True
 
-            if self.filterPath:
-                args.append("--")
-                args.extend(self.filterPath)
-
-            process = QProcess()
-            process.setWorkingDirectory(Git.REPO_DIR)
-            process.readyReadStandardOutput.connect(self.__onFindDataAvailable)
-            process.finished.connect(self.__onFindFinished)
-            self.findProc = process
-            self.isFindFinished = False
-
-            tempFile = QTemporaryFile()
-            tempFile.open()
-
-            # find the target range first
-            for i in findParam.range:
-                sha1 = self.data[i].sha1
-                tempFile.write(sha1.encode("utf-8") + b"\n")
-                self.findData.sha1IndexMap[sha1] = i
-
-            if findParam.range.start > findParam.range.stop:
-                begin = findParam.range.start + 1
-                end = len(self.data)
-            else:
-                begin = 0
-                end = findParam.range.start
-
-            # then the rest
-            for i in range(begin, end):
-                sha1 = self.data[i].sha1
-                tempFile.write(sha1.encode("utf-8") + b"\n")
-                self.findData.sha1IndexMap[sha1] = i
-
-            tempFile.close()
-            process.setStandardInputFile(tempFile.fileName())
-            process.start(GitProcess.GIT_BIN, args)
+        # start to find if not running
+        if needRun:
+            self._finder.findAsync()
 
         return True
 
@@ -1657,25 +1549,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         return result
 
     def cancelFindCommit(self, forced=True):
-        self.isFindFinished = False
-        self.findData.needUpdate = False
-
-        needEmit = self.findProc is not None
+        self.needUpdateFindResult = False
 
         # only terminate when forced
         # otherwise still load at background
-        if self.findProc and forced:
-            # disconnect signals in case invalid state changes
-            self.findProc.readyReadStandardOutput.disconnect()
-            # self.findProc.finished.disconnect()
-            QObject.disconnect(self.findProc,
-                               SIGNAL("finished(int, QProcess::ExitStatus)"),
-                               self.__onFindFinished)
-            self.findProc.close()
-            self.findProc = None
+        if self._finder.isRunning() and forced:
+            self._finder.cancel()
             return True
 
-        if needEmit:
+        if self._finder.isRunning():
             self.findFinished.emit(FIND_CANCELED)
 
         return False
@@ -1685,7 +1567,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.viewport().update()
 
     def clearFindData(self):
-        self.findData.reset()
+        self._finder.clearResult()
 
     def setFilterPath(self, path):
         self.filterPath = path
@@ -1818,7 +1700,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
             # bold find result
             # it seems that *in* already fast, so no bsearch
-            if i in self.findData.result:
+            if i in self._finder.findResult:
                 font = painter.font()
                 font.setBold(True)
                 painter.setFont(font)

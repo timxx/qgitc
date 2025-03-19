@@ -117,7 +117,7 @@ class FindField():
 
 class FindParameter():
 
-    def __init__(self, range, pattern, field, flag):
+    def __init__(self, range: range, pattern: str, field: FindField, flag):
         self.range = range
         self.pattern = pattern
         self.field = field
