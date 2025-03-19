@@ -1683,9 +1683,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             if i == self.curIdx:
                 painter.fillRect(rect, palette.highlight())
                 if self.hasFocus():
-                    painter.setPen(QPen(Qt.DotLine))
+                    pen = QPen(Qt.DotLine)
+                    pen.setColor(palette.windowText().color())
+                    painter.setPen(pen)
                     painter.drawRect(rect.adjusted(
-                        0, 0, -1, -1))
+                        1, 1, -1, -1))
                 painter.setPen(palette.color(QPalette.HighlightedText))
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
