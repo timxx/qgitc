@@ -35,7 +35,7 @@ class FindWorker(QObject):
         QObject.disconnect(self._process,
                            SIGNAL("finished(int, QProcess::ExitStatus)"),
                            self._onFinished)
-        self._process.close()
+        self._process.kill()
 
     def find(self, sha1s: List[str], param: FindParameter, filterPath: List[str] = None):
         assert len(sha1s) > 0
@@ -63,7 +63,7 @@ class FindWorker(QObject):
         else:
             cwd = os.path.join(Git.REPO_DIR, self._submodule)
 
-        self._process = QProcess()
+        self._process = QProcess(self)
         self._process.setWorkingDirectory(cwd)
         self._process.readyReadStandardOutput.connect(self._onDataAvailable)
         self._process.finished.connect(self._onFinished)
@@ -158,6 +158,13 @@ class DiffFinder(QObject):
         for finder in self._finders:
             finder.cancel()
         self._finders.clear()
+
+    def reset(self):
+        self.cancel()
+        self.clearResult()
+        self._param = None
+        self._filterPath = None
+        self._submodules = None
 
     def clearResult(self):
         self._result.clear()

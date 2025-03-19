@@ -559,8 +559,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def showLogs(self, branch, args=None):
         self.curBranch = branch
         self.args = args
-        self._finder.cancel()
-        self._finder.clearResult()
+        self._finder.reset()
 
         submodules = []
         if qApp.settings().isCompositeMode():
@@ -1804,6 +1803,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def queryClose(self):
         self.fetcher.cancel()
+        self._finder.cancel()
 
     def __onCompositeModeChanged(self):
         submodules = self.window().submodules()
