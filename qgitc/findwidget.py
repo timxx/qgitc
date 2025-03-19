@@ -2,7 +2,8 @@
 
 from PySide6.QtGui import (
     QIcon,
-    QPainter)
+    QPainter,
+    QPalette)
 from PySide6.QtWidgets import (
     QWidget,
     QGraphicsDropShadowEffect,
@@ -215,7 +216,8 @@ class FindWidget(QWidget):
         except re.error as e:
             self._lbStatus.setText(self.tr("No results"))
             palette = self._lbStatus.palette()
-            palette.setColor(self._lbStatus.foregroundRole(), Qt.red)
+            palette.setColor(self._lbStatus.foregroundRole(),
+                             qApp.colorSchema().NoResults)
             self._lbStatus.setPalette(palette)
 
             pos = self.mapToGlobal(QPoint(0, 10))
@@ -226,14 +228,14 @@ class FindWidget(QWidget):
 
     def _updateStatus(self):
         if self._findResult:
-            color = Qt.black
+            color = self.palette().windowText().color()
             self._lbStatus.setText("{}/{}".format(
                 self._curIndex + 1, len(self._findResult)))
         elif self._searching:
-            color = Qt.black
+            color = self.palette().windowText().color()
             self._lbStatus.setText(self.tr("Finding..."))
         else:
-            color = Qt.red
+            color = qApp.colorSchema().NoResults
             self._lbStatus.setText(self.tr("No results"))
 
         palette = self._lbStatus.palette()
@@ -318,8 +320,9 @@ class FindWidget(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         rc = self.rect().adjusted(0, 0, -1, -1)
-        painter.fillRect(rc, Qt.white)
-        painter.setPen(Qt.gray)
+        palette = self.palette()
+        painter.fillRect(rc, palette.window())
+        painter.setPen(palette.color(QPalette.Inactive, QPalette.Window))
         painter.drawRect(rc)
 
     def eventFilter(self, obj, event):

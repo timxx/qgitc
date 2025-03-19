@@ -60,6 +60,7 @@ class ColorSchemaLight():
     LccColor = Qt.green
 
     Mark = QColor(0, 128, 0)
+    NoResults = QColor(240, 126, 116)
 
 
 class ColorSchemaDark():
@@ -115,3 +116,4 @@ class ColorSchemaDark():
     LccColor = QColor(80, 230, 120)
 
     Mark = QColor(0, 230, 118)
+    NoResults = QColor(203, 80, 70)
