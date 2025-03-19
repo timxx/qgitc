@@ -72,6 +72,7 @@ class Application(QApplication):
         self.focusChanged.connect(self._onFocusChanged)
 
         self._colorSchema = None
+        self._isDarkTheme = False
         self._setupColorSchema()
 
     def settings(self):
@@ -253,6 +254,9 @@ class Application(QApplication):
         Git.REPO_DIR = repoDir or cwd
 
     def isDarkTheme(self):
+        return self._isDarkTheme
+
+    def _isDarkThemeImpl(self):
         ver = QVersionNumber.fromString(qVersion())
         if ver > QVersionNumber(6, 5, 0):
             return self.styleHints().colorScheme() == Qt.ColorScheme.Dark
@@ -263,10 +267,12 @@ class Application(QApplication):
             return textColor.lightness() > windowColor.lightness()
 
     def _setupColorSchema(self):
-        if self.isDarkTheme():
+        if self._isDarkThemeImpl():
             self._colorSchema = ColorSchemaDark()
+            self._isDarkTheme = True
         else:
             self._colorSchema = ColorSchemaLight()
+            self._isDarkTheme = False
 
     def colorSchema(self):
         return self._colorSchema

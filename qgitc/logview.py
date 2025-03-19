@@ -35,8 +35,8 @@ from .logsfetcher import LogsFetcher
 from .events import CodeReviewEvent, CopyConflictCommit
 
 import re
-import bisect
 
+# TODO: too bad to have hard coded global values
 # for refs
 TAG_COLORS = [Qt.yellow,
               Qt.green,
@@ -53,6 +53,27 @@ GRAPH_COLORS = [Qt.black,
                 QColor(255, 160, 50)  # orange
                 ]
 
+
+BORDER_COLOR = QColor(Qt.black)
+BORDER_COLOR_DARK = QColor(180, 180, 180)
+
+
+TAG_COLORS_DARK = [
+    QColor(255, 191, 0),
+    QColor(50, 205, 50),
+    QColor(255, 140, 0)
+]
+
+GRAPH_COLORS_DARK = [
+    QColor(200, 200, 200),
+    QColor(220, 60, 60),
+    QColor(0, 230, 118),
+    QColor(70, 130, 255),
+    QColor(160, 160, 160),
+    QColor(165, 105, 0),
+    QColor(200, 0, 200),
+    QColor(255, 165, 0)
+]
 
 HALF_LINE_PERCENT = 0.76
 
@@ -1131,6 +1152,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         br = painter.boundingRect(rect, flags, text)
         br.adjust(0, -1, 4, 1)
 
+        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
+        painter.setPen(borderColor)
         painter.fillRect(br, color)
         painter.drawRect(br)
 
@@ -1163,10 +1186,12 @@ class LogView(QAbstractScrollArea, CommitSource):
         path.lineTo(br.bottomLeft())
         path.closeSubpath()
 
-        painter.setPen(Qt.black)
+        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
+        painter.setPen(borderColor)
         painter.fillPath(path, color)
         painter.drawPath(path)
 
+        painter.setPen(Qt.black)
         painter.drawText(br, flags, text)
 
         painter.restore()
@@ -1187,13 +1212,15 @@ class LogView(QAbstractScrollArea, CommitSource):
                 activeLane = i
                 break
 
-        totalColor = len(GRAPH_COLORS)
+        isDarkTheme = qApp.isDarkTheme()
+        graph_colors = GRAPH_COLORS_DARK if isDarkTheme else GRAPH_COLORS
+        totalColor = len(graph_colors)
         if commit.sha1 == Git.LUC_SHA1:
-            activeColor = Qt.red
+            activeColor = QColor(255, 90, 90) if isDarkTheme else Qt.red
         elif commit.sha1 == Git.LCC_SHA1:
-            activeColor = Qt.green
+            activeColor = QColor(80, 230, 120) if isDarkTheme else Qt.green
         else:
-            activeColor = GRAPH_COLORS[activeLane % totalColor]
+            activeColor = graph_colors[activeLane % totalColor]
 
         w = self.__laneWidth()
         isHead = (commit.sha1 == Git.REV_HEAD)
@@ -1216,7 +1243,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 if i == activeLane:
                     color = activeColor
                 else:
-                    color = GRAPH_COLORS[i % totalColor]
+                    color = graph_colors[i % totalColor]
                 self.__drawGraphLane(graphPainter, lane, x1, x2,
                                      color, activeColor, isHead, firstCommit)
 
@@ -1257,7 +1284,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         # BL(m, h+r), BR(m+r, h+r)
 
         painter.save()
-        lanePen = QPen(Qt.black, 2)
+        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
+        lanePen = QPen(borderColor, 2)
 
         # arc
         if lane == Lane.JOIN or \
@@ -1339,20 +1367,21 @@ class LogView(QAbstractScrollArea, CommitSource):
                 lane == Lane.BOUNDARY_L:
             painter.drawLine(m, h, x2, h)
 
+        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
         # circle
         if isHead:
             color = Qt.yellow
         if lane == Lane.ACTIVE or \
                 lane == Lane.INITIAL or \
                 lane == Lane.BRANCH:
-            painter.setPen(Qt.black)
+            painter.setPen(borderColor)
             painter.setBrush(color)
             painter.drawEllipse(m - r, h - r, d, d)
 
         elif lane == Lane.MERGE_FORK or \
                 lane == Lane.MERGE_FORK_R or \
                 lane == Lane.MERGE_FORK_L:
-            painter.setPen(Qt.black)
+            painter.setPen(borderColor)
             painter.setBrush(color)
             painter.drawRect(m - r, h - r, d, d)
 
@@ -1368,14 +1397,14 @@ class LogView(QAbstractScrollArea, CommitSource):
             painter.drawRect(m - 1, h - r, 2, d)
 
         elif lane == Lane.BOUNDARY:
-            painter.setPen(Qt.black)
+            painter.setPen(borderColor)
             painter.setBrush(painter.background())
             painter.drawEllipse(m - r, h - r, d, d)
 
         elif lane == Lane.BOUNDARY_C or \
                 lane == Lane.BOUNDARY_R or \
                 lane == Lane.BOUNDARY_L:
-            painter.setPen(Qt.black)
+            painter.setPen(borderColor)
             painter.setBrush(painter.background())
             painter.drawRect(m - r, h - r, d, d)
 
@@ -1390,12 +1419,16 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         isHead = commit.sha1 == Git.REV_HEAD
         maxWidth = rc.width() * 2 / 3
+
+        tag_colors = TAG_COLORS_DARK if qApp.isDarkTheme() else TAG_COLORS
+        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
         for ref in refs:
             # tag
-            painter.setPen(QPen(Qt.black))
-            color = TAG_COLORS[ref.type]
+            painter.setPen(QPen(borderColor))
+            color = tag_colors[ref.type]
 
-            br = painter.boundingRect(rc, Qt.AlignLeft | Qt.AlignVCenter, ref.name)
+            br = painter.boundingRect(
+                rc, Qt.AlignLeft | Qt.AlignVCenter, ref.name)
             if rc.width() - br.width() < maxWidth:
                 self.__drawTag(painter, rc, color, "...", False)
                 break
@@ -1621,13 +1654,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         if self.logGraph and not self.logGraph.size().isEmpty() and \
                 eventRect.height() == self.viewport().height():
             ratio = painter.device().devicePixelRatioF()
-            graphImage = QImage(self.logGraph.size() * ratio, QImage.Format_ARGB32_Premultiplied)
+            graphImage = QImage(self.logGraph.size() * ratio,
+                                QImage.Format_ARGB32_Premultiplied)
             graphImage.setDevicePixelRatio(ratio)
             graphImage.fill(self.logGraph.palette().color(QPalette.Base))
             graphPainter = QPainter(graphImage)
             graphPainter.setRenderHints(QPainter.Antialiasing)
 
         isFullMessage = qApp.settings().isFullCommitMessage()
+
         def makeMessage(commit):
             if isFullMessage:
                 return commit.comments.replace('\n', ' ')
@@ -1662,7 +1697,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 for subCommit in commit.subCommits:
                     text = makeRepoName(subCommit.repoDir)
                     self.__drawTag(painter, rect, color,
-                                    text, textColor=textColor)
+                                   text, textColor=textColor)
                 needMargin = True
             else:
                 self.__drawGraph(painter, graphPainter, rect, i)
@@ -1712,7 +1747,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 oldPen = painter.pen()
                 for m in matchs:
                     if m.start() > start:
-                        br = painter.drawText(rect, flags, content[start:m.start()])
+                        br = painter.drawText(
+                            rect, flags, content[start:m.start()])
                         rect.adjust(br.width(), 0, 0, 0)
 
                     text = content[m.start():m.end()]
