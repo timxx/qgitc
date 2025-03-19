@@ -23,6 +23,7 @@ class ColorSchemaLight():
     Submodule2 = QColor(255, 0, 0)
     FindResult = QColor(246, 185, 77)
     SimilarWord = QColor(226, 230, 214)
+    HighlightWord = QColor(Qt.yellow)
 
 
 class ColorSchemaDark():
@@ -41,3 +42,4 @@ class ColorSchemaDark():
     Submodule2 = QColor(255, 110, 64)
     FindResult = QColor(255, 153, 0)
     SimilarWord = QColor(69, 90, 100)
+    HighlightWord = QColor(0x00FFCC)

@@ -906,7 +906,7 @@ class PatchViewer(SourceViewer):
         if self.highlightPattern:
             matchs = self.highlightPattern.finditer(text)
             fmt = QTextCharFormat()
-            fmt.setBackground(QBrush(Qt.yellow))
+            fmt.setBackground(QBrush(qApp.colorSchema().HighlightWord))
             for m in matchs:
                 rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
                 formats.append(rg)
