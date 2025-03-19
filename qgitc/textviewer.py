@@ -23,7 +23,8 @@ from PySide6.QtCore import (
     Signal,
     QElapsedTimer,
     QTimer,
-    QMimeData)
+    QMimeData,
+    QEvent)
 
 from .textline import (
     TextLine,
@@ -1025,3 +1026,15 @@ class TextViewer(QAbstractScrollArea):
             self._onConvertEvent()
         elif id == self._findTimerId:
             self._onFindEvent()
+
+    def event(self, evt):
+        if evt.type() == QEvent.PaletteChange:
+            self._onColorSchemeChanged()
+
+        return super().event(evt)
+
+    def _onColorSchemeChanged(self):
+        for _, line in self._textLines.items():
+            line.reapplyColorTheme()
+
+        self.viewport().update()

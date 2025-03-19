@@ -4,7 +4,8 @@ from PySide6.QtGui import (
     QTextCharFormat,
     QTextLayout,
     QTextOption,
-    QFontMetrics)
+    QFontMetrics,
+    QPalette)
 from PySide6.QtCore import (
     Qt,
     QRectF)
@@ -148,7 +149,7 @@ class TextLine():
 
         fmt = QTextCharFormat()
         fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
-        fmt.setForeground(ColorSchema.Link)
+        fmt.setForeground(qApp.palette().color(QPalette.Link))
 
         formats = []
         for link in self._links:
@@ -273,6 +274,15 @@ class TextLine():
     @useBuiltinPatterns.setter
     def useBuiltinPatterns(self, value):
         self._useBuiltinPatterns = value
+
+    def reapplyColorTheme(self):
+        # no need to rehighlight
+        if not self._layout or self._invalidated:
+            return
+        if not self._links:
+            return
+        self.rehighlight()
+        self._relayout()
 
 
 class SourceTextLineBase(TextLine):

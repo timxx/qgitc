@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtGui import QIcon, QDesktopServices
+from PySide6.QtGui import QIcon, QDesktopServices, QPalette
 from PySide6.QtCore import (
     Qt,
     QTranslator,
     QLibraryInfo,
     QLocale,
     QUrl,
-    QTimer)
+    QTimer,
+    qVersion,
+    QVersionNumber)
 
 from .aichatwindow import AiChatWindow
 from .common import dataDirPath
@@ -21,7 +23,7 @@ from .events import (
     GitBinChanged)
 from .blamewindow import BlameWindow
 from .mainwindow import MainWindow
-from .gitutils import Git, GitProcess
+from .gitutils import Git
 from .textline import Link
 from .versionchecker import VersionChecker
 from .newversiondialog import NewVersionDialog
@@ -242,3 +244,13 @@ class Application(QApplication):
         cwd = os.getcwd()
         repoDir = Git.repoTopLevelDir(cwd)
         Git.REPO_DIR = repoDir or cwd
+
+    def isDarkTheme(self):
+        ver = QVersionNumber.fromString(qVersion())
+        if ver > QVersionNumber(6, 5, 0):
+            return self.styleHints().colorScheme() == Qt.ColorScheme.Dark
+        else:
+            palette = self.palette()
+            textColor = palette.color(QPalette.WindowText)
+            windowColor = palette.color(QPalette.Window)
+            return textColor.lightness() > windowColor.lightness()

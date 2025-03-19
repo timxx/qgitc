@@ -16,7 +16,6 @@ class ColorSchema():
     Renamed = QColor(0x519143)
     RenamedModified = QColor(0x9a8246)
     Info = QColor(170, 170, 170)
-    Link = QColor(Qt.blue)
     Whitespace = QColor(Qt.lightGray)
     SelFocus = QColor(173, 214, 255)
     SelNoFocus = QColor(229, 235, 241)
