@@ -3,7 +3,7 @@
 import bisect
 import os
 from typing import List
-from PySide6.QtCore import QObject, Signal, SIGNAL, QProcess, QTemporaryFile
+from PySide6.QtCore import QObject, Signal, SIGNAL, QProcess
 
 from .commitsource import CommitSource
 from .common import FIND_CANCELED, FIND_NOTFOUND, FIND_REGEXP, Commit, FindField, FindParameter
@@ -63,15 +63,11 @@ class FindWorker(QObject):
         self._process.readyReadStandardOutput.connect(self._onDataAvailable)
         self._process.finished.connect(self._onFinished)
 
-        tempFile = QTemporaryFile()
-        tempFile.open()
+        self._process.start(GitProcess.GIT_BIN, args)
 
         data = "\n".join(sha1s).encode("utf-8")
-        tempFile.write(data + b"\n")
-        tempFile.close()
-
-        self._process.setStandardInputFile(tempFile.fileName())
-        self._process.start(GitProcess.GIT_BIN, args)
+        self._process.write(data + b"\n")
+        self._process.closeWriteChannel()
 
     def _onDataAvailable(self):
         data = self._process.readAllStandardOutput()
