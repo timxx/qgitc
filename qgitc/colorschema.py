@@ -25,6 +25,40 @@ class ColorSchemaLight():
     SimilarWord = QColor(226, 230, 214)
     HighlightWord = QColor(Qt.yellow)
 
+    AuthorTagBg = QColor(232, 238, 244)
+    AuthorTagFg = QColor(72, 94, 115)
+    DateTagBg = QColor(234, 242, 237)
+    DateTagFg = QColor(75, 104, 89)
+    RepoTagBg = QColor(241, 238, 244)
+    RepoTagFg = QColor(95, 82, 115)
+
+    TagColorsBg = [
+        Qt.yellow,
+        Qt.green,
+        QColor(255, 221, 170)
+    ]
+    TagColorsFg = [
+        QColor(70, 55, 10),
+        QColor(0, 60, 30),
+        QColor(120, 50, 10)
+    ]
+    TagBorder = QColor(0, 100, 0)
+
+    GraphColors = [
+        Qt.black,
+        Qt.red,
+        Qt.green,
+        Qt.blue,
+        Qt.darkGray,
+        QColor(150, 75, 0),  # brown
+        Qt.magenta,
+        QColor(255, 160, 50)  # orange
+    ]
+    GraphBorder = Qt.black
+
+    LucColor = Qt.red
+    LccColor = Qt.green
+
 
 class ColorSchemaDark():
 
@@ -43,3 +77,37 @@ class ColorSchemaDark():
     FindResult = QColor(255, 153, 0)
     SimilarWord = QColor(69, 90, 100)
     HighlightWord = QColor(0x00FFCC)
+
+    AuthorTagBg = QColor(44, 62, 80)
+    AuthorTagFg = QColor(158, 181, 202)
+    DateTagBg = QColor(43, 61, 54)
+    DateTagFg = QColor(143, 188, 159)
+    RepoTagBg = QColor(54, 47, 72)
+    RepoTagFg = QColor(175, 162, 194)
+
+    TagColorsBg = [
+        QColor(215, 191, 50),
+        QColor(50, 150, 50),
+        QColor(255, 140, 0)
+    ]
+    TagColorsFg = [
+        QColor(40, 30, 0),
+        QColor(220, 255, 220),
+        QColor(255, 240, 220)
+    ]
+    TagBorder = QColor(120, 80, 0)
+
+    GraphColors = [
+        QColor(200, 200, 200),
+        QColor(220, 60, 60),
+        QColor(0, 230, 118),
+        QColor(70, 130, 255),
+        QColor(160, 160, 160),
+        QColor(165, 105, 0),
+        QColor(200, 0, 200),
+        QColor(255, 165, 0)
+    ]
+    GraphBorder = QColor(180, 180, 180)
+
+    LucColor = QColor(255, 90, 90)
+    LccColor = QColor(80, 230, 120)

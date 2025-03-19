@@ -36,44 +36,6 @@ from .events import CodeReviewEvent, CopyConflictCommit
 
 import re
 
-# TODO: too bad to have hard coded global values
-# for refs
-TAG_COLORS = [Qt.yellow,
-              Qt.green,
-              QColor(255, 221, 170)]
-
-# for circles
-GRAPH_COLORS = [Qt.black,
-                Qt.red,
-                Qt.green,
-                Qt.blue,
-                Qt.darkGray,
-                QColor(150, 75, 0),  # brown
-                Qt.magenta,
-                QColor(255, 160, 50)  # orange
-                ]
-
-
-BORDER_COLOR = QColor(Qt.black)
-BORDER_COLOR_DARK = QColor(180, 180, 180)
-
-
-TAG_COLORS_DARK = [
-    QColor(255, 191, 0),
-    QColor(50, 205, 50),
-    QColor(255, 140, 0)
-]
-
-GRAPH_COLORS_DARK = [
-    QColor(200, 200, 200),
-    QColor(220, 60, 60),
-    QColor(0, 230, 118),
-    QColor(70, 130, 255),
-    QColor(160, 160, 160),
-    QColor(165, 105, 0),
-    QColor(200, 0, 200),
-    QColor(255, 165, 0)
-]
 
 HALF_LINE_PERCENT = 0.76
 
@@ -1141,7 +1103,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def __drawTag(self, painter, rect, color, text, bold=False, textColor=Qt.black):
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, False)
+        painter.setRenderHint(QPainter.Antialiasing, True)
 
         if bold:
             font = painter.font()
@@ -1152,8 +1114,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         br = painter.boundingRect(rect, flags, text)
         br.adjust(0, -1, 4, 1)
 
-        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
-        painter.setPen(borderColor)
+        painter.setPen(qApp.colorSchema().TagBorder)
         painter.fillRect(br, color)
         painter.drawRect(br)
 
@@ -1163,7 +1124,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         painter.restore()
         rect.adjust(br.width(), 0, 0, 0)
 
-    def __drawTriangleTag(self, painter, rect, color, text):
+    def __drawTriangleTag(self, painter, rect, color, text, textColor=Qt.black):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
 
@@ -1186,12 +1147,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         path.lineTo(br.bottomLeft())
         path.closeSubpath()
 
-        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
-        painter.setPen(borderColor)
+        painter.setPen(qApp.colorSchema().TagBorder)
         painter.fillPath(path, color)
         painter.drawPath(path)
 
-        painter.setPen(Qt.black)
+        painter.setPen(textColor)
         painter.drawText(br, flags, text)
 
         painter.restore()
@@ -1212,15 +1172,14 @@ class LogView(QAbstractScrollArea, CommitSource):
                 activeLane = i
                 break
 
-        isDarkTheme = qApp.isDarkTheme()
-        graph_colors = GRAPH_COLORS_DARK if isDarkTheme else GRAPH_COLORS
-        totalColor = len(graph_colors)
+        colorSchema = qApp.colorSchema()
+        totalColor = len(colorSchema.GraphColors)
         if commit.sha1 == Git.LUC_SHA1:
-            activeColor = QColor(255, 90, 90) if isDarkTheme else Qt.red
+            activeColor = colorSchema.LucColor
         elif commit.sha1 == Git.LCC_SHA1:
-            activeColor = QColor(80, 230, 120) if isDarkTheme else Qt.green
+            activeColor = colorSchema.LccColor
         else:
-            activeColor = graph_colors[activeLane % totalColor]
+            activeColor = colorSchema.GraphColors[activeLane % totalColor]
 
         w = self.__laneWidth()
         isHead = (commit.sha1 == Git.REV_HEAD)
@@ -1243,7 +1202,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 if i == activeLane:
                     color = activeColor
                 else:
-                    color = graph_colors[i % totalColor]
+                    color = colorSchema.GraphColors[i % totalColor]
                 self.__drawGraphLane(graphPainter, lane, x1, x2,
                                      color, activeColor, isHead, firstCommit)
 
@@ -1283,8 +1242,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         ###########
         # BL(m, h+r), BR(m+r, h+r)
 
+        borderColor = qApp.colorSchema().GraphBorder
         painter.save()
-        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
         lanePen = QPen(borderColor, 2)
 
         # arc
@@ -1367,7 +1326,6 @@ class LogView(QAbstractScrollArea, CommitSource):
                 lane == Lane.BOUNDARY_L:
             painter.drawLine(m, h, x2, h)
 
-        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
         # circle
         if isHead:
             color = Qt.yellow
@@ -1414,29 +1372,27 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit.sha1 in Git.REF_MAP:
             return
 
-        refs = Git.REF_MAP[commit.sha1]
+        refs: List[Ref] = Git.REF_MAP[commit.sha1]
         painter.save()
 
         isHead = commit.sha1 == Git.REV_HEAD
         maxWidth = rc.width() * 2 / 3
 
-        tag_colors = TAG_COLORS_DARK if qApp.isDarkTheme() else TAG_COLORS
-        borderColor = BORDER_COLOR_DARK if qApp.isDarkTheme() else BORDER_COLOR
         for ref in refs:
             # tag
-            painter.setPen(QPen(borderColor))
-            color = tag_colors[ref.type]
+            bgColor = qApp.colorSchema().TagColorsBg[ref.type]
+            fgColor = qApp.colorSchema().TagColorsFg[ref.type]
 
             br = painter.boundingRect(
                 rc, Qt.AlignLeft | Qt.AlignVCenter, ref.name)
             if rc.width() - br.width() < maxWidth:
-                self.__drawTag(painter, rc, color, "...", False)
+                self.__drawTag(painter, rc, bgColor, "...", False, fgColor)
                 break
             elif ref.type == Ref.TAG:
-                self.__drawTriangleTag(painter, rc, color, ref.name)
+                self.__drawTriangleTag(painter, rc, bgColor, ref.name, fgColor)
             else:
                 bold = (ref.type == Ref.HEAD and isHead)
-                self.__drawTag(painter, rc, color, ref.name, bold)
+                self.__drawTag(painter, rc, bgColor, ref.name, bold, fgColor)
 
         painter.restore()
 
@@ -1679,6 +1635,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 repoDir = "<main>"
             return repoDir
 
+        colorSchema = qApp.colorSchema()
+
         painter.setFont(self.font)
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
         for i in range(startLine, endLine):
@@ -1691,8 +1649,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             needMargin = False
             if commit.repoDir:
                 text = makeRepoName(commit.repoDir)
-                color = QColor(0xe9e8dd)
-                textColor = QColor(0xf54c27)
+                color = colorSchema.RepoTagBg
+                textColor = colorSchema.RepoTagFg
                 self.__drawTag(painter, rect, color, text, textColor=textColor)
                 for subCommit in commit.subCommits:
                     text = makeRepoName(subCommit.repoDir)
@@ -1705,13 +1663,13 @@ class LogView(QAbstractScrollArea, CommitSource):
             if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
                 # author
                 text = self.authorRe.sub("\\1", commit.author)
-                color = Qt.gray
-                self.__drawTag(painter, rect, color, text)
+                color = colorSchema.AuthorTagBg
+                self.__drawTag(painter, rect, color, text, textColor=colorSchema.AuthorTagFg)
 
                 # date
                 text = commit.authorDate.split(' ')[0]
-                color = QColor(140, 208, 80)
-                self.__drawTag(painter, rect, color, text)
+                color = colorSchema.DateTagBg
+                self.__drawTag(painter, rect, color, text, textColor=colorSchema.DateTagFg)
                 needMargin = True
 
             if needMargin:
