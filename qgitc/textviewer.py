@@ -30,7 +30,6 @@ from .textline import (
     TextLine,
     createFormatRange,
     Link)
-from .colorschema import ColorSchema
 from .textcursor import TextCursor
 
 import re
@@ -606,9 +605,9 @@ class TextViewer(QAbstractScrollArea):
             return fw and self.isAncestorOf(fw)
 
         if _hasFocus():
-            fmt.setBackground(QBrush(ColorSchema.SelFocus))
+            fmt.setBackground(QBrush(qApp.colorSchema().SelFocus))
         else:
-            fmt.setBackground(QBrush(ColorSchema.SelNoFocus))
+            fmt.setBackground(QBrush(qApp.colorSchema().SelNoFocus))
 
         return createFormatRange(start, end - start, fmt)
 
@@ -626,7 +625,7 @@ class TextViewer(QAbstractScrollArea):
 
         result = []
         fmt = QTextCharFormat()
-        fmt.setBackground(ColorSchema.FindResult)
+        fmt.setBackground(qApp.colorSchema().FindResult)
 
         for i in range(low, len(self._highlightFind)):
             r = self._highlightFind[i]
@@ -644,7 +643,7 @@ class TextViewer(QAbstractScrollArea):
 
         result = []
         fmt = QTextCharFormat()
-        fmt.setBackground(ColorSchema.SimilarWord)
+        fmt.setBackground(qApp.colorSchema().SimilarWord)
 
         matches = self._similarWordPattern.finditer(textLine.text())
         for m in matches:

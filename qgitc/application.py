@@ -10,9 +10,11 @@ from PySide6.QtCore import (
     QUrl,
     QTimer,
     qVersion,
-    QVersionNumber)
+    QVersionNumber,
+    QEvent)
 
 from .aichatwindow import AiChatWindow
+from .colorschema import ColorSchemaDark, ColorSchemaLight
 from .common import dataDirPath
 from .settings import Settings
 from .events import (
@@ -68,6 +70,9 @@ class Application(QApplication):
 
         self._lastFocusWidget = None
         self.focusChanged.connect(self._onFocusChanged)
+
+        self._colorSchema = None
+        self._setupColorSchema()
 
     def settings(self):
         return self._settings
@@ -156,6 +161,8 @@ class Application(QApplication):
             window = self.getWindow(Application.AiAssistant)
             self._ensureVisible(window)
             window.codeReview(event.commit, event.args)
+        elif type == QEvent.ApplicationPaletteChange:
+            self._setupColorSchema()
 
         return super().event(event)
 
@@ -254,3 +261,12 @@ class Application(QApplication):
             textColor = palette.color(QPalette.WindowText)
             windowColor = palette.color(QPalette.Window)
             return textColor.lightness() > windowColor.lightness()
+
+    def _setupColorSchema(self):
+        if self.isDarkTheme():
+            self._colorSchema = ColorSchemaDark()
+        else:
+            self._colorSchema = ColorSchemaLight()
+
+    def colorSchema(self):
+        return self._colorSchema

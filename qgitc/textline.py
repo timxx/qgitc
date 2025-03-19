@@ -10,8 +10,6 @@ from PySide6.QtCore import (
     Qt,
     QRectF)
 
-from .colorschema import ColorSchema
-
 import bisect
 import re
 
@@ -279,8 +277,7 @@ class TextLine():
         # no need to rehighlight
         if not self._layout or self._invalidated:
             return
-        if not self._links:
-            return
+
         self.rehighlight()
         self._relayout()
 
@@ -324,13 +321,13 @@ class SourceTextLineBase(TextLine):
 
             painter.save()
             painter.setFont(self._font)
-            painter.setPen(ColorSchema.Whitespace)
+            painter.setPen(qApp.colorSchema().Whitespace)
             painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, cr_char)
             painter.restore()
 
     def _applyWhitespaces(self, text, formats):
         tcFormat = QTextCharFormat()
-        tcFormat.setForeground(ColorSchema.Whitespace)
+        tcFormat.setForeground(qApp.colorSchema().Whitespace)
 
         offset = 0
         length = len(text)

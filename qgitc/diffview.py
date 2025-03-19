@@ -51,7 +51,6 @@ from .textline import (
     TextLine,
     SourceTextLineBase,
     LinkTextLine)
-from .colorschema import ColorSchema
 from .sourceviewer import SourceViewer
 from .textviewer import FindPart
 from .events import OpenLinkEvent
@@ -83,11 +82,11 @@ class FileListModel(QAbstractListModel):
         font.setBold(True)
         self._icons = [
             None,  # normal
-            _makeTextIcon("A", ColorSchema.Adding, font),
-            _makeTextIcon("M", ColorSchema.Modified, font),
-            _makeTextIcon("D", ColorSchema.Deletion, font),
-            _makeTextIcon("R", ColorSchema.Renamed, font),
-            _makeTextIcon("R", ColorSchema.RenamedModified, font),
+            _makeTextIcon("A", qApp.colorSchema().Adding, font),
+            _makeTextIcon("M", qApp.colorSchema().Modified, font),
+            _makeTextIcon("D", qApp.colorSchema().Deletion, font),
+            _makeTextIcon("R", qApp.colorSchema().Renamed, font),
+            _makeTextIcon("R", qApp.colorSchema().RenamedModified, font),
         ]
 
     def rowCount(self, parent=QModelIndex()):
@@ -674,25 +673,25 @@ class DiffTextLine(SourceTextLineBase):
             if len(text) >= 2 and text[1] == "+":
                 tcFormat.setFontWeight(QFont.Bold)
             else:
-                tcFormat.setForeground(ColorSchema.Adding)
+                tcFormat.setForeground(qApp.colorSchema().Adding)
         elif text[0] == "-":
-            tcFormat.setForeground(ColorSchema.Deletion)
+            tcFormat.setForeground(qApp.colorSchema().Deletion)
         elif text[0] == " " and len(text) >= 2:
             # TODO: only if in submodule changes
             if text.startswith("  > "):
-                tcFormat.setForeground(ColorSchema.Submodule)
+                tcFormat.setForeground(qApp.colorSchema().Submodule)
             elif text.startswith("  < "):
-                tcFormat.setForeground(ColorSchema.Submodule2)
+                tcFormat.setForeground(qApp.colorSchema().Submodule2)
             elif self._parentCount > 1 and len(text) >= self._parentCount:
                 index = self._parentCount - 1
                 if text[index] == "+":
                     tcFormat.setFontWeight(QFont.Bold)
-                    tcFormat.setForeground(ColorSchema.Adding)
+                    tcFormat.setForeground(qApp.colorSchema().Adding)
                 elif text[index] == "-":
                     tcFormat.setFontWeight(QFont.Bold)
-                    tcFormat.setForeground(ColorSchema.Deletion)
+                    tcFormat.setForeground(qApp.colorSchema().Deletion)
         elif diff_begin_re.search(text) or text.startswith(r"\ No newline "):
-            tcFormat.setForeground(ColorSchema.Newline)
+            tcFormat.setForeground(qApp.colorSchema().Newline)
 
         if tcFormat.isValid():
             formats.append(createFormatRange(0, len(text), tcFormat))
@@ -825,7 +824,7 @@ class PatchViewer(SourceViewer):
 
     def drawLineBackground(self, painter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
-            painter.fillRect(lineRect, ColorSchema.Info)
+            painter.fillRect(lineRect, qApp.colorSchema().Info)
 
     def textLineFormatRange(self, textLine):
         formats = []
