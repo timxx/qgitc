@@ -59,6 +59,8 @@ class ColorSchemaLight():
     LucColor = Qt.red
     LccColor = Qt.green
 
+    Mark = QColor(0, 128, 0)
+
 
 class ColorSchemaDark():
 
@@ -111,3 +113,5 @@ class ColorSchemaDark():
 
     LucColor = QColor(255, 90, 90)
     LccColor = QColor(80, 230, 120)
+
+    Mark = QColor(0, 230, 118)

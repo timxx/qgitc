@@ -76,7 +76,7 @@ class Marker():
 
         painter.save()
 
-        painter.setPen(Qt.red)
+        painter.setPen(qApp.colorSchema().Mark)
         br = painter.drawText(rect, Qt.AlignVCenter, Marker.CHAR_MARK)
         rect.adjust(br.width(), 0, 0, 0)
 
