@@ -46,7 +46,7 @@ class QtWaitingSpinner(QWidget):
         self._disableParentWhenSpinning = disableParentWhenSpinning
 
         # WAS IN initialize()
-        self._color = QColor(Qt.black)
+        self._color = None
         self._roundness = 100.0
         self._minimumTrailOpacity = 3.14159265358979323846
         self._trailFadePercentage = 80.0
@@ -78,6 +78,7 @@ class QtWaitingSpinner(QWidget):
             self._currentCounter = 0
 
         painter.setPen(Qt.NoPen)
+        lineColor = self._color if self._color else self.palette().windowText().color()
         for i in range(0, self._numberOfLines):
             painter.save()
             painter.translate(self._innerRadius + self._lineLength,
@@ -88,7 +89,7 @@ class QtWaitingSpinner(QWidget):
             distance = self.lineCountDistanceFromPrimary(
                 i, self._currentCounter, self._numberOfLines)
             color = self.currentLineColor(distance, self._numberOfLines, self._trailFadePercentage,
-                                          self._minimumTrailOpacity, self._color)
+                                          self._minimumTrailOpacity, lineColor)
             painter.setBrush(color)
             painter.drawRoundedRect(QRect(0, -self._lineWidth / 2, self._lineLength, self._lineWidth), self._roundness,
                                     self._roundness, Qt.RelativeSize)
