@@ -263,7 +263,7 @@ class Application(QApplication):
 
     def _isDarkThemeImpl(self):
         ver = QVersionNumber.fromString(qVersion())
-        if ver > QVersionNumber(6, 5, 0):
+        if ver >= QVersionNumber(6, 5, 0):
             return self.styleHints().colorScheme() == Qt.ColorScheme.Dark
         else:
             palette = self.palette()
@@ -273,7 +273,7 @@ class Application(QApplication):
 
     def overrideColorSchema(self, mode):
         ver = QVersionNumber.fromString(qVersion())
-        if ver > QVersionNumber(6, 8, 0):
+        if ver >= QVersionNumber(6, 8, 0):
             if mode == ColorSchemaMode.Light:
                 colorSchema = Qt.ColorScheme.Light
             elif mode == ColorSchemaMode.Dark:
