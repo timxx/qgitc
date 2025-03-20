@@ -824,7 +824,7 @@ class PatchViewer(SourceViewer):
 
     def drawLineBackground(self, painter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
-            painter.fillRect(lineRect, qApp.colorSchema().Info)
+            painter.fillRect(lineRect, qApp.colorSchema().InfoBg)
 
     def textLineFormatRange(self, textLine):
         formats = []
@@ -833,7 +833,11 @@ class PatchViewer(SourceViewer):
             fmt = self._createDiffFormats(textLine)
             if fmt:
                 formats.extend(fmt)
-        elif not isinstance(textLine, InfoTextLine):
+        elif isinstance(textLine, InfoTextLine):
+            fmt = QTextCharFormat()
+            fmt.setForeground(QBrush(qApp.colorSchema().InfoFg))
+            formats.append(createFormatRange(0, len(textLine.text()), fmt))
+        else:
             fmt = self._createCommentsFormats(textLine)
             if fmt:
                 formats.extend(fmt)
