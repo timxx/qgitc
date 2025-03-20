@@ -74,7 +74,7 @@ class BugPatternModel(QAbstractTableModel):
             return data.pattern if col == 0 else data.url
         if col == 0:
             if role == Qt.ForegroundRole:
-                return QBrush(Qt.black) if data.error is None else QBrush(Qt.red)
+                return qApp.palette().windowText() if data.error is None else qApp.colorSchema().NoResults
             elif role == Qt.ToolTipRole:
                 return data.error
 
