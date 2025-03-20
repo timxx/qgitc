@@ -98,7 +98,7 @@ class MainWindow(StateWindow):
     CompareMode = 2
     MergeMode = 3
 
-    submoduleAvailable = Signal()
+    submoduleAvailable = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -321,6 +321,8 @@ class MainWindow(StateWindow):
                 self.__onFindSubmoduleFinished)
             self.findSubmoduleThread.start()
 
+            self.initSubmodulesFromCache()
+
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
             branch = "remotes/" + branch
@@ -464,16 +466,34 @@ class MainWindow(StateWindow):
 
     def __onFindSubmoduleFinished(self):
         submodules = self.findSubmoduleThread.submodules
-        for submodule in submodules:
-            self.ui.cbSubmodule.addItem(submodule)
+
+        # check if the cache is reusable
+        caches = []
+        for i in range(self.ui.cbSubmodule.count()):
+            caches.append(self.ui.cbSubmodule.itemText(i))
+
+        isCacheValid = len(submodules) == len(caches)
+        if isCacheValid:
+            for i in range(len(submodules)):
+                if submodules[i] not in caches:
+                    isCacheValid = False
+                    break
+
+        if not isCacheValid:
+            self.ui.cbSubmodule.clear()
+            for submodule in submodules:
+                self.ui.cbSubmodule.addItem(submodule)
+
         if not self.mergeWidget:
             self.ui.leRepo.setReadOnly(False)
             self.ui.btnRepoBrowse.setEnabled(True)
         hasSubmodule = len(submodules) > 0
         self.ui.cbSubmodule.setVisible(hasSubmodule)
         self.ui.lbSubmodule.setVisible(hasSubmodule)
-        if submodules:
-            self.submoduleAvailable.emit()
+        if not isCacheValid and submodules:
+            self.submoduleAvailable.emit(False)
+
+        qApp.settings().setSubmodulesCache(Git.REPO_DIR, submodules)
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()
@@ -663,3 +683,21 @@ class MainWindow(StateWindow):
             submodules.append(self.ui.cbSubmodule.itemText(i))
 
         return submodules
+
+    def initSubmodulesFromCache(self):
+        submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
+        if not submodules:
+            return
+
+        # first, check if cache is valid
+        for submodule in submodules:
+            if not os.path.exists(os.path.join(Git.REPO_DIR, submodule)):
+                qApp.settings().setSubmodulesCache(Git.REPO_DIR, [])
+                return
+
+        for submodule in submodules:
+            self.ui.cbSubmodule.addItem(submodule)
+
+        self.ui.cbSubmodule.setVisible(True)
+        self.ui.lbSubmodule.setVisible(True)
+        self.submoduleAvailable.emit(True)

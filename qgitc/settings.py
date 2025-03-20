@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import List
 from PySide6.QtCore import (
     QSettings,
     Signal)
@@ -297,3 +298,16 @@ class Settings(QSettings):
         if mode != oldMode:
             self.setValue("colorSchemaMode", mode)
             self.colorSchemaModeChanged.emit(mode)
+
+    def submodulesCache(self, repoDir):
+        key = os.path.normpath(os.path.normcase(repoDir))
+        self.beginGroup("submodulesCache")
+        cache = self.value(key, [])
+        self.endGroup()
+        return cache
+
+    def setSubmodulesCache(self, repoDir, cache: List[str]):
+        key = os.path.normpath(os.path.normcase(repoDir))
+        self.beginGroup("submodulesCache")
+        self.setValue(key, cache)
+        self.endGroup()

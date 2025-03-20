@@ -1834,7 +1834,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.clear()
         self.showLogs(self.curBranch, self.args)
 
-    def __onSubmoduleAvailable(self):
+    def __onSubmoduleAvailable(self, isCache):
+        # ignore cache, we will reload in later
+        if isCache:
+            return
+
         if qApp.settings().isCompositeMode():
             self.__onCompositeModeChanged()
 
