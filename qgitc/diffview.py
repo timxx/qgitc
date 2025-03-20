@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import Union
 from PySide6.QtGui import (
     QDesktopServices,
     QKeySequence,
@@ -545,7 +546,13 @@ class DiffView(QWidget):
 
         self._updateFilterStatus()
 
-    def __commitDesc(self, sha1, repoDir=None):
+    def __commitDesc(self, commitOrSha1: Union[Commit|str], repoDir=None):
+        if isinstance(commitOrSha1, Commit):
+            sha1 = commitOrSha1.sha1
+            commit: Commit = commitOrSha1
+        else:
+            sha1 = commitOrSha1
+            commit: Commit = None
         if sha1 == Git.LUC_SHA1:
             subject = self.tr(
                 "Local uncommitted changes, not checked in to index")
@@ -553,8 +560,13 @@ class DiffView(QWidget):
             subject = self.tr(
                 "Local changes checked in to index but not committed")
         else:
-            repoDir = fullRepoDir(repoDir, self.branchDir)
-            subject = Git.commitSubject(sha1, repoDir).decode("utf-8")
+            if commit:
+                subject = commit.comments.split('\n')[0]
+            else:
+                repoDir = fullRepoDir(repoDir, self.branchDir)
+                subject = Git.commitSubject(sha1, repoDir).decode("utf-8")
+            fm = QFontMetricsF(self.viewer._font)
+            subject = fm.elidedText(subject, Qt.ElideRight, 700)
 
         return " (" + subject + ")"
 
@@ -586,7 +598,7 @@ class DiffView(QWidget):
 
             for child in commit.children:
                 content = self.tr("Child: ") + child.sha1
-                content += self.__commitDesc(child.sha1, child.repoDir)
+                content += self.__commitDesc(child, child.repoDir)
                 self.viewer.addSHA1Line(content, False)
 
         self.viewer.addNormalTextLine("", False)
