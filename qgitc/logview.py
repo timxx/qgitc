@@ -1093,10 +1093,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         row = (index - self.verticalScrollBar().value())
 
         offsetX = self.horizontalScrollBar().value()
+        margin = self.lineSpace // 4
         x = self.marginX - offsetX
-        y = self.marginY + row * self.lineHeight
+        y = self.marginY + row * self.lineHeight + margin
         w = self.viewport().width() - x - self.marginX
-        h = self.lineHeight
+        h = self.lineHeight - margin
 
         rect = QRect(x, y, w, h)
 
@@ -1685,7 +1686,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 painter.fillRect(rect, colorSchema.SelectedItemBg)
                 if self.hasFocus():
                     painter.setPen(QPen(colorSchema.FocusItemBorder))
-                    painter.drawRect(rect.adjusted(1, 1, -1, -1))
+                    painter.drawRect(rect.adjusted(0, 0, -1, -1))
                 painter.setPen(colorSchema.SelectedItemFg)
             elif i == self.hoverIdx:
                 painter.fillRect(rect, colorSchema.HoverItemBg)
@@ -1693,6 +1694,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 painter.setPen(palette.color(QPalette.WindowText))
 
             content = makeMessage(commit)
+
+            rect.adjust(4, 0, 0, 0)
 
             # bold find result
             # it seems that *in* already fast, so no bsearch
