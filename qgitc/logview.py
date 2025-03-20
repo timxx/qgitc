@@ -402,7 +402,6 @@ class LogGraph(QWidget):
 class LogView(QAbstractScrollArea, CommitSource):
     currentIndexChanged = Signal(int)
     findFinished = Signal(int)
-    findProgress = Signal(int)
 
     beginFetch = Signal()
     endFetch = Signal()
