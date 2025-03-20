@@ -1571,7 +1571,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not self.data:
             return -1
 
-        y = max(0, pos.y())
+        y = max(0, pos.y() - self.marginY)
         n = int(y / self.lineHeight)
         n += self.firstVisibleLine()
 
@@ -1735,7 +1735,10 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not self.data:
             return
 
-        y = event.pos().y()
+        y = event.pos().y() - self.marginY
+        if y < 0:
+            return
+
         index = int(y / self.lineHeight)
         index += self.verticalScrollBar().value()
 
