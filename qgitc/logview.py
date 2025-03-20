@@ -2,14 +2,14 @@
 
 from typing import List
 from PySide6.QtGui import (
-    QColor,
     QPalette,
     QPainter,
     QFontMetrics,
     QPen,
     QPainterPath,
     QConicalGradient,
-    QImage)
+    QImage,
+    QCursor)
 from PySide6.QtWidgets import (
     QWidget,
     QAbstractScrollArea,
@@ -411,10 +411,12 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFrameStyle(QFrame.NoFrame)
+        self.setMouseTracking(True)
 
         self.data: List[Commit] = []
         self.fetcher = LogsFetcher(self)
         self.curIdx = -1
+        self.hoverIdx = -1
         self.branchA = True
         self.curBranch = ""
         self.args = None
@@ -1680,14 +1682,13 @@ class LogView(QAbstractScrollArea, CommitSource):
             # subject
             painter.save()
             if i == self.curIdx:
-                painter.fillRect(rect, palette.highlight())
+                painter.fillRect(rect, colorSchema.SelectedItemBg)
                 if self.hasFocus():
-                    pen = QPen(Qt.DotLine)
-                    pen.setColor(palette.windowText().color())
-                    painter.setPen(pen)
-                    painter.drawRect(rect.adjusted(
-                        1, 1, -1, -1))
-                painter.setPen(palette.color(QPalette.HighlightedText))
+                    painter.setPen(QPen(colorSchema.FocusItemBorder))
+                    painter.drawRect(rect.adjusted(1, 1, -1, -1))
+                painter.setPen(colorSchema.SelectedItemFg)
+            elif i == self.hoverIdx:
+                painter.fillRect(rect, colorSchema.HoverItemBg)
             else:
                 painter.setPen(palette.color(QPalette.WindowText))
 
@@ -1735,15 +1736,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not self.data:
             return
 
-        y = event.pos().y() - self.marginY
-        if y < 0:
-            return
-
-        index = int(y / self.lineHeight)
-        index += self.verticalScrollBar().value()
-
-        if index >= len(self.data):
-            return
+        index = self.lineForPos(event.pos())
 
         mod = qApp.keyboardModifiers()
         # no OR combination
@@ -1752,6 +1745,28 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.viewport().update()
         else:
             self.setCurrentIndex(index)
+
+    def mouseMoveEvent(self, event):
+        self._updateHover(event.pos())
+
+    def wheelEvent(self, event):
+        super().wheelEvent(event)
+        pos = self.mapFromGlobal(QCursor.pos())
+        self._updateHover(pos)
+
+    def _updateHover(self, pos):
+        index = self.lineForPos(pos)
+        if index == -1:
+            return
+
+        if index == self.hoverIdx:
+            return
+
+        if self.hoverIdx != -1:
+            self.invalidateItem(self.hoverIdx)
+
+        self.hoverIdx = index
+        self.invalidateItem(self.hoverIdx)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Up:
@@ -1795,6 +1810,12 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def focusOutEvent(self, event):
         self.invalidateItem(self.curIdx)
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        if self.hoverIdx != -1 and self.hoverIdx != self.curIdx:
+            self.invalidateItem(self.hoverIdx)
+        self.hoverIdx = -1
 
     def copy(self):
         self.__onCopyCommitSummary()

@@ -71,6 +71,12 @@ class ColorSchemaLight():
 
     HighlightLineBg = QColor(0xB3E0B3)
 
+    # for list view
+    SelectedItemBg = QColor(0x4DA3FF)
+    SelectedItemFg = Qt.white
+    HoverItemBg = SelNoFocus
+    FocusItemBorder = QColor(0x0066CC)
+
 
 class ColorSchemaDark():
 
@@ -129,3 +135,9 @@ class ColorSchemaDark():
     NoResults = QColor(203, 80, 70)
 
     HighlightLineBg = QColor(0x1A4F49)
+
+    # for list view
+    SelectedItemBg = QColor(0x15385D)
+    SelectedItemFg = QColor(0xFFFFFF)
+    HoverItemBg = SelNoFocus
+    FocusItemBorder = QColor(0x3377D2)
