@@ -1086,14 +1086,14 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __linesPerPage(self):
         return int(self.__linesPerPageF())
 
-    def __itemRect(self, index):
+    def __itemRect(self, index, needMargin = True):
         """@index the index of data"""
 
         # the row number in viewport
         row = (index - self.verticalScrollBar().value())
 
         offsetX = self.horizontalScrollBar().value()
-        margin = self.lineSpace // 4
+        margin = self.lineSpace // 4 if needMargin else 0
         x = self.marginX - offsetX
         y = self.marginY + row * self.lineHeight + margin
         w = self.viewport().width() - x - self.marginX
@@ -1457,7 +1457,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 commit.children.append(child)
 
     def invalidateItem(self, index):
-        rect = self.__itemRect(index)
+        rect = self.__itemRect(index, False)
         # update if visible in the viewport
         if rect.y() >= 0:
             self.viewport().update(rect)
