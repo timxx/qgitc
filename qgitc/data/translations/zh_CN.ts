@@ -233,74 +233,79 @@
 <context>
     <name>DiffView</name>
     <message>
-        <location filename="../../diffview.py" line="186"/>
+        <location filename="../../diffview.py" line="187"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="190"/>
+        <location filename="../../diffview.py" line="191"/>
         <source>&amp;Copy path</source>
         <translation>复制路径(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="204"/>
+        <location filename="../../diffview.py" line="205"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="208"/>
+        <location filename="../../diffview.py" line="209"/>
         <source>&amp;Log this file</source>
         <translation>查看此文件记录(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="217"/>
-        <location filename="../../diffview.py" line="508"/>
+        <location filename="../../diffview.py" line="218"/>
+        <location filename="../../diffview.py" line="509"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="506"/>
+        <location filename="../../diffview.py" line="507"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="564"/>
-        <location filename="../../diffview.py" line="572"/>
+        <location filename="../../diffview.py" line="576"/>
+        <location filename="../../diffview.py" line="584"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="568"/>
+        <location filename="../../diffview.py" line="580"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="572"/>
+        <location filename="../../diffview.py" line="584"/>
         <source>You</source>
         <translation>你</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="576"/>
+        <location filename="../../diffview.py" line="588"/>
         <source>Parent: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="615"/>
+        <location filename="../../diffview.py" line="605"/>
+        <source>Sub Commit: </source>
+        <translation>子提交：</translation>
+    </message>
+    <message>
+        <location filename="../../diffview.py" line="632"/>
         <source>Comments</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="588"/>
+        <location filename="../../diffview.py" line="600"/>
         <source>Child: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="552"/>
+        <location filename="../../diffview.py" line="559"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="555"/>
+        <location filename="../../diffview.py" line="562"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
@@ -309,37 +314,37 @@
         <translation type="obsolete">复制成Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="210"/>
+        <location filename="../../diffview.py" line="211"/>
         <source>&amp;Blame this file</source>
         <translation>Blame此文件(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="212"/>
+        <location filename="../../diffview.py" line="213"/>
         <source>Blame parent commit</source>
         <translation>Blame父记录</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="459"/>
+        <location filename="../../diffview.py" line="460"/>
         <source>The external diff tool crashed!</source>
         <translation>外部diff工具崩溃了！</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="191"/>
+        <location filename="../../diffview.py" line="192"/>
         <source>As &amp;seen</source>
         <translation>相对路径(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="193"/>
+        <location filename="../../diffview.py" line="194"/>
         <source>As &amp;absolute</source>
         <translation>绝对路径(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="195"/>
+        <location filename="../../diffview.py" line="196"/>
         <source>As &amp;Windows</source>
         <translation>Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="199"/>
+        <location filename="../../diffview.py" line="200"/>
         <source>As W&amp;indows absolute</source>
         <translation>Windows绝对路径(&amp;I)</translation>
     </message>
@@ -581,12 +586,12 @@
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="968"/>
+        <location filename="../../logview.py" line="969"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="992"/>
+        <location filename="../../logview.py" line="993"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
@@ -631,12 +636,12 @@
         <translation>代码审查(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="803"/>
+        <location filename="../../logview.py" line="804"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="829"/>
+        <location filename="../../logview.py" line="830"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
     </message>
@@ -829,17 +834,17 @@
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="593"/>
+        <location filename="../../mainwindow.py" line="613"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="594"/>
+        <location filename="../../mainwindow.py" line="614"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="582"/>
+        <location filename="../../mainwindow.py" line="602"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -1136,12 +1141,12 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../diffview.py" line="899"/>
+        <location filename="../../diffview.py" line="916"/>
         <source>Copy Plain &amp;Text</source>
         <translation>复制纯文本(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="908"/>
+        <location filename="../../diffview.py" line="925"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>

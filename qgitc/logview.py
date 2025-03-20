@@ -634,17 +634,18 @@ class LogView(QAbstractScrollArea, CommitSource):
         return index != -1
 
     def findCommitIndex(self, sha1, begin=0, findNext=True):
-        index = -1
-
         findRange = range(begin, len(self.data)) \
             if findNext else range(begin, -1, -1)
         for i in findRange:
             commit = self.data[i]
             if commit.sha1.startswith(sha1):
-                index = i
-                break
+                return i
 
-        return index
+            for subCommit in commit.subCommits:
+                if subCommit.sha1.startswith(sha1):
+                    return i
+
+        return -1
 
     def showContextMenu(self, pos):
         if self.curIdx == -1:

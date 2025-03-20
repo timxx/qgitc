@@ -601,6 +601,11 @@ class DiffView(QWidget):
                 content += self.__commitDesc(child, child.repoDir)
                 self.viewer.addSHA1Line(content, False)
 
+        for subCommit in commit.subCommits:
+            content = self.tr("Sub Commit: ") + subCommit.sha1
+            content += " (" + commit.author + " " + commit.authorDate + ")"
+            self.viewer.addSHA1Line(content, False)
+
         self.viewer.addNormalTextLine("", False)
 
         comments = commit.comments.split('\n')
