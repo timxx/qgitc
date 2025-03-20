@@ -63,6 +63,8 @@ class ColorSchemaLight():
     Mark = QColor(0, 128, 0)
     NoResults = QColor(240, 126, 116)
 
+    HighlightLineBg = QColor(0xB3E0B3)
+
 
 class ColorSchemaDark():
 
@@ -119,3 +121,5 @@ class ColorSchemaDark():
 
     Mark = QColor(0, 230, 118)
     NoResults = QColor(203, 80, 70)
+
+    HighlightLineBg = QColor(0x1A4F49)

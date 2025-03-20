@@ -795,6 +795,8 @@ class TextViewer(QAbstractScrollArea):
 
         painter.setClipRect(eventRect)
 
+        highlightLineBg = qApp.colorSchema().HighlightLineBg
+
         for i in range(startLine, endLine):
             textLine = self.textLineAt(i)
 
@@ -809,7 +811,7 @@ class TextViewer(QAbstractScrollArea):
                 return fr
 
             if i in self._highlightLines:
-                painter.fillRect(lineRect(), QColor(192, 237, 197))
+                painter.fillRect(lineRect(), highlightLineBg)
             else:
                 self.drawLineBackground(painter, textLine, lineRect())
 

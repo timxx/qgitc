@@ -290,7 +290,7 @@ class RevisionPanel(TextViewer):
             fr = QRectF(br)
             fr.moveTop(fr.top() + y)
             fr.moveLeft(x)
-            painter.fillRect(fr, QColor(192, 237, 197))
+            painter.fillRect(fr, qApp.colorSchema().HighlightLineBg)
 
     def _reloadTextLine(self, textLine):
         textLine.setFont(self._font)
@@ -339,9 +339,6 @@ class RevisionPanel(TextViewer):
         eventRect = event.rect()
         painter.setClipRect(eventRect)
         painter.setFont(self._font)
-
-        painter.fillRect(self.rect().adjusted(1, 1, 0, 0),
-                         QColor(250, 250, 250))
 
         y = 0
         width = self.width()
