@@ -352,9 +352,6 @@ class DiffView(QWidget):
             return
 
         filePath = index.data()
-        commit = fileRealCommit(filePath, self.commit)
-        if commit.repoDir and commit.repoDir != ".":
-            filePath = filePath[len(commit.repoDir) + 1:]
         self.window().setFilterFile(filePath)
 
     def __onBlameFile(self):
