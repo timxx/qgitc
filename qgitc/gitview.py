@@ -96,6 +96,9 @@ class GitView(QWidget):
 
         self._delayTimer.timeout.connect(self.__onDelayTimeOut)
 
+        self.ui.diffView.localChangeRestored.connect(
+            self.ui.logView.reloadLogs)
+
         qApp.settings().compositeModeChanged.connect(self.__onCompositeModeChanged)
         self.window().submoduleAvailable.connect(self.__onSubmoduleAvailable)
 

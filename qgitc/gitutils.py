@@ -6,6 +6,7 @@ import subprocess
 import os
 import bisect
 import re
+from typing import Dict, List
 
 
 class GitProcess():
@@ -599,3 +600,46 @@ class Git():
             return False
 
         return Git.VERSION_PATCH >= patch
+
+    @staticmethod
+    def restoreStagedFiles(repoDir, files):
+        """restore staged files
+        return error message if any
+        """
+        args = ["restore", "--staged", "--"]
+        args.extend(files)
+        process = GitProcess(repoDir, args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            return error.decode("utf-8")
+        return None
+
+    @staticmethod
+    def restoreFiles(repoDir, files, staged=False):
+        """restore files
+        return error message if any
+        """
+        if staged:
+            error = Git.restoreStagedFiles(repoDir, files)
+            if error:
+                return error
+
+        args = ["restore", "--"]
+        args.extend(files)
+        process = GitProcess(repoDir, args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            return error.decode("utf-8")
+
+        return None
+
+    @staticmethod
+    def restoreRepoFiles(repoFiles: Dict[str, List[str]], staged=False):
+        for repoDir, files in repoFiles.items():
+            fullRepoDir = repoDir
+            if repoDir and repoDir != ".":
+                fullRepoDir = os.path.join(Git.REPO_TOP_DIR, repoDir)
+            error = Git.restoreFiles(fullRepoDir or Git.REPO_DIR, files, staged)
+            if error:
+                return error
+        return None

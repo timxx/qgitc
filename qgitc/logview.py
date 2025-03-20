@@ -884,8 +884,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self, self.window().windowTitle(),
                 error)
         else:
-            self.clear()
-            self.showLogs(self.curBranch, self.args)
+            self.reloadLogs()
 
     def __onResetSoft(self):
         self.__resetToCurCommit("soft")
@@ -1838,3 +1837,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onSubmoduleAvailable(self):
         if qApp.settings().isCompositeMode():
             self.__onCompositeModeChanged()
+
+    def reloadLogs(self):
+        self.clear()
+        self.showLogs(self.curBranch, self.args)

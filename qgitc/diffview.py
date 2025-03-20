@@ -165,6 +165,8 @@ class DiffView(QWidget):
     beginFetch = Signal()
     endFetch = Signal()
 
+    localChangeRestored = Signal()
+
     def __init__(self, parent=None):
         super(DiffView, self).__init__(parent)
 
@@ -209,6 +211,11 @@ class DiffView(QWidget):
                               self.__onBlameFile)
         self.twMenu.addAction(self.tr("Blame parent commit"),
                               self.__onBlameParentCommit)
+
+        self.twMenu.addSeparator()
+        self.acRestoreFiles = self.twMenu.addAction(
+            self.tr("&Restore this file"),
+            self.__onRestoreFiles)
 
         self.splitter = QSplitter(self)
         self.splitter.addWidget(self.viewer)
@@ -368,6 +375,36 @@ class DiffView(QWidget):
 
         self.requestBlame.emit(index.data(), True, self.commit)
 
+    def __onRestoreFiles(self):
+        indexes = self.fileListView.selectedIndexes()
+        if not indexes:
+            return
+
+        repoFiles = {}
+        for index in indexes:
+            if self.__isCommentItem(index):
+                continue
+            filePath = index.data()
+            commit = fileRealCommit(filePath, self.commit)
+            assert commit.sha1 == Git.LCC_SHA1 or commit.sha1 == Git.LUC_SHA1
+
+            if commit.repoDir and commit.repoDir != ".":
+                filePath = filePath[len(commit.repoDir) + 1:]
+            repoFiles.setdefault(commit.repoDir, []).append(filePath)
+
+        if not repoFiles:
+            return
+
+        staged = self.commit.sha1 == Git.LCC_SHA1
+        error = Git.restoreRepoFiles(repoFiles, staged)
+        if error:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                error)
+
+        # TODO: reload the local changes only
+        self.localChangeRestored.emit()
+
     def __isCommentItem(self, index):
         if not index.isValid():
             return False
@@ -457,6 +494,20 @@ class DiffView(QWidget):
         if self.__isCommentItem(index):
             return
 
+        isLocalChanges = self.commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]
+        if isLocalChanges:
+            indexes = self.fileListView.selectedIndexes()
+            fileCount = 0
+            for index in indexes:
+                if not self.__isCommentItem(index):
+                    fileCount += 1
+                    if fileCount > 1:
+                        break
+            text = self.tr("&Restore these files") if fileCount > 1 else self.tr(
+                "&Restore this file")
+            self.acRestoreFiles.setText(text)
+
+        self.acRestoreFiles.setVisible(isLocalChanges)
         self.twMenu.exec(self.fileListView.mapToGlobal(pos))
 
     def __onDiffAvailable(self, lineItems, fileItems):
@@ -469,7 +520,8 @@ class DiffView(QWidget):
             commit = self._commitList.pop(0)
             self.fetcher.resetRow(self.viewer.textLineCount())
             if commit.repoDir != ".":
-                self.fetcher.cwd = os.path.join(self.branchDir or Git.REPO_DIR, commit.repoDir)
+                self.fetcher.cwd = os.path.join(
+                    self.branchDir or Git.REPO_DIR, commit.repoDir)
                 self.fetcher.repoDir = commit.repoDir
             else:
                 self.fetcher.cwd = self.branchDir or Git.REPO_DIR
@@ -571,7 +623,8 @@ class DiffView(QWidget):
         self.viewer.beginReading()
         self.fetcher.resetRow(self.viewer.textLineCount())
         if commit.repoDir and commit.repoDir != ".":
-            self.fetcher.cwd = os.path.join(self.branchDir or Git.REPO_DIR, commit.repoDir)
+            self.fetcher.cwd = os.path.join(
+                self.branchDir or Git.REPO_DIR, commit.repoDir)
             self.fetcher.repoDir = commit.repoDir
         else:
             self.fetcher.cwd = self.branchDir or Git.REPO_DIR
@@ -797,7 +850,7 @@ class PatchViewer(SourceViewer):
                 type == DiffType.FileInfo:
             textLine = InfoTextLine(self, type, content.decode(diff_encoding))
         else:
-            assert(False)
+            assert (False)
 
         return textLine
 
