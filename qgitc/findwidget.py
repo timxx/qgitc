@@ -217,7 +217,7 @@ class FindWidget(QWidget):
             self._lbStatus.setText(self.tr("No results"))
             palette = self._lbStatus.palette()
             palette.setColor(self._lbStatus.foregroundRole(),
-                             qApp.colorSchema().NoResults)
+                             qApp.colorSchema().ErrorText)
             self._lbStatus.setPalette(palette)
 
             pos = self.mapToGlobal(QPoint(0, 10))
@@ -235,7 +235,7 @@ class FindWidget(QWidget):
             color = self.palette().windowText().color()
             self._lbStatus.setText(self.tr("Finding..."))
         else:
-            color = qApp.colorSchema().NoResults
+            color = qApp.colorSchema().ErrorText
             self._lbStatus.setText(self.tr("No results"))
 
         palette = self._lbStatus.palette()

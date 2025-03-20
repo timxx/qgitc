@@ -67,7 +67,7 @@ class ColorSchemaLight():
     LccColor = Qt.green
 
     Mark = QColor(0, 128, 0)
-    NoResults = QColor(240, 126, 116)
+    ErrorText = QColor(240, 126, 116)
 
     HighlightLineBg = QColor(0xB3E0B3)
 
@@ -132,7 +132,7 @@ class ColorSchemaDark():
     LccColor = QColor(80, 230, 120)
 
     Mark = QColor(0, 230, 118)
-    NoResults = QColor(203, 80, 70)
+    ErrorText = QColor(203, 80, 70)
 
     HighlightLineBg = QColor(0x1A4F49)
 

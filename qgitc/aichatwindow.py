@@ -471,7 +471,7 @@ class AiChatWidget(QWidget):
         cursor.insertText("System:")
 
         errorFormat = QTextCharFormat()
-        errorFormat.setForeground(Qt.red)
+        errorFormat.setForeground(qApp.colorSchema().ErrorText)
         cursor.insertBlock(QTextBlockFormat(), errorFormat)
         cursor.insertText(self.tr("Service Unavailable"))
         cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
