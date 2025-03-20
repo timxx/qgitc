@@ -186,12 +186,13 @@ class LogsFetcherThread(QThread):
         self._eventLoop = QEventLoop()
 
         branch = self._args[0]
-        hasLCC, hasLUC = self._fetchLocalChanges(branch)
-        if hasLCC or hasLUC:
-            lccCommit = Commit()
-            lucCommit = Commit()
-            self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC)
-            self.localChangesAvailable.emit(lccCommit, lucCommit)
+        if not self._args[1]:
+            hasLCC, hasLUC = self._fetchLocalChanges(branch)
+            if hasLCC or hasLUC:
+                lccCommit = Commit()
+                lucCommit = Commit()
+                self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+                self.localChangesAvailable.emit(lccCommit, lucCommit)
 
         fetcher = LogsFetcherImpl()
         fetcher.logsAvailable.connect(
@@ -220,7 +221,10 @@ class LogsFetcherThread(QThread):
             fetcher.fetch(*self._args)
 
             branch = self._args[0]
-            hasLCC, hasLUC = self._fetchLocalChanges(branch, submodule)
+            if not self._args[1]:
+                hasLCC, hasLUC = self._fetchLocalChanges(branch, submodule)
+            else:
+                hasLCC, hasLUC = False, False
 
             fetcher._process.waitForFinished()
             return fetcher._exitCode, fetcher._errorData, \
