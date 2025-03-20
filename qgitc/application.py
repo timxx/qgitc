@@ -10,7 +10,6 @@ from PySide6.QtCore import (
     QUrl,
     QTimer,
     qVersion,
-    QVersionNumber,
     QEvent)
 
 from .aichatwindow import AiChatWindow
@@ -37,11 +36,15 @@ import os
 import shutil
 
 
+def qtVersion():
+    return tuple(map(int, qVersion().split('.')))
+
+
 class Application(QApplication):
 
     LogWindow = 1
     BlameWindow = 2
-    AiAssistant= 3
+    AiAssistant = 3
 
     def __init__(self, argv):
         super(Application, self).__init__(argv)
@@ -139,7 +142,8 @@ class Application(QApplication):
         type = event.type()
         if type == BlameEvent.Type:
             window = self.getWindow(Application.BlameWindow)
-            window.blame(event.filePath, event.rev, event.lineNo, event.repoDir)
+            window.blame(event.filePath, event.rev,
+                         event.lineNo, event.repoDir)
             self._ensureVisible(window)
             return True
         elif type == ShowCommitEvent.Type:
@@ -262,8 +266,7 @@ class Application(QApplication):
         return self._isDarkTheme
 
     def _isDarkThemeImpl(self):
-        ver = QVersionNumber.fromString(qVersion())
-        if ver >= QVersionNumber(6, 5, 0):
+        if qtVersion() >= (6, 5, 0):
             return self.styleHints().colorScheme() == Qt.ColorScheme.Dark
         else:
             palette = self.palette()
@@ -272,8 +275,7 @@ class Application(QApplication):
             return textColor.lightness() > windowColor.lightness()
 
     def overrideColorSchema(self, mode):
-        ver = QVersionNumber.fromString(qVersion())
-        if ver >= QVersionNumber(6, 8, 0):
+        if qtVersion() >= (6, 8, 0):
             if mode == ColorSchemaMode.Light:
                 colorSchema = Qt.ColorScheme.Light
             elif mode == ColorSchemaMode.Dark:
