@@ -53,6 +53,7 @@ class Settings(QSettings):
     fallbackGlobalChanged = Signal(bool)
     tabSizeChanged = Signal(int)
     compositeModeChanged = Signal(bool)
+    colorSchemaModeChanged = Signal(int)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -287,3 +288,12 @@ class Settings(QSettings):
 
     def setShowParentChild(self, show):
         self.setValue("showParentChild", show)
+
+    def colorSchemaMode(self):
+        return self.value("colorSchemaMode", 0, type=int)
+
+    def setColorSchemaMode(self, mode):
+        oldMode = self.colorSchemaMode()
+        if mode != oldMode:
+            self.setValue("colorSchemaMode", mode)
+            self.colorSchemaModeChanged.emit(mode)

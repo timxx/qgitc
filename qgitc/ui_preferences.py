@@ -77,6 +77,25 @@ class Ui_Preferences(object):
 
         self.verticalLayout_5.addLayout(self.horizontalLayout_8)
 
+        self.horizontalLayout_10 = QHBoxLayout()
+        self.horizontalLayout_10.setObjectName(u"horizontalLayout_10")
+        self.label_18 = QLabel(self.groupBox_6)
+        self.label_18.setObjectName(u"label_18")
+
+        self.horizontalLayout_10.addWidget(self.label_18)
+
+        self.cbColorSchema = QComboBox(self.groupBox_6)
+        self.cbColorSchema.setObjectName(u"cbColorSchema")
+
+        self.horizontalLayout_10.addWidget(self.cbColorSchema)
+
+        self.horizontalSpacer_9 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_10.addItem(self.horizontalSpacer_9)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_10)
+
         self.horizontalLayout_9 = QHBoxLayout()
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.label_15 = QLabel(self.groupBox_6)
@@ -501,6 +520,7 @@ class Ui_Preferences(object):
         self.verticalLayout_2.addWidget(self.buttonBox)
 
 #if QT_CONFIG(shortcut)
+        self.label_18.setBuddy(self.cbColorSchema)
         self.label_10.setBuddy(self.sbTabSize)
         self.label_11.setBuddy(self.cbIgnoreWhitespace)
         self.label_6.setBuddy(self.cbFamilyLog)
@@ -543,6 +563,7 @@ class Ui_Preferences(object):
         self.cbState.setText(QCoreApplication.translate("Preferences", u"&Remember window state", None))
         self.cbCheckUpdates.setText(QCoreApplication.translate("Preferences", u"Check updates every", None))
         self.label_14.setText(QCoreApplication.translate("Preferences", u"day(s)", None))
+        self.label_18.setText(QCoreApplication.translate("Preferences", u"Color Schema", None))
         self.label_15.setText(QCoreApplication.translate("Preferences", u"Git:", None))
         self.btnChooseGit.setText(QCoreApplication.translate("Preferences", u"&Browse", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("Preferences", u"Diff view", None))

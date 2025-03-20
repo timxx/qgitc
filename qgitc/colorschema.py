@@ -4,7 +4,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 
 
-__all__ = ["ColorSchemaLight", "ColorSchemaDark"]
+__all__ = ["ColorSchemaLight", "ColorSchemaDark", "ColorSchemaMode"]
+
+
+class ColorSchemaMode:
+    Auto = 0
+    Light = 1
+    Dark = 2
 
 
 class ColorSchemaLight():

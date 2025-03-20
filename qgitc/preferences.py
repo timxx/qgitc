@@ -11,6 +11,7 @@ from PySide6.QtCore import (
     QModelIndex,
     QSize)
 
+from .colorschema import ColorSchemaMode
 from .ui_preferences import *
 from .mergetool import MergeTool
 from .comboboxitemdelegate import ComboBoxItemDelegate
@@ -284,6 +285,13 @@ class Preferences(QDialog):
                 break
 
         self.ui.cbShowPC.setChecked(self.settings.showParentChild())
+
+        self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
+        self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
+        self.ui.cbColorSchema.addItem(self.tr("Dark"), ColorSchemaMode.Dark)
+
+        index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
+        self.ui.cbColorSchema.setCurrentIndex(index)
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -562,3 +570,6 @@ class Preferences(QDialog):
 
         value = self.ui.cbShowPC.isChecked()
         self.settings.setShowParentChild(value)
+
+        value = self.ui.cbColorSchema.currentData()
+        self.settings.setColorSchemaMode(value)
