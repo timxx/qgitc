@@ -422,7 +422,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.delayVisible = False
         self.delayUpdateParents = False
 
-        self.lineSpace = 5
+        self.lineSpace = 8
         self.marginX = 3
         self.marginY = 3
 
