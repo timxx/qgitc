@@ -2,7 +2,7 @@
 
 
 VERSION_MAJOR = 4
-VERSION_MINOR = 6
+VERSION_MINOR = 7
 VERSION_PATCH = 0
 VERSION = "{}.{}.{}".format(VERSION_MAJOR,
                             VERSION_MINOR,
