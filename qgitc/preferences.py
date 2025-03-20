@@ -431,7 +431,12 @@ class Preferences(QDialog):
 
     def isGitUsable(self, git):
         try:
-            subprocess.check_call([git, "--version"])
+            startupinfo = None
+            if os.name == "nt":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            subprocess.check_call([git, "--version"], stderr=subprocess.DEVNULL,
+                                  stdout=subprocess.DEVNULL, startupinfo=startupinfo)
             return True
         except Exception:
             return False
