@@ -407,7 +407,8 @@ class LogView(QAbstractScrollArea, CommitSource):
     endFetch = Signal()
 
     def __init__(self, parent=None):
-        super(LogView, self).__init__(parent)
+        QAbstractScrollArea.__init__(self, parent)
+        CommitSource.__init__(self)
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFrameStyle(QFrame.NoFrame)

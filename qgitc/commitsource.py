@@ -5,6 +5,9 @@ from .common import Commit
 
 class CommitSource:
 
+    def __init__(self, parent=None):
+        pass
+
     def findCommitIndex(self, sha1: str, begin=0, findNext=True) -> int:
         raise NotImplemented
 
