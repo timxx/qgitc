@@ -345,12 +345,13 @@ class RevisionPanel(TextViewer):
         y = 0
         width = self.width()
 
+        colorSchema = qApp.colorSchema()
+
         textLineCount = self.textLineCount()
         digitCount = max(3, len(str(textLineCount)))
         x = width - digitCount * self._digitWidth - self._space * 2
-        pen = QPen(Qt.darkGray)
         oldPen = painter.pen()
-        painter.setPen(pen)
+        painter.setPen(colorSchema.Splitter)
         painter.drawLine(x, y, x, self.height())
         painter.setPen(oldPen)
 
@@ -376,7 +377,7 @@ class RevisionPanel(TextViewer):
 
             lineNumber = str(i + 1)
             x = width - len(lineNumber) * self._digitWidth - self._space
-            painter.setPen(pen)
+            painter.setPen(colorSchema.LineNumber)
             painter.drawText(x, y + ascent, lineNumber)
             painter.setPen(oldPen)
 

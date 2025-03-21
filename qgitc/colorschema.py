@@ -77,6 +77,9 @@ class ColorSchemaLight():
     HoverItemBg = SelNoFocus
     FocusItemBorder = QColor(0x0066CC)
 
+    Splitter = Qt.darkGray
+    LineNumber = Qt.darkGray
+
 
 class ColorSchemaDark():
 
@@ -141,3 +144,6 @@ class ColorSchemaDark():
     SelectedItemFg = QColor(0xFFFFFF)
     HoverItemBg = SelNoFocus
     FocusItemBorder = QColor(0x3377D2)
+
+    Splitter = QColor(112, 112, 112)
+    LineNumber = QColor(0x999999)
