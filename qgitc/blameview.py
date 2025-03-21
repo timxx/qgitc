@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QSplitter,
-    QToolButton,
     QSpacerItem,
     QSizePolicy,
     QMenu,
@@ -15,16 +14,19 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QPainter,
     QFontMetrics,
-    QColor,
-    QPen)
+    QPen,
+    QIcon)
 from PySide6.QtCore import (
     Qt,
     Signal,
     QRect,
     QRectF,
-    QPointF)
+    QPointF,
+    QSize)
 
 from datetime import datetime
+
+from .coloredicontoolbutton import ColoredIconToolButton
 from .datafetcher import DataFetcher
 from .sourceviewer import SourceViewer
 from .textline import LinkTextLine, Link
@@ -35,7 +37,7 @@ from .events import (
     OpenLinkEvent)
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import TextViewer
-from .common import decodeFileData
+from .common import dataDirPath, decodeFileData
 
 import re
 
@@ -652,10 +654,15 @@ class HeaderWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._btnPrev = QToolButton(self)
+        def _newButton(svg):
+            fullPath = dataDirPath() + "/icons/" + svg
+            icon = QIcon(fullPath)
+            return ColoredIconToolButton(icon, QSize(20, 20), self)
+
+        self._btnPrev = _newButton("arrow-back.svg")
         layout.addWidget(self._btnPrev)
 
-        self._btnNext = QToolButton(self)
+        self._btnNext = _newButton("arrow-forward.svg")
         layout.addWidget(self._btnNext)
 
         self._waitingSpinner = QtWaitingSpinner(self)
@@ -670,9 +677,6 @@ class HeaderWidget(QWidget):
             0, 0,
             QSizePolicy.Expanding,
             QSizePolicy.Fixed))
-
-        self._btnPrev.setText("🡰")
-        self._btnNext.setText("🡲")
 
         self._btnPrev.clicked.connect(
             self._onPrevious)
