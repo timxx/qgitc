@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from typing import Union
 from PySide6.QtGui import (
     QDesktopServices,
     QKeySequence,
@@ -546,7 +545,7 @@ class DiffView(QWidget):
 
         self._updateFilterStatus()
 
-    def __commitDesc(self, commitOrSha1: Union[Commit|str], repoDir=None):
+    def __commitDesc(self, commitOrSha1, repoDir=None):
         if isinstance(commitOrSha1, Commit):
             sha1 = commitOrSha1.sha1
             commit: Commit = commitOrSha1
