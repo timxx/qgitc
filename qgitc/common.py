@@ -344,3 +344,15 @@ def filterSubmoduleByPath(submodules: List[str], paths: List[str]):
             # treat it as in the main repo
             result.append(".")
     return result
+
+
+def makeRepoName(repoDir: str):
+    index = repoDir.rfind(os.sep)
+    # submodule returns '/' on windows
+    if index == -1 and os.sep == '\\':
+        index = repoDir.rfind('/')
+    if index != -1:
+        repoDir = repoDir[index + 1:]
+    if repoDir == ".":
+        repoDir = "<main>"
+    return repoDir

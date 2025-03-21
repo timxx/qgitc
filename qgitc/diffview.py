@@ -601,8 +601,11 @@ class DiffView(QWidget):
                 self.viewer.addSHA1Line(content, False)
 
         for subCommit in commit.subCommits:
-            content = self.tr("Sub Commit: ") + subCommit.sha1
-            content += " (" + commit.author + " " + commit.authorDate + ")"
+            content = makeRepoName(subCommit.repoDir) + ": " + subCommit.sha1
+            if commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
+                content += " (" + commit.comments + ")"
+            else:
+                content += " (" + commit.author + " " + commit.authorDate + ")"
             self.viewer.addSHA1Line(content, False)
 
         self.viewer.addNormalTextLine("", False)
