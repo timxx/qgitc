@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (QToolButton, QStylePainter, QStyleOptionToolButton, QStyle)
+from PySide6.QtWidgets import (
+    QToolButton, QStylePainter, QStyleOptionToolButton, QStyle)
 from PySide6.QtGui import (QPainter, QIcon, QPen)
 from PySide6.QtCore import (Qt, QSize, QRect, QPoint)
 
@@ -35,13 +36,7 @@ class ColoredIconToolButton(QToolButton):
         painter.drawPixmap(rect, pixmap)
 
     def _makePixmap(self):
-        state = QIcon.Disabled
-        if self.isEnabled():
-            state = QIcon.Active if self.isDown() else QIcon.Normal
-        pixmap = self._icon.pixmap(self._iconSize, self.devicePixelRatio(), state)
-
-        if not qApp.isDarkTheme():
-            return pixmap
+        pixmap = self._icon.pixmap(self._iconSize, self.devicePixelRatio())
 
         p = QPainter(pixmap)
         p.setPen(Qt.NoPen)
