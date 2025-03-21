@@ -525,6 +525,12 @@ class TextViewer(QAbstractScrollArea):
     def drawLineBackground(self, painter, textLine, lineRect):
         pass
 
+    def drawLinesBorder(self, painter, rect):
+        pass
+
+    def canDrawLineBorder(self, textLine):
+        return False
+
     def textLineFormatRange(self, textLine):
         return None
 
@@ -797,6 +803,8 @@ class TextViewer(QAbstractScrollArea):
 
         highlightLineBg = qApp.colorSchema().HighlightLineBg
 
+        borderStartLine = -1
+        borderRect = QRectF()
         for i in range(startLine, endLine):
             textLine = self.textLineAt(i)
 
@@ -814,6 +822,18 @@ class TextViewer(QAbstractScrollArea):
                 painter.fillRect(lineRect(), highlightLineBg)
             else:
                 self.drawLineBackground(painter, textLine, lineRect())
+
+            # TODO: move to subclass???
+            if self.canDrawLineBorder(textLine):
+                if borderStartLine == -1:
+                    borderStartLine = i
+                    borderRect = lineRect()
+                else:
+                    borderRect.setBottom(lineRect().bottom())
+            elif borderStartLine != -1:
+                self.drawLinesBorder(painter, borderRect)
+                borderStartLine = -1
+                borderRect = QRectF()
 
             formats = []
 
@@ -842,6 +862,9 @@ class TextViewer(QAbstractScrollArea):
 
             if offset.y() > viewportRect.height():
                 break
+
+        if borderStartLine != -1:
+            self.drawLinesBorder(painter, borderRect)
 
     def resizeEvent(self, event):
         self._adjustScrollbars()

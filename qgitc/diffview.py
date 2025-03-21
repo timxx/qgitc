@@ -891,9 +891,18 @@ class PatchViewer(SourceViewer):
         textLine.useBuiltinPatterns = True
         self.appendTextLine(textLine)
 
-    def drawLineBackground(self, painter, textLine, lineRect):
+    def drawLineBackground(self, painter: QPainter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
             painter.fillRect(lineRect, qApp.colorSchema().InfoBg)
+
+    def canDrawLineBorder(self, textLine):
+        return isinstance(textLine, InfoTextLine)
+
+    def drawLinesBorder(self, painter: QPainter, rect):
+        oldPen = painter.pen()
+        painter.setPen(qApp.colorSchema().InfoBorder)
+        painter.drawRect(rect)
+        painter.setPen(oldPen)
 
     def textLineFormatRange(self, textLine):
         formats = []

@@ -21,8 +21,9 @@ class ColorSchemaLight():
     Modified = QColor(0xdbab09)
     Renamed = QColor(0x519143)
     RenamedModified = QColor(0x9a8246)
-    InfoBg = QColor(170, 170, 170)
-    InfoFg = Qt.black
+    InfoBg = QColor(0xE8F0FE)
+    InfoFg = QColor(0x2B5070)
+    InfoBorder = QColor(0xC0D0E0)
     Whitespace = QColor(Qt.lightGray)
     SelFocus = QColor(173, 214, 255)
     SelNoFocus = QColor(229, 235, 241)
@@ -89,8 +90,9 @@ class ColorSchemaDark():
     Modified = QColor(255, 213, 0)
     Renamed = QColor(106, 176, 76)
     RenamedModified = QColor(205, 149, 12)
-    InfoBg = QColor(0x3E3A3F)
-    InfoFg = Qt.white
+    InfoBg = QColor(0x282C34)
+    InfoFg = QColor(0xDDDDDD)
+    InfoBorder = QColor(0x4B5363)
     Whitespace = QColor(68, 68, 68)
     SelFocus = QColor(42, 92, 117)
     SelNoFocus = QColor(58, 63, 69)
@@ -110,12 +112,12 @@ class ColorSchemaDark():
     TagColorsBg = [
         QColor(215, 191, 50),
         QColor(50, 100, 50),
-        QColor(200, 140, 0)
+        QColor(0xa46e0b)
     ]
     TagColorsFg = [
         QColor(40, 30, 0),
         QColor(220, 255, 220),
-        QColor(255, 240, 220)
+        QColor(0xdddddd)
     ]
     TagBorder = QColor(120, 80, 0)
 
