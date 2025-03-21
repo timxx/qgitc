@@ -25,10 +25,10 @@ from PySide6.QtCore import (
     QAbstractAnimation,
     QEvent)
 
+from .coloredicontoolbutton import ColoredIconToolButton
 from .textcursor import TextCursor
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import FindPart, FindFlags
-from .toggleiconbutton import ToggleIconButton
 from .common import dataDirPath
 
 import bisect
@@ -68,9 +68,18 @@ class FindWidget(QWidget):
 
     def _setupUi(self):
         self._leFind = QLineEdit(self)
-        self._tbPrev = QToolButton(self)
-        self._tbNext = QToolButton(self)
-        self._tbClose = QToolButton(self)
+        self._leFind.setTextMargins(1, 1, 2, 2)
+
+        def _newColoredButton(svg):
+            fullPath = dataDirPath() + "/icons/" + svg
+            icon = QIcon(fullPath)
+            button = ColoredIconToolButton(icon, QSize(20, 20), self)
+            button.setFixedSize(22, 22)
+            return button
+
+        self._tbPrev = _newColoredButton("arrow-up.svg")
+        self._tbNext = _newColoredButton("arrow-down.svg")
+        self._tbClose = _newColoredButton("close.svg")
         self._lbStatus = QLabel(self)
         self._spinner = QtWaitingSpinner(self)
 
@@ -95,10 +104,6 @@ class FindWidget(QWidget):
         hlayout.addWidget(self._tbNext)
         hlayout.addWidget(self._tbClose)
 
-        self._tbPrev.setText('🡩')
-        self._tbNext.setText('🡫')
-        self._tbClose.setText('⨉')
-
         self._setupFindEdit()
         self.resize(self._getShowSize())
 
@@ -108,8 +113,10 @@ class FindWidget(QWidget):
 
         def _addAction(iconPath, tooltip):
             icon = QIcon(iconPath)
-            button = ToggleIconButton(icon, size, self._leFind)
+            button = ColoredIconToolButton(icon, size, self._leFind)
             button.setToolTip(tooltip)
+            button.setCheckable(True)
+            button.setCursor(Qt.PointingHandCursor)
             action = QWidgetAction(self._leFind)
             action.setDefaultWidget(button)
             self._leFind.addAction(action, QLineEdit.TrailingPosition)
