@@ -250,7 +250,8 @@ class TextLine():
         if self._layout:
             if patterns:
                 patterns = list(patterns)
-                patterns.extend(list(self.builtinPatterns()))
+                for type, pattern in self.builtinPatterns().items():
+                    patterns.append((type, pattern, None))
                 self._findLinks(patterns)
             self.rehighlight()
         else:
