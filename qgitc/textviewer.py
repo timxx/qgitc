@@ -105,6 +105,8 @@ class TextViewer(QAbstractScrollArea):
 
         self._similarWordPattern = None
 
+        self.setTextMargins(4)
+
     def updateFont(self, font):
         self._font = font
         fm = QFontMetrics(self._font)
@@ -1062,3 +1064,9 @@ class TextViewer(QAbstractScrollArea):
             line.reapplyColorTheme()
 
         self.viewport().update()
+
+    def setTextMargins(self, margin):
+        self.setViewportMargins(margin, margin, margin, margin)
+
+    def textMargins(self):
+        return self.viewportMargins().left()

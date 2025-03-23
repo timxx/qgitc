@@ -29,6 +29,7 @@ class SourceTextLine(SourceTextLineBase):
 class SourceViewer(TextViewer):
 
     def __init__(self, parent=None):
+        self._margin = 0
         super().__init__(parent)
 
         self._panel = None
@@ -57,7 +58,8 @@ class SourceViewer(TextViewer):
             self._updatePanelGeo()
             panel.installEventFilter(self)
         else:
-            self.setViewportMargins(0, 0, 0, 0)
+            self.setViewportMargins(
+                self._margin, self._margin, self._margin, self._margin)
 
     @property
     def panel(self):
@@ -89,11 +91,12 @@ class SourceViewer(TextViewer):
         if self._panel:
             rc = self.rect()
             width = self._panel.width()
-            self.setViewportMargins(width + 1, 0, 0, 0)
+            self.setViewportMargins(
+                width + 1, self._margin, self._margin, self._margin)
             self._panel.setGeometry(rc.left() + 1,
                                     rc.top() + 1,
                                     width,
-                                    self.viewport().height())
+                                    self.viewport().height() + self._margin * 2)
 
     def _reloadTextLine(self, textLine):
         # reload bugPattern
@@ -119,3 +122,7 @@ class SourceViewer(TextViewer):
             return True
 
         return super().eventFilter(obj, event)
+
+    def setTextMargins(self, margin):
+        self._margin = margin
+        return super().setTextMargins(margin)

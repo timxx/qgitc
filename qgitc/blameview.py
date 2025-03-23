@@ -215,7 +215,7 @@ class RevisionPanel(TextViewer):
         width = self._sha1Width + self._space * 6
         width += self._dateWidth
         width += self._maxNameWidth
-        width += self._digitWidth * 6
+        width += self._digitWidth * 6 + self.textMargins()
         self.resize(width, self._viewer.height())
 
     def appendRevisions(self, revs):
@@ -344,6 +344,7 @@ class RevisionPanel(TextViewer):
 
         y = 0
         width = self.width()
+        margin = self.textMargins()
 
         colorSchema = qApp.colorSchema()
 
@@ -355,7 +356,7 @@ class RevisionPanel(TextViewer):
         painter.drawLine(x, y, x, self.height())
         painter.setPen(oldPen)
 
-        maxLineWidth = x - self._space
+        maxLineWidth = x - self._space - margin
 
         if not self.hasTextLines():
             return
@@ -370,15 +371,15 @@ class RevisionPanel(TextViewer):
             painter.save()
             painter.setClipRect(lineClipRect)
 
-            self._drawActiveRev(painter, i, self._space, y)
-            line.draw(painter, QPointF(self._space, y))
+            self._drawActiveRev(painter, i, 0, y)
+            line.draw(painter, QPointF(0, y))
 
             painter.restore()
 
             lineNumber = str(i + 1)
-            x = width - len(lineNumber) * self._digitWidth - self._space
+            rect = QRect(x + self._space, y, width - self._space * 2 - x, self._viewer.lineHeight)
             painter.setPen(colorSchema.LineNumber)
-            painter.drawText(x, y + ascent, lineNumber)
+            painter.drawText(rect, Qt.AlignRight | Qt.AlignVCenter, lineNumber)
             painter.setPen(oldPen)
 
             y += self._viewer.lineHeight
