@@ -413,6 +413,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFrameStyle(QFrame.NoFrame)
         self.setMouseTracking(True)
+        self.setViewportMargins(1, 3, 3, 3)
 
         self.data: List[Commit] = []
         self.fetcher = LogsFetcher(self)
@@ -426,8 +427,6 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.delayUpdateParents = False
 
         self.lineSpace = 8
-        self.marginX = 3
-        self.marginY = 3
 
         # commit history graphs
         self.graphs = {}
@@ -1081,7 +1080,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         return '<a href="mailto:{0}">{1}</a>'.format(email, htmlEscape(author))
 
     def __linesPerPageF(self):
-        h = self.viewport().height() - self.marginY
+        h = self.viewport().height()
         return h / self.lineHeight
 
     def __linesPerPage(self):
@@ -1095,9 +1094,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         offsetX = self.horizontalScrollBar().value()
         margin = self.lineSpace // 4 if needMargin else 0
-        x = self.marginX - offsetX
-        y = self.marginY + row * self.lineHeight + margin
-        w = self.viewport().width() - x - self.marginX
+        x = -offsetX
+        y = row * self.lineHeight + margin
+        w = self.viewport().width() - x
         h = self.lineHeight - margin
 
         rect = QRect(x, y, w, h)
@@ -1575,7 +1574,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not self.data:
             return -1
 
-        y = max(0, pos.y() - self.marginY)
+        y = max(0, pos.y())
         n = int(y / self.lineHeight)
         n += self.firstVisibleLine()
 
