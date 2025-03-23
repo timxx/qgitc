@@ -76,12 +76,6 @@ class TextViewer(QAbstractScrollArea):
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
 
-        self._showLineNumbers = False
-        self._digitWidth = 0
-        self._spaceWidth = 0
-        # the x position for text lines
-        self._splitter = 0
-
         self.reloadSettings()
 
         self._maxWidth = 0
@@ -115,10 +109,6 @@ class TextViewer(QAbstractScrollArea):
         self._font = font
         fm = QFontMetrics(self._font)
         self._lineHeight = fm.height()
-
-        if self._showLineNumbers:
-            self._digitWidth = fm.horizontalAdvance('9')
-            self._spaceWidth = fm.horizontalAdvance(' ')
 
     def reloadSettings(self):
         self.updateFont(self.font())
@@ -296,7 +286,6 @@ class TextViewer(QAbstractScrollArea):
             return QPointF(0, 0)
 
         x = self.horizontalScrollBar().value()
-        x -= self._splitter
 
         return QPointF(-x, -0)
 
@@ -647,8 +636,7 @@ class TextViewer(QAbstractScrollArea):
         for i in range(low, len(self._highlightFind)):
             r = self._highlightFind[i]
             if r.beginLine() == lineIndex:
-                rg = createFormatRange(
-                    r.beginPos(), r.endPos() - r.beginPos(), fmt)
+                rg = createFormatRange(r.beginPos(), r.endPos() - r.beginPos(), fmt)
                 result.append(rg)
             elif r.beginLine() > lineIndex or r.beginLine() > endLine:
                 break
@@ -665,8 +653,7 @@ class TextViewer(QAbstractScrollArea):
 
         matches = self._similarWordPattern.finditer(textLine.text())
         for m in matches:
-            result.append(createFormatRange(
-                m.start(), m.end() - m.start(), fmt))
+            result.append(createFormatRange(m.start(), m.end() - m.start(), fmt))
 
         return result
 
@@ -767,7 +754,7 @@ class TextViewer(QAbstractScrollArea):
         else:
             findPart = FindPart.BeforeCurPage
 
-        assert (self._findIndex < low or high < self._findIndex)
+        assert(self._findIndex < low or high < self._findIndex)
 
         begin = self._findIndex
         end = begin + 1000
@@ -799,8 +786,6 @@ class TextViewer(QAbstractScrollArea):
         painter = QPainter(self.viewport())
         eventRect = event.rect()
 
-        self._updateSplitterPosition(painter, eventRect)
-
         if eventRect.isValid():
             startLine = self.textRowForPos(eventRect.topLeft())
             endLine = self.textRowForPos(eventRect.bottomRight()) + 1
@@ -826,25 +811,25 @@ class TextViewer(QAbstractScrollArea):
             br = textLine.boundingRect()
             r = br.translated(offset)
 
-            lineRect = QRectF(br)
-            lineRect.moveTop(lineRect.top() + r.top())
-            lineRect.setLeft(self._splitter)
-            lineRect.setRight(viewportRect.width() - offset.x())
-
-            self._drawLineNumber(i, painter, lineRect)
+            def lineRect():
+                fr = QRectF(br)
+                fr.moveTop(fr.top() + r.top())
+                fr.setLeft(0)
+                fr.setRight(viewportRect.width() - offset.x())
+                return fr
 
             if i in self._highlightLines:
-                painter.fillRect(lineRect, highlightLineBg)
+                painter.fillRect(lineRect(), highlightLineBg)
             else:
-                self.drawLineBackground(painter, textLine, lineRect)
+                self.drawLineBackground(painter, textLine, lineRect())
 
             # TODO: move to subclass???
             if self.canDrawLineBorder(textLine):
                 if borderStartLine == -1:
                     borderStartLine = i
-                    borderRect = lineRect
+                    borderRect = lineRect()
                 else:
-                    borderRect.setBottom(lineRect.bottom())
+                    borderRect.setBottom(lineRect().bottom())
             elif borderStartLine != -1:
                 self.drawLinesBorder(painter, borderRect)
                 borderStartLine = -1
@@ -926,7 +911,7 @@ class TextViewer(QAbstractScrollArea):
 
         self._clickOnLink = False
         if not self.hasTextLines() or \
-                self._cursor.hasSelection():
+            self._cursor.hasSelection():
             return
 
         textLine = self.textLineForPos(event.pos())
@@ -1077,45 +1062,3 @@ class TextViewer(QAbstractScrollArea):
             line.reapplyColorTheme()
 
         self.viewport().update()
-
-    def setShowLineNumbers(self, show):
-        if self._showLineNumbers == show:
-            return
-
-        self._showLineNumbers = show
-        if show:
-            fm = QFontMetrics(self._font)
-            self._lineHeight = fm.height()
-
-            self._digitWidth = fm.horizontalAdvance('9')
-            self._spaceWidth = fm.horizontalAdvance(' ')
-        else:
-            self._splitter = 0
-
-        self.viewport().update()
-
-    def _updateSplitterPosition(self, painter: QPainter, eventRect: QRect):
-        if not self._showLineNumbers:
-            return
-
-        if self._splitter == 0 or self._inReading:
-            digitCount = max(3, len(str(self.textLineCount())))
-            self._splitter = self._digitWidth * digitCount + self._spaceWidth
-
-    def _drawLineNumber(self, i: int, painter: QPainter, lineRect: QRectF):
-        if not self._showLineNumbers:
-            return
-
-        lineNumber = str(i + 1)
-        x = self._splitter - self._spaceWidth
-        rect = QRectF(lineRect)
-        rect.setRight(x)
-        rect.setLeft(0)
-
-        oldPen = painter.pen()
-        oldFont = painter.font()
-        painter.setPen(qApp.colorSchema().LineNumber)
-        painter.setFont(self._font)
-        painter.drawText(rect, Qt.AlignVCenter | Qt.AlignRight, lineNumber)
-        painter.setPen(oldPen)
-        painter.setFont(oldFont)

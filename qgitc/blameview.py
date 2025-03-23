@@ -206,11 +206,16 @@ class RevisionPanel(TextViewer):
         self.updateFont(qApp.settings().diffViewFont())
 
         fm = QFontMetrics(self._font)
+        self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
+        self._dateWidth = fm.horizontalAdvance("2020-05-27")
         self._space = fm.horizontalAdvance(' ')
+        self._digitWidth = fm.horizontalAdvance('9')
+        self._maxNameWidth = 12 * fm.horizontalAdvance('W')
 
-        sampleText = "a" * ABBREV_N + " 2020-05-27 Long Author Name"
-        width = fm.horizontalAdvance(sampleText)
-        width += self._space * 2
+        width = self._sha1Width + self._space * 6
+        width += self._dateWidth
+        width += self._maxNameWidth
+        width += self._digitWidth * 6
         self.resize(width, self._viewer.height())
 
     def appendRevisions(self, revs):
@@ -343,7 +348,8 @@ class RevisionPanel(TextViewer):
         colorSchema = qApp.colorSchema()
 
         textLineCount = self.textLineCount()
-        x = width - self._space
+        digitCount = max(3, len(str(textLineCount)))
+        x = width - digitCount * self._digitWidth - self._space * 2
         oldPen = painter.pen()
         painter.setPen(colorSchema.Splitter)
         painter.drawLine(x, y, x, self.height())
@@ -355,6 +361,7 @@ class RevisionPanel(TextViewer):
             return
 
         startLine = self.firstVisibleLine()
+        ascent = QFontMetrics(self._font).ascent()
 
         for i in range(startLine, textLineCount):
             line = self.textLineAt(i)
@@ -367,6 +374,12 @@ class RevisionPanel(TextViewer):
             line.draw(painter, QPointF(self._space, y))
 
             painter.restore()
+
+            lineNumber = str(i + 1)
+            x = width - len(lineNumber) * self._digitWidth - self._space
+            painter.setPen(colorSchema.LineNumber)
+            painter.drawText(x, y + ascent, lineNumber)
+            painter.setPen(oldPen)
 
             y += self._viewer.lineHeight
             if y > self.height():
@@ -406,7 +419,6 @@ class BlameSourceViewer(SourceViewer):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setPanel(RevisionPanel(self))
-        self.setShowLineNumbers(True)
 
         self._panel.revisionActivated.connect(
             self.revisionActivated)
