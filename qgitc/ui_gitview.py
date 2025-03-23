@@ -17,9 +17,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QHBoxLayout,
     QLabel, QLayout, QLineEdit, QSizePolicy,
-    QSpacerItem, QSplitter, QToolButton, QVBoxLayout,
-    QWidget)
+    QSpacerItem, QSplitter, QVBoxLayout, QWidget)
 
+from .coloredicontoolbutton import ColoredIconToolButton
 from .diffview import DiffView
 from .logview import (LogGraph, LogView)
 from .waitingspinnerwidget import QtWaitingSpinner
@@ -33,7 +33,7 @@ class Ui_GitView(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.horizontalLayout.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.branchSpinner = QtWaitingSpinner(GitView)
         self.branchSpinner.setObjectName(u"branchSpinner")
 
@@ -59,14 +59,14 @@ class Ui_GitView(object):
 
         self.splitter = QSplitter(GitView)
         self.splitter.setObjectName(u"splitter")
-        self.splitter.setFrameShape(QFrame.NoFrame)
-        self.splitter.setOrientation(Qt.Vertical)
+        self.splitter.setFrameShape(QFrame.Shape.NoFrame)
+        self.splitter.setOrientation(Qt.Orientation.Vertical)
         self.logWidget = QSplitter(self.splitter)
         self.logWidget.setObjectName(u"logWidget")
-        self.logWidget.setFocusPolicy(Qt.NoFocus)
-        self.logWidget.setFrameShape(QFrame.StyledPanel)
-        self.logWidget.setFrameShadow(QFrame.Sunken)
-        self.logWidget.setOrientation(Qt.Horizontal)
+        self.logWidget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.logWidget.setFrameShape(QFrame.Shape.StyledPanel)
+        self.logWidget.setFrameShadow(QFrame.Shadow.Sunken)
+        self.logWidget.setOrientation(Qt.Orientation.Horizontal)
         self.logWidget.setHandleWidth(1)
         self.logGraph = LogGraph(self.logWidget)
         self.logGraph.setObjectName(u"logGraph")
@@ -144,13 +144,15 @@ class Ui_GitView(object):
 
         self.horizontalLayout_3.addWidget(self.cbFindType)
 
-        self.tbPrev = QToolButton(self.verticalLayoutWidget)
+        self.tbPrev = ColoredIconToolButton(self.verticalLayoutWidget)
         self.tbPrev.setObjectName(u"tbPrev")
+        self.tbPrev.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_3.addWidget(self.tbPrev)
 
-        self.tbNext = QToolButton(self.verticalLayoutWidget)
+        self.tbNext = ColoredIconToolButton(self.verticalLayoutWidget)
         self.tbNext.setObjectName(u"tbNext")
+        self.tbNext.setIconSize(QSize(20, 20))
 
         self.horizontalLayout_3.addWidget(self.tbNext)
 
@@ -200,10 +202,10 @@ class Ui_GitView(object):
 #if QT_CONFIG(tooltip)
         self.tbPrev.setToolTip(QCoreApplication.translate("GitView", u"Find previous", None))
 #endif // QT_CONFIG(tooltip)
-        self.tbPrev.setText(QCoreApplication.translate("GitView", u"\u2191", None))
+        self.tbPrev.setText("")
 #if QT_CONFIG(tooltip)
         self.tbNext.setToolTip(QCoreApplication.translate("GitView", u"Find next", None))
 #endif // QT_CONFIG(tooltip)
-        self.tbNext.setText(QCoreApplication.translate("GitView", u"\u2193", None))
+        self.tbNext.setText("")
     # retranslateUi
 

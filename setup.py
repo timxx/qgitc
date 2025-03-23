@@ -58,6 +58,7 @@ class BuildQt(Command):
                              rb"|gitview"
                              rb"|colorwidget"
                              rb"|linkeditwidget"
+                             rb"|coloredicontoolbutton"
                              rb") (import .*$)")
 
         for uiFile in glob("qgitc/*.ui"):

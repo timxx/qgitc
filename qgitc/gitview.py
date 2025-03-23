@@ -70,6 +70,12 @@ class GitView(QWidget):
 
         self._logWidgetSizes = []
 
+        iconPath = dataDirPath() + "/icons/"
+        self.ui.tbNext.setIcon(QIcon(iconPath + "arrow-down.svg"))
+        self.ui.tbPrev.setIcon(QIcon(iconPath + "arrow-up.svg"))
+        self.ui.tbNext.setIconSize(QSize(20, 20))
+        self.ui.tbPrev.setIconSize(QSize(20, 20))
+
         self.__setupSignals()
 
     def __setupSignals(self):
