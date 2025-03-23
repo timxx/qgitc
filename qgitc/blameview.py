@@ -583,7 +583,7 @@ class BlameSourceViewer(SourceViewer):
 
             painter = QPainter(self.viewport())
             painter.setPen(Qt.gray)
-            painter.drawRect(lineRect)
+            painter.drawRect(lineRect.adjusted(1, 0, 0, 0))
 
 
 class CommitPanel(TextViewer):
