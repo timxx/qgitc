@@ -25,7 +25,8 @@ from PySide6.QtCore import (
     QSize,
     QMimeData,
     QRect,
-    QPoint)
+    QRectF,
+    QPointF)
 
 from .commitsource import CommitSource
 from .common import *
@@ -1126,19 +1127,19 @@ class LogView(QAbstractScrollArea, CommitSource):
         painter.restore()
         rect.adjust(br.width(), 0, 0, 0)
 
-    def __drawTriangleTag(self, painter, rect, color, text, textColor=Qt.black):
+    def __drawTriangleTag(self, painter: QPainter, rect: QRect, color, text, textColor=Qt.black):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
 
         flags = Qt.AlignLeft | Qt.AlignVCenter
-        br = painter.boundingRect(rect, flags, text)
+        br = painter.boundingRect(QRectF(rect), flags, text)
         br.adjust(0, -1, 4, 1)
 
         h = br.height()
-        w = int(h / 2)
+        w = h / 2
 
         path = QPainterPath()
-        path.moveTo(QPoint(br.x(), br.y() + int(h / 2)))
+        path.moveTo(QPointF(br.x(), br.y() + h / 2))
 
         # move rect to right
         br.adjust(w, 0, w, 0)
@@ -1149,9 +1150,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         path.lineTo(br.bottomLeft())
         path.closeSubpath()
 
-        painter.setPen(qApp.colorSchema().TagBorder)
         painter.fillPath(path, color)
-        painter.drawPath(path)
+        painter.strokePath(path, QPen(qApp.colorSchema().TagBorder))
 
         painter.setPen(textColor)
         painter.drawText(br, flags, text)
