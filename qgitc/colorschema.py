@@ -31,7 +31,8 @@ class ColorSchemaLight():
     Submodule2 = QColor(255, 0, 0)
     FindResult = QColor(246, 185, 77)
     SimilarWord = QColor(226, 230, 214)
-    HighlightWord = QColor(Qt.yellow)
+    HighlightWordBg = QColor(0xFFF176)
+    HighlightWordSelectedFg = Qt.yellow
 
     AuthorTagBg = QColor(232, 238, 244)
     AuthorTagFg = QColor(72, 94, 115)
@@ -100,7 +101,8 @@ class ColorSchemaDark():
     Submodule2 = QColor(255, 110, 64)
     FindResult = QColor(255, 153, 0)
     SimilarWord = QColor(69, 90, 100)
-    HighlightWord = QColor(0x00FFCC)
+    HighlightWordBg = QColor(0x653306)
+    HighlightWordSelectedFg = QColor(0xFFEB3B)
 
     AuthorTagBg = QColor(44, 62, 80)
     AuthorTagFg = QColor(158, 181, 202)

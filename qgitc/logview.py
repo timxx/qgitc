@@ -9,7 +9,8 @@ from PySide6.QtGui import (
     QPainterPath,
     QConicalGradient,
     QImage,
-    QCursor)
+    QCursor,
+    QColor)
 from PySide6.QtWidgets import (
     QWidget,
     QAbstractScrollArea,
@@ -1705,10 +1706,10 @@ class LogView(QAbstractScrollArea, CommitSource):
 
                     text = content[m.start():m.end()]
                     if i == self.curIdx:
-                        painter.setPen(Qt.yellow)
+                        painter.setPen(colorSchema.HighlightWordSelectedFg)
                     else:
                         br = painter.boundingRect(rect, flags, text)
-                        painter.fillRect(br, Qt.yellow)
+                        painter.fillRect(br, colorSchema.HighlightWordBg)
                     br = painter.drawText(rect, flags, text)
                     rect.adjust(br.width(), 0, 0, 0)
                     start = m.end()
