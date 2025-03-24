@@ -15,10 +15,10 @@ class NewVersionDialog(QMessageBox):
         self.setIcon(QMessageBox.Information)
         self.setWindowTitle(self.tr("New version available"))
         # TODO: for source version?
-        self.setText(self.tr(
-            "A new version ({0}) was available.\n"
-            "Run `{1}` for getting the latest version.".format(
-                version, "pip install qgitc --upgrade")))
+        newVersion = self.tr("A new version ({0}) was available.").format(version)
+        instruct = self.tr("Run `{0}` for getting the latest version.").format(
+            "pip install qgitc --upgrade")
+        self.setText(newVersion + "\n" + instruct)
 
         cb = QCheckBox(self.tr("Ignore this version"), self)
         self.setCheckBox(cb)
