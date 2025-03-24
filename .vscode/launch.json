@@ -16,15 +16,30 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
-            "args": ["blame", "${workspaceRoot}/qgitc/main.py"],
+            "args": [
+                "blame",
+                "${workspaceRoot}/qgitc/main.py"
+            ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Commit (Integrated Terminal)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "console": "integratedTerminal",
+            "args": [
+                "commit"
+            ]
         },
         {
             "name": "Python: MergeTool (Integrated Terminal)",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
-            "args": ["mergetool"],
+            "args": [
+                "mergetool"
+            ],
             "console": "integratedTerminal"
         },
         {
@@ -32,7 +47,10 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
-            "args": ["shell", "register"],
+            "args": [
+                "shell",
+                "register"
+            ],
             "console": "integratedTerminal"
         },
         {
@@ -40,7 +58,10 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
-            "args": ["shell", "unregister"],
+            "args": [
+                "shell",
+                "unregister"
+            ],
             "console": "integratedTerminal"
         },
     ]

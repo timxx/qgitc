@@ -68,6 +68,11 @@ def _setup_argument(prog):
         help="The file to blame.")
     blame_parser.set_defaults(func=_do_blame)
 
+    commit_parser = subparsers.add_parser(
+        "commit",
+        help="Show commit window to commit changes.")
+    commit_parser.set_defaults(func=_do_commit)
+
     setup_shell_args(subparsers)
 
     return parser.parse_args()
@@ -153,6 +158,20 @@ def _do_blame(args):
     _detect_and_fix_repo(file)
 
     window.blame(file, args.rev, args.line_number)
+
+    return app.exec()
+
+
+def _do_commit(args):
+    app = _init_gui()
+
+    window = app.getWindow(Application.CommitWindow)
+    _move_center(window)
+
+    if window.restoreState():
+        window.show()
+    else:
+        window.showMaximized()
 
     return app.exec()
 
