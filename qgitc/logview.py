@@ -1229,10 +1229,10 @@ class LogView(QAbstractScrollArea, CommitSource):
             offset += int(w / 3)
             rect.adjust(offset, 0, 0, 0)
 
-    def __drawGraphLane(self, painter, lane, x1, x2, color, activeColor, isHead, firstCommit):
-        h = int(self.lineHeight / 2)
+    def __drawGraphLane(self, painter: QPainter, lane, x1, x2, color, activeColor, isHead, firstCommit):
+        h = int(self.lineHeight / 2) + self.lineSpace // 4
         m = int((x1 + x2) / 2)
-        r = int((x2 - x1) * 1 / 3)
+        r = int((x2 - x1) * 1 / 4)
         d = int(2 * r)
 
         # points
