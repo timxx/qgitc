@@ -588,9 +588,10 @@ class BlameSourceViewer(SourceViewer):
 
 class CommitPanel(TextViewer):
 
-    def __init__(self, parent=None):
+    def __init__(self, viewer: BlameSourceViewer, parent=None):
         super().__init__(parent)
         self._bodyCache = {}
+        self._viewer = viewer
 
         settings = qApp.settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
@@ -621,7 +622,7 @@ class CommitPanel(TextViewer):
             text = self._bodyCache[rev.sha1]
         else:
             args = ["show", "-s", "--pretty=format:%B", rev.sha1]
-            data = Git.checkOutput(args)
+            data = Git.checkOutput(args, repoDir=self._viewer.repoDir)
             text = _decode(data) if data else None
             self._bodyCache[rev.sha1] = text
         if text:
@@ -793,7 +794,7 @@ class BlameView(QWidget):
         self._viewer = BlameSourceViewer(self)
         layout.addWidget(self._viewer)
 
-        self._commitPanel = CommitPanel(self)
+        self._commitPanel = CommitPanel(self._viewer, self)
 
         vSplitter = QSplitter(Qt.Vertical, self)
         vSplitter.addWidget(sourceWidget)
