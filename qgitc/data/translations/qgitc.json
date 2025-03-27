@@ -36,6 +36,7 @@
             "../../mergetool.py",
             "../../mergewidget.py",
             "../../newversiondialog.py",
+            "../../patchviewer.py",
             "../../preferences.py",
             "../../preferences.ui",
             "../../settings.py",
