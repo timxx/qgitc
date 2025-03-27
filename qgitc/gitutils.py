@@ -6,7 +6,7 @@ import subprocess
 import os
 import bisect
 import re
-from typing import Dict, List
+from typing import Dict, List, Union
 
 
 class GitProcess():
@@ -130,7 +130,7 @@ class Git():
         return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None, repoDir=None):
+    def checkOutput(args, text=None, repoDir=None) -> Union[bytes, None]:
         process = Git.run(args, text, repoDir)
         data = process.communicate()[0]
         if process.returncode != 0:
@@ -639,7 +639,19 @@ class Git():
             fullRepoDir = repoDir
             if repoDir and repoDir != ".":
                 fullRepoDir = os.path.join(Git.REPO_TOP_DIR, repoDir)
-            error = Git.restoreFiles(fullRepoDir or Git.REPO_DIR, files, staged)
+            error = Git.restoreFiles(
+                fullRepoDir or Git.REPO_DIR, files, staged)
             if error:
                 return error
         return None
+
+    @staticmethod
+    def status(repoDir=None, showIgnored=False):
+        args = ["status", "--porcelain"]
+        if showIgnored:
+            args.append("--ignored")
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if not data:
+            return None
+
+        return data
