@@ -59,6 +59,7 @@ class BuildQt(Command):
                              rb"|colorwidget"
                              rb"|linkeditwidget"
                              rb"|coloredicontoolbutton"
+                             rb"|patchviewer"
                              rb") (import .*$)")
 
         for uiFile in glob("qgitc/*.ui"):

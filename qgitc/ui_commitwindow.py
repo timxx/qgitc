@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QLineEdit,
     QPushButton, QSizePolicy, QSpacerItem, QSplitter,
     QStatusBar, QVBoxLayout, QWidget)
 
+from .patchviewer import PatchViewer
+
 class Ui_CommitWindow(object):
     def setupUi(self, CommitWindow):
         if not CommitWindow.objectName():
@@ -68,13 +70,13 @@ class Ui_CommitWindow(object):
 
         self.splitter.addWidget(self.verticalLayoutWidget_2)
         self.splitterMain.addWidget(self.splitter)
-        self.splitter_2 = QSplitter(self.splitterMain)
-        self.splitter_2.setObjectName(u"splitter_2")
-        self.splitter_2.setOrientation(Qt.Orientation.Vertical)
-        self.viewer = QWidget(self.splitter_2)
+        self.splitterRight = QSplitter(self.splitterMain)
+        self.splitterRight.setObjectName(u"splitterRight")
+        self.splitterRight.setOrientation(Qt.Orientation.Vertical)
+        self.viewer = PatchViewer(self.splitterRight)
         self.viewer.setObjectName(u"viewer")
-        self.splitter_2.addWidget(self.viewer)
-        self.horizontalLayoutWidget = QWidget(self.splitter_2)
+        self.splitterRight.addWidget(self.viewer)
+        self.horizontalLayoutWidget = QWidget(self.splitterRight)
         self.horizontalLayoutWidget.setObjectName(u"horizontalLayoutWidget")
         self.horizontalLayout = QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -108,8 +110,8 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout.addWidget(self.teMessage)
 
-        self.splitter_2.addWidget(self.horizontalLayoutWidget)
-        self.splitterMain.addWidget(self.splitter_2)
+        self.splitterRight.addWidget(self.horizontalLayoutWidget)
+        self.splitterMain.addWidget(self.splitterRight)
 
         self.horizontalLayout_2.addWidget(self.splitterMain)
 
