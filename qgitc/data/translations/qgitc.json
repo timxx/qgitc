@@ -16,6 +16,8 @@
             "../../colorwidget.py",
             "../../comboboxitemdelegate.py",
             "../../common.py",
+            "../../commitwindow.py",
+            "../../commitwindow.ui",
             "../../datafetcher.py",
             "../../diffview.py",
             "../../events.py",
