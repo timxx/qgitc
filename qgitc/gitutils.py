@@ -646,10 +646,14 @@ class Git():
         return None
 
     @staticmethod
-    def status(repoDir=None, showIgnored=False):
+    def status(repoDir=None, showIgnored=False, nullFormat=True):
         args = ["status", "--porcelain"]
         if showIgnored:
             args.append("--ignored")
+        if Git.versionGE(1, 7, 2):
+            args.append("--ignore-submodules=dirty")
+        if nullFormat:
+            args.append("-z")
         data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return None

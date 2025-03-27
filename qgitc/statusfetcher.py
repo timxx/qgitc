@@ -8,7 +8,7 @@ from qgitc.gitutils import Git
 
 
 class FetchStatusThread(QThread):
-    # repoDir, file status
+    # repoDir, list[(statusCode, file)]
     resultAvailable = Signal(str, list)
 
     def __init__(self, submodules, parent=None):
@@ -41,15 +41,30 @@ class FetchStatusThread(QThread):
 
     def _fetch(self, repoDir):
         if self.isInterruptionRequested():
-            return
-
-        data = Git.status(repoDir)
-        if not data:
             return None, None
 
-        # TODO: parse
-        lines = data.splitlines()
-        return repoDir, lines
+        if not repoDir or repoDir == '.':
+            fullRepoDir = Git.REPO_DIR
+        else:
+            fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
+
+        try:
+            data = Git.status(fullRepoDir)
+            if not data:
+                return None, None
+        except Exception:
+            return None, None
+
+        lines = data.rstrip(b'\0').split(b'\0')
+        result = []
+        for line in lines:
+            assert (len(line) > 3)
+            status = line[:2].decode()
+            file = line[4:].decode()
+            repoFile = os.path.normpath(os.path.join(
+                repoDir, file)) if repoDir and repoDir != '.' else file
+            result.append((status, repoFile))
+        return repoDir, result
 
 
 class StatusFetcher(QObject):
