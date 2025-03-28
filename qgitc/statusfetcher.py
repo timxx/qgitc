@@ -60,10 +60,10 @@ class FetchStatusThread(QThread):
         for line in lines:
             assert (len(line) > 3)
             status = line[:2].decode()
-            file = line[4:].decode()
-            repoFile = os.path.normpath(os.path.join(
-                repoDir, file)) if repoDir and repoDir != '.' else file
-            result.append((status, repoFile))
+            file = line[3:].decode()
+            repoFile = os.path.join(
+                repoDir, file) if repoDir and repoDir != '.' else file
+            result.append((status, os.path.normpath(repoFile)))
         return repoDir, result
 
 
