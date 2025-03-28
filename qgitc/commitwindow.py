@@ -181,12 +181,19 @@ class CommitWindow(StateWindow):
 
     def _onFindSubmoduleFinished(self):
         submodules = self._findSubmoduleThread.submodules
-        if not submodules:
+        caches = qApp.settings().submodulesCache(Git.REPO_DIR)
+
+        newSubmodules = list(set(submodules) - set(caches))
+        # no new submodules, no need to fetch
+        if not newSubmodules:
             return
 
-        # TODO: only fetch newly added submodules
-        self.clear()
-        self._statusFetcher.fetch(submodules)
+        qApp.settings().setSubmodulesCache(Git.REPO_DIR, submodules)
+
+        if self._statusFetcher.isRunning():
+            self._statusFetcher.addTask(newSubmodules)
+        else:
+            self._statusFetcher.fetch(newSubmodules)
 
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str]]):
         for status, file in fileList:

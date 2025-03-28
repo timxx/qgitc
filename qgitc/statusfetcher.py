@@ -74,6 +74,7 @@ class StatusFetcher(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._thread: FetchStatusThread = None
+        self._delayedTask = []
 
     def __del__(self):
         self.cancel()
@@ -90,7 +91,18 @@ class StatusFetcher(QObject):
             self._thread.requestInterruption()
             self._thread.wait(50)
             self._thread = None
+        # do not use clear, as we don't copy the list
+        self._delayedTask = []
+
+    def isRunning(self):
+        return self._thread is not None and self._thread.isRunning()
+
+    def addTask(self, submodules):
+        self._delayedTask.extend(submodules)
 
     def _onFinished(self):
         self._thread = None
-        self.finished.emit()
+        if self._delayedTask:
+            self.fetch(self._delayedTask)
+        else:
+            self.finished.emit()
