@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from enum import Enum
+import os
 from typing import List, Tuple
 from PySide6.QtCore import (
     QTimer,
@@ -9,13 +11,24 @@ from PySide6.QtCore import (
     QSortFilterProxyModel
 )
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
+    QAbstractItemView
+)
 
+from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
 from .findsubmodules import FindSubmoduleThread
 from .gitutils import Git
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
 from .ui_commitwindow import Ui_CommitWindow
+
+
+class FileStatus(Enum):
+
+    Untracked = 0
+    Unstaged = 1
+    Staged = 2
 
 
 class StatusFileInfo():
@@ -118,19 +131,31 @@ class CommitWindow(StateWindow):
 
         self.setWindowTitle(self.tr("QGitc Commit"))
 
-        self._fetcher = StatusFetcher(self)
-        self._fetcher.resultAvailable.connect(self._onStatusAvailable)
-        self._fetcher.finished.connect(self._onFetchFinished)
+        self._statusFetcher = StatusFetcher(self)
+        self._statusFetcher.resultAvailable.connect(self._onStatusAvailable)
+        self._statusFetcher.finished.connect(self._onStatusFetchFinished)
+
+        self._diffFetcher = DiffFetcher(self)
+        self._diffFetcher.diffAvailable.connect(
+            self._onDiffAvailable)
+        self._diffFetcher.fetchFinished.connect(
+            self._onDiffFetchFinished)
 
         self._filesModel = StatusFileListModel(self)
         filesProxyModel = QSortFilterProxyModel(self)
         filesProxyModel.setSourceModel(self._filesModel)
         self.ui.lvFiles.setModel(filesProxyModel)
+        self.ui.lvFiles.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ui.lvFiles.selectionModel().currentRowChanged.connect(
+            self._onSelectFileChanged)
 
         self._stagedModel = StatusFileListModel(self)
         stagedProxyModel = QSortFilterProxyModel(self)
         stagedProxyModel.setSourceModel(self._stagedModel)
         self.ui.lvStaged.setModel(stagedProxyModel)
+        self.ui.lvStaged.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ui.lvStaged.selectionModel().currentRowChanged.connect(
+            self._onStagedSelectFileChanged)
 
         QTimer.singleShot(0, self._loadLocalChanges)
 
@@ -141,7 +166,7 @@ class CommitWindow(StateWindow):
 
     def _loadLocalChanges(self):
         submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
-        self._fetcher.fetch(submodules)
+        self._statusFetcher.fetch(submodules)
 
     def clear(self):
         self._filesModel.clear()
@@ -154,7 +179,7 @@ class CommitWindow(StateWindow):
 
         # TODO: only fetch newly added submodules
         self.clear()
-        self._fetcher.fetch(submodules)
+        self._statusFetcher.fetch(submodules)
 
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str]]):
         for status, file in fileList:
@@ -163,5 +188,56 @@ class CommitWindow(StateWindow):
             if status[1] != " ":
                 self._filesModel.addFile(file, repoDir, status[1])
 
-    def _onFetchFinished(self):
+    def _onStatusFetchFinished(self):
         print("Fetch finished")
+
+    def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
+        self.ui.viewer.clear()
+        if not current.isValid():
+            return
+
+        file = self._filesModel.data(current, Qt.DisplayRole)
+        statusCode = self._filesModel.data(
+            current, StatusFileListModel.StatusCodeRole)
+        repoDir = self._filesModel.data(
+            current, StatusFileListModel.RepoDirRole)
+
+        self._showDiff(file, repoDir, FileStatus.Unstaged if statusCode !=
+                       "?" else FileStatus.Untracked)
+
+    def _onStagedSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
+        self.ui.viewer.clear()
+        if not current.isValid():
+            return
+
+        file = self._filesModel.data(current, Qt.DisplayRole)
+        repoDir = self._filesModel.data(
+            current, StatusFileListModel.RepoDirRole)
+
+        self._showDiff(file, repoDir, FileStatus.Staged)
+
+    def _showDiff(self, file: str, repoDir: str, status: FileStatus):
+        self._diffFetcher.resetRow(0)
+
+        if repoDir and repoDir != ".":
+            self._diffFetcher.cwd = os.path.join(Git.REPO_DIR, repoDir)
+            self._diffFetcher.repoDir = repoDir
+        else:
+            self._diffFetcher.cwd = Git.REPO_DIR
+            self._diffFetcher.repoDir = None
+
+        if status == FileStatus.Unstaged:
+            sha1 = Git.LUC_SHA1
+        elif status == FileStatus.Staged:
+            sha1 = Git.LCC_SHA1
+        else:
+            # TODO
+            return
+
+        self._diffFetcher.fetch(sha1, [file], None)
+
+    def _onDiffAvailable(self, lineItems, fileItems):
+        self.ui.viewer.appendLines(lineItems)
+
+    def _onDiffFetchFinished(self, exitCode):
+        pass
