@@ -1,108 +1,63 @@
 # -*- coding: utf-8 -*-
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
-from PySide6.QtCore import QThread, QObject, Signal
+from PySide6.QtCore import Signal
 
-from qgitc.gitutils import Git
+from .gitutils import Git
+from .submoduleexecutor import SubmoduleExecutor
 
 
-class FetchStatusThread(QThread):
-    # repoDir, list[(statusCode, file)]
-    resultAvailable = Signal(str, list)
+def _fetchStatus(repoDir):
+    if not repoDir or repoDir == '.':
+        fullRepoDir = Git.REPO_DIR
+    else:
+        fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
 
-    def __init__(self, submodules, parent=None):
-        super().__init__(parent)
-
-        self._submodules = submodules
-        self._fetchers = []
-
-    def run(self):
-        if self.isInterruptionRequested():
-            return
-
-        submodules = self._submodules or [None]
-        if len(submodules) == 1:
-            repoDir, status = self._fetch(submodules[0])
-            if status and not self.isInterruptionRequested():
-                self.resultAvailable.emit(repoDir, status)
-        else:
-            max_workers = max(2, os.cpu_count() - 2)
-            executor = ThreadPoolExecutor(max_workers=max_workers)
-            tasks = [executor.submit(self._fetch, submodule)
-                     for submodule in submodules]
-
-            for task in as_completed(tasks):
-                if self.isInterruptionRequested():
-                    return
-                repoDir, status = task.result()
-                if status:
-                    self.resultAvailable.emit(repoDir, status)
-
-    def _fetch(self, repoDir):
-        if self.isInterruptionRequested():
+    try:
+        data = Git.status(fullRepoDir)
+        if not data:
             return None, None
+    except Exception:
+        return None, None
 
-        if not repoDir or repoDir == '.':
-            fullRepoDir = Git.REPO_DIR
-        else:
-            fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
-
-        try:
-            data = Git.status(fullRepoDir)
-            if not data:
-                return None, None
-        except Exception:
-            return None, None
-
-        lines = data.rstrip(b'\0').split(b'\0')
-        result = []
-        for line in lines:
-            assert (len(line) > 3)
-            status = line[:2].decode()
-            file = line[3:].decode()
-            repoFile = os.path.join(
-                repoDir, file) if repoDir and repoDir != '.' else file
-            result.append((status, os.path.normpath(repoFile)))
-        return repoDir, result
+    lines = data.rstrip(b'\0').split(b'\0')
+    result = []
+    for line in lines:
+        assert (len(line) > 3)
+        status = line[:2].decode()
+        file = line[3:].decode()
+        repoFile = os.path.join(
+            repoDir, file) if repoDir and repoDir != '.' else file
+        result.append((status, os.path.normpath(repoFile)))
+    return repoDir, result
 
 
-class StatusFetcher(QObject):
+class StatusFetcher(SubmoduleExecutor):
     resultAvailable = Signal(str, list)
-    finished = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._thread: FetchStatusThread = None
         self._delayedTask = []
-
-    def __del__(self):
-        self.cancel()
 
     def fetch(self, submodules):
-        self.cancel()
-        self._thread = FetchStatusThread(submodules, self)
-        self._thread.resultAvailable.connect(self.resultAvailable)
-        self._thread.finished.connect(self._onFinished)
-        self._thread.start()
+        self.submit(submodules, _fetchStatus, self._onResultAvailable)
 
     def cancel(self):
-        if self._thread:
-            self._thread.requestInterruption()
-            self._thread.wait(50)
-            self._thread = None
+        super().cancel()
         # do not use clear, as we don't copy the list
         self._delayedTask = []
-
-    def isRunning(self):
-        return self._thread is not None and self._thread.isRunning()
 
     def addTask(self, submodules):
         self._delayedTask.extend(submodules)
 
-    def _onFinished(self):
+    def onFinished(self):
         self._thread = None
         if self._delayedTask:
             self.fetch(self._delayedTask)
         else:
             self.finished.emit()
+
+    def _onResultAvailable(self, repoDir, result):
+        if not result:
+            return
+        self.resultAvailable.emit(repoDir, result)
