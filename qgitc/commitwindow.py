@@ -148,6 +148,8 @@ class CommitWindow(StateWindow):
         self.ui.lvFiles.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.lvFiles.selectionModel().currentRowChanged.connect(
             self._onSelectFileChanged)
+        self.ui.lvFiles.clicked.connect(
+            self._onFileClicked)
 
         self._stagedModel = StatusFileListModel(self)
         stagedProxyModel = QSortFilterProxyModel(self)
@@ -156,6 +158,8 @@ class CommitWindow(StateWindow):
         self.ui.lvStaged.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.ui.lvStaged.selectionModel().currentRowChanged.connect(
             self._onStagedSelectFileChanged)
+        self.ui.lvStaged.clicked.connect(
+            self._onStagedFileClicked)
 
         QTimer.singleShot(0, self._loadLocalChanges)
 
@@ -163,6 +167,9 @@ class CommitWindow(StateWindow):
         self._findSubmoduleThread.finished.connect(
             self._onFindSubmoduleFinished)
         self._findSubmoduleThread.start()
+
+        self._curFile: str = None
+        self._curFileStatus: FileStatus = None
 
     def _loadLocalChanges(self):
         submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
@@ -196,14 +203,7 @@ class CommitWindow(StateWindow):
         if not current.isValid():
             return
 
-        file = self._filesModel.data(current, Qt.DisplayRole)
-        statusCode = self._filesModel.data(
-            current, StatusFileListModel.StatusCodeRole)
-        repoDir = self._filesModel.data(
-            current, StatusFileListModel.RepoDirRole)
-
-        self._showDiff(file, repoDir, FileStatus.Unstaged if statusCode !=
-                       "?" else FileStatus.Untracked)
+        self._showIndexDiff(current)
 
     def _onStagedSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
         self.ui.viewer.clear()
@@ -216,7 +216,26 @@ class CommitWindow(StateWindow):
 
         self._showDiff(file, repoDir, FileStatus.Staged)
 
+    def _showIndexDiff(self, index: QModelIndex, fromStaged=False):
+        model = self._stagedModel if fromStaged else self._filesModel
+
+        file = model.data(index, Qt.DisplayRole)
+        repoDir = model.data(index, StatusFileListModel.RepoDirRole)
+
+        if fromStaged:
+            fileStatus = FileStatus.Staged
+        elif model.data(index, StatusFileListModel.StatusCodeRole) == "?":
+            fileStatus = FileStatus.Untracked
+        else:
+            fileStatus = FileStatus.Unstaged
+
+        self._showDiff(file, repoDir, fileStatus)
+
     def _showDiff(self, file: str, repoDir: str, status: FileStatus):
+        if file == self._curFile and status == self._curFileStatus:
+            return
+
+        self.ui.viewer.clear()
         self._diffFetcher.resetRow(0)
 
         if repoDir and repoDir != ".":
@@ -234,6 +253,8 @@ class CommitWindow(StateWindow):
             # TODO
             return
 
+        self._curFile = file
+        self._curFileStatus = status
         self._diffFetcher.fetch(sha1, [file], None)
 
     def _onDiffAvailable(self, lineItems, fileItems):
@@ -241,3 +262,9 @@ class CommitWindow(StateWindow):
 
     def _onDiffFetchFinished(self, exitCode):
         pass
+
+    def _onFileClicked(self, index: QModelIndex):
+        self._showIndexDiff(index)
+
+    def _onStagedFileClicked(self, index: QModelIndex):
+        self._showIndexDiff(index, True)
