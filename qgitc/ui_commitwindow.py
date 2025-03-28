@@ -15,12 +15,13 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QLineEdit,
-    QListView, QMainWindow, QMenuBar, QPlainTextEdit,
-    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
-    QStatusBar, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QLabel,
+    QLineEdit, QListView, QMainWindow, QMenuBar,
+    QPlainTextEdit, QPushButton, QSizePolicy, QSpacerItem,
+    QSplitter, QStatusBar, QVBoxLayout, QWidget)
 
 from .patchviewer import PatchViewer
+from .waitingspinnerwidget import QtWaitingSpinner
 
 class Ui_CommitWindow(object):
     def setupUi(self, CommitWindow):
@@ -42,6 +43,21 @@ class Ui_CommitWindow(object):
         self.verticalLayout = QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.label_3 = QLabel(self.verticalLayoutWidget)
+        self.label_3.setObjectName(u"label_3")
+
+        self.horizontalLayout_4.addWidget(self.label_3)
+
+        self.spinnerUnstaged = QtWaitingSpinner(self.verticalLayoutWidget)
+        self.spinnerUnstaged.setObjectName(u"spinnerUnstaged")
+
+        self.horizontalLayout_4.addWidget(self.spinnerUnstaged)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_4)
+
         self.leFilterFiles = QLineEdit(self.verticalLayoutWidget)
         self.leFilterFiles.setObjectName(u"leFilterFiles")
 
@@ -58,6 +74,11 @@ class Ui_CommitWindow(object):
         self.verticalLayout_2 = QVBoxLayout(self.verticalLayoutWidget_2)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(self.verticalLayoutWidget_2)
+        self.label.setObjectName(u"label")
+
+        self.verticalLayout_2.addWidget(self.label)
+
         self.leFilterStaged = QLineEdit(self.verticalLayoutWidget_2)
         self.leFilterStaged.setObjectName(u"leFilterStaged")
 
@@ -73,42 +94,75 @@ class Ui_CommitWindow(object):
         self.splitterRight = QSplitter(self.splitterMain)
         self.splitterRight.setObjectName(u"splitterRight")
         self.splitterRight.setOrientation(Qt.Orientation.Vertical)
-        self.viewer = PatchViewer(self.splitterRight)
+        self.verticalLayoutWidget_3 = QWidget(self.splitterRight)
+        self.verticalLayoutWidget_3.setObjectName(u"verticalLayoutWidget_3")
+        self.verticalLayout_7 = QVBoxLayout(self.verticalLayoutWidget_3)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.label_2 = QLabel(self.verticalLayoutWidget_3)
+        self.label_2.setObjectName(u"label_2")
+
+        self.horizontalLayout_3.addWidget(self.label_2)
+
+        self.spinnerDiff = QtWaitingSpinner(self.verticalLayoutWidget_3)
+        self.spinnerDiff.setObjectName(u"spinnerDiff")
+
+        self.horizontalLayout_3.addWidget(self.spinnerDiff)
+
+
+        self.verticalLayout_7.addLayout(self.horizontalLayout_3)
+
+        self.viewer = PatchViewer(self.verticalLayoutWidget_3)
         self.viewer.setObjectName(u"viewer")
-        self.splitterRight.addWidget(self.viewer)
+
+        self.verticalLayout_7.addWidget(self.viewer)
+
+        self.splitterRight.addWidget(self.verticalLayoutWidget_3)
         self.horizontalLayoutWidget = QWidget(self.splitterRight)
         self.horizontalLayoutWidget.setObjectName(u"horizontalLayoutWidget")
-        self.horizontalLayout = QHBoxLayout(self.horizontalLayoutWidget)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_3 = QVBoxLayout()
-        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.btnCommit = QPushButton(self.horizontalLayoutWidget)
-        self.btnCommit.setObjectName(u"btnCommit")
+        self.verticalLayout_4 = QVBoxLayout(self.horizontalLayoutWidget)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.groupBox = QGroupBox(self.horizontalLayoutWidget)
+        self.groupBox.setObjectName(u"groupBox")
+        self.groupBox.setFlat(True)
 
-        self.verticalLayout_3.addWidget(self.btnCommit)
-
-        self.cbAmend = QCheckBox(self.horizontalLayoutWidget)
-        self.cbAmend.setObjectName(u"cbAmend")
-
-        self.verticalLayout_3.addWidget(self.cbAmend)
-
-        self.btnPush = QPushButton(self.horizontalLayoutWidget)
-        self.btnPush.setObjectName(u"btnPush")
-
-        self.verticalLayout_3.addWidget(self.btnPush)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.verticalLayout_3.addItem(self.verticalSpacer)
-
-
-        self.horizontalLayout.addLayout(self.verticalLayout_3)
+        self.verticalLayout_4.addWidget(self.groupBox)
 
         self.teMessage = QPlainTextEdit(self.horizontalLayoutWidget)
         self.teMessage.setObjectName(u"teMessage")
 
-        self.horizontalLayout.addWidget(self.teMessage)
+        self.verticalLayout_4.addWidget(self.teMessage)
+
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer)
+
+        self.btnCommit = QPushButton(self.horizontalLayoutWidget)
+        self.btnCommit.setObjectName(u"btnCommit")
+
+        self.horizontalLayout.addWidget(self.btnCommit)
+
+        self.btnAmend = QPushButton(self.horizontalLayoutWidget)
+        self.btnAmend.setObjectName(u"btnAmend")
+
+        self.horizontalLayout.addWidget(self.btnAmend)
+
+        self.btnPush = QPushButton(self.horizontalLayoutWidget)
+        self.btnPush.setObjectName(u"btnPush")
+
+        self.horizontalLayout.addWidget(self.btnPush)
+
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout.addItem(self.horizontalSpacer_2)
+
+
+        self.verticalLayout_4.addLayout(self.horizontalLayout)
 
         self.splitterRight.addWidget(self.horizontalLayoutWidget)
         self.splitterMain.addWidget(self.splitterRight)
@@ -131,8 +185,12 @@ class Ui_CommitWindow(object):
 
     def retranslateUi(self, CommitWindow):
         CommitWindow.setWindowTitle(QCoreApplication.translate("CommitWindow", u"QGitc Commit", None))
+        self.label_3.setText(QCoreApplication.translate("CommitWindow", u"Unstaged:", None))
+        self.label.setText(QCoreApplication.translate("CommitWindow", u"Staged:", None))
+        self.label_2.setText(QCoreApplication.translate("CommitWindow", u"Diff:", None))
+        self.groupBox.setTitle(QCoreApplication.translate("CommitWindow", u"Commit message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
-        self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"Amend commit", None))
+        self.btnAmend.setText(QCoreApplication.translate("CommitWindow", u"Amend", None))
         self.btnPush.setText(QCoreApplication.translate("CommitWindow", u"&Push", None))
     # retranslateUi
 

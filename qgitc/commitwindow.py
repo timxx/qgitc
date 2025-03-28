@@ -126,7 +126,7 @@ class CommitWindow(StateWindow):
         self.ui.splitterMain.setSizes(sizes)
 
         height = self.ui.splitterRight.sizeHint().height()
-        sizes = [height * 3 / 5, height * 2 / 5]
+        sizes = [height * 4 / 5, height * 1 / 5]
         self.ui.splitterRight.setSizes(sizes)
 
         self.setWindowTitle(self.tr("QGitc Commit"))
