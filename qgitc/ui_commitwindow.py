@@ -45,15 +45,19 @@ class Ui_CommitWindow(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.label_3 = QLabel(self.verticalLayoutWidget)
-        self.label_3.setObjectName(u"label_3")
+        self.lbUnstaged = QLabel(self.verticalLayoutWidget)
+        self.lbUnstaged.setObjectName(u"lbUnstaged")
 
-        self.horizontalLayout_4.addWidget(self.label_3)
+        self.horizontalLayout_4.addWidget(self.lbUnstaged)
 
         self.spinnerUnstaged = QtWaitingSpinner(self.verticalLayoutWidget)
         self.spinnerUnstaged.setObjectName(u"spinnerUnstaged")
 
         self.horizontalLayout_4.addWidget(self.spinnerUnstaged)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_3)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout_4)
@@ -110,6 +114,10 @@ class Ui_CommitWindow(object):
         self.spinnerDiff.setObjectName(u"spinnerDiff")
 
         self.horizontalLayout_3.addWidget(self.spinnerDiff)
+
+        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_4)
 
 
         self.verticalLayout_7.addLayout(self.horizontalLayout_3)
@@ -185,9 +193,9 @@ class Ui_CommitWindow(object):
 
     def retranslateUi(self, CommitWindow):
         CommitWindow.setWindowTitle(QCoreApplication.translate("CommitWindow", u"QGitc Commit", None))
-        self.label_3.setText(QCoreApplication.translate("CommitWindow", u"Unstaged:", None))
-        self.label.setText(QCoreApplication.translate("CommitWindow", u"Staged:", None))
-        self.label_2.setText(QCoreApplication.translate("CommitWindow", u"Diff:", None))
+        self.lbUnstaged.setText(QCoreApplication.translate("CommitWindow", u"Unstaged", None))
+        self.label.setText(QCoreApplication.translate("CommitWindow", u"Staged", None))
+        self.label_2.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.groupBox.setTitle(QCoreApplication.translate("CommitWindow", u"Commit message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
         self.btnAmend.setText(QCoreApplication.translate("CommitWindow", u"Amend", None))

@@ -29,14 +29,27 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
-            <widget class="QLabel" name="label_3">
+            <widget class="QLabel" name="lbUnstaged">
              <property name="text">
-              <string>Unstaged:</string>
+              <string>Unstaged</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QtWaitingSpinner" name="spinnerUnstaged" native="true"/>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
@@ -53,7 +66,7 @@
          <item>
           <widget class="QLabel" name="label">
            <property name="text">
-            <string>Staged:</string>
+            <string>Staged</string>
            </property>
           </widget>
          </item>
@@ -77,12 +90,25 @@
            <item>
             <widget class="QLabel" name="label_2">
              <property name="text">
-              <string>Diff:</string>
+              <string>Diff</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QtWaitingSpinner" name="spinnerDiff" native="true"/>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>

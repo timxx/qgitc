@@ -171,9 +171,23 @@ class CommitWindow(StateWindow):
         self._curFile: str = None
         self._curFileStatus: FileStatus = None
 
+        self._setupSpinner(self.ui.spinnerUnstaged)
+        self._setupSpinner(self.ui.spinnerDiff)
+
+        self._diffSpinnerDelayTimer = QTimer(self)
+        self._diffSpinnerDelayTimer.setSingleShot(True)
+        self._diffSpinnerDelayTimer.timeout.connect(self.ui.spinnerDiff.start)
+
+    def _setupSpinner(self, spinner):
+        height = self.ui.lbUnstaged.height() // 7
+        spinner.setLineLength(height)
+        spinner.setInnerRadius(height)
+        spinner.setNumberOfLines(14)
+
     def _loadLocalChanges(self):
         submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
         self._statusFetcher.fetch(submodules)
+        self.ui.spinnerUnstaged.start()
 
     def clear(self):
         self._filesModel.clear()
@@ -203,7 +217,7 @@ class CommitWindow(StateWindow):
                 self._filesModel.addFile(file, repoDir, status[1])
 
     def _onStatusFetchFinished(self):
-        print("Fetch finished")
+        self.ui.spinnerUnstaged.stop()
 
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
         self.ui.viewer.clear()
@@ -262,12 +276,14 @@ class CommitWindow(StateWindow):
         self._curFile = file
         self._curFileStatus = status
         self._diffFetcher.fetch(sha1, [file], None)
+        self._diffSpinnerDelayTimer.start(1000)
 
     def _onDiffAvailable(self, lineItems, fileItems):
         self.ui.viewer.appendLines(lineItems)
 
     def _onDiffFetchFinished(self, exitCode):
-        pass
+        self._diffSpinnerDelayTimer.stop()
+        self.ui.spinnerDiff.stop()
 
     def _onFileClicked(self, index: QModelIndex):
         self._showIndexDiff(index)
