@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict
+from typing import Dict, List
 from PySide6.QtCore import Signal
 
 from .common import toSubmodulePath
@@ -142,8 +142,8 @@ class DiffFetcher(DataFetcher):
         super(DiffFetcher, self).cancel()
 
     def makeArgs(self, args):
-        sha1 = args[0]
-        filePath = args[1]
+        sha1: str = args[0]
+        filePaths: List[str] = args[1]
         gitArgs = args[2]
 
         git_args = ["-c", "core.quotePath=false"]
@@ -152,22 +152,26 @@ class DiffFetcher(DataFetcher):
             git_args.extend(["diff-index", "--cached", "HEAD"])
         elif sha1 == Git.LUC_SHA1:
             git_args.extend(["diff-files"])
+        elif sha1 == None:  # untracked files
+            assert len(filePaths) == 1
+            git_args.extend(["diff", "-p", "--no-index", "/dev/null"])
         else:
             git_args.extend(["diff-tree", "-r", "--root", sha1])
 
-        git_args.extend(["-p", "--textconv", "--submodule",
-                         "-C", "--cc", "--no-commit-id", "-U3"])
+        if sha1 is not None:
+            git_args.extend(["-p", "--textconv", "--submodule",
+                             "-C", "--cc", "--no-commit-id", "-U3"])
 
         if gitArgs:
             git_args.extend(gitArgs)
 
-        if filePath:
+        if filePaths:
             git_args.append("--")
             if self._repoDir and self._repoDir != ".":
-                for path in filePath:
+                for path in filePaths:
                     git_args.append(toSubmodulePath(self._repoDir, path))
             else:
-                git_args.extend(filePath)
+                git_args.extend(filePaths)
 
         return git_args
 

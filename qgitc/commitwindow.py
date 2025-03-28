@@ -250,8 +250,7 @@ class CommitWindow(StateWindow):
         elif status == FileStatus.Staged:
             sha1 = Git.LCC_SHA1
         else:
-            # TODO
-            return
+            sha1 = None
 
         self._curFile = file
         self._curFileStatus = status
