@@ -130,10 +130,24 @@
           </widget>
          </item>
          <item>
-          <widget class="QPlainTextEdit" name="teMessage"/>
+          <widget class="QPlainTextEdit" name="teMessage">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QCheckBox" name="cbAmend">
+             <property name="text">
+              <string>Amend Last Message</string>
+             </property>
+            </widget>
+           </item>
            <item>
             <spacer name="horizontalSpacer">
              <property name="orientation">
@@ -155,16 +169,15 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btnAmend">
-             <property name="text">
-              <string>Amend</string>
+            <widget class="QPushButton" name="btnCommitPush">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
              </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="btnPush">
              <property name="text">
-              <string>&amp;Push</string>
+              <string>Commit &amp;&amp; &amp;Push</string>
              </property>
             </widget>
            </item>

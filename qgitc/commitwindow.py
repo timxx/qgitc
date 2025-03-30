@@ -12,12 +12,15 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QAbstractItemView
+    QAbstractItemView,
+    QMessageBox
 )
 
+from .common import toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
 from .findsubmodules import FindSubmoduleThread
+from .gitprogressdialog import GitProgressDialog
 from .gitutils import Git
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
@@ -161,6 +164,12 @@ class CommitWindow(StateWindow):
         self.ui.lvStaged.clicked.connect(
             self._onStagedFileClicked)
 
+        self._stagedModel.rowsInserted.connect(self._onStagedFilesChanged)
+        self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)
+
+        self.ui.btnCommit.setEnabled(False)
+        self.ui.btnCommitPush.setEnabled(False)
+
         QTimer.singleShot(0, self._loadLocalChanges)
 
         self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
@@ -177,6 +186,16 @@ class CommitWindow(StateWindow):
         self._diffSpinnerDelayTimer = QTimer(self)
         self._diffSpinnerDelayTimer.setSingleShot(True)
         self._diffSpinnerDelayTimer.timeout.connect(self.ui.spinnerDiff.start)
+
+        self.ui.teMessage.setPlaceholderText(
+            self.tr("Enter commit message here..."))
+
+        self.ui.btnCommit.clicked.connect(self._onCommitClicked)
+        self.ui.btnCommitPush.clicked.connect(self._onCommitAndPushClicked)
+
+        # current running task
+        self._submoduleFiles = {}
+        self._progressDialog: GitProgressDialog = None
 
     def _setupSpinner(self, spinner):
         height = self.ui.lbUnstaged.height() // 7
@@ -290,3 +309,75 @@ class CommitWindow(StateWindow):
 
     def _onStagedFileClicked(self, index: QModelIndex):
         self._showIndexDiff(index, True)
+
+    def _onCommitClicked(self):
+        if not self._checkMessage():
+            return
+
+        # get all rows from _stagedModel
+        submoduleFiles = {}
+        for row in range(self._stagedModel.rowCount()):
+            index = self._stagedModel.index(row, 0)
+            filePath = self._stagedModel.data(index, Qt.DisplayRole)
+            repoDir = self._stagedModel.data(
+                index, StatusFileListModel.RepoDirRole)
+            submoduleFiles.setdefault(repoDir, []).append(filePath)
+
+        assert (len(submoduleFiles) > 0)
+
+        self._submoduleFiles = submoduleFiles
+        submodules = list(submoduleFiles.keys())
+
+        self._progressDialog = GitProgressDialog(self)
+        self._progressDialog.setWindowTitle(self.tr("Committing..."))
+        self._progressDialog.executeTask(submodules, self._doCommit)
+        self._submoduleFiles = {}
+        self._progressDialog = None
+
+    def _onCommitAndPushClicked(self):
+        if not self._checkMessage():
+            return
+
+    def _checkMessage(self):
+        # amend no need message
+        if self.ui.cbAmend.isChecked():
+            return True
+
+        if not self._isMessageValid():
+            content = self.tr("Please enter a valid commit message.")
+            if not self.ui.teMessage.toPlainText().strip():
+                content += "\n" + self.tr("Commit message cannot be empty.")
+            QMessageBox.critical(
+                self,
+                self.tr("Invalid commit message"),
+                content,
+                QMessageBox.Ok)
+            return False
+
+        return True
+
+    def _isMessageValid(self):
+        message = self.ui.teMessage.toPlainText().strip()
+        if not message:
+            return False
+
+        # TODO: verify with template or other rules
+        return True
+
+    def _onStagedFilesChanged(self, parent: QModelIndex, first, last):
+        enabled = self._stagedModel.rowCount() > 0
+        self.ui.btnCommit.setEnabled(enabled)
+        self.ui.btnCommitPush.setEnabled(enabled)
+
+    def _doCommit(self, submodule):
+        # since we run in modal dialog
+        # we treat here is safe to get from ui directly
+        amend = self.ui.cbAmend.isChecked()
+        if not amend:
+            message = self.ui.teMessage.toPlainText().strip()
+            assert (message)
+        else:
+            message = None
+
+        out, error = Git.commit(message, amend, submodule)
+        self._progressDialog.updateProgressResult(out, error)

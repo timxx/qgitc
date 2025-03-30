@@ -659,3 +659,19 @@ class Git():
             return None
 
         return data
+
+    @staticmethod
+    def commit(message: str, amend: bool = False, repoDir: str = None):
+        args = ["commit", "--no-edit"]
+        if amend:
+            args.append("--amend")
+        else:
+            args.append("-m")
+            args.append(message)
+        process = GitProcess(repoDir or Git.REPO_DIR, args)
+        out, error = process.communicate()
+        if out is not None:
+            out = out.decode("utf-8")
+        if error is not None:
+            error = error.decode("utf-8")
+        return out, error

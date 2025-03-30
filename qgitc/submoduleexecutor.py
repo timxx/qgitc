@@ -43,7 +43,10 @@ class SubmoduleThread(QThread):
         if len(submodules) == 1:
             result = self.processSubmodule(submodules[0])
             if not self.isInterruptionRequested():
-                self.onResultAvailable(*result)
+                if isinstance(result, tuple):
+                    self.onResultAvailable(*result)
+                else:
+                    self.onResultAvailable(result)
         else:
             max_workers = max(2, os.cpu_count() - 2)
             executor = ThreadPoolExecutor(max_workers=max_workers)
@@ -54,7 +57,10 @@ class SubmoduleThread(QThread):
                 if self.isInterruptionRequested():
                     return
                 result = task.result()
-                self.onResultAvailable(*result)
+                if isinstance(result, tuple):
+                    self.onResultAvailable(*result)
+                else:
+                    self.onResultAvailable(result)
 
 
 class SubmoduleExecutor(QObject):
@@ -67,7 +73,7 @@ class SubmoduleExecutor(QObject):
     def __del__(self):
         self.cancel()
 
-    def submit(self, submodules, actionHandler: Callable, resultHandler: Callable):
+    def submit(self, submodules, actionHandler: Callable, resultHandler: Callable = None):
         """ Submit a list of submodules and an action to be performed on each submodule.
          The action should be a callable that takes a submodule path as an argument.
          The result handler should be a callable that takes the result of the action."""
