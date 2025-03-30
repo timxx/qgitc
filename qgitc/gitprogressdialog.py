@@ -4,15 +4,13 @@ from typing import Callable, List
 from PySide6.QtCore import Qt, QEvent
 from PySide6.QtGui import (
     QTextCharFormat,
-    QTextCursor,
-    QColor
+    QTextCursor
 )
 from PySide6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QProgressBar,
     QDialogButtonBox,
-    QSpacerItem,
     QSizePolicy,
     QPlainTextEdit
 )
@@ -31,6 +29,15 @@ class AppendResultEvent(QEvent):
         self.error = error
 
 
+class UpdateProgressEvent(QEvent):
+    """Event to update the progress bar."""
+
+    Type = QEvent.User + 2
+
+    def __init__(self):
+        super().__init__(QEvent.Type(UpdateProgressEvent.Type))
+
+
 class GitProgressDialog(QDialog):
     """Git progress dialog."""
 
@@ -45,6 +52,7 @@ class GitProgressDialog(QDialog):
 
         self._executor = SubmoduleExecutor(self)
         self._executor.finished.connect(self._onFinished)
+        self._resultHandler: Callable = None
 
         self._setupUi()
 
@@ -54,6 +62,7 @@ class GitProgressDialog(QDialog):
 
         self._progress = QProgressBar(self)
         self._progress.setRange(0, 0)
+        self._progress.setTextVisible(False)
         layout.addWidget(self._progress)
 
         self._textEdit = QPlainTextEdit(self)
@@ -69,9 +78,11 @@ class GitProgressDialog(QDialog):
         self.buttonBox.rejected.connect(self._executor.cancel)
 
     def executeTask(self, submodules: List[str], actionHandler: Callable, resultHandler: Callable = None):
-        self._executor.submit(submodules, actionHandler, resultHandler)
+        self._resultHandler = resultHandler
+        self._executor.submit(submodules, actionHandler, self._onHandleResult)
 
-        self._progress.setRange(0, 0)
+        self._progress.setRange(0, len(submodules))
+        self._progress.setValue(0)
         self._textEdit.clear()
 
         return self.exec()
@@ -84,7 +95,6 @@ class GitProgressDialog(QDialog):
         qApp.postEvent(self, AppendResultEvent(out, error))
 
     def _onFinished(self):
-        self._progress.hide()
         self.buttonBox.rejected.disconnect()
         self.buttonBox.clear()
         self.buttonBox.addButton(QDialogButtonBox.Close)
@@ -96,7 +106,7 @@ class GitProgressDialog(QDialog):
             if evt.error:
                 cursor = self._textEdit.textCursor()
                 cursor.movePosition(QTextCursor.End)
-                
+
                 format = QTextCharFormat()
                 format.setForeground(qApp.colorScheme().ErrorText)
                 cursor.insertText(evt.error + "\n", format)
@@ -104,4 +114,14 @@ class GitProgressDialog(QDialog):
             self._textEdit.moveCursor(QTextCursor.End)
             self._textEdit.ensureCursorVisible()
             return True
+        elif evt.type() == UpdateProgressEvent.Type:
+            self._progress.setValue(self._progress.value() + 1)
+            return True
+
         return super().event(evt)
+
+    def _onHandleResult(self, *args):
+        qApp.postEvent(self, UpdateProgressEvent())
+
+        if self._resultHandler:
+            self._resultHandler(*args)
