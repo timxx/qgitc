@@ -416,6 +416,22 @@
    <header>coloredicontoolbutton.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>teMessage</tabstop>
+  <tabstop>btnCommit</tabstop>
+  <tabstop>cbAmend</tabstop>
+  <tabstop>lvFiles</tabstop>
+  <tabstop>tbUnstageAll</tabstop>
+  <tabstop>tbUnstage</tabstop>
+  <tabstop>tbStage</tabstop>
+  <tabstop>tbStageAll</tabstop>
+  <tabstop>leFilterStaged</tabstop>
+  <tabstop>lvStaged</tabstop>
+  <tabstop>tbRefresh</tabstop>
+  <tabstop>leFilterFiles</tabstop>
+  <tabstop>tbWDChanges</tabstop>
+  <tabstop>cbRunAction</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

@@ -171,6 +171,7 @@ class CommitWindow(StateWindow):
 
         self.ui = Ui_CommitWindow()
         self.ui.setupUi(self)
+        self.ui.teMessage.setFocus()
 
         width = self.ui.splitterMain.sizeHint().width()
         sizes = [width * 2 / 5, width * 3 / 5]
