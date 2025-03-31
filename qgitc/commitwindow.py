@@ -18,7 +18,8 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QMessageBox,
-    QListView
+    QListView,
+    QMenu
 )
 
 from .common import dataDirPath, toSubmodulePath
@@ -110,7 +111,7 @@ class StatusFileListModel(QAbstractListModel):
     def removeFile(self, file: str, repoDir: str):
         if not self._fileList:
             return None
-        
+
         for i, fileInfo in enumerate(self._fileList):
             if fileInfo.file == file and fileInfo.repoDir == repoDir:
                 break
@@ -153,6 +154,14 @@ class UpdateFilesEvent(QEvent):
         self.isStaged = isStaged
         self.submodule = submodule
         self.files = files
+
+
+class GitErrorEvent(QEvent):
+    Type = QEvent.User + 2
+
+    def __init__(self, error: str):
+        super().__init__(QEvent.Type(GitErrorEvent.Type))
+        self.error = error
 
 
 class CommitWindow(StateWindow):
@@ -260,6 +269,8 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.finished.connect(
             self._onNonUITaskFinished)
 
+        self._setupWDMenu()
+
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)
@@ -269,6 +280,8 @@ class CommitWindow(StateWindow):
     def _loadLocalChanges(self):
         submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
         self._statusFetcher.fetch(submodules)
+        self.ui.tbRefresh.setEnabled(False)
+        self.ui.tbWDChanges.setEnabled(False)
         self.ui.spinnerUnstaged.start()
 
     def clear(self):
@@ -293,13 +306,15 @@ class CommitWindow(StateWindow):
 
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str]]):
         for status, file in fileList:
-            if status[0] != " " and status[0] != "?":
+            if status[0] != " " and status[0] not in ["?", "!"]:
                 self._stagedModel.addFile(file, repoDir, status[0])
             if status[1] != " ":
                 self._filesModel.addFile(file, repoDir, status[1])
 
     def _onStatusFetchFinished(self):
         self.ui.spinnerUnstaged.stop()
+        self.ui.tbRefresh.setEnabled(True)
+        self.ui.tbWDChanges.setEnabled(True)
 
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
         self.ui.viewer.clear()
@@ -327,7 +342,7 @@ class CommitWindow(StateWindow):
 
         if fromStaged:
             fileStatus = FileStatus.Staged
-        elif model.data(index, StatusFileListModel.StatusCodeRole) == "?":
+        elif model.data(index, StatusFileListModel.StatusCodeRole) in ["?", "!"]:
             fileStatus = FileStatus.Untracked
         else:
             fileStatus = FileStatus.Unstaged
@@ -515,6 +530,8 @@ class CommitWindow(StateWindow):
         error = Git.restoreStagedFiles(repoDir, repoFiles)
         if not error:
             qApp.postEvent(self, UpdateFilesEvent(True, submodule, files))
+        else:
+            qApp.postEvent(self, GitErrorEvent(error))
 
     def _doStage(self, submodule: str, files: List[str]):
         repoDir = self._toRepoDir(submodule)
@@ -522,6 +539,8 @@ class CommitWindow(StateWindow):
         error = Git.addFiles(repoDir, repoFiles)
         if not error:
             qApp.postEvent(self, UpdateFilesEvent(False, submodule, files))
+        else:
+            qApp.postEvent(self, GitErrorEvent(error))
 
     def _onNonUITaskFinished(self):
         self._blockUI(False)
@@ -537,6 +556,14 @@ class CommitWindow(StateWindow):
     def event(self, evt):
         if evt.type() == UpdateFilesEvent.Type:
             self._updateFiles(evt.isStaged, evt.submodule, evt.files)
+            return True
+        elif evt.type() == GitErrorEvent.Type:
+            # TODO: merge the same error and report at end
+            QMessageBox.critical(
+                self,
+                self.tr("Git Error"),
+                evt.error,
+                QMessageBox.Ok)
             return True
         return super().event(evt)
 
@@ -557,12 +584,27 @@ class CommitWindow(StateWindow):
     def _addFiles(self, model: StatusFileListModel, submodule: str, files: List[str], oldStatus: Dict[str, str]):
         for file in files:
             status = oldStatus.get(file)
-            if status == "?" and model == self._stagedModel:
+            if status in ["?", "!"] and model == self._stagedModel:
                 status = "A"
             elif status == "A" and model == self._filesModel:
+                # TODO: might be ignored files
                 status = "?"
             model.tryAddFile(file, submodule, status)
 
     def reloadLocalChanges(self):
         self.clear()
         self._loadLocalChanges()
+
+    def _setupWDMenu(self):
+        self._wdMenu = QMenu(self)
+        self._acShowIgnoredFiles = self._wdMenu.addAction(
+            self.tr("Show ignored files"),
+            self._onShowIgnoredFiles)
+        self._acShowIgnoredFiles.setCheckable(True)
+
+        self.ui.tbWDChanges.setMenu(self._wdMenu)
+
+    def _onShowIgnoredFiles(self):
+        self._statusFetcher.setShowIgnoredFiles(
+            self._acShowIgnoredFiles.isChecked())
+        self.reloadLocalChanges()

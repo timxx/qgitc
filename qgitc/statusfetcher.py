@@ -7,40 +7,16 @@ from .gitutils import Git
 from .submoduleexecutor import SubmoduleExecutor
 
 
-def _fetchStatus(repoDir, userData=None):
-    if not repoDir or repoDir == '.':
-        fullRepoDir = Git.REPO_DIR
-    else:
-        fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
-
-    try:
-        data = Git.status(fullRepoDir)
-        if not data:
-            return None, None
-    except Exception:
-        return None, None
-
-    lines = data.rstrip(b'\0').split(b'\0')
-    result = []
-    for line in lines:
-        assert (len(line) > 3)
-        status = line[:2].decode()
-        file = line[3:].decode()
-        repoFile = os.path.join(
-            repoDir, file) if repoDir and repoDir != '.' else file
-        result.append((status, os.path.normpath(repoFile)))
-    return repoDir, result
-
-
 class StatusFetcher(SubmoduleExecutor):
     resultAvailable = Signal(str, list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._delayedTask = []
+        self._showIgnoredFiles = False
 
     def fetch(self, submodules):
-        self.submit(submodules, _fetchStatus, self._onResultAvailable)
+        self.submit(submodules, self._fetchStatus, self._onResultAvailable)
 
     def cancel(self):
         super().cancel()
@@ -61,3 +37,30 @@ class StatusFetcher(SubmoduleExecutor):
         if not result:
             return
         self.resultAvailable.emit(repoDir, result)
+
+    def setShowIgnoredFiles(self, showIgnoredFiles: bool):
+        self._showIgnoredFiles = showIgnoredFiles
+
+    def _fetchStatus(self, repoDir, userData=None):
+        if not repoDir or repoDir == '.':
+            fullRepoDir = Git.REPO_DIR
+        else:
+            fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
+
+        try:
+            data = Git.status(fullRepoDir, self._showIgnoredFiles)
+            if not data:
+                return None, None
+        except Exception:
+            return None, None
+
+        lines = data.rstrip(b'\0').split(b'\0')
+        result = []
+        for line in lines:
+            assert (len(line) > 3)
+            status = line[:2].decode()
+            file = line[3:].decode()
+            repoFile = os.path.join(
+                repoDir, file) if repoDir and repoDir != '.' else file
+            result.append((status, os.path.normpath(repoFile)))
+        return repoDir, result

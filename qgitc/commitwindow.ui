@@ -70,7 +70,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton">
+            <widget class="QToolButton" name="tbWDChanges">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -81,7 +81,7 @@
               <string>Working directory changes</string>
              </property>
              <property name="popupMode">
-              <enum>QToolButton::ToolButtonPopupMode::MenuButtonPopup</enum>
+              <enum>QToolButton::ToolButtonPopupMode::InstantPopup</enum>
              </property>
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>

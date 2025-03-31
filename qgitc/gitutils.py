@@ -651,7 +651,7 @@ class Git():
         """add files to the index
         return error message if any
         """
-        args = ["add", "--"]
+        args = ["add", "-f", "--"]
         args.extend(files)
         process = GitProcess(repoDir, args)
         _, error = process.communicate()

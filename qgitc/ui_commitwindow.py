@@ -63,18 +63,18 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_4.addWidget(self.line)
 
-        self.toolButton = QToolButton(self.frame)
-        self.toolButton.setObjectName(u"toolButton")
+        self.tbWDChanges = QToolButton(self.frame)
+        self.tbWDChanges.setObjectName(u"tbWDChanges")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.toolButton.sizePolicy().hasHeightForWidth())
-        self.toolButton.setSizePolicy(sizePolicy)
-        self.toolButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        self.toolButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.toolButton.setArrowType(Qt.ArrowType.NoArrow)
+        sizePolicy.setHeightForWidth(self.tbWDChanges.sizePolicy().hasHeightForWidth())
+        self.tbWDChanges.setSizePolicy(sizePolicy)
+        self.tbWDChanges.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self.tbWDChanges.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.tbWDChanges.setArrowType(Qt.ArrowType.NoArrow)
 
-        self.horizontalLayout_4.addWidget(self.toolButton)
+        self.horizontalLayout_4.addWidget(self.tbWDChanges)
 
         self.spinnerUnstaged = QtWaitingSpinner(self.frame)
         self.spinnerUnstaged.setObjectName(u"spinnerUnstaged")
@@ -273,7 +273,7 @@ class Ui_CommitWindow(object):
     def retranslateUi(self, CommitWindow):
         CommitWindow.setWindowTitle(QCoreApplication.translate("CommitWindow", u"QGitc Commit", None))
         self.tbRefresh.setText("")
-        self.toolButton.setText(QCoreApplication.translate("CommitWindow", u"Working directory changes", None))
+        self.tbWDChanges.setText(QCoreApplication.translate("CommitWindow", u"Working directory changes", None))
         self.tbUnstageAll.setText("")
         self.tbUnstage.setText(QCoreApplication.translate("CommitWindow", u"&Unstage", None))
         self.tbStage.setText(QCoreApplication.translate("CommitWindow", u"&Stage", None))
