@@ -50,7 +50,7 @@ class GitProgressDialog(QDialog):
         self.setModal(True)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
 
-        self.resize(400, 400)
+        self.resize(500, 300)
 
         self._executor = SubmoduleExecutor(self)
         self._executor.finished.connect(self._onFinished)
