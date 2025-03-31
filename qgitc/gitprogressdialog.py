@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import Callable, List
-from PySide6.QtCore import Qt, QEvent
+from PySide6.QtCore import Qt, QEvent, Signal
 from PySide6.QtGui import (
     QTextCharFormat,
     QTextCursor
@@ -40,6 +40,8 @@ class UpdateProgressEvent(QEvent):
 
 class GitProgressDialog(QDialog):
     """Git progress dialog."""
+
+    finished = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -95,6 +97,7 @@ class GitProgressDialog(QDialog):
         qApp.postEvent(self, AppendResultEvent(out, error))
 
     def _onFinished(self):
+        self.finished.emit()
         self.buttonBox.rejected.disconnect()
         self.buttonBox.clear()
         self.buttonBox.addButton(QDialogButtonBox.Close)

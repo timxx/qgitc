@@ -393,6 +393,7 @@ class CommitWindow(StateWindow):
         assert (len(submodules) > 0)
 
         self._progressDialog = GitProgressDialog(self)
+        self._progressDialog.finished.connect(self.reloadLocalChanges)
         self._progressDialog.setWindowTitle(self.tr("Committing..."))
         self._progressDialog.executeTask(submodules, self._doCommit)
         self._progressDialog = None
@@ -553,3 +554,7 @@ class CommitWindow(StateWindow):
             elif status == "A" and model == self._filesModel:
                 status = "?"
             model.tryAddFile(file, submodule, status)
+
+    def reloadLocalChanges(self):
+        self.clear()
+        self._loadLocalChanges()
