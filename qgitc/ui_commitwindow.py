@@ -15,12 +15,13 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QGroupBox, QHBoxLayout,
-    QLabel, QLineEdit, QListView, QMainWindow,
-    QMenuBar, QPlainTextEdit, QPushButton, QSizePolicy,
-    QSpacerItem, QSplitter, QStatusBar, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGroupBox,
+    QHBoxLayout, QLabel, QLineEdit, QListView,
+    QMainWindow, QMenuBar, QPlainTextEdit, QPushButton,
+    QSizePolicy, QSpacerItem, QSplitter, QStatusBar,
+    QVBoxLayout, QWidget)
 
+from .coloredicontoolbutton import ColoredIconToolButton
 from .patchviewer import PatchViewer
 from .waitingspinnerwidget import QtWaitingSpinner
 
@@ -79,6 +80,68 @@ class Ui_CommitWindow(object):
         self.verticalLayout_2 = QVBoxLayout(self.verticalLayoutWidget_2)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setSpacing(3)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.tbUnstageAll = ColoredIconToolButton(self.verticalLayoutWidget_2)
+        self.tbUnstageAll.setObjectName(u"tbUnstageAll")
+        self.tbUnstageAll.setIconSize(QSize(20, 20))
+
+        self.horizontalLayout_5.addWidget(self.tbUnstageAll)
+
+        self.line = QFrame(self.verticalLayoutWidget_2)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.VLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout_5.addWidget(self.line)
+
+        self.tbUnstage = ColoredIconToolButton(self.verticalLayoutWidget_2)
+        self.tbUnstage.setObjectName(u"tbUnstage")
+        self.tbUnstage.setIconSize(QSize(20, 20))
+
+        self.horizontalLayout_5.addWidget(self.tbUnstage)
+
+        self.label_3 = QLabel(self.verticalLayoutWidget_2)
+        self.label_3.setObjectName(u"label_3")
+
+        self.horizontalLayout_5.addWidget(self.label_3)
+
+        self.horizontalSpacer_5 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_5)
+
+        self.tbStage = ColoredIconToolButton(self.verticalLayoutWidget_2)
+        self.tbStage.setObjectName(u"tbStage")
+        self.tbStage.setIconSize(QSize(20, 20))
+
+        self.horizontalLayout_5.addWidget(self.tbStage)
+
+        self.label_4 = QLabel(self.verticalLayoutWidget_2)
+        self.label_4.setObjectName(u"label_4")
+
+        self.horizontalLayout_5.addWidget(self.label_4)
+
+        self.horizontalSpacer_6 = QSpacerItem(3, 20, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_5.addItem(self.horizontalSpacer_6)
+
+        self.line_2 = QFrame(self.verticalLayoutWidget_2)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.Shape.VLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.horizontalLayout_5.addWidget(self.line_2)
+
+        self.tbStageAll = ColoredIconToolButton(self.verticalLayoutWidget_2)
+        self.tbStageAll.setObjectName(u"tbStageAll")
+        self.tbStageAll.setIconSize(QSize(20, 20))
+
+        self.horizontalLayout_5.addWidget(self.tbStageAll)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_5)
+
         self.label = QLabel(self.verticalLayoutWidget_2)
         self.label.setObjectName(u"label")
 
@@ -191,6 +254,10 @@ class Ui_CommitWindow(object):
         self.statusbar = QStatusBar(CommitWindow)
         self.statusbar.setObjectName(u"statusbar")
         CommitWindow.setStatusBar(self.statusbar)
+#if QT_CONFIG(shortcut)
+        self.label_3.setBuddy(self.tbUnstage)
+        self.label_4.setBuddy(self.tbStage)
+#endif // QT_CONFIG(shortcut)
 
         self.retranslateUi(CommitWindow)
 
@@ -200,10 +267,16 @@ class Ui_CommitWindow(object):
     def retranslateUi(self, CommitWindow):
         CommitWindow.setWindowTitle(QCoreApplication.translate("CommitWindow", u"QGitc Commit", None))
         self.lbUnstaged.setText(QCoreApplication.translate("CommitWindow", u"Unstaged", None))
+        self.tbUnstageAll.setText("")
+        self.tbUnstage.setText("")
+        self.label_3.setText(QCoreApplication.translate("CommitWindow", u"&Unstage", None))
+        self.tbStage.setText("")
+        self.label_4.setText(QCoreApplication.translate("CommitWindow", u"&Stage", None))
+        self.tbStageAll.setText("")
         self.label.setText(QCoreApplication.translate("CommitWindow", u"Staged", None))
         self.label_2.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.groupBox.setTitle(QCoreApplication.translate("CommitWindow", u"Commit message", None))
-        self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"Amend Last Message", None))
+        self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend Last Message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
         self.cbRunAction.setText(QCoreApplication.translate("CommitWindow", u"&Run Action After Commit", None))
     # retranslateUi

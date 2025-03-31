@@ -10,13 +10,16 @@ from PySide6.QtCore import (
     QModelIndex,
     QSortFilterProxyModel
 )
-from PySide6.QtGui import QFont
+from PySide6.QtGui import (
+    QFont,
+    QIcon
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QMessageBox
 )
 
-from .common import toSubmodulePath
+from .common import dataDirPath
 from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
 from .findsubmodules import FindSubmoduleThread
@@ -168,6 +171,19 @@ class CommitWindow(StateWindow):
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)
 
         self.ui.btnCommit.setEnabled(False)
+
+        iconsPath = dataDirPath() + "/icons/"
+        self.ui.tbUnstage.setIcon(QIcon(iconsPath + "unstage.svg"))
+        self.ui.tbUnstage.setToolTip(self.tr("Unstage"))
+
+        self.ui.tbUnstageAll.setIcon(QIcon(iconsPath + "unstage-all.svg"))
+        self.ui.tbUnstageAll.setToolTip(self.tr("Unstage all"))
+
+        self.ui.tbStage.setIcon(QIcon(iconsPath + "stage.svg"))
+        self.ui.tbStage.setToolTip(self.tr("Stage"))
+
+        self.ui.tbStageAll.setIcon(QIcon(iconsPath + "stage-all.svg"))
+        self.ui.tbStageAll.setToolTip(self.tr("Stage all"))
 
         QTimer.singleShot(0, self._loadLocalChanges)
 

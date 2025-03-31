@@ -53,6 +53,9 @@ class ColoredIconToolButton(QToolButton):
             painter.drawRect(rc)
             painter.setPen(oldPen)
 
+        if self._icon.isNull():
+            return
+
         pixmap = self._makePixmap()
         rect = QRect(QPoint(0, 0), self._iconSize)
         rect.moveCenter(self.rect().center())
