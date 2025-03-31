@@ -168,7 +168,6 @@ class CommitWindow(StateWindow):
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)
 
         self.ui.btnCommit.setEnabled(False)
-        self.ui.btnCommitPush.setEnabled(False)
 
         QTimer.singleShot(0, self._loadLocalChanges)
 
@@ -191,7 +190,6 @@ class CommitWindow(StateWindow):
             self.tr("Enter commit message here..."))
 
         self.ui.btnCommit.clicked.connect(self._onCommitClicked)
-        self.ui.btnCommitPush.clicked.connect(self._onCommitAndPushClicked)
 
         # current running task
         self._submoduleFiles = {}
@@ -334,10 +332,6 @@ class CommitWindow(StateWindow):
         self._submoduleFiles = {}
         self._progressDialog = None
 
-    def _onCommitAndPushClicked(self):
-        if not self._checkMessage():
-            return
-
     def _checkMessage(self):
         # amend no need message
         if self.ui.cbAmend.isChecked():
@@ -367,7 +361,6 @@ class CommitWindow(StateWindow):
     def _onStagedFilesChanged(self, parent: QModelIndex, first, last):
         enabled = self._stagedModel.rowCount() > 0
         self.ui.btnCommit.setEnabled(enabled)
-        self.ui.btnCommitPush.setEnabled(enabled)
 
     def _doCommit(self, submodule):
         # since we run in modal dialog

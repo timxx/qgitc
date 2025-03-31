@@ -166,19 +166,14 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout.addWidget(self.btnCommit)
 
-        self.btnCommitPush = QPushButton(self.horizontalLayoutWidget)
-        self.btnCommitPush.setObjectName(u"btnCommitPush")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.btnCommitPush.sizePolicy().hasHeightForWidth())
-        self.btnCommitPush.setSizePolicy(sizePolicy1)
-
-        self.horizontalLayout.addWidget(self.btnCommitPush)
-
         self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
+
+        self.cbRunAction = QCheckBox(self.horizontalLayoutWidget)
+        self.cbRunAction.setObjectName(u"cbRunAction")
+
+        self.horizontalLayout.addWidget(self.cbRunAction)
 
 
         self.verticalLayout_4.addLayout(self.horizontalLayout)
@@ -210,6 +205,6 @@ class Ui_CommitWindow(object):
         self.groupBox.setTitle(QCoreApplication.translate("CommitWindow", u"Commit message", None))
         self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"Amend Last Message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
-        self.btnCommitPush.setText(QCoreApplication.translate("CommitWindow", u"Commit && &Push", None))
+        self.cbRunAction.setText(QCoreApplication.translate("CommitWindow", u"&Run Action After Commit", None))
     # retranslateUi
 

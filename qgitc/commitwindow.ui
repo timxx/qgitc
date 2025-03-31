@@ -169,19 +169,6 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btnCommitPush">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>Commit &amp;&amp; &amp;Push</string>
-             </property>
-            </widget>
-           </item>
-           <item>
             <spacer name="horizontalSpacer_2">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
@@ -193,6 +180,13 @@
               </size>
              </property>
             </spacer>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="cbRunAction">
+             <property name="text">
+              <string>&amp;Run Action After Commit</string>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
