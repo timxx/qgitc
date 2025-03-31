@@ -229,6 +229,10 @@ class CommitWindow(StateWindow):
         self.ui.tbStageAll.clicked.connect(
             self._onStageAllClicked)
 
+        self.ui.tbRefresh.setIcon(QIcon(iconsPath + "refresh.svg"))
+        self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
+        self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
+
         QTimer.singleShot(0, self._loadLocalChanges)
 
         self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
@@ -259,7 +263,7 @@ class CommitWindow(StateWindow):
             self._onNonUITaskFinished)
 
     def _setupSpinner(self, spinner):
-        height = self.ui.lbUnstaged.height() // 7
+        height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)
         spinner.setInnerRadius(height)
         spinner.setNumberOfLines(14)
@@ -525,6 +529,7 @@ class CommitWindow(StateWindow):
         self.ui.tbUnstageAll.setEnabled(not blocked)
         self.ui.tbStage.setEnabled(not blocked)
         self.ui.tbStageAll.setEnabled(not blocked)
+        self.ui.tbRefresh.setEnabled(not blocked)
 
     def event(self, evt):
         if evt.type() == UpdateFilesEvent.Type:

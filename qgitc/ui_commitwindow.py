@@ -47,10 +47,11 @@ class Ui_CommitWindow(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.lbUnstaged = QLabel(self.verticalLayoutWidget)
-        self.lbUnstaged.setObjectName(u"lbUnstaged")
+        self.tbRefresh = ColoredIconToolButton(self.verticalLayoutWidget)
+        self.tbRefresh.setObjectName(u"tbRefresh")
+        self.tbRefresh.setIconSize(QSize(20, 20))
 
-        self.horizontalLayout_4.addWidget(self.lbUnstaged)
+        self.horizontalLayout_4.addWidget(self.tbRefresh)
 
         self.spinnerUnstaged = QtWaitingSpinner(self.verticalLayoutWidget)
         self.spinnerUnstaged.setObjectName(u"spinnerUnstaged")
@@ -141,11 +142,6 @@ class Ui_CommitWindow(object):
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_5)
-
-        self.label = QLabel(self.verticalLayoutWidget_2)
-        self.label.setObjectName(u"label")
-
-        self.verticalLayout_2.addWidget(self.label)
 
         self.leFilterStaged = QLineEdit(self.verticalLayoutWidget_2)
         self.leFilterStaged.setObjectName(u"leFilterStaged")
@@ -266,14 +262,13 @@ class Ui_CommitWindow(object):
 
     def retranslateUi(self, CommitWindow):
         CommitWindow.setWindowTitle(QCoreApplication.translate("CommitWindow", u"QGitc Commit", None))
-        self.lbUnstaged.setText(QCoreApplication.translate("CommitWindow", u"Unstaged", None))
+        self.tbRefresh.setText("")
         self.tbUnstageAll.setText("")
         self.tbUnstage.setText("")
         self.label_3.setText(QCoreApplication.translate("CommitWindow", u"&Unstage", None))
         self.tbStage.setText("")
         self.label_4.setText(QCoreApplication.translate("CommitWindow", u"&Stage", None))
         self.tbStageAll.setText("")
-        self.label.setText(QCoreApplication.translate("CommitWindow", u"Staged", None))
         self.label_2.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.groupBox.setTitle(QCoreApplication.translate("CommitWindow", u"Commit message", None))
         self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend Last Message", None))

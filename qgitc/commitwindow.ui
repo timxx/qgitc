@@ -29,9 +29,15 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
-            <widget class="QLabel" name="lbUnstaged">
+            <widget class="ColoredIconToolButton" name="tbRefresh">
              <property name="text">
-              <string>Unstaged</string>
+              <string/>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>20</width>
+               <height>20</height>
+              </size>
              </property>
             </widget>
            </item>
@@ -184,13 +190,6 @@
             </widget>
            </item>
           </layout>
-         </item>
-         <item>
-          <widget class="QLabel" name="label">
-           <property name="text">
-            <string>Staged</string>
-           </property>
-          </widget>
          </item>
          <item>
           <widget class="QLineEdit" name="leFilterStaged"/>
