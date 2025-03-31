@@ -2,32 +2,34 @@
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
-from typing import Callable
+from typing import Callable, Union
 from PySide6.QtCore import QThread, QObject, Signal
 
 
 class SubmoduleThread(QThread):
 
-    def __init__(self, submodules, parent=None):
+    def __init__(self, submodules: Union[list, dict], parent=None):
         super().__init__(parent)
 
         self._submodules = submodules
-        self._actionHandler: Callable[[str], any] = None
+        self._actionHandler: Callable[[str, any], any] = None
         self._resultHandler: Callable[[any], any] = None
 
     def setActionHandler(self, action: Callable):
         """ Set the action to be performed on each submodule.
-        The action should be a callable that takes a submodule path as an argument."""
+        The action should be a callable that takes a submodule path as an argument, and optionally additional data."""
         self._actionHandler = action
 
     def setResultHandler(self, resultHandler: Callable):
         """ Set the result handler to process the result of the action. """
         self._resultHandler = resultHandler
 
-    def processSubmodule(self, submodule: str):
-        """ Override this method or @setAction to do the work """
+    def processSubmodule(self, submodule: str, userData: any = None):
+        """ Process a single submodule in background thread.
+        The action handler is called with the submodule path as an argument.
+        The result of the action is passed to the result handler."""
         if self._actionHandler:
-            return self._actionHandler(submodule)
+            return self._actionHandler(submodule, userData)
         return None
 
     def onResultAvailable(self, *args):
@@ -39,9 +41,16 @@ class SubmoduleThread(QThread):
         if self.isInterruptionRequested():
             return
 
-        submodules = self._submodules or [None]
+        if isinstance(self._submodules, dict):
+            submodules = list(self._submodules.keys())
+            hasData = True
+        else:
+            submodules = self._submodules or [None]
+            hasData = False
+
         if len(submodules) == 1:
-            result = self.processSubmodule(submodules[0])
+            data = self._submodules[submodules[0]] if hasData else None
+            result = self.processSubmodule(submodules[0], data)
             if not self.isInterruptionRequested():
                 if isinstance(result, tuple):
                     self.onResultAvailable(*result)
@@ -50,8 +59,8 @@ class SubmoduleThread(QThread):
         else:
             max_workers = max(2, os.cpu_count() - 2)
             executor = ThreadPoolExecutor(max_workers=max_workers)
-            tasks = [executor.submit(self.processSubmodule, submodule)
-                     for submodule in submodules]
+            tasks = [executor.submit(self.processSubmodule, submodule, self._submodules[submodule]
+                                     if hasData else None) for submodule in submodules]
 
             for task in as_completed(tasks):
                 if self.isInterruptionRequested():
@@ -73,10 +82,11 @@ class SubmoduleExecutor(QObject):
     def __del__(self):
         self.cancel()
 
-    def submit(self, submodules, actionHandler: Callable, resultHandler: Callable = None):
+    def submit(self, submodules: Union[list, dict], actionHandler: Callable, resultHandler: Callable = None):
         """ Submit a list of submodules and an action to be performed on each submodule.
-         The action should be a callable that takes a submodule path as an argument.
-         The result handler should be a callable that takes the result of the action."""
+        Submodules can be a list or a dictionary of submodule paths.
+        The action should be a callable that takes a submodule path as an argument, and optionally additional data.
+        The result handler is called with the result of the action."""
 
         self.cancel()
         self._thread = SubmoduleThread(submodules, self)

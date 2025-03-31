@@ -175,15 +175,23 @@ class CommitWindow(StateWindow):
         iconsPath = dataDirPath() + "/icons/"
         self.ui.tbUnstage.setIcon(QIcon(iconsPath + "unstage.svg"))
         self.ui.tbUnstage.setToolTip(self.tr("Unstage"))
+        self.ui.tbUnstage.clicked.connect(
+            self._onUnstageClicked)
 
         self.ui.tbUnstageAll.setIcon(QIcon(iconsPath + "unstage-all.svg"))
         self.ui.tbUnstageAll.setToolTip(self.tr("Unstage all"))
+        self.ui.tbUnstageAll.clicked.connect(
+            self._onUnstageAllClicked)
 
         self.ui.tbStage.setIcon(QIcon(iconsPath + "stage.svg"))
         self.ui.tbStage.setToolTip(self.tr("Stage"))
+        self.ui.tbStage.clicked.connect(
+            self._onStageClicked)
 
         self.ui.tbStageAll.setIcon(QIcon(iconsPath + "stage-all.svg"))
         self.ui.tbStageAll.setToolTip(self.tr("Stage all"))
+        self.ui.tbStageAll.clicked.connect(
+            self._onStageAllClicked)
 
         QTimer.singleShot(0, self._loadLocalChanges)
 
@@ -328,19 +336,22 @@ class CommitWindow(StateWindow):
         if not self._checkMessage():
             return
 
+        amend = self.ui.cbAmend.isChecked()
+        if not amend:
+            message = self.ui.teMessage.toPlainText().strip()
+            assert (message)
+        else:
+            message = None
+
         # get all rows from _stagedModel
-        submoduleFiles = {}
+        submodules = {}
         for row in range(self._stagedModel.rowCount()):
             index = self._stagedModel.index(row, 0)
-            filePath = self._stagedModel.data(index, Qt.DisplayRole)
             repoDir = self._stagedModel.data(
                 index, StatusFileListModel.RepoDirRole)
-            submoduleFiles.setdefault(repoDir, []).append(filePath)
+            submodules.setdefault(repoDir, (message, amend))
 
-        assert (len(submoduleFiles) > 0)
-
-        self._submoduleFiles = submoduleFiles
-        submodules = list(submoduleFiles.keys())
+        assert (len(submodules) > 0)
 
         self._progressDialog = GitProgressDialog(self)
         self._progressDialog.setWindowTitle(self.tr("Committing..."))
@@ -378,15 +389,46 @@ class CommitWindow(StateWindow):
         enabled = self._stagedModel.rowCount() > 0
         self.ui.btnCommit.setEnabled(enabled)
 
-    def _doCommit(self, submodule):
-        # since we run in modal dialog
-        # we treat here is safe to get from ui directly
-        amend = self.ui.cbAmend.isChecked()
+    def _doCommit(self, submodule: str, userData: Tuple[str, bool]):
+        amend = userData[1]
         if not amend:
-            message = self.ui.teMessage.toPlainText().strip()
+            message = userData[0]
             assert (message)
         else:
             message = None
 
         out, error = Git.commit(message, amend, submodule)
         self._progressDialog.updateProgressResult(out, error)
+
+    def _onUnstageClicked(self):
+        indexes = self.ui.lvStaged.selectionModel().selectedRows()
+        if not indexes:
+            return
+
+        self._submoduleFiles = {}
+        for index in indexes:
+            file = self._stagedModel.data(index, Qt.DisplayRole)
+            repoDir = self._stagedModel.data(
+                index, StatusFileListModel.RepoDirRole)
+            self._submoduleFiles.setdefault(repoDir, []).append(file)
+
+    def _onUnstageAllClicked(self):
+        self._submoduleFiles = {}
+        for row in range(self._stagedModel.rowCount()):
+            index = self._stagedModel.index(row, 0)
+            file = self._stagedModel.data(index, Qt.DisplayRole)
+            repoDir = self._stagedModel.data(
+                index, StatusFileListModel.RepoDirRole)
+            self._submoduleFiles.setdefault(repoDir, []).append(file)
+
+        if not self._submoduleFiles:
+            return
+
+    def _onStageClicked(self):
+        pass
+
+    def _onStageAllClicked(self):
+        pass
+
+    def _doUnstage(self, submodule):
+        pass

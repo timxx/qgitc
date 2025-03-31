@@ -7,7 +7,7 @@ from .gitutils import Git
 from .submoduleexecutor import SubmoduleExecutor
 
 
-def _fetchStatus(repoDir):
+def _fetchStatus(repoDir, userData=None):
     if not repoDir or repoDir == '.':
         fullRepoDir = Git.REPO_DIR
     else:
