@@ -19,7 +19,10 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QMessageBox,
     QListView,
-    QMenu
+    QMenu,
+    QWidget,
+    QHBoxLayout,
+    QLabel
 )
 
 from .common import dataDirPath, toSubmodulePath
@@ -164,6 +167,22 @@ class GitErrorEvent(QEvent):
         self.error = error
 
 
+class RepoInfo:
+
+    def __init__(self):
+        self.userName: str = None
+        self.userEmail:str = None
+        self.branch: str = None
+
+
+class RepoInfoEvent(QEvent):
+    Type = QEvent.User + 3
+
+    def __init__(self, info: RepoInfo):
+        super().__init__(QEvent.Type(RepoInfoEvent.Type))
+        self.info = info
+
+
 class CommitWindow(StateWindow):
 
     def __init__(self, parent=None):
@@ -270,7 +289,13 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.finished.connect(
             self._onNonUITaskFinished)
 
+        infoFetcher = SubmoduleExecutor(self)
+        infoFetcher.finished.connect(self._onInfoFetchFinished)
+        infoFetcher.submit(None, self._fetchRepoInfo)
+        self._repoInfo: RepoInfo = None
+
         self._setupWDMenu()
+        self._setupStatusBar()
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -412,7 +437,11 @@ class CommitWindow(StateWindow):
 
         self._progressDialog = GitProgressDialog(self)
         self._progressDialog.finished.connect(self.reloadLocalChanges)
-        self._progressDialog.setWindowTitle(self.tr("Committing..."))
+        if self._repoInfo:
+            self._progressDialog.setWindowTitle(
+                self.tr("Commit to") + " " + self._repoInfo.branch)
+        else:
+            self._progressDialog.setWindowTitle(self.tr("Commit"))
         self._progressDialog.executeTask(submodules, self._doCommit)
         self._progressDialog = None
 
@@ -566,6 +595,15 @@ class CommitWindow(StateWindow):
                 evt.error,
                 QMessageBox.Ok)
             return True
+        elif evt.type() == RepoInfoEvent.Type:
+            self._repoInfo = evt.info
+            if self._progressDialog:
+                self._progressDialog.setWindowTitle(
+                    self.tr("Commit to") + " " + self._repoInfo.branch)
+            self._commiterLabel.setText("{} <{}>".format(
+                self._repoInfo.userName, self._repoInfo.userEmail))
+            self._branchLabel.setText(self._repoInfo.branch)
+            return True
         return super().event(evt)
 
     def _updateFiles(self, isStaged: bool, submodule: str, files: List[str]):
@@ -609,3 +647,32 @@ class CommitWindow(StateWindow):
         self._statusFetcher.setShowIgnoredFiles(
             self._acShowIgnoredFiles.isChecked())
         self.reloadLocalChanges()
+
+    def _onInfoFetchFinished(self):
+        sender = self.sender()
+        del sender
+
+    def _fetchRepoInfo(self, submodule: str, userData: any):
+        info = RepoInfo()
+        info.userName = Git.userName()
+        info.userEmail = Git.userEmail()
+        info.branch = Git.activeBranch()
+
+        qApp.postEvent(self, RepoInfoEvent(info))
+
+    def _setupStatusBar(self):
+        widget = QWidget(self)
+        hbox = QHBoxLayout(widget)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(QLabel(self.tr("Committer:")))
+        self._commiterLabel = QLabel(widget)
+        hbox.addWidget(self._commiterLabel)
+        self.ui.statusbar.addPermanentWidget(widget)
+
+        widget = QWidget(self)
+        hbox = QHBoxLayout(widget)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.addWidget(QLabel(self.tr("Branch:")))
+        self._branchLabel = QLabel(widget)
+        hbox.addWidget(self._branchLabel)
+        self.ui.statusbar.addPermanentWidget(widget)

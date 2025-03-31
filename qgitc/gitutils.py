@@ -569,6 +569,10 @@ class Git():
         return Git.getConfigValue("user.name", False)
 
     @staticmethod
+    def userEmail():
+        return Git.getConfigValue("user.email", False)
+
+    @staticmethod
     def initGit(gitBin: str):
         GitProcess.GIT_BIN = gitBin
 
@@ -690,3 +694,11 @@ class Git():
         if error is not None:
             error = error.decode("utf-8")
         return out, error
+
+    @staticmethod
+    def activeBranch(repoDir=None):
+        args = ["rev-parse", "--abbrev-ref", "HEAD"]
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if data:
+            return data.rstrip(b'\n').decode("utf-8")
+        return ""
