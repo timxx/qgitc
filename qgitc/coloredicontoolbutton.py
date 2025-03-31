@@ -19,11 +19,10 @@ class ColoredIconToolButton(QToolButton):
         if len(args) <= 1:
             super().__init__(args[0] if len(args) == 1 else None)
             self._icon = QIcon()
-            self._iconSize = QSize()
         elif len(args) == 2 or len(args) == 3:
             super().__init__(args[2] if len(args) == 3 else None)
             self._icon = args[0]
-            self._iconSize = args[1]
+            self.setIconSize(args[1])
         else:
             raise TypeError("Invalid arguments")
 
@@ -31,10 +30,6 @@ class ColoredIconToolButton(QToolButton):
 
     def setIcon(self, icon):
         self._icon = icon
-        self.update()
-
-    def setIconSize(self, size):
-        self._iconSize = size
         self.update()
 
     def paintEvent(self, event):
@@ -57,12 +52,23 @@ class ColoredIconToolButton(QToolButton):
             return
 
         pixmap = self._makePixmap()
-        rect = QRect(QPoint(0, 0), self._iconSize)
-        rect.moveCenter(self.rect().center())
+        rect = QRect(QPoint(0, 0), opt.iconSize)
+
+        style = self.toolButtonStyle()
+        if style == Qt.ToolButtonIconOnly:
+            rect.moveCenter(self.rect().center())
+        elif style == Qt.ToolButtonTextBesideIcon:
+            rect.moveTop(self.rect().top() + (self.height() - opt.iconSize.height()) / 2)
+        else:
+            assert ("Unsupported tool button style")
         painter.drawPixmap(rect, pixmap)
 
+        if style == Qt.ToolButtonTextBesideIcon:
+            opt.rect.setLeft(opt.iconSize.width())
+            painter.drawControl(QStyle.CE_ToolButtonLabel, opt)
+
     def _makePixmap(self):
-        pixmap = self._icon.pixmap(self._iconSize, self.devicePixelRatio())
+        pixmap = self._icon.pixmap(self.iconSize(), self.devicePixelRatio())
 
         p = QPainter(pixmap)
         p.setPen(Qt.NoPen)
@@ -73,3 +79,13 @@ class ColoredIconToolButton(QToolButton):
         p.end()
 
         return pixmap
+
+    def sizeHint(self):
+        size = self.iconSize() + QSize(2, 2)
+        if self.toolButtonStyle() == Qt.ToolButtonTextBesideIcon:
+            fm = self.fontMetrics()
+            textSize = fm.size(Qt.TextShowMnemonic, self.text())
+            textSize.setWidth(textSize.width() + fm.horizontalAdvance(' '))
+            size.setWidth(size.width() + 4 + textSize.width())
+
+        return size

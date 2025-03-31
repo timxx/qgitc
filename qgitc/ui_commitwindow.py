@@ -124,14 +124,12 @@ class Ui_CommitWindow(object):
 
         self.tbUnstage = ColoredIconToolButton(self.frame_2)
         self.tbUnstage.setObjectName(u"tbUnstage")
+        sizePolicy.setHeightForWidth(self.tbUnstage.sizePolicy().hasHeightForWidth())
+        self.tbUnstage.setSizePolicy(sizePolicy)
         self.tbUnstage.setIconSize(QSize(20, 20))
+        self.tbUnstage.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self.horizontalLayout_6.addWidget(self.tbUnstage)
-
-        self.label_5 = QLabel(self.frame_2)
-        self.label_5.setObjectName(u"label_5")
-
-        self.horizontalLayout_6.addWidget(self.label_5)
 
         self.horizontalSpacer_7 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
@@ -140,17 +138,9 @@ class Ui_CommitWindow(object):
         self.tbStage = ColoredIconToolButton(self.frame_2)
         self.tbStage.setObjectName(u"tbStage")
         self.tbStage.setIconSize(QSize(20, 20))
+        self.tbStage.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self.horizontalLayout_6.addWidget(self.tbStage)
-
-        self.label_6 = QLabel(self.frame_2)
-        self.label_6.setObjectName(u"label_6")
-
-        self.horizontalLayout_6.addWidget(self.label_6)
-
-        self.horizontalSpacer_8 = QSpacerItem(3, 20, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_6.addItem(self.horizontalSpacer_8)
 
         self.line_4 = QFrame(self.frame_2)
         self.line_4.setObjectName(u"line_4")
@@ -274,10 +264,6 @@ class Ui_CommitWindow(object):
         self.statusbar = QStatusBar(CommitWindow)
         self.statusbar.setObjectName(u"statusbar")
         CommitWindow.setStatusBar(self.statusbar)
-#if QT_CONFIG(shortcut)
-        self.label_5.setBuddy(self.tbUnstage)
-        self.label_6.setBuddy(self.tbStage)
-#endif // QT_CONFIG(shortcut)
 
         self.retranslateUi(CommitWindow)
 
@@ -289,10 +275,8 @@ class Ui_CommitWindow(object):
         self.tbRefresh.setText("")
         self.toolButton.setText(QCoreApplication.translate("CommitWindow", u"Working directory changes", None))
         self.tbUnstageAll.setText("")
-        self.tbUnstage.setText("")
-        self.label_5.setText(QCoreApplication.translate("CommitWindow", u"&Unstage", None))
-        self.tbStage.setText("")
-        self.label_6.setText(QCoreApplication.translate("CommitWindow", u"&Stage", None))
+        self.tbUnstage.setText(QCoreApplication.translate("CommitWindow", u"&Unstage", None))
+        self.tbStage.setText(QCoreApplication.translate("CommitWindow", u"&Stage", None))
         self.tbStageAll.setText("")
         self.label_3.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.label.setText(QCoreApplication.translate("CommitWindow", u"Commit message", None))

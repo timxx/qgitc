@@ -210,7 +210,6 @@ class CommitWindow(StateWindow):
 
         iconsPath = dataDirPath() + "/icons/"
         self.ui.tbUnstage.setIcon(QIcon(iconsPath + "unstage.svg"))
-        self.ui.tbUnstage.setToolTip(self.tr("Unstage"))
         self.ui.tbUnstage.clicked.connect(
             self._onUnstageClicked)
 
@@ -220,7 +219,6 @@ class CommitWindow(StateWindow):
             self._onUnstageAllClicked)
 
         self.ui.tbStage.setIcon(QIcon(iconsPath + "stage.svg"))
-        self.ui.tbStage.setToolTip(self.tr("Stage"))
         self.ui.tbStage.clicked.connect(
             self._onStageClicked)
 
