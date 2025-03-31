@@ -606,7 +606,8 @@ class Git():
         """restore staged files
         return error message if any
         """
-        args = ["restore", "--staged", "--"]
+        # `restore --staged` is much slower than reset HEAD
+        args = ["reset", "HEAD", "--"]
         args.extend(files)
         process = GitProcess(repoDir, args)
         _, error = process.communicate()
@@ -643,6 +644,20 @@ class Git():
                 fullRepoDir or Git.REPO_DIR, files, staged)
             if error:
                 return error
+        return None
+
+    @staticmethod
+    def addFiles(repoDir, files):
+        """add files to the index
+        return error message if any
+        """
+        args = ["add", "--"]
+        args.extend(files)
+        process = GitProcess(repoDir, args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            return error.decode("utf-8")
+
         return None
 
     @staticmethod

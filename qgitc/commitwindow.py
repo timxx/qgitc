@@ -2,13 +2,14 @@
 
 from enum import Enum
 import os
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 from PySide6.QtCore import (
     QTimer,
     QAbstractListModel,
     Qt,
     QModelIndex,
-    QSortFilterProxyModel
+    QSortFilterProxyModel,
+    QEvent
 )
 from PySide6.QtGui import (
     QFont,
@@ -16,15 +17,17 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QMessageBox
+    QMessageBox,
+    QListView
 )
 
-from .common import dataDirPath
+from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
 from .findsubmodules import FindSubmoduleThread
 from .gitprogressdialog import GitProgressDialog
 from .gitutils import Git
+from .submoduleexecutor import SubmoduleExecutor
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
 from .ui_commitwindow import Ui_CommitWindow
@@ -96,6 +99,29 @@ class StatusFileListModel(QAbstractListModel):
         self._fileList.append(StatusFileInfo(file, repoDir, statusCode))
         self.endInsertRows()
 
+    def tryAddFile(self, file: str, repoDir: str, statusCode: str):
+        for fileInfo in self._fileList:
+            if fileInfo.file == file and fileInfo.repoDir == repoDir:
+                return False
+
+        self.addFile(file, repoDir, statusCode)
+        return True
+
+    def removeFile(self, file: str, repoDir: str):
+        if not self._fileList:
+            return None
+        
+        for i, fileInfo in enumerate(self._fileList):
+            if fileInfo.file == file and fileInfo.repoDir == repoDir:
+                break
+        else:
+            return None
+
+        self.beginRemoveRows(QModelIndex(), i, i)
+        info = self._fileList.pop(i)
+        self.endRemoveRows()
+        return info
+
     def clear(self):
         self.removeRows(0, self.rowCount())
 
@@ -117,6 +143,16 @@ class StatusFileListModel(QAbstractListModel):
             icon = _makeTextIcon(statusCode, color, font)
             self._icons[statusCode] = icon
         return icon
+
+
+class UpdateFilesEvent(QEvent):
+    Type = QEvent.User + 1
+
+    def __init__(self, isStaged: bool, submodule: str, files: List[str]):
+        super().__init__(QEvent.Type(UpdateFilesEvent.Type))
+        self.isStaged = isStaged
+        self.submodule = submodule
+        self.files = files
 
 
 class CommitWindow(StateWindow):
@@ -215,9 +251,12 @@ class CommitWindow(StateWindow):
 
         self.ui.btnCommit.clicked.connect(self._onCommitClicked)
 
-        # current running task
-        self._submoduleFiles = {}
+        # UI tasks
         self._progressDialog: GitProgressDialog = None
+        # no UI tasks
+        self._submoduleExecutor = SubmoduleExecutor(self)
+        self._submoduleExecutor.finished.connect(
+            self._onNonUITaskFinished)
 
     def _setupSpinner(self, spinner):
         height = self.ui.lbUnstaged.height() // 7
@@ -356,7 +395,6 @@ class CommitWindow(StateWindow):
         self._progressDialog = GitProgressDialog(self)
         self._progressDialog.setWindowTitle(self.tr("Committing..."))
         self._progressDialog.executeTask(submodules, self._doCommit)
-        self._submoduleFiles = {}
         self._progressDialog = None
 
     def _checkMessage(self):
@@ -400,35 +438,118 @@ class CommitWindow(StateWindow):
         out, error = Git.commit(message, amend, submodule)
         self._progressDialog.updateProgressResult(out, error)
 
-    def _onUnstageClicked(self):
-        indexes = self.ui.lvStaged.selectionModel().selectedRows()
+    def _collectSectionFiles(self, view: QListView):
+        indexes = view.selectionModel().selectedRows()
         if not indexes:
+            return {}
+
+        model = view.model()
+        submoduleFiles = {}
+        for index in indexes:
+            file = model.data(index, Qt.DisplayRole)
+            repoDir = model.data(
+                index, StatusFileListModel.RepoDirRole)
+            submoduleFiles.setdefault(repoDir, []).append(file)
+
+        return submoduleFiles
+
+    def _collectModelFiles(self, model: QAbstractListModel):
+        submoduleFiles = {}
+        for row in range(model.rowCount()):
+            index = model.index(row, 0)
+            file = model.data(index, Qt.DisplayRole)
+            repoDir = model.data(
+                index, StatusFileListModel.RepoDirRole)
+            submoduleFiles.setdefault(repoDir, []).append(file)
+
+        return submoduleFiles
+
+    def _onUnstageClicked(self):
+        submoduleFiles = self._collectSectionFiles(self.ui.lvStaged)
+        if not submoduleFiles:
             return
 
-        self._submoduleFiles = {}
-        for index in indexes:
-            file = self._stagedModel.data(index, Qt.DisplayRole)
-            repoDir = self._stagedModel.data(
-                index, StatusFileListModel.RepoDirRole)
-            self._submoduleFiles.setdefault(repoDir, []).append(file)
+        self._blockUI()
+        self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
 
     def _onUnstageAllClicked(self):
-        self._submoduleFiles = {}
-        for row in range(self._stagedModel.rowCount()):
-            index = self._stagedModel.index(row, 0)
-            file = self._stagedModel.data(index, Qt.DisplayRole)
-            repoDir = self._stagedModel.data(
-                index, StatusFileListModel.RepoDirRole)
-            self._submoduleFiles.setdefault(repoDir, []).append(file)
-
-        if not self._submoduleFiles:
+        submoduleFiles = self._collectModelFiles(self._stagedModel)
+        if not submoduleFiles:
             return
 
+        self._blockUI()
+        self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
+
     def _onStageClicked(self):
-        pass
+        submoduleFiles = self._collectSectionFiles(self.ui.lvFiles)
+        if not submoduleFiles:
+            return
+
+        self._blockUI()
+        self._submoduleExecutor.submit(submoduleFiles, self._doStage)
 
     def _onStageAllClicked(self):
-        pass
+        submoduleFiles = self._collectModelFiles(self._filesModel)
+        if not submoduleFiles:
+            return
 
-    def _doUnstage(self, submodule):
-        pass
+        self._blockUI()
+        self._submoduleExecutor.submit(submoduleFiles, self._doStage)
+
+    @staticmethod
+    def _toRepoDir(submodule: str):
+        if not submodule or submodule == ".":
+            return Git.REPO_DIR
+        return os.path.join(Git.REPO_DIR, submodule)
+
+    def _doUnstage(self, submodule: str, files: List[str]):
+        repoDir = self._toRepoDir(submodule)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+        error = Git.restoreStagedFiles(repoDir, repoFiles)
+        if not error:
+            qApp.postEvent(self, UpdateFilesEvent(True, submodule, files))
+
+    def _doStage(self, submodule: str, files: List[str]):
+        repoDir = self._toRepoDir(submodule)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+        error = Git.addFiles(repoDir, repoFiles)
+        if not error:
+            qApp.postEvent(self, UpdateFilesEvent(False, submodule, files))
+
+    def _onNonUITaskFinished(self):
+        self._blockUI(False)
+
+    def _blockUI(self, blocked=True):
+        self.ui.tbUnstage.setEnabled(not blocked)
+        self.ui.tbUnstageAll.setEnabled(not blocked)
+        self.ui.tbStage.setEnabled(not blocked)
+        self.ui.tbStageAll.setEnabled(not blocked)
+
+    def event(self, evt):
+        if evt.type() == UpdateFilesEvent.Type:
+            self._updateFiles(evt.isStaged, evt.submodule, evt.files)
+            return True
+        return super().event(evt)
+
+    def _updateFiles(self, isStaged: bool, submodule: str, files: List[str]):
+        model = self._stagedModel if isStaged else self._filesModel
+        status = self._removeFiles(model, submodule, files)
+
+        model = self._filesModel if isStaged else self._stagedModel
+        self._addFiles(model, submodule, files, status)
+
+    def _removeFiles(self, model: StatusFileListModel, submodule: str, files: List[str]):
+        status = {}
+        for file in files:
+            info = model.removeFile(file, submodule)
+            status.setdefault(file, info.statusCode)
+        return status
+
+    def _addFiles(self, model: StatusFileListModel, submodule: str, files: List[str], oldStatus: Dict[str, str]):
+        for file in files:
+            status = oldStatus.get(file)
+            if status == "?" and model == self._stagedModel:
+                status = "A"
+            elif status == "A" and model == self._filesModel:
+                status = "?"
+            model.tryAddFile(file, submodule, status)
