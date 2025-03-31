@@ -473,6 +473,7 @@ class CommitWindow(StateWindow):
             return
 
         self._blockUI()
+        self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
 
     def _onUnstageAllClicked(self):
@@ -481,6 +482,7 @@ class CommitWindow(StateWindow):
             return
 
         self._blockUI()
+        self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
 
     def _onStageClicked(self):
@@ -489,6 +491,7 @@ class CommitWindow(StateWindow):
             return
 
         self._blockUI()
+        self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
 
     def _onStageAllClicked(self):
@@ -497,6 +500,7 @@ class CommitWindow(StateWindow):
             return
 
         self._blockUI()
+        self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
 
     @staticmethod
@@ -521,6 +525,7 @@ class CommitWindow(StateWindow):
 
     def _onNonUITaskFinished(self):
         self._blockUI(False)
+        self.ui.spinnerUnstaged.stop()
 
     def _blockUI(self, blocked=True):
         self.ui.tbUnstage.setEnabled(not blocked)
