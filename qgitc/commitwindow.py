@@ -183,6 +183,14 @@ class RepoInfoEvent(QEvent):
         self.info = info
 
 
+class TemplateReadyEvent(QEvent):
+    Type = QEvent.User + 4
+
+    def __init__(self, template: str):
+        super().__init__(QEvent.Type(TemplateReadyEvent.Type))
+        self.template = template
+
+
 class CommitWindow(StateWindow):
 
     def __init__(self, parent=None):
@@ -197,7 +205,7 @@ class CommitWindow(StateWindow):
         self.ui.splitterMain.setSizes(sizes)
 
         height = self.ui.splitterRight.sizeHint().height()
-        sizes = [height * 4 / 5, height * 1 / 5]
+        sizes = [height * 3 / 5, height * 2 / 5]
         self.ui.splitterRight.setSizes(sizes)
 
         self.setWindowTitle(self.tr("QGitc Commit"))
@@ -604,6 +612,13 @@ class CommitWindow(StateWindow):
                 self._repoInfo.userName, self._repoInfo.userEmail))
             self._branchLabel.setText(self._repoInfo.branch)
             return True
+        elif evt.type() == TemplateReadyEvent.Type:
+            doc = self.ui.teMessage.document()
+            # only set template if user has not modified the message
+            if not doc.isUndoAvailable() and not doc.isRedoAvailable():
+                self.ui.teMessage.setPlainText(evt.template)
+                doc.clearUndoRedoStacks()
+            return True
         return super().event(evt)
 
     def _updateFiles(self, isStaged: bool, submodule: str, files: List[str]):
@@ -653,6 +668,13 @@ class CommitWindow(StateWindow):
         del sender
 
     def _fetchRepoInfo(self, submodule: str, userData: any):
+        templateFile = Git.getConfigValue("commit.template", False)
+        if templateFile and os.path.exists(templateFile):
+            with open(templateFile, "r", encoding="utf-8") as f:
+                template = f.read()
+            if template:
+                qApp.postEvent(self, TemplateReadyEvent(template))
+
         info = RepoInfo()
         info.userName = Git.userName()
         info.userEmail = Git.userEmail()
