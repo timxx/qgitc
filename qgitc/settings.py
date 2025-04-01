@@ -168,11 +168,11 @@ class Settings(QSettings):
     def setRememberWindowState(self, remember):
         self.setValue("rememberWindowState", remember)
 
-    def windowState(self, windowName):
+    def windowState(self, windowName, maximized=True):
         self.beginGroup(windowName)
         state = self.value("state", None)
         geometry = self.value("geometry", None)
-        isMaximized = self.value("maximized", True, type=bool)
+        isMaximized = self.value("maximized", maximized, type=bool)
         self.endGroup()
 
         return state, geometry, isMaximized
@@ -311,3 +311,14 @@ class Settings(QSettings):
         self.beginGroup("submodulesCache")
         self.setValue(key, cache)
         self.endGroup()
+
+    def saveSplitterState(self, splitter, state):
+        self.beginGroup("splitterState")
+        self.setValue(splitter, state)
+        self.endGroup()
+
+    def getSplitterState(self, splitter):
+        self.beginGroup("splitterState")
+        state = self.value(splitter, None)
+        self.endGroup()
+        return state

@@ -32,7 +32,7 @@ class StateWindow(QMainWindow):
             return False
 
         state, geometry, isMaximized = sett.windowState(
-            self.__class__.__name__)
+            self.__class__.__name__, self.isMaximizedByDefault())
         if state:
             super().restoreState(state)
         if geometry:
@@ -46,3 +46,6 @@ class StateWindow(QMainWindow):
     def closeEvent(self, event):
         self.saveState()
         super().closeEvent(event)
+
+    def isMaximizedByDefault(self):
+        return True

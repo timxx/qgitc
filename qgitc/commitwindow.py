@@ -171,7 +171,7 @@ class RepoInfo:
 
     def __init__(self):
         self.userName: str = None
-        self.userEmail:str = None
+        self.userEmail: str = None
         self.branch: str = None
 
 
@@ -698,3 +698,40 @@ class CommitWindow(StateWindow):
         self._branchLabel = QLabel(widget)
         hbox.addWidget(self._branchLabel)
         self.ui.statusbar.addPermanentWidget(widget)
+
+    def isMaximizedByDefault(self):
+        return False
+
+    def restoreState(self):
+        if not super().restoreState():
+            return False
+
+        sett = qApp.instance().settings()
+        state = sett.getSplitterState("cw.splitterMain")
+        if state:
+            self.ui.splitterMain.restoreState(state)
+
+        state = sett.getSplitterState("cw.splitterLeft")
+        if state:
+            self.ui.splitterLeft.restoreState(state)
+
+        state = sett.getSplitterState("cw.splitterRight")
+        if state:
+            self.ui.splitterRight.restoreState(state)
+
+        return True
+
+    def saveState(self):
+        if not super().saveState():
+            return False
+
+        sett = qApp.instance().settings()
+
+        sett.saveSplitterState(
+            "cw.splitterLeft", self.ui.splitterLeft.saveState())
+        sett.saveSplitterState(
+            "cw.splitterRight", self.ui.splitterRight.saveState())
+        sett.saveSplitterState(
+            "cw.splitterMain", self.ui.splitterMain.saveState())
+
+        return True
