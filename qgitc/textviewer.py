@@ -114,16 +114,17 @@ class TextViewer(QAbstractScrollArea):
 
     def reloadSettings(self):
         self.updateFont(self.font())
-        self.reloadBugPattern()
+        self._bugPatterns = TextViewer.reloadBugPattern()
 
-    def reloadBugPattern(self):
+    @staticmethod
+    def reloadBugPattern():
         repoName = qApp.repoName()
         sett = qApp.settings()
         patterns = sett.bugPatterns(repoName)
         globalPatterns = sett.bugPatterns(
             None) if sett.fallbackGlobalLinks(repoName) else None
 
-        self._bugPatterns = []
+        bugPatterns = []
         filtered = set()
 
         def _combine(patterns):
@@ -137,12 +138,14 @@ class TextViewer(QAbstractScrollArea):
                     filtered.add(pattern)
                     try:
                         re_pattern = re.compile(pattern)
-                        self._bugPatterns.append((Link.BugId, re_pattern, url))
+                        bugPatterns.append((Link.BugId, re_pattern, url))
                     except re.error:
                         continue
 
         _combine(patterns)
         _combine(globalPatterns)
+
+        return bugPatterns
 
     def toTextLine(self, text):
         return TextLine(text, self._font, self._option)

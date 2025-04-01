@@ -82,6 +82,8 @@ class ColorSchemaLight():
     Splitter = Qt.darkGray
     LineNumber = Qt.darkGray
 
+    Comment = QColor(0x207f0b)
+
 
 class ColorSchemaDark():
 
@@ -151,3 +153,5 @@ class ColorSchemaDark():
 
     Splitter = QColor(112, 112, 112)
     LineNumber = QColor(0x999999)
+
+    Comment = QColor(0x6e9857)

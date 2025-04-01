@@ -2,14 +2,64 @@
 
 from typing import List
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QTextCursor
+from PySide6.QtGui import (
+    QTextCursor,
+    QSyntaxHighlighter,
+    QTextCharFormat,
+    QPalette
+)
 from PySide6.QtWidgets import QPlainTextEdit
+
+from .textline import Link, TextLine
+from .textviewer import TextViewer
+
+
+class CommitMessageHighlighter(QSyntaxHighlighter):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._bugPatterns = []
+        self.reloadBugPattern()
+
+    def highlightBlock(self, text):
+        if qApp.settings().ignoreCommentLine() and text.startswith("#"):
+            self.setFormat(0, len(text), qApp.colorSchema().Comment)
+            return
+
+        builtinPatterns = TextLine.builtinPatterns()
+        patterns = list(self._bugPatterns)
+        for type, pattern in builtinPatterns.items():
+            patterns.append((type, pattern, None))
+        links: List[Link] = TextLine.findLinks(text, patterns)
+        if not links:
+            return
+
+        fmt = QTextCharFormat()
+        fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
+        fmt.setForeground(qApp.palette().color(QPalette.Link))
+
+        for link in links:
+            self.setFormat(link.start, link.end - link.start, fmt)
+
+    def reloadBugPattern(self):
+        self._bugPatterns = TextViewer.reloadBugPattern()
 
 
 class CommitMessageEdit(QPlainTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self._highlighter = CommitMessageHighlighter(self.document())
+
+        sett = qApp.settings()
+        sett.ignoreCommentLineChanged.connect(
+            self._highlighter.rehighlight)
+
+        sett.bugPatternChanged.connect(
+            self._onBugPatternChanged)
+        sett.fallbackGlobalChanged.connect(
+            self._onBugPatternChanged)
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Tab and self._isTabToGroupEnabled():
@@ -135,3 +185,7 @@ class CommitMessageEdit(QPlainTextEdit):
                 return True
 
         return False
+
+    def _onBugPatternChanged(self):
+        self._highlighter.reloadBugPattern()
+        self._highlighter.rehighlight()

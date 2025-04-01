@@ -55,6 +55,7 @@ class Settings(QSettings):
     tabSizeChanged = Signal(int)
     compositeModeChanged = Signal(bool)
     colorSchemaModeChanged = Signal(int)
+    ignoreCommentLineChanged = Signal(bool)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -325,14 +326,17 @@ class Settings(QSettings):
 
     def ignoreCommentLine(self):
         self.beginGroup("commit")
-        ignore = self.value("ignoreCommentLine", False, type=bool)
+        ignore = self.value("ignoreCommentLine", True, type=bool)
         self.endGroup()
         return ignore
 
     def setIgnoreCommentLine(self, ignore):
+        if ignore == self.ignoreCommentLine():
+            return
         self.beginGroup("commit")
         self.setValue("ignoreCommentLine", ignore)
         self.endGroup()
+        self.ignoreCommentLineChanged.emit(ignore)
 
     def tabToNextGroup(self):
         self.beginGroup("commit")
