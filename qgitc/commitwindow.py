@@ -309,6 +309,9 @@ class CommitWindow(StateWindow):
         self._setupWDMenu()
         self._setupStatusBar()
 
+        self.ui.tbOptions.setIcon(QIcon(iconsPath + "settings.svg"))
+        self.ui.tbOptions.clicked.connect(self._onOptionsClicked)
+
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)
@@ -739,3 +742,6 @@ class CommitWindow(StateWindow):
             "cw.splitterMain", self.ui.splitterMain.saveState())
 
         return True
+
+    def _onOptionsClicked(self):
+        pass

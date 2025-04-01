@@ -191,10 +191,28 @@ class Ui_CommitWindow(object):
         self.verticalLayout_2 = QVBoxLayout(self.frame_4)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.label = QLabel(self.frame_4)
         self.label.setObjectName(u"label")
 
-        self.verticalLayout_2.addWidget(self.label)
+        self.horizontalLayout_3.addWidget(self.label)
+
+        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_4)
+
+        self.tbOptions = ColoredIconToolButton(self.frame_4)
+        self.tbOptions.setObjectName(u"tbOptions")
+        sizePolicy.setHeightForWidth(self.tbOptions.sizePolicy().hasHeightForWidth())
+        self.tbOptions.setSizePolicy(sizePolicy)
+        self.tbOptions.setIconSize(QSize(16, 16))
+        self.tbOptions.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.horizontalLayout_3.addWidget(self.tbOptions)
+
+
+        self.verticalLayout_2.addLayout(self.horizontalLayout_3)
 
         self.teMessage = QPlainTextEdit(self.frame_4)
         self.teMessage.setObjectName(u"teMessage")
@@ -272,6 +290,7 @@ class Ui_CommitWindow(object):
         self.tbStageAll.setText("")
         self.label_3.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.label.setText(QCoreApplication.translate("CommitWindow", u"Commit message", None))
+        self.tbOptions.setText(QCoreApplication.translate("CommitWindow", u"Options", None))
         self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend Last Message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
         self.cbRunAction.setText(QCoreApplication.translate("CommitWindow", u"&Run Action After Commit", None))
