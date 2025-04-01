@@ -99,6 +99,8 @@ class Ui_MainWindow(object):
         self.acCompositeMode = QAction(MainWindow)
         self.acCompositeMode.setObjectName(u"acCompositeMode")
         self.acCompositeMode.setCheckable(True)
+        self.acCommit = QAction(MainWindow)
+        self.acCommit.setObjectName(u"acCommit")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -188,6 +190,8 @@ class Ui_MainWindow(object):
         self.menu_Merge.setObjectName(u"menu_Merge")
         self.menuCopy_To_Conflict_Log = QMenu(self.menu_Merge)
         self.menuCopy_To_Conflict_Log.setObjectName(u"menuCopy_To_Conflict_Log")
+        self.menu_Git = QMenu(self.menubar)
+        self.menu_Git.setObjectName(u"menu_Git")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -197,6 +201,7 @@ class Ui_MainWindow(object):
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menu_Edit.menuAction())
+        self.menubar.addAction(self.menu_Git.menuAction())
         self.menubar.addAction(self.menu_View.menuAction())
         self.menubar.addAction(self.menu_Merge.menuAction())
         self.menubar.addAction(self.menu_Settings.menuAction())
@@ -228,6 +233,7 @@ class Ui_MainWindow(object):
         self.menuCopy_To_Conflict_Log.addAction(self.acCopyLog)
         self.menuCopy_To_Conflict_Log.addAction(self.acCopyLogA)
         self.menuCopy_To_Conflict_Log.addAction(self.acCopyLogB)
+        self.menu_Git.addAction(self.acCommit)
 
         self.retranslateUi(MainWindow)
 
@@ -286,6 +292,7 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(shortcut)
         self.acCopyPlainText.setText(QCoreApplication.translate("MainWindow", u"Copy Plain &Text", None))
         self.acCompositeMode.setText(QCoreApplication.translate("MainWindow", u"Com&posite Mode", None))
+        self.acCommit.setText(QCoreApplication.translate("MainWindow", u"&Commit", None))
 #if QT_CONFIG(tooltip)
         self.leOpts.setToolTip(QCoreApplication.translate("MainWindow", u"See the GIT-LOG options for more information.", None))
 #endif // QT_CONFIG(tooltip)
@@ -303,5 +310,6 @@ class Ui_MainWindow(object):
         self.menu_Edit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
         self.menu_Merge.setTitle(QCoreApplication.translate("MainWindow", u"&Merge", None))
         self.menuCopy_To_Conflict_Log.setTitle(QCoreApplication.translate("MainWindow", u"Copy To Conflict &Log", None))
+        self.menu_Git.setTitle(QCoreApplication.translate("MainWindow", u"&Git", None))
     # retranslateUi
 

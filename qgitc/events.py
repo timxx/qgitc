@@ -57,3 +57,10 @@ class CodeReviewEvent(QEvent):
         super().__init__(QEvent.Type(CodeReviewEvent.Type))
         self.commit = commit
         self.args = args
+
+
+class RequestCommitEvent(QEvent):
+    Type = QEvent.User + 7
+
+    def __init__(self):
+        super().__init__(QEvent.Type(RequestCommitEvent.Type))

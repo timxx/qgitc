@@ -30,7 +30,7 @@ from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
 from .statewindow import StateWindow
 from .logview import LogView
-from .events import GitBinChanged
+from .events import GitBinChanged, RequestCommitEvent
 
 import os
 import sys
@@ -162,6 +162,9 @@ class MainWindow(StateWindow):
 
         self.ui.cbSelfCommits.stateChanged.connect(
             self.__onSelfCommitsStateChanged)
+
+        self.ui.acCommit.triggered.connect(
+            self.__onCommitTriggered)
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -650,3 +653,7 @@ class MainWindow(StateWindow):
         self.ui.cbSubmodule.setVisible(True)
         self.ui.lbSubmodule.setVisible(True)
         self.submoduleAvailable.emit(True)
+
+    def __onCommitTriggered(self):
+        # we can't import application here, because it will cause circular import
+        qApp.postEvent(qApp, RequestCommitEvent())

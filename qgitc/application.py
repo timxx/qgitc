@@ -20,6 +20,7 @@ from .settings import Settings
 from .events import (
     BlameEvent,
     CodeReviewEvent,
+    RequestCommitEvent,
     ShowCommitEvent,
     OpenLinkEvent,
     GitBinChanged)
@@ -182,6 +183,12 @@ class Application(QApplication):
             window.codeReview(event.commit, event.args)
         elif type == QEvent.ApplicationPaletteChange:
             self._setupColorSchema()
+        elif type == RequestCommitEvent.Type:
+            needRefresh = self._commitWindow is not None
+            window = self.getWindow(Application.CommitWindow)
+            if needRefresh:
+                window.reloadLocalChanges()
+            self._ensureVisible(window)
 
         return super().event(event)
 
