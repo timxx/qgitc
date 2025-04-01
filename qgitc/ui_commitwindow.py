@@ -16,12 +16,12 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QListView, QMainWindow,
-    QPlainTextEdit, QPushButton, QSizePolicy, QSpacerItem,
-    QSplitter, QStatusBar, QToolButton, QVBoxLayout,
-    QWidget)
+    QLabel, QLineEdit, QMainWindow, QPlainTextEdit,
+    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
+    QStatusBar, QToolButton, QVBoxLayout, QWidget)
 
 from .coloredicontoolbutton import ColoredIconToolButton
+from .emptystatelistview import EmptyStateListView
 from .patchviewer import PatchViewer
 from .waitingspinnerwidget import QtWaitingSpinner
 
@@ -93,7 +93,7 @@ class Ui_CommitWindow(object):
 
         self.verticalLayout_5.addWidget(self.leFilterFiles)
 
-        self.lvFiles = QListView(self.frame)
+        self.lvFiles = EmptyStateListView(self.frame)
         self.lvFiles.setObjectName(u"lvFiles")
 
         self.verticalLayout_5.addWidget(self.lvFiles)
@@ -163,7 +163,7 @@ class Ui_CommitWindow(object):
 
         self.verticalLayout_3.addWidget(self.leFilterStaged)
 
-        self.lvStaged = QListView(self.frame_2)
+        self.lvStaged = EmptyStateListView(self.frame_2)
         self.lvStaged.setObjectName(u"lvStaged")
 
         self.verticalLayout_3.addWidget(self.lvStaged)

@@ -229,6 +229,8 @@ class CommitWindow(StateWindow):
             self._onSelectFileChanged)
         self.ui.lvFiles.clicked.connect(
             self._onFileClicked)
+        self.ui.lvFiles.setEmptyStateText(
+            self.tr("There are no unstaged changes"))
 
         self._stagedModel = StatusFileListModel(self)
         stagedProxyModel = QSortFilterProxyModel(self)
@@ -239,6 +241,8 @@ class CommitWindow(StateWindow):
             self._onStagedSelectFileChanged)
         self.ui.lvStaged.clicked.connect(
             self._onStagedFileClicked)
+        self.ui.lvStaged.setEmptyStateText(
+            self.tr("There are no staged changes"))
 
         self._stagedModel.rowsInserted.connect(self._onStagedFilesChanged)
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)

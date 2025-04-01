@@ -113,7 +113,7 @@
           <widget class="QLineEdit" name="leFilterFiles"/>
          </item>
          <item>
-          <widget class="QListView" name="lvFiles"/>
+          <widget class="EmptyStateListView" name="lvFiles"/>
          </item>
         </layout>
        </widget>
@@ -239,7 +239,7 @@
           <widget class="QLineEdit" name="leFilterStaged"/>
          </item>
          <item>
-          <widget class="QListView" name="lvStaged"/>
+          <widget class="EmptyStateListView" name="lvStaged"/>
          </item>
         </layout>
        </widget>
@@ -414,6 +414,11 @@
    <class>ColoredIconToolButton</class>
    <extends>QToolButton</extends>
    <header>coloredicontoolbutton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>EmptyStateListView</class>
+   <extends>QListView</extends>
+   <header>emptystatelistview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
