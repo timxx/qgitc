@@ -16,11 +16,12 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QPlainTextEdit,
-    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
-    QStatusBar, QToolButton, QVBoxLayout, QWidget)
+    QLabel, QLineEdit, QMainWindow, QPushButton,
+    QSizePolicy, QSpacerItem, QSplitter, QStatusBar,
+    QToolButton, QVBoxLayout, QWidget)
 
 from .coloredicontoolbutton import ColoredIconToolButton
+from .commitmessageedit import CommitMessageEdit
 from .emptystatelistview import EmptyStateListView
 from .patchviewer import PatchViewer
 from .waitingspinnerwidget import QtWaitingSpinner
@@ -214,7 +215,7 @@ class Ui_CommitWindow(object):
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_3)
 
-        self.teMessage = QPlainTextEdit(self.frame_4)
+        self.teMessage = CommitMessageEdit(self.frame_4)
         self.teMessage.setObjectName(u"teMessage")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(0)

@@ -347,7 +347,7 @@ class Settings(QSettings):
 
     def groupChars(self):
         self.beginGroup("commit")
-        chars = self.value("groupChars", "[] 【】")
+        chars = self.value("groupChars", "【】 []")
         self.endGroup()
         return chars
 

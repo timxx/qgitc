@@ -346,7 +346,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QPlainTextEdit" name="teMessage">
+          <widget class="CommitMessageEdit" name="teMessage">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -437,6 +437,11 @@
    <class>EmptyStateListView</class>
    <extends>QListView</extends>
    <header>emptystatelistview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CommitMessageEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>commitmessageedit.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
