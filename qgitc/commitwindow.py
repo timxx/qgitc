@@ -437,7 +437,8 @@ class CommitWindow(StateWindow):
 
         amend = self.ui.cbAmend.isChecked()
         if not amend:
-            message = self.ui.teMessage.toPlainText().strip()
+            message = self._filterMessage(
+                self.ui.teMessage.toPlainText().strip())
             assert (message)
         else:
             message = None
@@ -469,7 +470,9 @@ class CommitWindow(StateWindow):
 
         if not self._isMessageValid():
             content = self.tr("Please enter a valid commit message.")
-            if not self.ui.teMessage.toPlainText().strip():
+            message = self.ui.teMessage.toPlainText().strip()
+            message = self._filterMessage(message)
+            if not message:
                 content += "\n" + self.tr("Commit message cannot be empty.")
             QMessageBox.critical(
                 self,
@@ -485,8 +488,27 @@ class CommitWindow(StateWindow):
         if not message:
             return False
 
+        message = self._filterMessage(message)
+        if not message:
+            return False
+
         # TODO: verify with template or other rules
         return True
+
+    def _filterMessage(self, message: str):
+        ignoreCommentLine = qApp.settings().ignoreCommentLine()
+        if not ignoreCommentLine:
+            return message
+
+        lines = message.splitlines()
+        newMessage = ""
+        for line in lines:
+            if line.startswith("#"):
+                continue
+            newMessage += line + "\n"
+        newMessage = newMessage.rstrip()
+
+        return newMessage
 
     def _onStagedFilesChanged(self, parent: QModelIndex, first, last):
         enabled = self._stagedModel.rowCount() > 0
@@ -680,7 +702,7 @@ class CommitWindow(StateWindow):
         templateFile = Git.getConfigValue("commit.template", False)
         if templateFile and os.path.exists(templateFile):
             with open(templateFile, "r", encoding="utf-8") as f:
-                template = f.read()
+                template = f.read().rstrip()
             if template:
                 qApp.postEvent(self, TemplateReadyEvent(template))
 
