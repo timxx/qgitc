@@ -203,6 +203,8 @@ class Preferences(QDialog):
 
         # default to General tab
         self.ui.tabWidget.setCurrentIndex(0)
+        self.ui.tabWidget.currentChanged.connect(
+            self._onTabChanged)
 
         self.ui.buttonBox.accepted.connect(
             self._onAccepted)
@@ -219,6 +221,7 @@ class Preferences(QDialog):
         self.ui.cbCommitSince.addItem(self.tr("3 Years"), 365 * 3)
         self.ui.cbCommitSince.addItem(self.tr("5 Years"), 365 * 5)
 
+        self._initedTabs = set()
         self._initSettings()
 
     def _initSettings(self):
@@ -292,6 +295,9 @@ class Preferences(QDialog):
 
         index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
         self.ui.cbColorSchema.setCurrentIndex(index)
+
+        for i in range(0, 5):
+            self._initedTabs.add(i)
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -578,3 +584,38 @@ class Preferences(QDialog):
 
         value = self.ui.cbColorSchema.currentData()
         self.settings.setColorSchemaMode(value)
+
+        self._saveCommitMessageTab()
+        self._saveActionTab()
+
+    def _onTabChanged(self, index):
+        if index in self._initedTabs:
+            return
+
+        self._initedTabs.add(index)
+
+        if self.ui.tabWidget.indexOf(self.ui.tabCommitMessage) == index:
+            self._initCommitMessageTab()
+        elif self.ui.tabWidget.indexOf(self.ui.tabAction) == index:
+            self._initActionTab()
+
+    def _initCommitMessageTab(self):
+        self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())
+        self.ui.cbTab.setChecked(self.settings.tabToNextGroup())
+        self.ui.leGroupChars.setText(self.settings.groupChars())
+
+    def _initActionTab(self):
+        pass
+
+    def _saveCommitMessageTab(self):
+        value = self.ui.cbIgnoreComment.isChecked()
+        self.settings.setIgnoreCommentLine(value)
+
+        value = self.ui.cbTab.isChecked()
+        self.settings.setTabToNextGroup(value)
+
+        value = self.ui.leGroupChars.text().strip()
+        self.settings.setGroupChars(value)
+
+    def _saveActionTab(self):
+        pass

@@ -322,3 +322,36 @@ class Settings(QSettings):
         state = self.value(splitter, None)
         self.endGroup()
         return state
+
+    def ignoreCommentLine(self):
+        self.beginGroup("commit")
+        ignore = self.value("ignoreCommentLine", False, type=bool)
+        self.endGroup()
+        return ignore
+
+    def setIgnoreCommentLine(self, ignore):
+        self.beginGroup("commit")
+        self.setValue("ignoreCommentLine", ignore)
+        self.endGroup()
+
+    def tabToNextGroup(self):
+        self.beginGroup("commit")
+        value = self.value("tabToNextGroup", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setTabToNextGroup(self, tab):
+        self.beginGroup("commit")
+        self.setValue("tabToNextGroup", tab)
+        self.endGroup()
+
+    def groupChars(self):
+        self.beginGroup("commit")
+        chars = self.value("groupChars", "[] 【】")
+        self.endGroup()
+        return chars
+
+    def setGroupChars(self, chars):
+        self.beginGroup("commit")
+        self.setValue("groupChars", chars)
+        self.endGroup()

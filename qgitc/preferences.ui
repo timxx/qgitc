@@ -905,12 +905,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
          <item>
           <widget class="QLabel" name="label_19">
            <property name="text">
-            <string>Group Pairs:</string>
+            <string>Group Chars:</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lineEdit">
+          <widget class="QLineEdit" name="leGroupChars">
            <property name="toolTip">
             <string>Each pair separate by space, such as `() []`</string>
            </property>

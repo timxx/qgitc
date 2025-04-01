@@ -22,7 +22,8 @@ from PySide6.QtWidgets import (
     QMenu,
     QWidget,
     QHBoxLayout,
-    QLabel
+    QLabel,
+    QDialog
 )
 
 from .common import dataDirPath, toSubmodulePath
@@ -745,6 +746,8 @@ class CommitWindow(StateWindow):
         return True
 
     def _onOptionsClicked(self):
-        dialog = Preferences(qApp.settings(), self)
-        dialog.ui.tabWidget.setCurrentIndex(5)
-        dialog.exec()
+        preferences = Preferences(qApp.settings(), self)
+        preferences.ui.tabWidget.setCurrentWidget(
+            preferences.ui.tabCommitMessage)
+        if preferences.exec() == QDialog.Accepted:
+            preferences.save()

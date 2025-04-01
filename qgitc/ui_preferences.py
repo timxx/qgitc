@@ -530,10 +530,10 @@ class Ui_Preferences(object):
 
         self.horizontalLayout_11.addWidget(self.label_19)
 
-        self.lineEdit = QLineEdit(self.tabCommitMessage)
-        self.lineEdit.setObjectName(u"lineEdit")
+        self.leGroupChars = QLineEdit(self.tabCommitMessage)
+        self.leGroupChars.setObjectName(u"leGroupChars")
 
-        self.horizontalLayout_11.addWidget(self.lineEdit)
+        self.horizontalLayout_11.addWidget(self.leGroupChars)
 
 
         self.verticalLayout_10.addLayout(self.horizontalLayout_11)
@@ -691,9 +691,9 @@ class Ui_Preferences(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
         self.cbIgnoreComment.setText(QCoreApplication.translate("Preferences", u"Ignore comment line", None))
         self.cbTab.setText(QCoreApplication.translate("Preferences", u"Tab to next group", None))
-        self.label_19.setText(QCoreApplication.translate("Preferences", u"Group Pairs:", None))
+        self.label_19.setText(QCoreApplication.translate("Preferences", u"Group Chars:", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
+        self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
 #endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Message", None))
         self.btnAddAction.setText(QCoreApplication.translate("Preferences", u"Add", None))
