@@ -657,3 +657,8 @@ class MainWindow(StateWindow):
     def __onCommitTriggered(self):
         # we can't import application here, because it will cause circular import
         qApp.postEvent(qApp, RequestCommitEvent())
+
+    def reloadLocalChanges(self):
+        self.ui.gitViewA.ui.logView.reloadLogs()
+        if self.gitViewB:
+            self.gitViewB.ui.logView.reloadLogs()

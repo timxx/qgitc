@@ -64,3 +64,10 @@ class RequestCommitEvent(QEvent):
 
     def __init__(self):
         super().__init__(QEvent.Type(RequestCommitEvent.Type))
+
+
+class LocalChangesCommittedEvent(QEvent):
+    Type = QEvent.User + 8
+
+    def __init__(self):
+        super().__init__(QEvent.Type(LocalChangesCommittedEvent.Type))

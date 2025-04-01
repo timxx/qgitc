@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
+from .events import LocalChangesCommittedEvent
 from .findsubmodules import FindSubmoduleThread
 from .gitprogressdialog import GitProgressDialog
 from .gitutils import Git
@@ -454,7 +455,7 @@ class CommitWindow(StateWindow):
         assert (len(submodules) > 0)
 
         self._progressDialog = GitProgressDialog(self)
-        self._progressDialog.finished.connect(self.reloadLocalChanges)
+        self._progressDialog.finished.connect(self._onCommitFinished)
         if self._repoInfo:
             self._progressDialog.setWindowTitle(
                 self.tr("Commit to") + " " + self._repoInfo.branch)
@@ -773,3 +774,7 @@ class CommitWindow(StateWindow):
             preferences.ui.tabCommitMessage)
         if preferences.exec() == QDialog.Accepted:
             preferences.save()
+
+    def _onCommitFinished(self):
+        self.reloadLocalChanges()
+        qApp.postEvent(qApp, LocalChangesCommittedEvent())

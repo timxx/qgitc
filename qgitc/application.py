@@ -20,6 +20,7 @@ from .settings import Settings
 from .events import (
     BlameEvent,
     CodeReviewEvent,
+    LocalChangesCommittedEvent,
     RequestCommitEvent,
     ShowCommitEvent,
     OpenLinkEvent,
@@ -156,12 +157,14 @@ class Application(QApplication):
                          event.lineNo, event.repoDir)
             self._ensureVisible(window)
             return True
-        elif type == ShowCommitEvent.Type:
+
+        if type == ShowCommitEvent.Type:
             window = self.getWindow(Application.LogWindow)
             window.showCommit(event.sha1)
             self._ensureVisible(window)
             return True
-        elif type == OpenLinkEvent.Type:
+
+        if type == OpenLinkEvent.Type:
             url = None
             link = event.link
             if link.type == Link.Email:
@@ -172,23 +175,34 @@ class Application(QApplication):
             if url:
                 QDesktopServices.openUrl(QUrl(url))
             return True
-        elif type == GitBinChanged.Type:
+
+        if type == GitBinChanged.Type:
             self._initGit(self._settings.gitBinPath())
             if self._logWindow:
                 self._logWindow.reloadRepo()
+            return True
 
-        elif type == CodeReviewEvent.Type:
+        if type == CodeReviewEvent.Type:
             window = self.getWindow(Application.AiAssistant)
             self._ensureVisible(window)
             window.codeReview(event.commit, event.args)
-        elif type == QEvent.ApplicationPaletteChange:
-            self._setupColorSchema()
-        elif type == RequestCommitEvent.Type:
+            return True
+
+        if type == RequestCommitEvent.Type:
             needRefresh = self._commitWindow is not None
             window = self.getWindow(Application.CommitWindow)
             if needRefresh:
                 window.reloadLocalChanges()
             self._ensureVisible(window)
+            return True
+
+        if type == LocalChangesCommittedEvent.Type:
+            if self._logWindow:
+                self._logWindow.reloadLocalChanges()
+            return True
+
+        if type == QEvent.ApplicationPaletteChange:
+            self._setupColorSchema()
 
         return super().event(event)
 
