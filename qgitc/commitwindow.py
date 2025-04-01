@@ -31,6 +31,7 @@ from .diffview import _makeTextIcon
 from .findsubmodules import FindSubmoduleThread
 from .gitprogressdialog import GitProgressDialog
 from .gitutils import Git
+from .preferences import Preferences
 from .submoduleexecutor import SubmoduleExecutor
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
@@ -744,4 +745,6 @@ class CommitWindow(StateWindow):
         return True
 
     def _onOptionsClicked(self):
-        pass
+        dialog = Preferences(qApp.settings(), self)
+        dialog.ui.tabWidget.setCurrentIndex(5)
+        dialog.exec()
