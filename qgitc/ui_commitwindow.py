@@ -56,13 +56,6 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_4.addWidget(self.tbRefresh)
 
-        self.line = QFrame(self.frame)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.Shape.VLine)
-        self.line.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout_4.addWidget(self.line)
-
         self.tbWDChanges = QToolButton(self.frame)
         self.tbWDChanges.setObjectName(u"tbWDChanges")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
@@ -115,13 +108,6 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_6.addWidget(self.tbUnstageAll)
 
-        self.line_3 = QFrame(self.frame_2)
-        self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.Shape.VLine)
-        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout_6.addWidget(self.line_3)
-
         self.tbUnstage = ColoredIconToolButton(self.frame_2)
         self.tbUnstage.setObjectName(u"tbUnstage")
         sizePolicy.setHeightForWidth(self.tbUnstage.sizePolicy().hasHeightForWidth())
@@ -141,13 +127,6 @@ class Ui_CommitWindow(object):
         self.tbStage.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         self.horizontalLayout_6.addWidget(self.tbStage)
-
-        self.line_4 = QFrame(self.frame_2)
-        self.line_4.setObjectName(u"line_4")
-        self.line_4.setFrameShape(QFrame.Shape.VLine)
-        self.line_4.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.horizontalLayout_6.addWidget(self.line_4)
 
         self.tbStageAll = ColoredIconToolButton(self.frame_2)
         self.tbStageAll.setObjectName(u"tbStageAll")

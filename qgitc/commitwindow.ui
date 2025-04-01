@@ -63,13 +63,6 @@
             </widget>
            </item>
            <item>
-            <widget class="Line" name="line">
-             <property name="orientation">
-              <enum>Qt::Orientation::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QToolButton" name="tbWDChanges">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -156,13 +149,6 @@
             </widget>
            </item>
            <item>
-            <widget class="Line" name="line_3">
-             <property name="orientation">
-              <enum>Qt::Orientation::Vertical</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="ColoredIconToolButton" name="tbUnstage">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -210,13 +196,6 @@
              </property>
              <property name="toolButtonStyle">
               <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="Line" name="line_4">
-             <property name="orientation">
-              <enum>Qt::Orientation::Vertical</enum>
              </property>
             </widget>
            </item>
