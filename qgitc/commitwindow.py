@@ -339,6 +339,11 @@ class CommitWindow(StateWindow):
         self.ui.cbRunAction.toggled.connect(
             lambda checked: qApp.settings().setRunCommitActions(checked))
 
+        self.ui.leFilterFiles.textChanged.connect(
+            self._onFilterFilesChanged)
+        self.ui.leFilterStaged.textChanged.connect(
+            self._onFilterStagedChanged)
+
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)
@@ -403,7 +408,7 @@ class CommitWindow(StateWindow):
         self._showDiff(file, repoDir, FileStatus.Staged)
 
     def _showIndexDiff(self, index: QModelIndex, fromStaged=False):
-        model = self._stagedModel if fromStaged else self._filesModel
+        model = self.ui.lvStaged.model() if fromStaged else self.ui.lvFiles.model()
 
         file = model.data(index, Qt.DisplayRole)
         repoDir = model.data(index, StatusFileListModel.RepoDirRole)
@@ -471,7 +476,7 @@ class CommitWindow(StateWindow):
         if self.ui.cbRunAction.isChecked():
             settings = qApp.settings()
             actions = [action for action in settings.commitActions()
-                    if action.enabled and action.command]
+                       if action.enabled and action.command]
         else:
             actions = []
 
@@ -603,7 +608,7 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
 
     def _onUnstageAllClicked(self):
-        submoduleFiles = self._collectModelFiles(self._stagedModel)
+        submoduleFiles = self._collectModelFiles(self.ui.lvStaged.model())
         if not submoduleFiles:
             return
 
@@ -621,7 +626,7 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
 
     def _onStageAllClicked(self):
-        submoduleFiles = self._collectModelFiles(self._filesModel)
+        submoduleFiles = self._collectModelFiles(self.ui.lvFiles.model())
         if not submoduleFiles:
             return
 
@@ -834,7 +839,8 @@ class CommitWindow(StateWindow):
         qApp.postEvent(qApp, LocalChangesCommittedEvent())
 
     def _updateCommitProgress(self, out: str, error: str, updateProgress=True):
-        qApp.postEvent(self, UpdateCommitProgressEvent(out, error, updateProgress))
+        qApp.postEvent(self, UpdateCommitProgressEvent(
+            out, error, updateProgress))
 
     def _updateCommitStatus(self, isRunning: bool):
         text = self.tr("&Abort") if isRunning else self.tr("&Back")
@@ -889,3 +895,11 @@ class CommitWindow(StateWindow):
             error = str(e)
 
         return out, error
+
+    def _onFilterFilesChanged(self, text: str):
+        model: QSortFilterProxyModel = self.ui.lvFiles.model()
+        model.setFilterRegularExpression(text)
+
+    def _onFilterStagedChanged(self, text: str):
+        model: QSortFilterProxyModel = self.ui.lvStaged.model()
+        model.setFilterRegularExpression(text)
