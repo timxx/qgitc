@@ -377,6 +377,8 @@ class CommitWindow(StateWindow):
     def clear(self):
         self._filesModel.clear()
         self._stagedModel.clear()
+        self._curFile = None
+        self._curFileStatus = None
 
     def _onFindSubmoduleFinished(self):
         submodules = self._findSubmoduleThread.submodules
@@ -640,6 +642,8 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
+        self._curFile = None
+        self._curFileStatus = None
 
     def _onStageClicked(self):
         submoduleFiles = self._collectSectionFiles(self.ui.lvFiles)
@@ -658,6 +662,8 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
+        self._curFile = None
+        self._curFileStatus = None
 
     @staticmethod
     def _toRepoDir(submodule: str):
