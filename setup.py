@@ -1,10 +1,11 @@
 import os
 import re
+import shutil
 
 from setuptools import (setup, find_packages)
 from distutils.core import Command
 from distutils.command.build import build
-from distutils.spawn import find_executable, spawn
+from distutils.spawn import spawn
 from distutils.errors import DistutilsExecError
 from glob import glob
 from subprocess import call
@@ -48,7 +49,7 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        uic_bin = find_executable("pyside6-uic", ENV_PATH)
+        uic_bin = shutil.which("pyside6-uic", path=ENV_PATH)
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
@@ -72,7 +73,7 @@ class BuildQt(Command):
             self._fix_import(pyFile, pattern)
 
     def compile_ts(self):
-        lrelease = find_executable("pyside6-lrelease", ENV_PATH)
+        lrelease = shutil.which("pyside6-lrelease", path=ENV_PATH)
         if not lrelease:
             print("Missing lrelease, no translation will be built.")
             return
@@ -103,7 +104,7 @@ class UpdateTs(Command):
         pass
 
     def run(self):
-        lupdate = find_executable("pyside6-lupdate", ENV_PATH)
+        lupdate = shutil.which("pyside6-lupdate", path=ENV_PATH)
         if not lupdate:
             raise DistutilsExecError("Missing pyside6-lupdate")
 
@@ -146,7 +147,6 @@ setup(name="qgitc",
           "psutil; sys_platform == 'win32'"
       ],
       classifiers=[
-          "License :: OSI Approved :: Apache Software License",
           "Operating System :: POSIX",
           "Operating System :: POSIX :: BSD",
           "Operating System :: POSIX :: Linux",
