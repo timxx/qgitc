@@ -10,6 +10,8 @@ from PySide6.QtGui import (
     QColor)
 from PySide6.QtWidgets import (
     QApplication)
+
+from .commitactiontablemodel import CommitAction
 from .mergetool import MergeTool
 
 import os
@@ -358,4 +360,16 @@ class Settings(QSettings):
     def setGroupChars(self, chars):
         self.beginGroup("commit")
         self.setValue("groupChars", chars)
+        self.endGroup()
+
+    def commitActions(self) -> List[CommitAction]:
+        self.beginGroup("commit")
+        defaultActions = [CommitAction("git", "push", enabled=False)]
+        actions = self.value("actions", defaultActions)
+        self.endGroup()
+        return actions
+
+    def setCommitActions(self, actions: List[CommitAction]):
+        self.beginGroup("commit")
+        self.setValue("actions", actions)
         self.endGroup()

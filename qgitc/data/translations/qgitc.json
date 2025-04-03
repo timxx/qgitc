@@ -15,6 +15,7 @@
             "../../colorschema.py",
             "../../colorwidget.py",
             "../../comboboxitemdelegate.py",
+            "../../commitactiontablemodel.py",
             "../../common.py",
             "../../commitwindow.py",
             "../../commitwindow.ui",

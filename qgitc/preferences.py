@@ -9,6 +9,7 @@ from PySide6.QtCore import (
     QSize)
 
 from .colorschema import ColorSchemaMode
+from .commitactiontablemodel import CommitActionTableModel
 from .ui_preferences import *
 from .comboboxitemdelegate import ComboBoxItemDelegate
 from .linkeditdialog import LinkEditDialog
@@ -37,7 +38,7 @@ class Preferences(QDialog):
             ToolTableModel.Col_Tool,
             QHeaderView.Stretch)
 
-        delegate = ComboBoxItemDelegate(model.getSceneNames())
+        delegate = ComboBoxItemDelegate(model.getSceneNames(), self)
         self.ui.tableView.setItemDelegateForColumn(
             ToolTableModel.Col_Scenes, delegate)
 
@@ -79,6 +80,30 @@ class Preferences(QDialog):
         self.ui.cbCommitSince.addItem(self.tr("2 Years"), 365 * 2)
         self.ui.cbCommitSince.addItem(self.tr("3 Years"), 365 * 3)
         self.ui.cbCommitSince.addItem(self.tr("5 Years"), 365 * 5)
+
+        model = CommitActionTableModel(self)
+        self.ui.tvActions.setModel(model)
+
+        delegate = ComboBoxItemDelegate(model.getStatusNames(), self)
+        self.ui.tvActions.setItemDelegateForColumn(
+            CommitActionTableModel.Col_Status, delegate)
+
+        delegate = ComboBoxItemDelegate(model.getRepos(), self)
+        self.ui.tvActions.setItemDelegateForColumn(
+            CommitActionTableModel.Col_Repos, delegate)
+
+        self.ui.tvActions.horizontalHeader().setSectionResizeMode(
+            CommitActionTableModel.Col_Cmd,
+            QHeaderView.Stretch)
+
+        self.ui.tvActions.horizontalHeader().resizeSection(
+            CommitActionTableModel.Col_Repos,
+            120)
+
+        self.ui.btnAddAction.clicked.connect(
+            self._onAddActionClicked)
+        self.ui.btnDelAction.clicked.connect(
+            self._onDeleteActionClicked)
 
         self._initedTabs = set()
         self._initSettings()
@@ -192,15 +217,21 @@ class Preferences(QDialog):
         self._updateFontSizes(font.family(), size, cbSize)
 
     def _onBtnAddClicked(self, checked=False):
-        model = self.ui.tableView.model()
+        self._tableViewAddItem(self.ui.tableView, ToolTableModel.Col_Suffix)
+
+    def _tableViewAddItem(self, tableView: QTableView, editCol: int):
+        model = tableView.model()
         row = model.rowCount()
         if not model.insertRow(row):
             return
-        index = model.index(row, ToolTableModel.Col_Suffix)
-        self.ui.tableView.edit(index)
+        index = model.index(row, editCol)
+        tableView.edit(index)
 
     def _onBtnDeleteClicked(self, checked=False):
-        indexes = self.ui.tableView.selectionModel().selectedRows()
+        self._tableViewAddItem(self.ui.tableView)
+
+    def _tableViewDeleteItem(self, tableView: QTableView):
+        indexes = tableView.selectionModel().selectedRows()
         if not indexes:
             QMessageBox.information(self,
                                     qApp.applicationName(),
@@ -219,7 +250,7 @@ class Preferences(QDialog):
 
         indexes.sort(reverse=True)
         for index in indexes:
-            self.ui.tableView.model().removeRow(index.row())
+            tableView.model().removeRow(index.row())
 
     def _onSuffixExists(self, suffix):
         QMessageBox.information(self,
@@ -464,8 +495,9 @@ class Preferences(QDialog):
         self.ui.leGroupChars.setText(self.settings.groupChars())
 
     def _initActionTab(self):
-        pass
-
+        actions = self.settings.commitActions()
+        self.ui.tvActions.model().setRawData(actions)
+    
     def _saveCommitMessageTab(self):
         value = self.ui.cbIgnoreComment.isChecked()
         self.settings.setIgnoreCommentLine(value)
@@ -477,4 +509,12 @@ class Preferences(QDialog):
         self.settings.setGroupChars(value)
 
     def _saveActionTab(self):
-        pass
+        actions = self.ui.tvActions.model().rawData()
+        self.settings.setCommitActions(actions)
+
+    def _onAddActionClicked(self):
+        self._tableViewAddItem(
+            self.ui.tvActions, CommitActionTableModel.Col_Cmd)
+
+    def _onDeleteActionClicked(self):
+        self._tableViewDeleteItem(self.ui.tvActions)
