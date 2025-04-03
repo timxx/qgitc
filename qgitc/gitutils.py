@@ -665,8 +665,10 @@ class Git():
         return None
 
     @staticmethod
-    def status(repoDir=None, showIgnored=False, nullFormat=True):
+    def status(repoDir=None, showUntracked=True, showIgnored=False, nullFormat=True):
         args = ["status", "--porcelain"]
+        args.append("--untracked-files={}".format(
+            "all" if showUntracked else "no"))
         if showIgnored:
             args.append("--ignored")
         if Git.versionGE(1, 7, 2):

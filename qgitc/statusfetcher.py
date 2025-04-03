@@ -13,6 +13,7 @@ class StatusFetcher(SubmoduleExecutor):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._delayedTask = []
+        self._showUntrackedFiles = True
         self._showIgnoredFiles = False
 
     def fetch(self, submodules):
@@ -38,6 +39,9 @@ class StatusFetcher(SubmoduleExecutor):
             return
         self.resultAvailable.emit(repoDir, result)
 
+    def setShowUntrackedFiles(self, showUntrackedFiles: bool):
+        self._showUntrackedFiles = showUntrackedFiles
+
     def setShowIgnoredFiles(self, showIgnoredFiles: bool):
         self._showIgnoredFiles = showIgnoredFiles
 
@@ -48,7 +52,8 @@ class StatusFetcher(SubmoduleExecutor):
             fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
 
         try:
-            data = Git.status(fullRepoDir, self._showIgnoredFiles)
+            data = Git.status(
+                fullRepoDir, self._showUntrackedFiles, self._showIgnoredFiles)
             if not data:
                 return None, None
         except Exception:

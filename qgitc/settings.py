@@ -384,3 +384,25 @@ class Settings(QSettings):
         self.beginGroup("commit")
         self.setValue("runActions", run)
         self.endGroup()
+
+    def showUntrackedFiles(self):
+        self.beginGroup("commit")
+        show = self.value("showUntrackedFiles", True, type=bool)
+        self.endGroup()
+        return show
+
+    def setShowUntrackedFiles(self, show):
+        self.beginGroup("commit")
+        self.setValue("showUntrackedFiles", show)
+        self.endGroup()
+
+    def showIgnoredFiles(self):
+        self.beginGroup("commit")
+        show = self.value("showIgnoredFiles", False, type=bool)
+        self.endGroup()
+        return show
+
+    def setShowIgnoredFiles(self, show):
+        self.beginGroup("commit")
+        self.setValue("showIgnoredFiles", show)
+        self.endGroup()

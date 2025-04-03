@@ -741,16 +741,37 @@ class CommitWindow(StateWindow):
 
     def _setupWDMenu(self):
         self._wdMenu = QMenu(self)
+        self._acShowUntrackedFiles = self._wdMenu.addAction(
+            self.tr("Show untracked files"),
+            self._onShowUntrackedFiles)
+        self._acShowUntrackedFiles.setCheckable(True)
+
+        settings = qApp.settings()
+        checked = settings.showUntrackedFiles()
+        self._acShowUntrackedFiles.setChecked(checked)
+        self._statusFetcher.setShowUntrackedFiles(checked)
+
         self._acShowIgnoredFiles = self._wdMenu.addAction(
             self.tr("Show ignored files"),
             self._onShowIgnoredFiles)
         self._acShowIgnoredFiles.setCheckable(True)
 
+        checked = settings.showIgnoredFiles()
+        self._acShowIgnoredFiles.setChecked(checked)
+        self._statusFetcher.setShowIgnoredFiles(checked)
+
         self.ui.tbWDChanges.setMenu(self._wdMenu)
 
+    def _onShowUntrackedFiles(self):
+        checked = self._acShowUntrackedFiles.isChecked()
+        self._statusFetcher.setShowUntrackedFiles(checked)
+        qApp.settings().setShowUntrackedFiles(checked)
+        self.reloadLocalChanges()
+
     def _onShowIgnoredFiles(self):
-        self._statusFetcher.setShowIgnoredFiles(
-            self._acShowIgnoredFiles.isChecked())
+        checked = self._acShowIgnoredFiles.isChecked()
+        self._statusFetcher.setShowIgnoredFiles(checked)
+        qApp.settings().setShowIgnoredFiles(checked)
         self.reloadLocalChanges()
 
     def _onInfoFetchFinished(self):
