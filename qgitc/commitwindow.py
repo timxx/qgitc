@@ -712,7 +712,11 @@ class CommitWindow(StateWindow):
                 self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
 
             if evt.out or evt.error:
-                repoText = self.tr("Repo: ") + (evt.submodule or "<main>")
+                if not evt.submodule or evt.submodule == ".":
+                    repoName = "<main>"
+                else:
+                    repoName = evt.submodule
+                repoText = self.tr("Repo: ") + repoName
                 format = QTextCharFormat()
                 format.setBackground(qApp.colorSchema().RepoTagBg)
                 format.setForeground(qApp.colorSchema().RepoTagFg)
