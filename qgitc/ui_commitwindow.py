@@ -16,9 +16,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QPushButton,
-    QSizePolicy, QSpacerItem, QSplitter, QStatusBar,
-    QToolButton, QVBoxLayout, QWidget)
+    QLabel, QLineEdit, QMainWindow, QPlainTextEdit,
+    QProgressBar, QPushButton, QSizePolicy, QSpacerItem,
+    QSplitter, QStackedWidget, QStatusBar, QToolButton,
+    QVBoxLayout, QWidget)
 
 from .coloredicontoolbutton import ColoredIconToolButton
 from .commitmessageedit import CommitMessageEdit
@@ -158,6 +159,7 @@ class Ui_CommitWindow(object):
         self.frame_3.setFrameShape(QFrame.Shape.StyledPanel)
         self.frame_3.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout = QVBoxLayout(self.frame_3)
+        self.verticalLayout.setSpacing(6)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(4, 4, 4, 4)
         self.horizontalLayout_5 = QHBoxLayout()
@@ -185,7 +187,14 @@ class Ui_CommitWindow(object):
         self.verticalLayout.addWidget(self.viewer)
 
         self.splitterRight.addWidget(self.frame_3)
-        self.frame_4 = QFrame(self.splitterRight)
+        self.stackedWidget = QStackedWidget(self.splitterRight)
+        self.stackedWidget.setObjectName(u"stackedWidget")
+        self.pageMessage = QWidget()
+        self.pageMessage.setObjectName(u"pageMessage")
+        self.verticalLayout_4 = QVBoxLayout(self.pageMessage)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.frame_4 = QFrame(self.pageMessage)
         self.frame_4.setObjectName(u"frame_4")
         self.frame_4.setFrameShape(QFrame.Shape.StyledPanel)
         self.frame_4.setFrameShadow(QFrame.Shadow.Raised)
@@ -253,7 +262,63 @@ class Ui_CommitWindow(object):
 
         self.verticalLayout_2.addLayout(self.horizontalLayout)
 
-        self.splitterRight.addWidget(self.frame_4)
+
+        self.verticalLayout_4.addWidget(self.frame_4)
+
+        self.stackedWidget.addWidget(self.pageMessage)
+        self.pageProgress = QWidget()
+        self.pageProgress.setObjectName(u"pageProgress")
+        self.verticalLayout_7 = QVBoxLayout(self.pageProgress)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
+        self.frame_5 = QFrame(self.pageProgress)
+        self.frame_5.setObjectName(u"frame_5")
+        self.frame_5.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_5.setFrameShadow(QFrame.Shadow.Raised)
+        self.verticalLayout_6 = QVBoxLayout(self.frame_5)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(4, 4, 4, 4)
+        self.lbStatus = QLabel(self.frame_5)
+        self.lbStatus.setObjectName(u"lbStatus")
+
+        self.verticalLayout_6.addWidget(self.lbStatus)
+
+        self.progressBar = QProgressBar(self.frame_5)
+        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setValue(0)
+        self.progressBar.setTextVisible(False)
+
+        self.verticalLayout_6.addWidget(self.progressBar)
+
+        self.teOutput = QPlainTextEdit(self.frame_5)
+        self.teOutput.setObjectName(u"teOutput")
+        self.teOutput.setReadOnly(True)
+
+        self.verticalLayout_6.addWidget(self.teOutput)
+
+        self.horizontalLayout_7 = QHBoxLayout()
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.horizontalSpacer_6 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_7.addItem(self.horizontalSpacer_6)
+
+        self.btnAction = QPushButton(self.frame_5)
+        self.btnAction.setObjectName(u"btnAction")
+
+        self.horizontalLayout_7.addWidget(self.btnAction)
+
+        self.horizontalSpacer_8 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_7.addItem(self.horizontalSpacer_8)
+
+
+        self.verticalLayout_6.addLayout(self.horizontalLayout_7)
+
+
+        self.verticalLayout_7.addWidget(self.frame_5)
+
+        self.stackedWidget.addWidget(self.pageProgress)
+        self.splitterRight.addWidget(self.stackedWidget)
         self.splitterMain.addWidget(self.splitterRight)
 
         self.horizontalLayout_2.addWidget(self.splitterMain)
@@ -278,6 +343,9 @@ class Ui_CommitWindow(object):
 
         self.retranslateUi(CommitWindow)
 
+        self.stackedWidget.setCurrentIndex(0)
+
+
         QMetaObject.connectSlotsByName(CommitWindow)
     # setupUi
 
@@ -295,5 +363,7 @@ class Ui_CommitWindow(object):
         self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend Last Message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
         self.cbRunAction.setText(QCoreApplication.translate("CommitWindow", u"&Run Action After Commit", None))
+        self.lbStatus.setText(QCoreApplication.translate("CommitWindow", u"Work in progress...", None))
+        self.btnAction.setText(QCoreApplication.translate("CommitWindow", u"&Abort", None))
     # retranslateUi
 

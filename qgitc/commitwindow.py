@@ -13,7 +13,9 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QFont,
-    QIcon
+    QIcon,
+    QTextCursor,
+    QTextCharFormat
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -194,6 +196,15 @@ class TemplateReadyEvent(QEvent):
         self.template = template
 
 
+class UpdateCommitProgressEvent(QEvent):
+    Type = QEvent.User + 5
+
+    def __init__(self, out: str, error: str):
+        super().__init__(QEvent.Type(UpdateCommitProgressEvent.Type))
+        self.out = out
+        self.error = error
+
+
 class CommitWindow(StateWindow):
 
     def __init__(self, parent=None):
@@ -297,12 +308,14 @@ class CommitWindow(StateWindow):
 
         self.ui.btnCommit.clicked.connect(self._onCommitClicked)
 
-        # UI tasks
-        self._progressDialog: GitProgressDialog = None
         # no UI tasks
         self._submoduleExecutor = SubmoduleExecutor(self)
         self._submoduleExecutor.finished.connect(
             self._onNonUITaskFinished)
+
+        self._commitExecutor = SubmoduleExecutor(self)
+        self._commitExecutor.finished.connect(
+            self._onCommitFinished)
 
         infoFetcher = SubmoduleExecutor(self)
         infoFetcher.finished.connect(self._onInfoFetchFinished)
@@ -314,6 +327,9 @@ class CommitWindow(StateWindow):
 
         self.ui.tbOptions.setIcon(QIcon(iconsPath + "settings.svg"))
         self.ui.tbOptions.clicked.connect(self._onOptionsClicked)
+
+        self.ui.btnAction.clicked.connect(
+            self._onCommitActionClicked)
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -454,15 +470,13 @@ class CommitWindow(StateWindow):
 
         assert (len(submodules) > 0)
 
-        self._progressDialog = GitProgressDialog(self)
-        self._progressDialog.finished.connect(self._onCommitFinished)
-        if self._repoInfo:
-            self._progressDialog.setWindowTitle(
-                self.tr("Commit to") + " " + self._repoInfo.branch)
-        else:
-            self._progressDialog.setWindowTitle(self.tr("Commit"))
-        self._progressDialog.executeTask(submodules, self._doCommit)
-        self._progressDialog = None
+        self.ui.progressBar.setRange(0, len(submodules))
+        self.ui.progressBar.setValue(0)
+        self.ui.teOutput.clear()
+        self._updateCommitStatus(True)
+        self.ui.stackedWidget.setCurrentWidget(self.ui.pageProgress)
+        self._commitExecutor.submit(submodules, self._doCommit)
+        self._blockUI()
 
     def _checkMessage(self):
         # amend no need message
@@ -524,7 +538,7 @@ class CommitWindow(StateWindow):
             message = None
 
         out, error = Git.commit(message, amend, submodule)
-        self._progressDialog.updateProgressResult(out, error)
+        self._updateCommitProgress(out, error)
 
     def _collectSectionFiles(self, view: QListView):
         indexes = view.selectionModel().selectedRows()
@@ -637,9 +651,6 @@ class CommitWindow(StateWindow):
             return True
         elif evt.type() == RepoInfoEvent.Type:
             self._repoInfo = evt.info
-            if self._progressDialog:
-                self._progressDialog.setWindowTitle(
-                    self.tr("Commit to") + " " + self._repoInfo.branch)
             self._commiterLabel.setText("{} <{}>".format(
                 self._repoInfo.userName, self._repoInfo.userEmail))
             self._branchLabel.setText(self._repoInfo.branch)
@@ -650,6 +661,20 @@ class CommitWindow(StateWindow):
             if not doc.isUndoAvailable() and not doc.isRedoAvailable():
                 self.ui.teMessage.setPlainText(evt.template)
                 doc.clearUndoRedoStacks()
+            return True
+        elif evt.type() == UpdateCommitProgressEvent.Type:
+            self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
+            self.ui.teOutput.appendPlainText(evt.out)
+            if evt.error:
+                cursor = self.ui.teOutput.textCursor()
+                cursor.movePosition(QTextCursor.End)
+
+                format = QTextCharFormat()
+                format.setForeground(qApp.colorScheme().ErrorText)
+                cursor.insertText(evt.error + "\n", format)
+                cursor.setCharFormat(QTextCharFormat())
+            self.ui.teOutput.moveCursor(QTextCursor.End)
+            self.ui.teOutput.ensureCursorVisible()
             return True
         return super().event(evt)
 
@@ -777,4 +802,22 @@ class CommitWindow(StateWindow):
 
     def _onCommitFinished(self):
         self.reloadLocalChanges()
+        self._updateCommitStatus(False)
         qApp.postEvent(qApp, LocalChangesCommittedEvent())
+
+    def _updateCommitProgress(self, out: str, error: str):
+        qApp.postEvent(self, UpdateCommitProgressEvent(out, error))
+
+    def _updateCommitStatus(self, isRunning: bool):
+        text = self.tr("&Abort") if isRunning else self.tr("&Back")
+        self.ui.btnAction.setText(text)
+
+        text = self.tr("Working on commit...") if isRunning else self.tr(
+            "Commit finished")
+        self.ui.lbStatus.setText(text)
+
+    def _onCommitActionClicked(self):
+        if self._commitExecutor.isRunning():
+            self._commitExecutor.cancel()
+        else:
+            self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
