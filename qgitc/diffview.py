@@ -405,7 +405,7 @@ class DiffView(QWidget):
         commit = fileRealCommit(filePath, self.commit)
         if commit.repoDir and commit.repoDir != ".":
             filePath = filePath[len(commit.repoDir) + 1:]
-        tool = self.__diffToolForFile(filePath)
+        tool = DiffView.diffToolForFile(filePath)
 
         cwd = self.branchDir or Git.REPO_DIR
         if commit.repoDir and commit.repoDir != ".":
@@ -602,7 +602,8 @@ class DiffView(QWidget):
 
         self.viewer.addNormalTextLine("", False)
 
-    def __diffToolForFile(self, filePath):
+    @staticmethod
+    def diffToolForFile(filePath):
         tools = qApp.settings().mergeToolList()
         # ignored case even on Unix platform
         lowercase_file = filePath.lower()

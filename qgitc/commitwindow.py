@@ -26,13 +26,14 @@ from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QLabel,
-    QDialog
+    QDialog,
+    QStyle
 )
 
 from .commitactiontablemodel import ActionCondition, CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
-from .diffview import _makeTextIcon
+from .diffview import DiffView, _makeTextIcon
 from .events import LocalChangesCommittedEvent
 from .findsubmodules import FindSubmoduleThread
 from .gitprogressdialog import GitProgressDialog
@@ -348,6 +349,17 @@ class CommitWindow(StateWindow):
 
         self.ui.cbAmend.toggled.connect(
             self._updateCommitButtonState)
+
+        if not qApp.style().styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
+            self.ui.lvFiles.activated.connect(
+                self._onFilesDoubleClicked)
+            self.ui.lvStaged.activated.connect(
+                self._onStagedDoubleClicked)
+        else:
+            self.ui.lvFiles.doubleClicked.connect(
+                self._onFilesDoubleClicked)
+            self.ui.lvStaged.doubleClicked.connect(
+                self._onStagedDoubleClicked)
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -970,3 +982,48 @@ class CommitWindow(StateWindow):
     def _onFilterStagedChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvStaged.model()
         model.setFilterRegularExpression(text)
+
+    def _onFilesDoubleClicked(self, index: QModelIndex):
+        statusCode = index.data(StatusFileListModel.StatusCodeRole)
+        if statusCode in ["?", "!"]:
+            fileStatus = FileStatus.Untracked
+        else:
+            fileStatus = FileStatus.Unstaged
+        self._runDiffTool(index, fileStatus)
+
+    def _onStagedDoubleClicked(self, index: QModelIndex):
+        self._runDiffTool(index, FileStatus.Staged)
+
+    def _runDiffTool(self, index: QModelIndex, fileStatus: FileStatus):
+        if not index.isValid():
+            return
+
+        submodule = index.data(StatusFileListModel.RepoDirRole)
+        file = toSubmodulePath(submodule, index.data(Qt.DisplayRole))
+
+        tool = DiffView.diffToolForFile(file)
+
+        args = ["difftool", "--no-prompt"]
+        if fileStatus == FileStatus.Unstaged:
+            pass
+        elif fileStatus == FileStatus.Staged:
+            args.append("--cached")
+        else:
+            args.append("--no-index")
+            args.append("/dev/null")
+
+        if tool:
+            args.append("--tool={}".format(tool))
+
+        args.append("--")
+        args.append(file)
+
+        repoDir = CommitWindow._toRepoDir(submodule)
+        try:
+            process = Git.run(args, repoDir=repoDir)
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Run External Diff Tool Error"),
+                str(e),
+                QMessageBox.Ok)
