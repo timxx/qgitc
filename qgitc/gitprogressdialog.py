@@ -111,7 +111,7 @@ class GitProgressDialog(QDialog):
                 cursor.movePosition(QTextCursor.End)
 
                 format = QTextCharFormat()
-                format.setForeground(qApp.colorScheme().ErrorText)
+                format.setForeground(qApp.colorSchema().ErrorText)
                 cursor.insertText(evt.error + "\n", format)
                 cursor.setCharFormat(QTextCharFormat())
             self._textEdit.moveCursor(QTextCursor.End)

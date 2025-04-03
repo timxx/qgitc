@@ -2,6 +2,7 @@
 
 from enum import Enum
 import os
+import subprocess
 from typing import Dict, List, Tuple
 from PySide6.QtCore import (
     QTimer,
@@ -28,6 +29,7 @@ from PySide6.QtWidgets import (
     QDialog
 )
 
+from .commitactiontablemodel import CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
@@ -460,13 +462,19 @@ class CommitWindow(StateWindow):
         else:
             message = None
 
-        # get all rows from _stagedModel
+        if self.ui.cbRunAction.isChecked():
+            settings = qApp.settings()
+            actions = [action for action in settings.commitActions()
+                    if action.enabled and action.command]
+        else:
+            actions = []
+
         submodules = {}
         for row in range(self._stagedModel.rowCount()):
             index = self._stagedModel.index(row, 0)
             repoDir = self._stagedModel.data(
                 index, StatusFileListModel.RepoDirRole)
-            submodules.setdefault(repoDir, (message, amend))
+            submodules.setdefault(repoDir, (message, amend, actions))
 
         assert (len(submodules) > 0)
 
@@ -529,7 +537,7 @@ class CommitWindow(StateWindow):
         enabled = self._stagedModel.rowCount() > 0
         self.ui.btnCommit.setEnabled(enabled)
 
-    def _doCommit(self, submodule: str, userData: Tuple[str, bool]):
+    def _doCommit(self, submodule: str, userData: Tuple[str, bool, list]):
         amend = userData[1]
         if not amend:
             message = userData[0]
@@ -538,6 +546,15 @@ class CommitWindow(StateWindow):
             message = None
 
         out, error = Git.commit(message, amend, submodule)
+
+        actions: List[CommitAction] = userData[2]
+        for action in actions:
+            o, e = CommitWindow._runCommitAction(submodule, action)
+            if o:
+                out = out + "\n" + o if out else o
+            if e:
+                error = error + "\n" + e if error else e
+
         self._updateCommitProgress(out, error)
 
     def _collectSectionFiles(self, view: QListView):
@@ -670,7 +687,7 @@ class CommitWindow(StateWindow):
                 cursor.movePosition(QTextCursor.End)
 
                 format = QTextCharFormat()
-                format.setForeground(qApp.colorScheme().ErrorText)
+                format.setForeground(qApp.colorSchema().ErrorText)
                 cursor.insertText(evt.error + "\n", format)
                 cursor.setCharFormat(QTextCharFormat())
             self.ui.teOutput.moveCursor(QTextCursor.End)
@@ -821,3 +838,43 @@ class CommitWindow(StateWindow):
             self._commitExecutor.cancel()
         else:
             self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
+
+    @staticmethod
+    def _runCommitAction(submodule: str, action: CommitAction):
+        if action.mainRepoOnly:
+            # not main repo, ignore it
+            if not (not submodule or submodule == "."):
+                return None, None
+
+        repoDir = CommitWindow._toRepoDir(submodule)
+
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+        def _quote(path):
+            if " " in path:
+                return '"' + path + '"'
+            return path
+
+        args = _quote(action.command)
+        if action.args:
+            args += " " + action.args
+
+        try:
+            process = subprocess.Popen(
+                args,
+                cwd=repoDir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                startupinfo=startupinfo,
+                universal_newlines=True,
+                shell=True)
+
+            out, error = process.communicate()
+        except Exception as e:
+            out = None
+            error = str(e)
+
+        return out, error
