@@ -573,9 +573,10 @@ class CommitWindow(StateWindow):
 
         out, error = Git.commit(message, amend, submodule)
         self._updateCommitProgress(submodule, out, error, not actions)
+        if not actions:
+            return
 
         out, error = None, None
-
         for action in actions:
             o, e = CommitWindow._runCommitAction(submodule, action)
             if o:
@@ -711,16 +712,17 @@ class CommitWindow(StateWindow):
             if evt.updateProgress:
                 self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
 
-            repoText = self.tr("Repo: ") + (evt.submodule or "<main>")
-            format = QTextCharFormat()
-            format.setBackground(qApp.colorSchema().RepoTagBg)
-            format.setForeground(qApp.colorSchema().RepoTagFg)
+            if evt.out or evt.error:
+                repoText = self.tr("Repo: ") + (evt.submodule or "<main>")
+                format = QTextCharFormat()
+                format.setBackground(qApp.colorSchema().RepoTagBg)
+                format.setForeground(qApp.colorSchema().RepoTagFg)
 
-            cursor = self.ui.teOutput.textCursor()
-            cursor.movePosition(QTextCursor.End)
-            cursor.insertText(repoText + "\n", format)
-            cursor.setCharFormat(QTextCharFormat())
-            self.ui.teOutput.setTextCursor(cursor)
+                cursor = self.ui.teOutput.textCursor()
+                cursor.movePosition(QTextCursor.End)
+                cursor.insertText(repoText, format)
+                cursor.setCharFormat(QTextCharFormat())
+                self.ui.teOutput.setTextCursor(cursor)
 
             if evt.out:
                 self.ui.teOutput.appendPlainText(evt.out + "\n")
@@ -954,7 +956,7 @@ class CommitWindow(StateWindow):
     def _runCommittedAction(self, submodule: str, actions: List[CommitAction]):
         for action in actions:
             out, error = CommitWindow._runCommitAction(submodule, action)
-            qApp.postEvent(self, UpdateCommitProgressEvent(submodule, out, error))
+            self._updateCommitProgress(submodule, out, error)
 
     def _onFilterFilesChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvFiles.model()
