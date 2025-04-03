@@ -45,6 +45,7 @@
             "../../textcursor.py",
             "../../textline.py",
             "../../textviewer.py",
+            "../../tooltablemodel.py",
             "../../waitingspinnerwidget.py"
         ],
         "translations": [
