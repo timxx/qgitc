@@ -106,82 +106,17 @@ class Preferences(QDialog):
             self._onDeleteActionClicked)
 
         self._initedTabs = set()
-        self._initSettings()
+        # FIXME: we'd better use interface to implement tabs
+        self._tabs = {
+            self.ui.tabGeneral: (self._initGeneralTab, self._saveGeneralTab),
+            self.ui.tabFonts: (self._initFontsTab, self._saveFontsTab),
+            self.ui.tabSummary: (self._initSummaryTab, self._saveSummaryTab),
+            self.ui.tabTools: (self._initToolsTab, self._saveToolsTab),
+            self.ui.tabLLM: (self._initLLMTab, self._saveLLMTab),
+            self.ui.tabCommitMessage: (self._initCommitMessageTab, self._saveCommitMessageTab),
+        }
 
-    def _initSettings(self):
-        # TODO: delay load config for each tab
-        checked = self.settings.checkUpdatesEnabled()
-        self.ui.cbCheckUpdates.setChecked(checked)
-        self._onCheckUpdatesChanged(checked)
-
-        self.ui.sbDays.setValue(
-            self.settings.checkUpdatesInterval())
-
-        font = self.settings.logViewFont()
-        self.ui.cbFamilyLog.setCurrentFont(font)
-        self.ui.cbFamilyLog.currentFontChanged.emit(font)
-
-        font = self.settings.diffViewFont()
-        self.ui.cbFamilyDiff.setCurrentFont(font)
-        self.ui.cbFamilyDiff.currentFontChanged.emit(font)
-
-        self.ui.colorA.setColor(self.settings.commitColorA())
-        self.ui.colorB.setColor(self.settings.commitColorB())
-
-        repoName = qApp.repoName()
-        self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
-
-        self.ui.linkEditWidget.setBugPatterns(
-            self.settings.bugPatterns(repoName))
-        self.ui.cbFallback.setChecked(
-            self.settings.fallbackGlobalLinks(repoName))
-
-        self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
-        self.ui.sbTabSize.setValue(self.settings.tabSize())
-
-        self.ui.cbEsc.setChecked(self.settings.quitViaEsc())
-        self.ui.cbState.setChecked(self.settings.rememberWindowState())
-
-        index = self.settings.ignoreWhitespace()
-        if index < 0 or index >= self.ui.cbIgnoreWhitespace.count():
-            index = 0
-        self.ui.cbIgnoreWhitespace.setCurrentIndex(index)
-
-        tools = self.settings.mergeToolList()
-        self.ui.tableView.model().setRawData(tools)
-
-        name = self.settings.diffToolName()
-        self.ui.cbDiffName.setCurrentText(name)
-        self.ui.leDiffCmd.setText(Git.diffToolCmd(name))
-
-        name = self.settings.mergeToolName()
-        self.ui.cbMergeName.setCurrentText(name)
-        self.ui.leMergeCmd.setText(Git.mergeToolCmd(name))
-
-        git = self.settings.gitBinPath()
-        if not git and GitProcess.GIT_BIN:
-            git = GitProcess.GIT_BIN
-        self.ui.leGitPath.setText(git)
-
-        self.ui.leServerUrl.setText(self.settings.llmServer())
-
-        days = self.settings.maxCompositeCommitsSince()
-        for i in range(self.ui.cbCommitSince.count()):
-            if self.ui.cbCommitSince.itemData(i) == days:
-                self.ui.cbCommitSince.setCurrentIndex(i)
-                break
-
-        self.ui.cbShowPC.setChecked(self.settings.showParentChild())
-
-        self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
-        self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
-        self.ui.cbColorSchema.addItem(self.tr("Dark"), ColorSchemaMode.Dark)
-
-        index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
-        self.ui.cbColorSchema.setCurrentIndex(index)
-
-        for i in range(0, 5):
-            self._initedTabs.add(i)
+        self._onTabChanged(self.ui.tabWidget.currentIndex())
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -388,13 +323,90 @@ class Preferences(QDialog):
         return None
 
     def save(self):
-        # TODO: only update those values that really changed
+        for tab in self._initedTabs:
+            self._tabs[tab][1]()
+
+    def _onTabChanged(self, index):
+        tab = self.ui.tabWidget.widget(index)
+        if tab in self._initedTabs:
+            return
+
+        self._initedTabs.add(tab)
+
+        assert tab in self._tabs
+        self._tabs[tab][0]()
+
+    def _initGeneralTab(self):
+        self.ui.cbEsc.setChecked(self.settings.quitViaEsc())
+        self.ui.cbState.setChecked(self.settings.rememberWindowState())
+
+        checked = self.settings.checkUpdatesEnabled()
+        self.ui.cbCheckUpdates.setChecked(checked)
+        self._onCheckUpdatesChanged(checked)
+        self.ui.sbDays.setValue(self.settings.checkUpdatesInterval())
+
+        self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
+        self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
+        self.ui.cbColorSchema.addItem(self.tr("Dark"), ColorSchemaMode.Dark)
+        index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
+        self.ui.cbColorSchema.setCurrentIndex(index)
+
+        git = self.settings.gitBinPath()
+        if not git and GitProcess.GIT_BIN:
+            git = GitProcess.GIT_BIN
+        self.ui.leGitPath.setText(git)
+
+        self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
+        self.ui.sbTabSize.setValue(self.settings.tabSize())
+
+        index = self.settings.ignoreWhitespace()
+        if index < 0 or index >= self.ui.cbIgnoreWhitespace.count():
+            index = 0
+        self.ui.cbIgnoreWhitespace.setCurrentIndex(index)
+
+        self.ui.cbShowPC.setChecked(self.settings.showParentChild())
+
+    def _saveGeneralTab(self):
+        value = self.ui.cbEsc.isChecked()
+        self.settings.setQuitViaEsc(value)
+
+        value = self.ui.cbState.isChecked()
+        self.settings.setRememberWindowState(value)
+
         value = self.ui.cbCheckUpdates.isChecked()
         self.settings.setCheckUpdatesEnabled(value)
 
         value = self.ui.sbDays.value()
         self.settings.setCheckUpdatesInterval(value)
 
+        value = self.ui.cbColorSchema.currentData()
+        self.settings.setColorSchemaMode(value)
+
+        value = self.ui.leGitPath.text()
+        self.settings.setGitBinPath(value)
+
+        value = self.ui.cbShowWhitespace.isChecked()
+        self.settings.setShowWhitespace(value)
+
+        value = self.ui.sbTabSize.value()
+        self.settings.setTabSize(value)
+
+        value = self.ui.cbIgnoreWhitespace.currentIndex()
+        self.settings.setIgnoreWhitespace(value)
+
+        value = self.ui.cbShowPC.isChecked()
+        self.settings.setShowParentChild(value)
+
+    def _initFontsTab(self):
+        font = self.settings.logViewFont()
+        self.ui.cbFamilyLog.setCurrentFont(font)
+        self.ui.cbFamilyLog.currentFontChanged.emit(font)
+
+        font = self.settings.diffViewFont()
+        self.ui.cbFamilyDiff.setCurrentFont(font)
+        self.ui.cbFamilyDiff.currentFontChanged.emit(font)
+
+    def _saveFontsTab(self):
         font = QFont(self.ui.cbFamilyLog.currentText(),
                      int(self.ui.cbSizeLog.currentText()))
 
@@ -405,6 +417,24 @@ class Preferences(QDialog):
 
         self.settings.setDiffViewFont(font)
 
+    def _initSummaryTab(self):
+        self.ui.colorA.setColor(self.settings.commitColorA())
+        self.ui.colorB.setColor(self.settings.commitColorB())
+
+        repoName = qApp.repoName()
+        self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
+        self.ui.linkEditWidget.setBugPatterns(
+            self.settings.bugPatterns(repoName))
+        self.ui.cbFallback.setChecked(
+            self.settings.fallbackGlobalLinks(repoName))
+
+        days = self.settings.maxCompositeCommitsSince()
+        for i in range(self.ui.cbCommitSince.count()):
+            if self.ui.cbCommitSince.itemData(i) == days:
+                self.ui.cbCommitSince.setCurrentIndex(i)
+                break
+
+    def _saveSummaryTab(self):
         color = self.ui.colorA.getColor()
         self.settings.setCommitColorA(color)
 
@@ -421,21 +451,22 @@ class Preferences(QDialog):
         value = self.ui.cbFallback.isChecked()
         self.settings.setFallbackGlobalLinks(repoName, value)
 
-        value = self.ui.cbShowWhitespace.isChecked()
-        self.settings.setShowWhitespace(value)
+        value = self.ui.cbCommitSince.currentData()
+        self.settings.setMaxCompositeCommitsSince(value)
 
-        value = self.ui.sbTabSize.value()
-        self.settings.setTabSize(value)
+    def _initToolsTab(self):
+        tools = self.settings.mergeToolList()
+        self.ui.tableView.model().setRawData(tools)
 
-        value = self.ui.cbEsc.isChecked()
-        self.settings.setQuitViaEsc(value)
+        name = self.settings.diffToolName()
+        self.ui.cbDiffName.setCurrentText(name)
+        self.ui.leDiffCmd.setText(Git.diffToolCmd(name))
 
-        value = self.ui.cbState.isChecked()
-        self.settings.setRememberWindowState(value)
+        name = self.settings.mergeToolName()
+        self.ui.cbMergeName.setCurrentText(name)
+        self.ui.leMergeCmd.setText(Git.mergeToolCmd(name))
 
-        value = self.ui.cbIgnoreWhitespace.currentIndex()
-        self.settings.setIgnoreWhitespace(value)
-
+    def _saveToolsTab(self):
         tools = self.ui.tableView.model().rawData()
         # TODO: validate if all tool isValid before saving
         self.settings.setMergeToolList(tools)
@@ -461,30 +492,11 @@ class Preferences(QDialog):
                 self, self.window().windowTitle(),
                 error)
 
-        value = self.ui.leGitPath.text()
-        self.settings.setGitBinPath(value)
+    def _initLLMTab(self):
+        self.ui.leServerUrl.setText(self.settings.llmServer())
 
+    def _saveLLMTab(self):
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
-
-        value = self.ui.cbCommitSince.currentData()
-        self.settings.setMaxCompositeCommitsSince(value)
-
-        value = self.ui.cbShowPC.isChecked()
-        self.settings.setShowParentChild(value)
-
-        value = self.ui.cbColorSchema.currentData()
-        self.settings.setColorSchemaMode(value)
-
-        self._saveCommitMessageTab()
-
-    def _onTabChanged(self, index):
-        if index in self._initedTabs:
-            return
-
-        self._initedTabs.add(index)
-
-        if self.ui.tabWidget.indexOf(self.ui.tabCommitMessage) == index:
-            self._initCommitMessageTab()
 
     def _initCommitMessageTab(self):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())
