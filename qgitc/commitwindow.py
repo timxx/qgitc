@@ -201,8 +201,9 @@ class TemplateReadyEvent(QEvent):
 class UpdateCommitProgressEvent(QEvent):
     Type = QEvent.User + 5
 
-    def __init__(self, out: str, error: str, updateProgress: bool = True):
+    def __init__(self, submodule: str, out: str, error: str, updateProgress: bool = True):
         super().__init__(QEvent.Type(UpdateCommitProgressEvent.Type))
+        self.submodule = submodule
         self.out = out
         self.error = error
         self.updateProgress = updateProgress
@@ -571,7 +572,7 @@ class CommitWindow(StateWindow):
         actions: List[CommitAction] = userData[2]
 
         out, error = Git.commit(message, amend, submodule)
-        self._updateCommitProgress(out, error, not actions)
+        self._updateCommitProgress(submodule, out, error, not actions)
 
         out, error = None, None
 
@@ -582,7 +583,7 @@ class CommitWindow(StateWindow):
             if e:
                 error = error + "\n" + e if error else e
 
-        self._updateCommitProgress(out, error)
+        self._updateCommitProgress(submodule, out, error)
 
     def _collectSectionFiles(self, view: QListView):
         indexes = view.selectionModel().selectedRows()
@@ -709,16 +710,28 @@ class CommitWindow(StateWindow):
         elif evt.type() == UpdateCommitProgressEvent.Type:
             if evt.updateProgress:
                 self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
+
+            repoText = self.tr("Repo: ") + (evt.submodule or "<main>")
+            format = QTextCharFormat()
+            format.setBackground(qApp.colorSchema().RepoTagBg)
+            format.setForeground(qApp.colorSchema().RepoTagFg)
+
+            cursor = self.ui.teOutput.textCursor()
+            cursor.movePosition(QTextCursor.End)
+            cursor.insertText(repoText + "\n", format)
+            cursor.setCharFormat(QTextCharFormat())
+            self.ui.teOutput.setTextCursor(cursor)
+
             if evt.out:
-                self.ui.teOutput.appendPlainText(evt.out)
+                self.ui.teOutput.appendPlainText(evt.out + "\n")
             if evt.error:
-                cursor = self.ui.teOutput.textCursor()
                 cursor.movePosition(QTextCursor.End)
 
                 format = QTextCharFormat()
                 format.setForeground(qApp.colorSchema().ErrorText)
                 cursor.insertText(evt.error + "\n", format)
                 cursor.setCharFormat(QTextCharFormat())
+                self.ui.teOutput.setTextCursor(cursor)
             self.ui.teOutput.moveCursor(QTextCursor.End)
             self.ui.teOutput.ensureCursorVisible()
             return True
@@ -879,9 +892,9 @@ class CommitWindow(StateWindow):
         self._updateCommitStatus(False)
         qApp.postEvent(qApp, LocalChangesCommittedEvent())
 
-    def _updateCommitProgress(self, out: str, error: str, updateProgress=True):
+    def _updateCommitProgress(self, submodule, out: str, error: str, updateProgress=True):
         qApp.postEvent(self, UpdateCommitProgressEvent(
-            out, error, updateProgress))
+            submodule, out, error, updateProgress))
 
     def _updateCommitStatus(self, isRunning: bool):
         text = self.tr("&Abort") if isRunning else self.tr("&Back")
@@ -941,7 +954,7 @@ class CommitWindow(StateWindow):
     def _runCommittedAction(self, submodule: str, actions: List[CommitAction]):
         for action in actions:
             out, error = CommitWindow._runCommitAction(submodule, action)
-            qApp.postEvent(self, UpdateCommitProgressEvent(out, error))
+            qApp.postEvent(self, UpdateCommitProgressEvent(submodule, out, error))
 
     def _onFilterFilesChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvFiles.model()
