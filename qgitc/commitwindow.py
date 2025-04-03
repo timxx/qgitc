@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QDialog
 )
 
-from .commitactiontablemodel import CommitAction
+from .commitactiontablemodel import ActionCondition, CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import _makeTextIcon
@@ -316,6 +316,7 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.finished.connect(
             self._onNonUITaskFinished)
 
+        self._committedActions = []
         self._commitExecutor = SubmoduleExecutor(self)
         self._commitExecutor.finished.connect(
             self._onCommitFinished)
@@ -474,11 +475,21 @@ class CommitWindow(StateWindow):
             message = None
 
         if self.ui.cbRunAction.isChecked():
-            settings = qApp.settings()
-            actions = [action for action in settings.commitActions()
-                       if action.enabled and action.command]
+            allActions = qApp.settings().commitActions()
+            actions = []
+            self._committedActions = []
+            for action in allActions:
+                if not action.enabled:
+                    continue
+                if not action.command:
+                    continue
+                if action.condition == ActionCondition.AllCommitted:
+                    self._committedActions.append(action)
+                else:
+                    actions.append(action)
         else:
             actions = []
+            self._committedActions = []
 
         submodules = {}
         for row in range(self._stagedModel.rowCount()):
@@ -489,7 +500,8 @@ class CommitWindow(StateWindow):
 
         assert (len(submodules) > 0)
 
-        self.ui.progressBar.setRange(0, len(submodules))
+        self.ui.progressBar.setRange(
+            0, len(submodules) + len(self._committedActions))
         self.ui.progressBar.setValue(0)
         self.ui.teOutput.clear()
         self._updateCommitStatus(True)
@@ -697,7 +709,8 @@ class CommitWindow(StateWindow):
         elif evt.type() == UpdateCommitProgressEvent.Type:
             if evt.updateProgress:
                 self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
-            self.ui.teOutput.appendPlainText(evt.out)
+            if evt.out:
+                self.ui.teOutput.appendPlainText(evt.out)
             if evt.error:
                 cursor = self.ui.teOutput.textCursor()
                 cursor.movePosition(QTextCursor.End)
@@ -855,6 +868,13 @@ class CommitWindow(StateWindow):
             preferences.save()
 
     def _onCommitFinished(self):
+        # we're not really done yet
+        if self._committedActions:
+            submodules = {None: self._committedActions}
+            self._committedActions = []
+            self._commitExecutor.submit(submodules, self._runCommittedAction)
+            return
+
         self.reloadLocalChanges()
         self._updateCommitStatus(False)
         qApp.postEvent(qApp, LocalChangesCommittedEvent())
@@ -874,12 +894,13 @@ class CommitWindow(StateWindow):
     def _onCommitActionClicked(self):
         if self._commitExecutor.isRunning():
             self._commitExecutor.cancel()
+            self._committedActions.clear()
         else:
             self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
 
     @staticmethod
     def _runCommitAction(submodule: str, action: CommitAction):
-        if action.mainRepoOnly:
+        if action.condition == ActionCondition.MainRepoOnly:
             # not main repo, ignore it
             if not (not submodule or submodule == "."):
                 return None, None
@@ -916,6 +937,11 @@ class CommitWindow(StateWindow):
             error = str(e)
 
         return out, error
+
+    def _runCommittedAction(self, submodule: str, actions: List[CommitAction]):
+        for action in actions:
+            out, error = CommitWindow._runCommitAction(submodule, action)
+            qApp.postEvent(self, UpdateCommitProgressEvent(out, error))
 
     def _onFilterFilesChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvFiles.model()

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from enum import Enum
 from typing import List
 from PySide6.QtCore import (
     QAbstractTableModel,
@@ -8,19 +9,25 @@ from PySide6.QtCore import (
     Qt)
 
 
+class ActionCondition(Enum):
+    MainRepoOnly = 0
+    EachRepo = 1
+    AllCommitted = 2
+
+
 class CommitAction:
 
-    def __init__(self, command: str, args: str = None, mainRepoOnly: bool = False, enabled: bool = True):
+    def __init__(self, command: str, args: str = None, condition=ActionCondition.EachRepo, enabled: bool = True):
         self.command = command
         self.args = args
-        self.mainRepoOnly = mainRepoOnly
+        self.condition = condition
         self.enabled = enabled
 
 
 class CommitActionTableModel(QAbstractTableModel):
     Col_Cmd = 0
     Col_Args = 1
-    Col_Repos = 2
+    Col_Condition = 2
     Col_Status = 3
     Col_Count = 4
 
@@ -31,9 +38,10 @@ class CommitActionTableModel(QAbstractTableModel):
 
         self._data: List[CommitAction] = []
 
-        self._repos = {
-            True: self.tr("Main repo only"),
-            False: self.tr("All repos")
+        self._conditions = {
+            ActionCondition.MainRepoOnly: self.tr("Main Repo Only"),
+            ActionCondition.EachRepo: self.tr("Each Repo"),
+            ActionCondition.AllCommitted: self.tr("All Committed")
         }
 
         self._status = {
@@ -57,8 +65,8 @@ class CommitActionTableModel(QAbstractTableModel):
             return self.tr("Command")
         if section == self.Col_Args:
             return self.tr("Arguments")
-        if section == self.Col_Repos:
-            return self.tr("Run on")
+        if section == self.Col_Condition:
+            return self.tr("Condition")
         if section == self.Col_Status:
             return self.tr("Status")
 
@@ -81,8 +89,8 @@ class CommitActionTableModel(QAbstractTableModel):
                 return action.command
             if col == self.Col_Args:
                 return action.args
-            if col == self.Col_Repos and role == Qt.DisplayRole:
-                return self._repos[action.mainRepoOnly]
+            if col == self.Col_Condition and role == Qt.DisplayRole:
+                return self._conditions[action.condition]
             if col == self.Col_Status and role == Qt.DisplayRole:
                 return self._status[action.enabled]
 
@@ -101,10 +109,12 @@ class CommitActionTableModel(QAbstractTableModel):
                 action.command = value
             elif col == self.Col_Args:
                 action.args = value
-            elif col == self.Col_Repos:
-                action.mainRepoOnly = value == self.tr("Main repo only")
+            elif col == self.Col_Condition:
+                action.condition = list(self._conditions.keys())[
+                    list(self._conditions.values()).index(value)]
             elif col == self.Col_Status:
-                action.enabled = value == self.tr("Enabled")
+                action.enabled = list(self._status.keys())[
+                    list(self._status.values()).index(value)]
         else:
             return False
 
@@ -151,8 +161,8 @@ class CommitActionTableModel(QAbstractTableModel):
             self._data = data
             self.endInsertRows()
 
-    def getRepos(self):
-        return list(self._repos.values())
+    def getConditionNames(self):
+        return list(self._conditions.values())
 
     def getStatusNames(self):
         return list(self._status.values())

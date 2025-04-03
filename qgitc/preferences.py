@@ -88,16 +88,16 @@ class Preferences(QDialog):
         self.ui.tvActions.setItemDelegateForColumn(
             CommitActionTableModel.Col_Status, delegate)
 
-        delegate = ComboBoxItemDelegate(model.getRepos(), self)
+        delegate = ComboBoxItemDelegate(model.getConditionNames(), self)
         self.ui.tvActions.setItemDelegateForColumn(
-            CommitActionTableModel.Col_Repos, delegate)
+            CommitActionTableModel.Col_Condition, delegate)
 
         self.ui.tvActions.horizontalHeader().setSectionResizeMode(
             CommitActionTableModel.Col_Cmd,
             QHeaderView.Stretch)
 
         self.ui.tvActions.horizontalHeader().resizeSection(
-            CommitActionTableModel.Col_Repos,
+            CommitActionTableModel.Col_Condition,
             120)
 
         self.ui.btnAddAction.clicked.connect(
