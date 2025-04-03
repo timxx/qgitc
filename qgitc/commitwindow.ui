@@ -63,7 +63,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="tbWDChanges">
+            <widget class="MenuButton" name="tbWDChanges">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -572,6 +572,11 @@
    <class>CommitMessageEdit</class>
    <extends>QPlainTextEdit</extends>
    <header>commitmessageedit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>MenuButton</class>
+   <extends>QToolButton</extends>
+   <header>menubutton.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
 from .coloredicontoolbutton import ColoredIconToolButton
 from .commitmessageedit import CommitMessageEdit
 from .emptystatelistview import EmptyStateListView
+from .menubutton import MenuButton
 from .patchviewer import PatchViewer
 from .waitingspinnerwidget import QtWaitingSpinner
 
@@ -58,7 +59,7 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_4.addWidget(self.tbRefresh)
 
-        self.tbWDChanges = QToolButton(self.frame)
+        self.tbWDChanges = MenuButton(self.frame)
         self.tbWDChanges.setObjectName(u"tbWDChanges")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
