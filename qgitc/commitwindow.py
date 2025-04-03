@@ -346,6 +346,9 @@ class CommitWindow(StateWindow):
         self.ui.leFilterStaged.textChanged.connect(
             self._onFilterStagedChanged)
 
+        self.ui.cbAmend.toggled.connect(
+            self._updateCommitButtonState)
+
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)
@@ -468,12 +471,9 @@ class CommitWindow(StateWindow):
             return
 
         amend = self.ui.cbAmend.isChecked()
-        if not amend:
-            message = self._filterMessage(
-                self.ui.teMessage.toPlainText().strip())
-            assert (message)
-        else:
-            message = None
+        message = self._filterMessage(
+            self.ui.teMessage.toPlainText().strip())
+        assert (message)
 
         if self.ui.cbRunAction.isChecked():
             allActions = qApp.settings().commitActions()
@@ -499,7 +499,10 @@ class CommitWindow(StateWindow):
                 index, StatusFileListModel.RepoDirRole)
             submodules.setdefault(repoDir, (message, amend, actions))
 
-        assert (len(submodules) > 0)
+        # amend to main repo
+        if not submodules:
+            assert (amend)
+            submodules[None] = (message, amend, actions)
 
         self.ui.progressBar.setRange(
             0, len(submodules) + len(self._committedActions))
@@ -511,10 +514,6 @@ class CommitWindow(StateWindow):
         self._blockUI()
 
     def _checkMessage(self):
-        # amend no need message
-        if self.ui.cbAmend.isChecked():
-            return True
-
         if not self._isMessageValid():
             content = self.tr("Please enter a valid commit message.")
             message = self.ui.teMessage.toPlainText().strip()
@@ -558,16 +557,16 @@ class CommitWindow(StateWindow):
         return newMessage
 
     def _onStagedFilesChanged(self, parent: QModelIndex, first, last):
-        enabled = self._stagedModel.rowCount() > 0
+        self._updateCommitButtonState()
+
+    def _updateCommitButtonState(self):
+        enabled = self._stagedModel.rowCount() > 0 or self.ui.cbAmend.isChecked()
         self.ui.btnCommit.setEnabled(enabled)
 
     def _doCommit(self, submodule: str, userData: Tuple[str, bool, list]):
         amend = userData[1]
-        if not amend:
-            message = userData[0]
-            assert (message)
-        else:
-            message = None
+        message = userData[0]
+        assert (message)
 
         actions: List[CommitAction] = userData[2]
 

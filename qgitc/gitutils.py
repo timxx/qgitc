@@ -686,9 +686,9 @@ class Git():
         args = ["commit", "--no-edit"]
         if amend:
             args.append("--amend")
-        else:
-            args.append("-m")
-            args.append(message)
+
+        args.append("-m")
+        args.append(message)
         process = GitProcess(repoDir or Git.REPO_DIR, args)
         out, error = process.communicate()
         if out is not None:
