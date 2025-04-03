@@ -317,69 +317,69 @@
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="520"/>
+        <location filename="../../commitwindow.py" line="519"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="524"/>
+        <location filename="../../commitwindow.py" line="523"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="526"/>
+        <location filename="../../commitwindow.py" line="525"/>
         <source>Invalid commit message</source>
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="694"/>
+        <location filename="../../commitwindow.py" line="693"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="716"/>
+        <location filename="../../commitwindow.py" line="715"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="773"/>
+        <location filename="../../commitwindow.py" line="774"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="783"/>
+        <location filename="../../commitwindow.py" line="784"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="828"/>
+        <location filename="../../commitwindow.py" line="829"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="836"/>
+        <location filename="../../commitwindow.py" line="837"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="902"/>
+        <location filename="../../commitwindow.py" line="903"/>
         <location filename="../../commitwindow.ui" line="516"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="903"/>
+        <location filename="../../commitwindow.py" line="904"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="905"/>
+        <location filename="../../commitwindow.py" line="906"/>
         <location filename="../../commitwindow.ui" line="477"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="907"/>
+        <location filename="../../commitwindow.py" line="908"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
@@ -1709,41 +1709,54 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
     </message>
     <message>
         <location filename="../../preferences.ui" line="886"/>
-        <source>&amp;Message</source>
-        <translation>提交信息(&amp;M)</translation>
+        <source>&amp;Commit Message</source>
+        <translation>提交信息(&amp;C)</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="892"/>
+        <source>Commit &amp;Message</source>
+        <translation>提交信息(&amp;M)</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="933"/>
+        <source>Commit &amp;Action</source>
+        <translation>提交动作(&amp;A)</translation>
+    </message>
+    <message>
+        <source>&amp;Message</source>
+        <translation type="vanished">提交信息(&amp;M)</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="898"/>
         <source>Ignore comment line</source>
         <translation>忽略注释行</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="899"/>
+        <location filename="../../preferences.ui" line="905"/>
         <source>Tab to next group</source>
         <translation>按Tab键跳转分组</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="908"/>
+        <location filename="../../preferences.ui" line="914"/>
         <source>Group Chars:</source>
         <translation>分组字符：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="915"/>
+        <location filename="../../preferences.ui" line="921"/>
         <source>Each pair separate by space, such as `() []`</source>
         <translation>每个对以空格分开，比如`() []`</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="938"/>
         <source>Action</source>
-        <translation>提交动作</translation>
+        <translation type="vanished">提交动作</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="953"/>
+        <location filename="../../preferences.ui" line="948"/>
         <source>Add</source>
         <translation>添加</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="960"/>
+        <location filename="../../preferences.ui" line="955"/>
         <source>Delete</source>
         <translation>删除</translation>
     </message>

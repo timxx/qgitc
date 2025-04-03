@@ -513,54 +513,56 @@ class Ui_Preferences(object):
         self.tabCommitMessage.setObjectName(u"tabCommitMessage")
         self.verticalLayout_10 = QVBoxLayout(self.tabCommitMessage)
         self.verticalLayout_10.setObjectName(u"verticalLayout_10")
-        self.cbIgnoreComment = QCheckBox(self.tabCommitMessage)
+        self.groupBox_11 = QGroupBox(self.tabCommitMessage)
+        self.groupBox_11.setObjectName(u"groupBox_11")
+        self.verticalLayout_13 = QVBoxLayout(self.groupBox_11)
+        self.verticalLayout_13.setObjectName(u"verticalLayout_13")
+        self.cbIgnoreComment = QCheckBox(self.groupBox_11)
         self.cbIgnoreComment.setObjectName(u"cbIgnoreComment")
 
-        self.verticalLayout_10.addWidget(self.cbIgnoreComment)
+        self.verticalLayout_13.addWidget(self.cbIgnoreComment)
 
-        self.cbTab = QCheckBox(self.tabCommitMessage)
+        self.cbTab = QCheckBox(self.groupBox_11)
         self.cbTab.setObjectName(u"cbTab")
 
-        self.verticalLayout_10.addWidget(self.cbTab)
+        self.verticalLayout_13.addWidget(self.cbTab)
 
         self.horizontalLayout_11 = QHBoxLayout()
         self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.label_19 = QLabel(self.tabCommitMessage)
+        self.label_19 = QLabel(self.groupBox_11)
         self.label_19.setObjectName(u"label_19")
 
         self.horizontalLayout_11.addWidget(self.label_19)
 
-        self.leGroupChars = QLineEdit(self.tabCommitMessage)
+        self.leGroupChars = QLineEdit(self.groupBox_11)
         self.leGroupChars.setObjectName(u"leGroupChars")
 
         self.horizontalLayout_11.addWidget(self.leGroupChars)
 
 
-        self.verticalLayout_10.addLayout(self.horizontalLayout_11)
+        self.verticalLayout_13.addLayout(self.horizontalLayout_11)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
-        self.verticalLayout_10.addItem(self.verticalSpacer)
+        self.verticalLayout_10.addWidget(self.groupBox_11)
 
-        self.tabWidget.addTab(self.tabCommitMessage, "")
-        self.tabAction = QWidget()
-        self.tabAction.setObjectName(u"tabAction")
-        self.verticalLayout_11 = QVBoxLayout(self.tabAction)
-        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
-        self.tvActions = QTableView(self.tabAction)
+        self.groupBox_12 = QGroupBox(self.tabCommitMessage)
+        self.groupBox_12.setObjectName(u"groupBox_12")
+        self.verticalLayout_14 = QVBoxLayout(self.groupBox_12)
+        self.verticalLayout_14.setObjectName(u"verticalLayout_14")
+        self.tvActions = QTableView(self.groupBox_12)
         self.tvActions.setObjectName(u"tvActions")
         self.tvActions.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
-        self.verticalLayout_11.addWidget(self.tvActions)
+        self.verticalLayout_14.addWidget(self.tvActions)
 
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.btnAddAction = QPushButton(self.tabAction)
+        self.btnAddAction = QPushButton(self.groupBox_12)
         self.btnAddAction.setObjectName(u"btnAddAction")
 
         self.horizontalLayout_12.addWidget(self.btnAddAction)
 
-        self.btnDelAction = QPushButton(self.tabAction)
+        self.btnDelAction = QPushButton(self.groupBox_12)
         self.btnDelAction.setObjectName(u"btnDelAction")
 
         self.horizontalLayout_12.addWidget(self.btnDelAction)
@@ -570,9 +572,12 @@ class Ui_Preferences(object):
         self.horizontalLayout_12.addItem(self.horizontalSpacer_10)
 
 
-        self.verticalLayout_11.addLayout(self.horizontalLayout_12)
+        self.verticalLayout_14.addLayout(self.horizontalLayout_12)
 
-        self.tabWidget.addTab(self.tabAction, "")
+
+        self.verticalLayout_10.addWidget(self.groupBox_12)
+
+        self.tabWidget.addTab(self.tabCommitMessage, "")
 
         self.verticalLayout_2.addWidget(self.tabWidget)
 
@@ -689,15 +694,16 @@ class Ui_Preferences(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
         self.label_16.setText(QCoreApplication.translate("Preferences", u"Server:", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
+        self.groupBox_11.setTitle(QCoreApplication.translate("Preferences", u"Commit &Message", None))
         self.cbIgnoreComment.setText(QCoreApplication.translate("Preferences", u"Ignore comment line", None))
         self.cbTab.setText(QCoreApplication.translate("Preferences", u"Tab to next group", None))
         self.label_19.setText(QCoreApplication.translate("Preferences", u"Group Chars:", None))
 #if QT_CONFIG(tooltip)
         self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
 #endif // QT_CONFIG(tooltip)
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Message", None))
+        self.groupBox_12.setTitle(QCoreApplication.translate("Preferences", u"Commit &Action", None))
         self.btnAddAction.setText(QCoreApplication.translate("Preferences", u"Add", None))
         self.btnDelAction.setText(QCoreApplication.translate("Preferences", u"Delete", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabAction), QCoreApplication.translate("Preferences", u"Action", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Commit Message", None))
     # retranslateUi
 

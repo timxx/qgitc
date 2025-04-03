@@ -476,7 +476,6 @@ class Preferences(QDialog):
         self.settings.setColorSchemaMode(value)
 
         self._saveCommitMessageTab()
-        self._saveActionTab()
 
     def _onTabChanged(self, index):
         if index in self._initedTabs:
@@ -486,18 +485,15 @@ class Preferences(QDialog):
 
         if self.ui.tabWidget.indexOf(self.ui.tabCommitMessage) == index:
             self._initCommitMessageTab()
-        elif self.ui.tabWidget.indexOf(self.ui.tabAction) == index:
-            self._initActionTab()
 
     def _initCommitMessageTab(self):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())
         self.ui.cbTab.setChecked(self.settings.tabToNextGroup())
         self.ui.leGroupChars.setText(self.settings.groupChars())
 
-    def _initActionTab(self):
         actions = self.settings.commitActions()
         self.ui.tvActions.model().setRawData(actions)
-    
+
     def _saveCommitMessageTab(self):
         value = self.ui.cbIgnoreComment.isChecked()
         self.settings.setIgnoreCommentLine(value)
@@ -508,7 +504,6 @@ class Preferences(QDialog):
         value = self.ui.leGroupChars.text().strip()
         self.settings.setGroupChars(value)
 
-    def _saveActionTab(self):
         actions = self.ui.tvActions.model().rawData()
         self.settings.setCommitActions(actions)
 
