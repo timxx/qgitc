@@ -730,7 +730,9 @@ class CommitWindow(StateWindow):
 
                 format = QTextCharFormat()
                 format.setForeground(qApp.colorSchema().ErrorText)
-                cursor.insertText(evt.error + "\n", format)
+                error = "\n" + evt.error if not evt.out else evt.error
+                error += "\n"
+                cursor.insertText(error, format)
                 cursor.setCharFormat(QTextCharFormat())
                 self.ui.teOutput.setTextCursor(cursor)
             self.ui.teOutput.moveCursor(QTextCursor.End)
