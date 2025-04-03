@@ -201,10 +201,11 @@ class TemplateReadyEvent(QEvent):
 class UpdateCommitProgressEvent(QEvent):
     Type = QEvent.User + 5
 
-    def __init__(self, out: str, error: str):
+    def __init__(self, out: str, error: str, updateProgress: bool = True):
         super().__init__(QEvent.Type(UpdateCommitProgressEvent.Type))
         self.out = out
         self.error = error
+        self.updateProgress = updateProgress
 
 
 class CommitWindow(StateWindow):
@@ -550,9 +551,13 @@ class CommitWindow(StateWindow):
         else:
             message = None
 
-        out, error = Git.commit(message, amend, submodule)
-
         actions: List[CommitAction] = userData[2]
+
+        out, error = Git.commit(message, amend, submodule)
+        self._updateCommitProgress(out, error, not actions)
+
+        out, error = None, None
+
         for action in actions:
             o, e = CommitWindow._runCommitAction(submodule, action)
             if o:
@@ -685,7 +690,8 @@ class CommitWindow(StateWindow):
                 doc.clearUndoRedoStacks()
             return True
         elif evt.type() == UpdateCommitProgressEvent.Type:
-            self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
+            if evt.updateProgress:
+                self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
             self.ui.teOutput.appendPlainText(evt.out)
             if evt.error:
                 cursor = self.ui.teOutput.textCursor()
@@ -827,8 +833,8 @@ class CommitWindow(StateWindow):
         self._updateCommitStatus(False)
         qApp.postEvent(qApp, LocalChangesCommittedEvent())
 
-    def _updateCommitProgress(self, out: str, error: str):
-        qApp.postEvent(self, UpdateCommitProgressEvent(out, error))
+    def _updateCommitProgress(self, out: str, error: str, updateProgress=True):
+        qApp.postEvent(self, UpdateCommitProgressEvent(out, error, updateProgress))
 
     def _updateCommitStatus(self, isRunning: bool):
         text = self.tr("&Abort") if isRunning else self.tr("&Back")
