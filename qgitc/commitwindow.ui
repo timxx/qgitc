@@ -382,7 +382,7 @@
                <item>
                 <widget class="QCheckBox" name="cbAmend">
                  <property name="text">
-                  <string>&amp;Amend Last Message</string>
+                  <string>&amp;Amend last message</string>
                  </property>
                 </widget>
                </item>
@@ -421,8 +421,11 @@
                </item>
                <item>
                 <widget class="QCheckBox" name="cbRunAction">
+                 <property name="toolTip">
+                  <string>Run custom actions after commit, please config actions in Options</string>
+                 </property>
                  <property name="text">
-                  <string>&amp;Run Action After Commit</string>
+                  <string>&amp;Run actions after commit</string>
                  </property>
                 </widget>
                </item>

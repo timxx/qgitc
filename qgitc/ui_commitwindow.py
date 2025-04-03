@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'commitwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.3
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -360,10 +360,13 @@ class Ui_CommitWindow(object):
         self.label_3.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.label.setText(QCoreApplication.translate("CommitWindow", u"Commit message", None))
         self.tbOptions.setText(QCoreApplication.translate("CommitWindow", u"Options", None))
-        self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend Last Message", None))
+        self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend last message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
-        self.cbRunAction.setText(QCoreApplication.translate("CommitWindow", u"&Run Action After Commit", None))
-        self.lbStatus.setText(QCoreApplication.translate("CommitWindow", u"Work in progress...", None))
+#if QT_CONFIG(tooltip)
+        self.cbRunAction.setToolTip(QCoreApplication.translate("CommitWindow", u"Run custom actions after commit, please config actions in Options", None))
+#endif // QT_CONFIG(tooltip)
+        self.cbRunAction.setText(QCoreApplication.translate("CommitWindow", u"&Run actions after commit", None))
+        self.lbStatus.setText(QCoreApplication.translate("CommitWindow", u"Working on commit...", None))
         self.btnAction.setText(QCoreApplication.translate("CommitWindow", u"&Abort", None))
     # retranslateUi
 
