@@ -333,6 +333,11 @@ class CommitWindow(StateWindow):
         self.ui.btnAction.clicked.connect(
             self._onCommitActionClicked)
 
+        self.ui.cbRunAction.setChecked(
+            qApp.settings().runCommitActions())
+        self.ui.cbRunAction.toggled.connect(
+            lambda checked: qApp.settings().setRunCommitActions(checked))
+
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)

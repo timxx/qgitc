@@ -373,3 +373,14 @@ class Settings(QSettings):
         self.beginGroup("commit")
         self.setValue("actions", actions)
         self.endGroup()
+
+    def runCommitActions(self):
+        self.beginGroup("commit")
+        run = self.value("runActions", False, type=bool)
+        self.endGroup()
+        return run
+
+    def setRunCommitActions(self, run):
+        self.beginGroup("commit")
+        self.setValue("runActions", run)
+        self.endGroup()
