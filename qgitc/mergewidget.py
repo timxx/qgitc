@@ -32,6 +32,7 @@ from PySide6.QtCore import (
     QSize,
     QTimer,
     QProcess,
+    QProcessEnvironment,
     QEvent)
 from .gitutils import Git, GitProcess
 from .conflictlog import (
@@ -582,6 +583,10 @@ class MergeWidget(QWidget):
         self.process.readyReadStandardOutput.connect(self.__onReadyRead)
         self.process.finished.connect(self.__onResolveFinished)
         self.process.setWorkingDirectory(Git.REPO_DIR)
+
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("LANGUAGE", "en_US")
+        self.process.setProcessEnvironment(env)
         self.process.start(GitProcess.GIT_BIN, args)
 
         self.requestResolve.emit(file)

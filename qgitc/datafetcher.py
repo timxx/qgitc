@@ -4,7 +4,8 @@ from PySide6.QtCore import (
     QObject,
     Signal,
     SIGNAL,
-    QProcess)
+    QProcess,
+    QProcessEnvironment)
 from .gitutils import Git, GitProcess
 
 
@@ -125,5 +126,9 @@ class DataFetcher(QObject):
         self._process.readyReadStandardOutput.connect(self.onDataAvailable)
         self._process.readyReadStandardError.connect(self.onProcessError)
         self._process.finished.connect(self.onDataFinished)
+
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("LANGUAGE", "en_US")
+        self._process.setProcessEnvironment(env)
 
         self._process.start(GitProcess.GIT_BIN, git_args)
