@@ -9,14 +9,17 @@ from .submoduleexecutor import SubmoduleExecutor
 
 class StatusFetcher(SubmoduleExecutor):
     resultAvailable = Signal(str, list)
+    branchInfoAvailable = Signal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._delayedTask = []
         self._showUntrackedFiles = True
         self._showIgnoredFiles = False
+        self._needCheckBranch = False
 
     def fetch(self, submodules):
+        self._needCheckBranch = len(submodules) > 1
         self.submit(submodules, self._fetchStatus, self._onResultAvailable)
 
     def cancel(self):
@@ -38,6 +41,10 @@ class StatusFetcher(SubmoduleExecutor):
         if not result:
             return
         self.resultAvailable.emit(repoDir, result)
+
+        if self._needCheckBranch:
+            branch = Git.activeBranch(repoDir)
+            self.branchInfoAvailable.emit(repoDir, branch)
 
     def setShowUntrackedFiles(self, showUntrackedFiles: bool):
         self._showUntrackedFiles = showUntrackedFiles

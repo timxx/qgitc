@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QStyle
 )
 
+from .colorediconlabel import ColoredIconLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
@@ -232,6 +233,10 @@ class CommitWindow(StateWindow):
         self._statusFetcher = StatusFetcher(self)
         self._statusFetcher.resultAvailable.connect(self._onStatusAvailable)
         self._statusFetcher.finished.connect(self._onStatusFetchFinished)
+        self._statusFetcher.branchInfoAvailable.connect(
+            self._onBranchInfoAvailable)
+
+        self._repoBranch = {}
 
         self._diffFetcher = DiffFetcher(self)
         self._diffFetcher.diffAvailable.connect(
@@ -379,6 +384,9 @@ class CommitWindow(StateWindow):
         self._stagedModel.clear()
         self._curFile = None
         self._curFileStatus = None
+        self._repoBranch.clear()
+        self._branchMessage.clear()
+        self._branchWidget.setVisible(False)
 
     def _onFindSubmoduleFinished(self):
         submodules = self._findSubmoduleThread.submodules
@@ -403,10 +411,27 @@ class CommitWindow(StateWindow):
             if status[1] != " ":
                 self._filesModel.addFile(file, repoDir, status[1])
 
+    def _onBranchInfoAvailable(self, repoDir: str, branch: str):
+        self._repoBranch.setdefault(repoDir, branch)
+
     def _onStatusFetchFinished(self):
         self.ui.spinnerUnstaged.stop()
         self.ui.tbRefresh.setEnabled(True)
         self.ui.tbWDChanges.setEnabled(True)
+
+        # check if all branch in self._repoBranch are same
+        branches = set(self._repoBranch.values())
+        if len(branches) > 1:
+            msg = self.tr("Inconsistent branches")
+            self._branchMessage.setText(msg)
+            self._branchWidget.setVisible(True)
+
+            tooltip = self.tr("You have different branches in submodules:")
+            for repoDir, branch in self._repoBranch.items():
+                if not repoDir or repoDir == ".":
+                    repoDir = "<main>"
+                tooltip += "\n  {}: {}".format(repoDir, branch)
+            self._branchMessage.setToolTip(tooltip)
 
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
         self.ui.viewer.clear()
@@ -865,6 +890,19 @@ class CommitWindow(StateWindow):
         self._branchLabel = QLabel(widget)
         hbox.addWidget(self._branchLabel)
         self.ui.statusbar.addPermanentWidget(widget)
+
+        self._branchWidget = QWidget(self)
+        hbox = QHBoxLayout(self._branchWidget)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        warningIcon = ColoredIconLabel(self)
+        warningIcon.setIcon(QIcon(dataDirPath() + "/icons/warning.svg"))
+        hbox.addWidget(warningIcon)
+
+        self._branchMessage = QLabel(self)
+        hbox.addWidget(self._branchMessage)
+
+        self.ui.statusbar.addWidget(self._branchWidget)
+        self._branchWidget.setVisible(False)
 
     def isMaximizedByDefault(self):
         return False
