@@ -879,6 +879,7 @@ class CommitWindow(StateWindow):
         widget = QWidget(self)
         hbox = QHBoxLayout(widget)
         hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.setSpacing(3)
         hbox.addWidget(QLabel(self.tr("Committer:")))
         self._commiterLabel = QLabel(widget)
         hbox.addWidget(self._commiterLabel)
@@ -887,6 +888,7 @@ class CommitWindow(StateWindow):
         widget = QWidget(self)
         hbox = QHBoxLayout(widget)
         hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.setSpacing(3)
         hbox.addWidget(QLabel(self.tr("Branch:")))
         self._branchLabel = QLabel(widget)
         hbox.addWidget(self._branchLabel)
@@ -895,6 +897,7 @@ class CommitWindow(StateWindow):
         self._branchWidget = QWidget(self)
         hbox = QHBoxLayout(self._branchWidget)
         hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.setSpacing(3)
         warningIcon = ColoredIconLabel(self)
         warningIcon.setIcon(
             QIcon(dataDirPath() + "/icons/warning.svg"), "ErrorText")
