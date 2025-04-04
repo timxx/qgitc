@@ -551,7 +551,6 @@ class CommitWindow(StateWindow):
         self._updateCommitStatus(True)
         self.ui.stackedWidget.setCurrentWidget(self.ui.pageProgress)
         self._commitExecutor.submit(submodules, self._doCommit)
-        self._blockUI()
 
     def _checkMessage(self):
         if not self._isMessageValid():
