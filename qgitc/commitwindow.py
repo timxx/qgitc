@@ -704,7 +704,8 @@ class CommitWindow(StateWindow):
         if evt.type() == UpdateFilesEvent.Type:
             self._updateFiles(evt.isStaged, evt.submodule, evt.files)
             return True
-        elif evt.type() == GitErrorEvent.Type:
+
+        if evt.type() == GitErrorEvent.Type:
             # TODO: merge the same error and report at end
             QMessageBox.critical(
                 self,
@@ -712,20 +713,23 @@ class CommitWindow(StateWindow):
                 evt.error,
                 QMessageBox.Ok)
             return True
-        elif evt.type() == RepoInfoEvent.Type:
+
+        if evt.type() == RepoInfoEvent.Type:
             self._repoInfo = evt.info
             self._commiterLabel.setText("{} <{}>".format(
                 self._repoInfo.userName, self._repoInfo.userEmail))
             self._branchLabel.setText(self._repoInfo.branch)
             return True
-        elif evt.type() == TemplateReadyEvent.Type:
+
+        if evt.type() == TemplateReadyEvent.Type:
             doc = self.ui.teMessage.document()
             # only set template if user has not modified the message
             if not doc.isUndoAvailable() and not doc.isRedoAvailable():
                 self.ui.teMessage.setPlainText(evt.template)
                 doc.clearUndoRedoStacks()
             return True
-        elif evt.type() == UpdateCommitProgressEvent.Type:
+
+        if evt.type() == UpdateCommitProgressEvent.Type:
             if evt.updateProgress:
                 self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
 
@@ -760,6 +764,7 @@ class CommitWindow(StateWindow):
             self.ui.teOutput.moveCursor(QTextCursor.End)
             self.ui.teOutput.ensureCursorVisible()
             return True
+
         return super().event(evt)
 
     def _updateFiles(self, isStaged: bool, submodule: str, files: List[str]):
