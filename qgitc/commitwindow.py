@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from .colorediconlabel import ColoredIconLabel
+from .coloredlabel import ColoredLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
@@ -895,10 +896,11 @@ class CommitWindow(StateWindow):
         hbox = QHBoxLayout(self._branchWidget)
         hbox.setContentsMargins(0, 0, 0, 0)
         warningIcon = ColoredIconLabel(self)
-        warningIcon.setIcon(QIcon(dataDirPath() + "/icons/warning.svg"))
+        warningIcon.setIcon(
+            QIcon(dataDirPath() + "/icons/warning.svg"), "ErrorText")
         hbox.addWidget(warningIcon)
 
-        self._branchMessage = QLabel(self)
+        self._branchMessage = ColoredLabel("ErrorText", self)
         hbox.addWidget(self._branchMessage)
 
         self.ui.statusbar.addWidget(self._branchWidget)

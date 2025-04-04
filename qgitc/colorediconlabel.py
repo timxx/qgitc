@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtCore import Qt, QSize, QPoint, QRect, QEvent
-from PySide6.QtGui import QIcon, QPainter, QPixmap
+from PySide6.QtGui import QIcon, QPainter, QPixmap, QBrush
 from PySide6.QtWidgets import QLabel
 
 
@@ -12,10 +12,12 @@ class ColoredIconLabel(QLabel):
         self._icon: QIcon = None
         self._size: QSize = QSize(16, 16)
         self._pixmap: QPixmap = None
+        self._colorSchema: str = None
 
-    def setIcon(self, icon: QIcon, size: QSize = QSize(16, 16)):
+    def setIcon(self, icon: QIcon, colorSchema: str = None, size: QSize = QSize(16, 16)):
         self._icon = icon
         self._size = size
+        self._colorSchema = colorSchema
         self._pixmap = self._makePixmap()
 
     def paintEvent(self, event):
@@ -36,7 +38,10 @@ class ColoredIconLabel(QLabel):
         p = QPainter(pixmap)
         p.setPen(Qt.NoPen)
 
-        brush = self.palette().windowText()
+        if self._colorSchema:
+            brush = QBrush(getattr(qApp.colorSchema(), self._colorSchema))
+        else:
+            brush = self.palette().windowText()
         p.setCompositionMode(QPainter.CompositionMode_SourceIn)
         p.fillRect(pixmap.rect(), brush)
         p.end()
