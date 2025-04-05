@@ -1141,3 +1141,12 @@ class CommitWindow(StateWindow):
 
     def _onShowCommitClicked(self):
         qApp.postEvent(qApp, ShowCommitEvent(None))
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            sett = qApp.instance().settings()
+            if sett.quitViaEsc():
+                self.close()
+                return
+
+        super().keyPressEvent(event)
