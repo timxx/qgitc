@@ -100,8 +100,7 @@ class AiCommitMessage(QObject):
         self._aiThread: GenerateThread = None
 
     def __del__(self):
-        if self._aiThread:
-            self._aiThread.requestInterruption()
+        self.cancel()
 
     def generate(self, submodules: List[str]):
         if len(submodules) <= 1:
@@ -118,10 +117,23 @@ class AiCommitMessage(QObject):
         if not repoData:
             repoData[None] = commitCount
 
+        self.cancel()
+
         self._logs.clear()
         self._diffs.clear()
         self._message = ""
         self._executor.submit(repoData, self._fetchCommitInfo)
+
+    def cancel(self):
+        if self._aiThread:
+            self._aiThread.responseAvailable.disconnect(
+                self._onAiResponseAvailable)
+            self._aiThread.finished.disconnect(self._onAiResponseFinished)
+            self._aiThread.requestInterruption()
+            self._aiThread.wait(50)
+            self._aiThread = None
+
+        self._executor.cancel()
 
     def _fetchCommitInfo(self, submodule: str, commitCount: int):
         repoDir = AiCommitMessage._toRepoDir(submodule)

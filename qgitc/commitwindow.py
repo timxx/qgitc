@@ -379,6 +379,13 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.clicked.connect(
             self._onGenMessageClicked)
 
+        icon = QIcon(iconsPath + "/stop.svg")
+        self.ui.btnCancelGen.setIcon(icon)
+        self.ui.btnCancelGen.setIconSize(QSize(16, 16))
+        self.ui.btnCancelGen.clicked.connect(
+            self._onCancelGenMessageClicked)
+        self.ui.btnCancelGen.hide()
+
         self._aiMessage = AiCommitMessage(self)
         self._aiMessage.messageAvailable.connect(
             self._onAiMessageAvailable)
@@ -1109,11 +1116,20 @@ class CommitWindow(StateWindow):
                 index, StatusFileListModel.RepoDirRole)
             submodules.add(repoDir)
         assert (submodules)
+        self.ui.btnGenMessage.hide()
+        self.ui.btnCancelGen.show()
         self._aiMessage.generate(list(submodules))
 
     def _onAiMessageAvailable(self, message: str):
+        self.ui.btnCancelGen.hide()
+        self.ui.btnGenMessage.show()
         if not message:
             return
 
         self.ui.teMessage.setPlainText(message)
         self.ui.teMessage.moveCursor(QTextCursor.End)
+
+    def _onCancelGenMessageClicked(self):
+        self._aiMessage.cancel()
+        self.ui.btnCancelGen.hide()
+        self.ui.btnGenMessage.show()
