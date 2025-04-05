@@ -219,6 +219,11 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_3.addWidget(self.btnCancelGen)
 
+        self.btnShowCommit = ColoredIconToolButton(self.frame_4)
+        self.btnShowCommit.setObjectName(u"btnShowCommit")
+
+        self.horizontalLayout_3.addWidget(self.btnShowCommit)
+
         self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_4)
@@ -378,6 +383,10 @@ class Ui_CommitWindow(object):
         self.btnCancelGen.setToolTip(QCoreApplication.translate("CommitWindow", u"Cancel", None))
 #endif // QT_CONFIG(tooltip)
         self.btnCancelGen.setText("")
+#if QT_CONFIG(tooltip)
+        self.btnShowCommit.setToolTip(QCoreApplication.translate("CommitWindow", u"Show commit window", None))
+#endif // QT_CONFIG(tooltip)
+        self.btnShowCommit.setText("")
         self.tbOptions.setText(QCoreApplication.translate("CommitWindow", u"Options", None))
         self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend last message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))

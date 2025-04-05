@@ -38,7 +38,7 @@ from .commitactiontablemodel import ActionCondition, CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import DiffView, _makeTextIcon
-from .events import LocalChangesCommittedEvent
+from .events import LocalChangesCommittedEvent, ShowCommitEvent
 from .findsubmodules import FindSubmoduleThread
 from .gitutils import Git
 from .preferences import Preferences
@@ -389,6 +389,11 @@ class CommitWindow(StateWindow):
         self._aiMessage = AiCommitMessage(self)
         self._aiMessage.messageAvailable.connect(
             self._onAiMessageAvailable)
+
+        icon = QIcon(iconsPath + "/commit.svg")
+        self.ui.btnShowCommit.setIcon(icon)
+        self.ui.btnShowCommit.clicked.connect(
+            self._onShowCommitClicked)
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -1133,3 +1138,6 @@ class CommitWindow(StateWindow):
         self._aiMessage.cancel()
         self.ui.btnCancelGen.hide()
         self.ui.btnGenMessage.show()
+
+    def _onShowCommitClicked(self):
+        qApp.postEvent(qApp, ShowCommitEvent(None))
