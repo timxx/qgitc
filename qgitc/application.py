@@ -16,12 +16,15 @@ from .aichatwindow import AiChatWindow
 from .colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
 from .commitwindow import CommitWindow
 from .common import dataDirPath
+from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .settings import Settings
 from .events import (
     BlameEvent,
     CodeReviewEvent,
     LocalChangesCommittedEvent,
+    LoginFinished,
     RequestCommitEvent,
+    RequestLoginGithubCopilot,
     ShowCommitEvent,
     OpenLinkEvent,
     GitBinChanged)
@@ -200,6 +203,12 @@ class Application(QApplication):
             if self._logWindow:
                 self._logWindow.reloadLocalChanges()
             return True
+
+        if type == RequestLoginGithubCopilot.Type:
+            dialog = GithubCopilotLoginDialog(self.activeWindow())
+            dialog.exec()
+            self.postEvent(event.requestor, LoginFinished(
+                dialog.isLoginSuccessful()))
 
         if type == QEvent.ApplicationPaletteChange:
             self._setupColorSchema()

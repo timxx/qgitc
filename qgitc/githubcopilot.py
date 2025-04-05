@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from PySide6.QtCore import QEventLoop
+
 import requests
 import json
 import time
 
+from .events import RequestLoginGithubCopilot, LoginFinished
 from .llm import AiModelBase, AiParameters, AiResponse
 from .settings import Settings
 
@@ -14,6 +17,8 @@ class GithubCopilot(AiModelBase):
         super().__init__(None, parent)
         self._history = []
         self._token = qApp.settings().githubCopilotToken()
+
+        self._eventLoop = None
 
     def query(self, params: AiParameters):
         if not self._token or not GithubCopilot.isTokenValid(self._token):
@@ -123,9 +128,9 @@ class GithubCopilot(AiModelBase):
         settings = Settings()
         accessToken = settings.githubCopilotAccessToken()
         if not accessToken:
-            # TODO: login
-            return False
-            # accessToken = settings.githubCopilotAccessToken()
+            accessToken = self._requestAccessToken()
+            if not accessToken:
+                return False
 
         response = requests.get(
             "https://api.github.com/copilot_internal/v2/token",
@@ -161,3 +166,24 @@ class GithubCopilot(AiModelBase):
             if key.strip() == "exp":
                 return int(value.strip())
         return None
+
+    def _requestAccessToken(self):
+        if self._eventLoop:
+            return None
+
+        qApp.postEvent(qApp, RequestLoginGithubCopilot(self))
+
+        self._eventLoop = QEventLoop()
+        self._eventLoop.exec()
+        self._eventLoop = None
+
+        settings = Settings()
+        return settings.githubCopilotAccessToken()
+
+    def event(self, evt):
+        if evt.type() == LoginFinished.Type:
+            if self._eventLoop:
+                self._eventLoop.quit()
+            return True
+
+        return super().event(evt)
