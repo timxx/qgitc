@@ -152,6 +152,10 @@ class StatusFileListModel(QAbstractListModel):
                 color = qApp.colorSchema().Deletion
             elif statusCode == "R":
                 color = qApp.colorSchema().Renamed
+            elif statusCode == "?":
+                color = qApp.colorSchema().Untracked
+            elif statusCode == "!":
+                color = qApp.colorSchema().Ignored
             else:
                 color = qApp.palette().windowText().color()
             icon = _makeTextIcon(statusCode, color, font)
