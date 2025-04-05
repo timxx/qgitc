@@ -7,7 +7,7 @@ if sys.platform == "win32":
         CreateKeyEx,
         SetValueEx,
         DeleteKeyEx,
-        HKEY_CLASSES_ROOT,
+        HKEY_CURRENT_USER,
         REG_SZ)
 else:
     import xml.etree.ElementTree as ET
@@ -51,11 +51,11 @@ def _shell_usage(args):
 def _shell_register_win(args):
 
     def _do_register(subkey, name, ico, exe, cmd="log", arg="%1"):
-        with CreateKeyEx(HKEY_CLASSES_ROOT, subkey) as key:
-            SetValueEx(key, "", 0, REG_SZ, name)
+        with CreateKeyEx(HKEY_CURRENT_USER, subkey) as key:
+            SetValueEx(key, "MUIVerb", 0, REG_SZ, name)
             SetValueEx(key, "Icon", 0, REG_SZ, ico)
 
-        with CreateKeyEx(HKEY_CLASSES_ROOT, subkey + "\\command") as key:
+        with CreateKeyEx(HKEY_CURRENT_USER, subkey + "\\command") as key:
             if arg:
                 value = '{} {} "{}"'.format(exe, cmd, arg)
             else:
@@ -64,15 +64,28 @@ def _shell_register_win(args):
 
         return 0
 
+    def _create_menu(subkey, name, ico):
+        with CreateKeyEx(HKEY_CURRENT_USER, subkey) as key:
+            SetValueEx(key, "MUIVerb", 0, REG_SZ, name)
+            SetValueEx(key, "Icon", 0, REG_SZ, ico)
+            SetValueEx(key, "SubCommands", 0, REG_SZ, "")
+        return 0
+
     ico = os.path.join(_dataDir(), "icons", "qgitc.ico")
     exe = _exePath()
 
-    ret = _do_register(r"*\shell\QGitc", "QGitc", ico, exe)
-    ret |= _do_register(r"Directory\Background\shell\QGitc",
-                        "QGitc", ico, exe, arg=None)
-    ret |= _do_register(r"Directory\shell\QGitc", "QGitc", ico, exe)
-    ret |= _do_register(r"*\shell\QGitcBlame",
-                        "QGitc Blame", ico, exe, "blame")
+    ret = _create_menu(r"Software\Classes\*\shell\QGitc", "QGitc", ico)
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Log", "Log", ico, exe)
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Blame", "Blame", ico, exe, "blame")
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Commit", "Commit", ico, exe, "commit", None)
+
+    ret |= _create_menu(r"Software\Classes\Directory\Background\shell\QGitc", "QGitc", ico)
+    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Log", "Log", ico, exe, arg=None)
+    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Commit", "Commit", ico, exe, "commit", None)
+
+    ret |= _create_menu(r"Software\Classes\Directory\shell\QGitc", "QGitc", ico)
+    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Log", "Log", ico, exe)
+    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Commit", "Commit", ico, exe, "commit", None)
 
     return ret
 
@@ -81,23 +94,34 @@ def _shell_unregister_win(args):
 
     def _do_delete(subkey):
         try:
-            DeleteKeyEx(HKEY_CLASSES_ROOT, subkey)
+            DeleteKeyEx(HKEY_CURRENT_USER, subkey)
             return 0
         except FileNotFoundError:
             return 0
         return 1
 
-    ret = _do_delete(r"*\shell\QGitc\command")
-    ret |= _do_delete(r"*\shell\QGitc")
+    ret = _do_delete(r"Software\Classes\*\shell\QGitc\shell\log\command")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\log")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\blame\command")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\blame")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\commit\command")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\commit")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell")
+    ret |= _do_delete(r"Software\Classes\*\shell\QGitc")
 
-    ret |= _do_delete(r"Directory\Background\shell\QGitc\command")
-    ret |= _do_delete(r"Directory\Background\shell\QGitc")
+    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\log\command")
+    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\log")
+    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\commit\command")
+    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\commit") 
+    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell")
+    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc")
 
-    ret |= _do_delete(r"Directory\shell\QGitc\command")
-    ret |= _do_delete(r"Directory\shell\QGitc")
-
-    ret |= _do_delete(r"*\shell\QGitcBlame\command")
-    ret |= _do_delete(r"*\shell\QGitcBlame")
+    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\log\command")
+    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\log")
+    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\commit\command")
+    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\commit")
+    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell")
+    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc")
 
     return ret
 
