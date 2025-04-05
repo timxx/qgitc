@@ -687,8 +687,9 @@ class Git():
         if amend:
             args.append("--amend")
 
-        args.append("-m")
-        args.append(message)
+        if message:
+            args.append("-m")
+            args.append(message)
         process = GitProcess(repoDir or Git.REPO_DIR, args)
         out, error = process.communicate()
         if out is not None:

@@ -517,7 +517,6 @@ class CommitWindow(StateWindow):
         amend = self.ui.cbAmend.isChecked()
         message = self._filterMessage(
             self.ui.teMessage.toPlainText().strip())
-        assert (message)
 
         if self.ui.cbRunAction.isChecked():
             allActions = qApp.settings().commitActions()
@@ -557,6 +556,9 @@ class CommitWindow(StateWindow):
         self._commitExecutor.submit(submodules, self._doCommit)
 
     def _checkMessage(self):
+        if self.ui.cbAmend.isChecked() and self.ui.lvStaged.model().rowCount() > 0:
+            return True
+
         if not self._isMessageValid():
             content = self.tr("Please enter a valid commit message.")
             message = self.ui.teMessage.toPlainText().strip()
@@ -609,7 +611,6 @@ class CommitWindow(StateWindow):
     def _doCommit(self, submodule: str, userData: Tuple[str, bool, list]):
         amend = userData[1]
         message = userData[0]
-        assert (message)
 
         actions: List[CommitAction] = userData[2]
 
