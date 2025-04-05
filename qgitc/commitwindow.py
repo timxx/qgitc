@@ -10,7 +10,8 @@ from PySide6.QtCore import (
     Qt,
     QModelIndex,
     QSortFilterProxyModel,
-    QEvent
+    QEvent,
+    QSize
 )
 from PySide6.QtGui import (
     QFont,
@@ -277,6 +278,7 @@ class CommitWindow(StateWindow):
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)
 
         self.ui.btnCommit.setEnabled(False)
+        self.ui.btnGenMessage.setEnabled(False)
 
         iconsPath = dataDirPath() + "/icons/"
         self.ui.tbUnstage.setIcon(QIcon(iconsPath + "unstage.svg"))
@@ -370,6 +372,12 @@ class CommitWindow(StateWindow):
                 self._onFilesDoubleClicked)
             self.ui.lvStaged.doubleClicked.connect(
                 self._onStagedDoubleClicked)
+
+        icon = QIcon(iconsPath + "/wand-stars.svg")
+        self.ui.btnGenMessage.setIcon(icon)
+        self.ui.btnGenMessage.setIconSize(QSize(16, 16))
+        self.ui.btnGenMessage.clicked.connect(
+            self._onGenMessageClicked)
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -605,8 +613,10 @@ class CommitWindow(StateWindow):
         self._updateCommitButtonState()
 
     def _updateCommitButtonState(self):
-        enabled = self._stagedModel.rowCount() > 0 or self.ui.cbAmend.isChecked()
+        hasStagedFiles = self._stagedModel.rowCount() > 0
+        enabled = hasStagedFiles or self.ui.cbAmend.isChecked()
         self.ui.btnCommit.setEnabled(enabled)
+        self.ui.btnGenMessage.setEnabled(hasStagedFiles)
 
     def _doCommit(self, submodule: str, userData: Tuple[str, bool, list]):
         amend = userData[1]
@@ -1085,3 +1095,7 @@ class CommitWindow(StateWindow):
                 self.tr("Run External Diff Tool Error"),
                 str(e),
                 QMessageBox.Ok)
+
+    def _onGenMessageClicked(self):
+        # TODO
+        pass

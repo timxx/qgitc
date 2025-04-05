@@ -209,6 +209,11 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_3.addWidget(self.label)
 
+        self.btnGenMessage = ColoredIconToolButton(self.frame_4)
+        self.btnGenMessage.setObjectName(u"btnGenMessage")
+
+        self.horizontalLayout_3.addWidget(self.btnGenMessage)
+
         self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_4)
@@ -360,6 +365,10 @@ class Ui_CommitWindow(object):
         self.tbStageAll.setText("")
         self.label_3.setText(QCoreApplication.translate("CommitWindow", u"Diff", None))
         self.label.setText(QCoreApplication.translate("CommitWindow", u"Commit message", None))
+#if QT_CONFIG(tooltip)
+        self.btnGenMessage.setToolTip(QCoreApplication.translate("CommitWindow", u"Generate Commit Message with AI Assistant", None))
+#endif // QT_CONFIG(tooltip)
+        self.btnGenMessage.setText("")
         self.tbOptions.setText(QCoreApplication.translate("CommitWindow", u"Options", None))
         self.cbAmend.setText(QCoreApplication.translate("CommitWindow", u"&Amend last message", None))
         self.btnCommit.setText(QCoreApplication.translate("CommitWindow", u"&Commit", None))
