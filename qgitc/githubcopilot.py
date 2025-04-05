@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QEventLoop
+from PySide6.QtCore import QEventLoop, QLocale
 
 import requests
 import json
 import time
 
 from .events import RequestLoginGithubCopilot, LoginFinished
-from .llm import AiModelBase, AiParameters, AiResponse
+from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse
 from .settings import Settings
+
+
+CODE_REVIEW_SYSTEM_PROMPT = """Below is a code snippet, please help me do a brief code review on it.
+Any bug risks and/or improvement suggestions are welcome.
+Write your review in {language}:
+"""
 
 
 class GithubCopilot(AiModelBase):
@@ -41,6 +47,10 @@ class GithubCopilot(AiModelBase):
         if params.sys_prompt:
             self.add_history(self._makeMessage(
                 "system", params.sys_prompt))
+        elif params.chat_mode == AiChatMode.CodeReview:
+            self.add_history(self._makeMessage(
+                "system", CODE_REVIEW_SYSTEM_PROMPT.format(
+                    language=QLocale.system().nativeTerritoryName())))
         self.add_history(self._makeMessage("user", params.prompt))
         payload["messages"] = self._history
 
