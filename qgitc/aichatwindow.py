@@ -35,6 +35,7 @@ import threading
 import requests
 
 from .common import commitRepoDir
+from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
 from .statewindow import StateWindow
@@ -252,6 +253,7 @@ class AiChatWidget(QWidget):
 
         self._ai_models = [
             LocalLLM(qApp.settings().llmServer(), self),
+            GithubCopilot(self),
         ]
 
         self._ai_models[0].nameChanged.connect(
