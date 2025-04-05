@@ -24,6 +24,8 @@
             "../../events.py",
             "../../excepthandler.py",
             "../../findwidget.py",
+            "../../githubcopilotlogindialog.py",
+            "../../githubcopilotlogindialog.ui",
             "../../gitutils.py",
             "../../gitview.py",
             "../../gitview.ui",

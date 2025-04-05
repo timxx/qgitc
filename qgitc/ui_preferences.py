@@ -491,22 +491,45 @@ class Ui_Preferences(object):
         self.tabWidget.addTab(self.tabTools, "")
         self.tabLLM = QWidget()
         self.tabLLM.setObjectName(u"tabLLM")
-        self.verticalLayout_12 = QVBoxLayout(self.tabLLM)
-        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
-        self.gridLayout_2 = QGridLayout()
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.verticalLayout_11 = QVBoxLayout(self.tabLLM)
+        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
+        self.horizontalLayout_13 = QHBoxLayout()
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
         self.label_16 = QLabel(self.tabLLM)
         self.label_16.setObjectName(u"label_16")
 
-        self.gridLayout_2.addWidget(self.label_16, 1, 0, 1, 1)
+        self.horizontalLayout_13.addWidget(self.label_16)
 
         self.leServerUrl = QLineEdit(self.tabLLM)
         self.leServerUrl.setObjectName(u"leServerUrl")
 
-        self.gridLayout_2.addWidget(self.leServerUrl, 1, 1, 1, 1)
+        self.horizontalLayout_13.addWidget(self.leServerUrl)
 
 
-        self.verticalLayout_12.addLayout(self.gridLayout_2)
+        self.verticalLayout_11.addLayout(self.horizontalLayout_13)
+
+        self.horizontalLayout_14 = QHBoxLayout()
+        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
+        self.label_20 = QLabel(self.tabLLM)
+        self.label_20.setObjectName(u"label_20")
+
+        self.horizontalLayout_14.addWidget(self.label_20)
+
+        self.btnGithubCopilot = QPushButton(self.tabLLM)
+        self.btnGithubCopilot.setObjectName(u"btnGithubCopilot")
+
+        self.horizontalLayout_14.addWidget(self.btnGithubCopilot)
+
+        self.horizontalSpacer_11 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_14.addItem(self.horizontalSpacer_11)
+
+
+        self.verticalLayout_11.addLayout(self.horizontalLayout_14)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_11.addItem(self.verticalSpacer)
 
         self.tabWidget.addTab(self.tabLLM, "")
         self.tabCommitMessage = QWidget()
@@ -617,7 +640,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(5)
+        self.tabWidget.setCurrentIndex(4)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -693,6 +716,8 @@ class Ui_Preferences(object):
 #endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
         self.label_16.setText(QCoreApplication.translate("Preferences", u"Server:", None))
+        self.label_20.setText(QCoreApplication.translate("Preferences", u"Github Copilot:", None))
+        self.btnGithubCopilot.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
         self.groupBox_11.setTitle(QCoreApplication.translate("Preferences", u"Commit &Message", None))
         self.cbIgnoreComment.setText(QCoreApplication.translate("Preferences", u"Ignore comment line", None))

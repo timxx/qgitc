@@ -10,6 +10,7 @@ from PySide6.QtCore import (
 
 from .colorschema import ColorSchemaMode
 from .commitactiontablemodel import CommitActionTableModel
+from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .ui_preferences import *
 from .comboboxitemdelegate import ComboBoxItemDelegate
 from .linkeditdialog import LinkEditDialog
@@ -104,6 +105,9 @@ class Preferences(QDialog):
             self._onAddActionClicked)
         self.ui.btnDelAction.clicked.connect(
             self._onDeleteActionClicked)
+
+        self.ui.btnGithubCopilot.clicked.connect(
+            self._onGithubCopilotClicked)
 
         self._initedTabs = set()
         # FIXME: we'd better use interface to implement tabs
@@ -494,6 +498,9 @@ class Preferences(QDialog):
 
     def _initLLMTab(self):
         self.ui.leServerUrl.setText(self.settings.llmServer())
+        token = self.settings.githubCopilotAccessToken()
+        text = self.tr("Logout") if token else self.tr("Login")
+        self.ui.btnGithubCopilot.setText(text)
 
     def _saveLLMTab(self):
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
@@ -525,3 +532,13 @@ class Preferences(QDialog):
 
     def _onDeleteActionClicked(self):
         self._tableViewDeleteItem(self.ui.tvActions)
+
+    def _onGithubCopilotClicked(self):
+        if self.ui.btnGithubCopilot.text() == self.tr("Logout"):
+            self.settings.setGithubCopilotAccessToken("")
+            self.ui.btnGithubCopilot.setText(self.tr("Login"))
+        else:
+            dialog = GithubCopilotLoginDialog(self)
+            dialog.exec()
+            if dialog.isLoginSuccessful():
+                self.ui.btnGithubCopilot.setText(self.tr("Logout"))

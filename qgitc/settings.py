@@ -406,3 +406,25 @@ class Settings(QSettings):
         self.beginGroup("commit")
         self.setValue("showIgnoredFiles", show)
         self.endGroup()
+
+    def githubCopilotAccessToken(self):
+        self.beginGroup("GithubCopilot")
+        token = self.value("accessToken", None)
+        self.endGroup()
+        return token
+
+    def setGithubCopilotAccessToken(self, token: str):
+        self.beginGroup("GithubCopilot")
+        self.setValue("accessToken", token)
+        self.endGroup()
+
+    def githubCopilotToken(self):
+        self.beginGroup("GithubCopilot")
+        token = self.value("token", None)
+        self.endGroup()
+        return token
+
+    def setGithubCopilotToken(self, token: str):
+        self.beginGroup("GithubCopilot")
+        self.setValue("token", token)
+        self.endGroup()
