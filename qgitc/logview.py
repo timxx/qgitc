@@ -1161,7 +1161,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         rect.adjust(path.boundingRect().width(), 0, 0, 0)
 
     def __laneWidth(self):
-        return int(self.lineHeight * 3 / 4)
+        return int(self.lineHeight * 9 / 16)
 
     def __drawGraph(self, painter, graphPainter, rect, cid):
         commit = self.data[cid]
@@ -1233,7 +1233,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __drawGraphLane(self, painter: QPainter, lane, x1, x2, color, activeColor, isHead, firstCommit):
         h = int(self.lineHeight / 2) + self.lineSpace // 4
         m = int((x1 + x2) / 2)
-        r = int((x2 - x1) * 1 / 4)
+        r = int((x2 - x1) * 0.4)
         d = int(2 * r)
 
         # points
