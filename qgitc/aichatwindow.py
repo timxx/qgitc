@@ -236,7 +236,8 @@ class AiChatWidget(QWidget):
         self.sbMaxTokens.setRange(1, 0x7FFFFFFF)
         self.sbMaxTokens.setSingleStep(500)
         self.sbMaxTokens.setValue(2048)
-        self.sbMaxTokens.setMaximumWidth(60)
+        self.sbMaxTokens.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         self.sbMaxTokens.setToolTip(self.tr("Max tokens to generate"))
         hlayout.addWidget(self.sbMaxTokens)
 
@@ -284,7 +285,7 @@ class AiChatWidget(QWidget):
         self.cbChatMode.addItem(self.tr("Code Fix"), AiChatMode.CodeFix)
         self.cbChatMode.addItem(
             self.tr("Code Explanation"), AiChatMode.CodeExplanation)
-        self.cbChatMode.setEnabled(True)
+        self.cbChatMode.setEnabled(self.isLocalLLM())
 
         hlayout.addWidget(self.cbChatMode)
 
