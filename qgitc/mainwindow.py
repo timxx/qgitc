@@ -9,7 +9,8 @@ from PySide6.QtWidgets import (
     QDialog)
 
 from PySide6.QtGui import (
-    QActionGroup)
+    QActionGroup,
+    QIcon)
 
 from PySide6.QtCore import (
     QSize,
@@ -18,6 +19,8 @@ from PySide6.QtCore import (
     QEvent,
     Signal)
 
+from .common import dataDirPath
+from .coloredicontoolbutton import ColoredIconToolButton
 from .findsubmodules import FindSubmoduleThread
 from .findwidget import FindWidget
 
@@ -30,7 +33,7 @@ from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
 from .statewindow import StateWindow
 from .logview import LogView
-from .events import GitBinChanged, RequestCommitEvent
+from .events import GitBinChanged, RequestCommitEvent, ShowAiAssistantEvent
 
 import os
 import sys
@@ -75,6 +78,14 @@ class MainWindow(StateWindow):
 
         self.__setupSignals()
         self.__setupMenus()
+
+        icon = QIcon(dataDirPath() + "/icons/assistant.svg")
+        assistantButton = ColoredIconToolButton(icon, QSize(16, 16), self)
+        assistantButton.setIcon(icon)
+        assistantButton.clicked.connect(
+            self._onShowAiAssistant)
+
+        self.statusBar().addPermanentWidget(assistantButton)
 
     def __setupSignals(self):
         self.ui.acReload.triggered.connect(self.reloadRepo)
@@ -662,3 +673,6 @@ class MainWindow(StateWindow):
         self.ui.gitViewA.ui.logView.reloadLogs()
         if self.gitViewB:
             self.gitViewB.ui.logView.reloadLogs()
+
+    def _onShowAiAssistant(self):
+        qApp.postEvent(qApp, ShowAiAssistantEvent())

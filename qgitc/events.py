@@ -87,3 +87,10 @@ class LoginFinished(QEvent):
     def __init__(self, isSuccessful: bool):
         super().__init__(QEvent.Type(LoginFinished.Type))
         self.isSuccessful = isSuccessful
+
+
+class ShowAiAssistantEvent(QEvent):
+    Type = QEvent.User + 11
+
+    def __init__(self):
+        super().__init__(QEvent.Type(ShowAiAssistantEvent.Type))

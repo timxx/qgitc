@@ -25,6 +25,7 @@ from .events import (
     LoginFinished,
     RequestCommitEvent,
     RequestLoginGithubCopilot,
+    ShowAiAssistantEvent,
     ShowCommitEvent,
     OpenLinkEvent,
     GitBinChanged)
@@ -191,6 +192,11 @@ class Application(QApplication):
             window.codeReview(event.commit, event.args)
             return True
 
+        if type == ShowAiAssistantEvent.Type:
+            window = self.getWindow(Application.AiAssistant)
+            self._ensureVisible(window)
+            return True
+
         if type == RequestCommitEvent.Type:
             needRefresh = self._commitWindow is not None
             window = self.getWindow(Application.CommitWindow)
@@ -209,6 +215,7 @@ class Application(QApplication):
             dialog.exec()
             self.postEvent(event.requestor, LoginFinished(
                 dialog.isLoginSuccessful()))
+            return True
 
         if type == QEvent.ApplicationPaletteChange:
             self._setupColorSchema()
