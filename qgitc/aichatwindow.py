@@ -266,6 +266,11 @@ class AiChatWidget(QWidget):
             tb.verticalScrollBar().valueChanged.connect(
                 self._onTextBrowserScrollbarChanged)
 
+        if qApp.settings().useLocalLlm():
+            self.cbBots.setCurrentIndex(0)
+        else:
+            self.cbBots.setCurrentIndex(1)
+
         self.stackWidget.setCurrentIndex(self.cbBots.currentIndex())
 
         hlayout.addWidget(self.cbBots)

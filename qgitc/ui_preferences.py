@@ -493,6 +493,11 @@ class Ui_Preferences(object):
         self.tabLLM.setObjectName(u"tabLLM")
         self.verticalLayout_11 = QVBoxLayout(self.tabLLM)
         self.verticalLayout_11.setObjectName(u"verticalLayout_11")
+        self.cbUseLocalLLM = QCheckBox(self.tabLLM)
+        self.cbUseLocalLLM.setObjectName(u"cbUseLocalLLM")
+
+        self.verticalLayout_11.addWidget(self.cbUseLocalLLM)
+
         self.horizontalLayout_13 = QHBoxLayout()
         self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
         self.label_16 = QLabel(self.tabLLM)
@@ -715,7 +720,8 @@ class Ui_Preferences(object):
 "imgdiff \"$BASE\" \"$LOCAL\" \"$REMOTE\" -o \"$MERGED\"", None))
 #endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
-        self.label_16.setText(QCoreApplication.translate("Preferences", u"Server:", None))
+        self.cbUseLocalLLM.setText(QCoreApplication.translate("Preferences", u"Use Local LLM", None))
+        self.label_16.setText(QCoreApplication.translate("Preferences", u"Local LLM Server:", None))
         self.label_20.setText(QCoreApplication.translate("Preferences", u"Github Copilot:", None))
         self.btnGithubCopilot.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))

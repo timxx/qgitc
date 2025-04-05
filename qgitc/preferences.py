@@ -16,6 +16,7 @@ from .comboboxitemdelegate import ComboBoxItemDelegate
 from .linkeditdialog import LinkEditDialog
 from .gitutils import Git, GitProcess
 from .tooltablemodel import ToolTableModel
+from .settings import Settings
 
 import sys
 import os
@@ -24,7 +25,7 @@ import subprocess
 
 class Preferences(QDialog):
 
-    def __init__(self, settings, parent=None):
+    def __init__(self, settings: Settings, parent=None):
         super(Preferences, self).__init__(parent)
 
         self.ui = Ui_Preferences()
@@ -497,12 +498,15 @@ class Preferences(QDialog):
                 error)
 
     def _initLLMTab(self):
+        self.ui.cbUseLocalLLM.setChecked(self.settings.useLocalLlm())
         self.ui.leServerUrl.setText(self.settings.llmServer())
         token = self.settings.githubCopilotAccessToken()
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
 
     def _saveLLMTab(self):
+        self.settings.setUseLocalLlm(
+            self.ui.cbUseLocalLLM.isChecked())
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
 
     def _initCommitMessageTab(self):

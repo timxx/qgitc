@@ -274,6 +274,12 @@ class Settings(QSettings):
     def setLlmServer(self, server):
         self.setValue("llmServer", server)
 
+    def useLocalLlm(self):
+        return self.value("useLocalLlm", False, type=bool)
+
+    def setUseLocalLlm(self, use: bool):
+        self.setValue("useLocalLlm", use)
+
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)
 

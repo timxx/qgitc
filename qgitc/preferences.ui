@@ -866,11 +866,18 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_11">
        <item>
+        <widget class="QCheckBox" name="cbUseLocalLLM">
+         <property name="text">
+          <string>Use Local LLM</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_13">
          <item>
           <widget class="QLabel" name="label_16">
            <property name="text">
-            <string>Server:</string>
+            <string>Local LLM Server:</string>
            </property>
           </widget>
          </item>
