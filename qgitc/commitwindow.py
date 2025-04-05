@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QStyle
 )
 
+from .aicommitmessage import AiCommitMessage
 from .colorediconlabel import ColoredIconLabel
 from .coloredlabel import ColoredLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
@@ -39,7 +40,6 @@ from .difffetcher import DiffFetcher
 from .diffview import DiffView, _makeTextIcon
 from .events import LocalChangesCommittedEvent
 from .findsubmodules import FindSubmoduleThread
-from .gitprogressdialog import GitProgressDialog
 from .gitutils import Git
 from .preferences import Preferences
 from .submoduleexecutor import SubmoduleExecutor
@@ -378,6 +378,10 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.setIconSize(QSize(16, 16))
         self.ui.btnGenMessage.clicked.connect(
             self._onGenMessageClicked)
+
+        self._aiMessage = AiCommitMessage(self)
+        self._aiMessage.messageAvailable.connect(
+            self._onAiMessageAvailable)
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -1097,5 +1101,19 @@ class CommitWindow(StateWindow):
                 QMessageBox.Ok)
 
     def _onGenMessageClicked(self):
-        # TODO
-        pass
+        model = self.ui.lvStaged.model()
+        submodules = set()
+        for row in range(model.rowCount()):
+            index = model.index(row, 0)
+            repoDir = model.data(
+                index, StatusFileListModel.RepoDirRole)
+            submodules.add(repoDir)
+        assert (submodules)
+        self._aiMessage.generate(list(submodules))
+
+    def _onAiMessageAvailable(self, message: str):
+        if not message:
+            return
+
+        self.ui.teMessage.setPlainText(message)
+        self.ui.teMessage.moveCursor(QTextCursor.End)
