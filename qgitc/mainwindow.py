@@ -9,16 +9,19 @@ from PySide6.QtWidgets import (
     QDialog)
 
 from PySide6.QtGui import (
-    QActionGroup)
+    QActionGroup,
+    QIcon)
 
 from PySide6.QtCore import (
-    QThread,
     QSize,
     QTimer,
     Qt,
     QEvent,
     Signal)
 
+from .common import dataDirPath
+from .coloredicontoolbutton import ColoredIconToolButton
+from .findsubmodules import FindSubmoduleThread
 from .findwidget import FindWidget
 
 from .ui_mainwindow import Ui_MainWindow
@@ -30,67 +33,11 @@ from .aboutdialog import AboutDialog
 from .mergewidget import MergeWidget
 from .statewindow import StateWindow
 from .logview import LogView
-from .events import GitBinChanged
+from .events import GitBinChanged, RequestCommitEvent, ShowAiAssistantEvent
 
 import os
 import sys
 import shlex
-
-
-class FindSubmoduleThread(QThread):
-    def __init__(self, repoDir, parent=None):
-        super(FindSubmoduleThread, self).__init__(parent)
-
-        self._repoDir = os.path.normcase(os.path.normpath(repoDir))
-        self._submodules = []
-
-    @property
-    def submodules(self):
-        if self.isFinished() and not self.isInterruptionRequested():
-            return self._submodules
-        return []
-
-    def run(self):
-        self._submodules.clear()
-        if self.isInterruptionRequested():
-            return
-
-        # try git submodule first
-        process = GitProcess(self._repoDir,
-                             ["submodule", "foreach", "--quiet", "echo $name"],
-                             True)
-        data = process.communicate()[0]
-        if self.isInterruptionRequested():
-            return
-        if process.returncode == 0 and data:
-            self._submodules = data.rstrip().split('\n')
-            self._submodules.insert(0, ".")
-            return
-
-        submodules = []
-        # some projects may not use submodule or subtree
-        max_level = 5 + self._repoDir.count(os.path.sep)
-        for root, subdirs, files in os.walk(self._repoDir, topdown=True):
-            if self.isInterruptionRequested():
-                return
-            if os.path.normcase(root) == self._repoDir:
-                continue
-
-            if ".git" in subdirs or ".git" in files:
-                dir = root.replace(self._repoDir + os.sep, "")
-                if dir:
-                    submodules.append(dir)
-
-            if root.count(os.path.sep) >= max_level or root.endswith(".git"):
-                del subdirs[:]
-            else:
-                # ignore all '.dir'
-                subdirs[:] = [d for d in subdirs if not d.startswith(".")]
-
-        if submodules:
-            submodules.insert(0, '.')
-
-        self._submodules = submodules
 
 
 class MainWindow(StateWindow):
@@ -131,6 +78,15 @@ class MainWindow(StateWindow):
 
         self.__setupSignals()
         self.__setupMenus()
+
+        icon = QIcon(dataDirPath() + "/icons/assistant.svg")
+        assistantButton = ColoredIconToolButton(icon, QSize(16, 16), self)
+        assistantButton.setIcon(icon)
+        assistantButton.clicked.connect(
+            self._onShowAiAssistant)
+        assistantButton.setToolTip(self.tr("Show AI Assistant"))
+
+        self.statusBar().addPermanentWidget(assistantButton)
 
     def __setupSignals(self):
         self.ui.acReload.triggered.connect(self.reloadRepo)
@@ -210,12 +166,17 @@ class MainWindow(StateWindow):
         # application
         qApp.focusChanged.connect(self.__updateEditMenu)
 
-        self.ui.cbSubmodule.currentIndexChanged.connect(self.__onSubmoduleChanged)
+        self.ui.cbSubmodule.currentIndexChanged.connect(
+            self.__onSubmoduleChanged)
 
         self._delayTimer.timeout.connect(
             self.__onDelayTimeout)
 
-        self.ui.cbSelfCommits.stateChanged.connect(self.__onSelfCommitsStateChanged)
+        self.ui.cbSelfCommits.stateChanged.connect(
+            self.__onSelfCommitsStateChanged)
+
+        self.ui.acCommit.triggered.connect(
+            self.__onCommitTriggered)
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -255,7 +216,8 @@ class MainWindow(StateWindow):
             self.ui.acFind.setEnabled(False)
             if isinstance(fw.parentWidget(), FindWidget):
                 self.ui.acFindNext.setEnabled(fw.parentWidget().canFindNext())
-                self.ui.acFindPrevious.setEnabled(fw.parentWidget().canFindPrevious())
+                self.ui.acFindPrevious.setEnabled(
+                    fw.parentWidget().canFindPrevious())
         elif isinstance(fw, LogView):
             self.ui.acCopy.setEnabled(fw.isCurrentCommitted())
             self.ui.acCopyLog.setEnabled(enabled)
@@ -326,9 +288,10 @@ class MainWindow(StateWindow):
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
             branch = "remotes/" + branch
-        self.ui.gitViewA.reloadBranches( self.ui.gitViewA.currentBranch())
+        self.ui.gitViewA.reloadBranches(self.ui.gitViewA.currentBranch())
         if self.gitViewB:
-            self.gitViewB.reloadBranches(branch or self.gitViewB.currentBranch())
+            self.gitViewB.reloadBranches(
+                branch or self.gitViewB.currentBranch())
 
         if self.mergeWidget:
             # cache in case changed later
@@ -453,7 +416,8 @@ class MainWindow(StateWindow):
     def __onSubmoduleChanged(self, index):
         newRepo = Git.REPO_TOP_DIR
         if index > 0:
-            newRepo = os.path.join(Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
+            newRepo = os.path.join(
+                Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
         if os.path.normcase(os.path.normpath(newRepo)) == os.path.normcase(os.path.normpath(Git.REPO_DIR)):
             return
 
@@ -701,3 +665,15 @@ class MainWindow(StateWindow):
         self.ui.cbSubmodule.setVisible(True)
         self.ui.lbSubmodule.setVisible(True)
         self.submoduleAvailable.emit(True)
+
+    def __onCommitTriggered(self):
+        # we can't import application here, because it will cause circular import
+        qApp.postEvent(qApp, RequestCommitEvent())
+
+    def reloadLocalChanges(self):
+        self.ui.gitViewA.ui.logView.reloadLogs()
+        if self.gitViewB:
+            self.gitViewB.ui.logView.reloadLogs()
+
+    def _onShowAiAssistant(self):
+        qApp.postEvent(qApp, ShowAiAssistantEvent())

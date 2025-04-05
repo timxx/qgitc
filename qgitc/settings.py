@@ -10,6 +10,8 @@ from PySide6.QtGui import (
     QColor)
 from PySide6.QtWidgets import (
     QApplication)
+
+from .commitactiontablemodel import CommitAction
 from .mergetool import MergeTool
 
 import os
@@ -55,6 +57,7 @@ class Settings(QSettings):
     tabSizeChanged = Signal(int)
     compositeModeChanged = Signal(bool)
     colorSchemaModeChanged = Signal(int)
+    ignoreCommentLineChanged = Signal(bool)
 
     def __init__(self, parent=None):
         super(Settings, self).__init__(
@@ -168,11 +171,11 @@ class Settings(QSettings):
     def setRememberWindowState(self, remember):
         self.setValue("rememberWindowState", remember)
 
-    def windowState(self, windowName):
+    def windowState(self, windowName, maximized=True):
         self.beginGroup(windowName)
         state = self.value("state", None)
         geometry = self.value("geometry", None)
-        isMaximized = self.value("maximized", True, type=bool)
+        isMaximized = self.value("maximized", maximized, type=bool)
         self.endGroup()
 
         return state, geometry, isMaximized
@@ -271,6 +274,12 @@ class Settings(QSettings):
     def setLlmServer(self, server):
         self.setValue("llmServer", server)
 
+    def useLocalLlm(self):
+        return self.value("useLocalLlm", False, type=bool)
+
+    def setUseLocalLlm(self, use: bool):
+        self.setValue("useLocalLlm", use)
+
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)
 
@@ -310,4 +319,118 @@ class Settings(QSettings):
         key = os.path.normpath(os.path.normcase(repoDir))
         self.beginGroup("submodulesCache")
         self.setValue(key, cache)
+        self.endGroup()
+
+    def saveSplitterState(self, splitter, state):
+        self.beginGroup("splitterState")
+        self.setValue(splitter, state)
+        self.endGroup()
+
+    def getSplitterState(self, splitter):
+        self.beginGroup("splitterState")
+        state = self.value(splitter, None)
+        self.endGroup()
+        return state
+
+    def ignoreCommentLine(self):
+        self.beginGroup("commit")
+        ignore = self.value("ignoreCommentLine", True, type=bool)
+        self.endGroup()
+        return ignore
+
+    def setIgnoreCommentLine(self, ignore):
+        if ignore == self.ignoreCommentLine():
+            return
+        self.beginGroup("commit")
+        self.setValue("ignoreCommentLine", ignore)
+        self.endGroup()
+        self.ignoreCommentLineChanged.emit(ignore)
+
+    def tabToNextGroup(self):
+        self.beginGroup("commit")
+        value = self.value("tabToNextGroup", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setTabToNextGroup(self, tab):
+        self.beginGroup("commit")
+        self.setValue("tabToNextGroup", tab)
+        self.endGroup()
+
+    def groupChars(self):
+        self.beginGroup("commit")
+        chars = self.value("groupChars", "【】 []")
+        self.endGroup()
+        return chars
+
+    def setGroupChars(self, chars):
+        self.beginGroup("commit")
+        self.setValue("groupChars", chars)
+        self.endGroup()
+
+    def commitActions(self) -> List[CommitAction]:
+        self.beginGroup("commit")
+        defaultActions = [CommitAction("git", "push", enabled=False)]
+        actions = self.value("actions", defaultActions)
+        self.endGroup()
+        return actions
+
+    def setCommitActions(self, actions: List[CommitAction]):
+        self.beginGroup("commit")
+        self.setValue("actions", actions)
+        self.endGroup()
+
+    def runCommitActions(self):
+        self.beginGroup("commit")
+        run = self.value("runActions", False, type=bool)
+        self.endGroup()
+        return run
+
+    def setRunCommitActions(self, run):
+        self.beginGroup("commit")
+        self.setValue("runActions", run)
+        self.endGroup()
+
+    def showUntrackedFiles(self):
+        self.beginGroup("commit")
+        show = self.value("showUntrackedFiles", True, type=bool)
+        self.endGroup()
+        return show
+
+    def setShowUntrackedFiles(self, show):
+        self.beginGroup("commit")
+        self.setValue("showUntrackedFiles", show)
+        self.endGroup()
+
+    def showIgnoredFiles(self):
+        self.beginGroup("commit")
+        show = self.value("showIgnoredFiles", False, type=bool)
+        self.endGroup()
+        return show
+
+    def setShowIgnoredFiles(self, show):
+        self.beginGroup("commit")
+        self.setValue("showIgnoredFiles", show)
+        self.endGroup()
+
+    def githubCopilotAccessToken(self):
+        self.beginGroup("GithubCopilot")
+        token = self.value("accessToken", None)
+        self.endGroup()
+        return token
+
+    def setGithubCopilotAccessToken(self, token: str):
+        self.beginGroup("GithubCopilot")
+        self.setValue("accessToken", token)
+        self.endGroup()
+
+    def githubCopilotToken(self):
+        self.beginGroup("GithubCopilot")
+        token = self.value("token", None)
+        self.endGroup()
+        return token
+
+    def setGithubCopilotToken(self, token: str):
+        self.beginGroup("GithubCopilot")
+        self.setValue("token", token)
         self.endGroup()

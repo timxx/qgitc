@@ -35,6 +35,7 @@ import threading
 import requests
 
 from .common import commitRepoDir
+from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
 from .statewindow import StateWindow
@@ -235,7 +236,8 @@ class AiChatWidget(QWidget):
         self.sbMaxTokens.setRange(1, 0x7FFFFFFF)
         self.sbMaxTokens.setSingleStep(500)
         self.sbMaxTokens.setValue(2048)
-        self.sbMaxTokens.setMaximumWidth(60)
+        self.sbMaxTokens.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         self.sbMaxTokens.setToolTip(self.tr("Max tokens to generate"))
         hlayout.addWidget(self.sbMaxTokens)
 
@@ -252,6 +254,7 @@ class AiChatWidget(QWidget):
 
         self._ai_models = [
             LocalLLM(qApp.settings().llmServer(), self),
+            GithubCopilot(self),
         ]
 
         self._ai_models[0].nameChanged.connect(
@@ -263,6 +266,11 @@ class AiChatWidget(QWidget):
             self.stackWidget.addWidget(tb)
             tb.verticalScrollBar().valueChanged.connect(
                 self._onTextBrowserScrollbarChanged)
+
+        if qApp.settings().useLocalLlm():
+            self.cbBots.setCurrentIndex(0)
+        else:
+            self.cbBots.setCurrentIndex(1)
 
         self.stackWidget.setCurrentIndex(self.cbBots.currentIndex())
 
@@ -277,7 +285,7 @@ class AiChatWidget(QWidget):
         self.cbChatMode.addItem(self.tr("Code Fix"), AiChatMode.CodeFix)
         self.cbChatMode.addItem(
             self.tr("Code Explanation"), AiChatMode.CodeExplanation)
-        self.cbChatMode.setEnabled(True)
+        self.cbChatMode.setEnabled(self.isLocalLLM())
 
         hlayout.addWidget(self.cbChatMode)
 

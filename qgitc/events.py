@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QEvent
+from PySide6.QtCore import QEvent, QObject
 
 
 class BlameEvent(QEvent):
@@ -57,3 +57,40 @@ class CodeReviewEvent(QEvent):
         super().__init__(QEvent.Type(CodeReviewEvent.Type))
         self.commit = commit
         self.args = args
+
+
+class RequestCommitEvent(QEvent):
+    Type = QEvent.User + 7
+
+    def __init__(self):
+        super().__init__(QEvent.Type(RequestCommitEvent.Type))
+
+
+class LocalChangesCommittedEvent(QEvent):
+    Type = QEvent.User + 8
+
+    def __init__(self):
+        super().__init__(QEvent.Type(LocalChangesCommittedEvent.Type))
+
+
+class RequestLoginGithubCopilot(QEvent):
+    Type = QEvent.User + 9
+
+    def __init__(self, requestor: QObject):
+        super().__init__(QEvent.Type(RequestLoginGithubCopilot.Type))
+        self.requestor = requestor
+
+
+class LoginFinished(QEvent):
+    Type = QEvent.User + 10
+
+    def __init__(self, isSuccessful: bool):
+        super().__init__(QEvent.Type(LoginFinished.Type))
+        self.isSuccessful = isSuccessful
+
+
+class ShowAiAssistantEvent(QEvent):
+    Type = QEvent.User + 11
+
+    def __init__(self):
+        super().__init__(QEvent.Type(ShowAiAssistantEvent.Type))

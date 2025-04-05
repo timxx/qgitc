@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'preferences.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -491,24 +491,121 @@ class Ui_Preferences(object):
         self.tabWidget.addTab(self.tabTools, "")
         self.tabLLM = QWidget()
         self.tabLLM.setObjectName(u"tabLLM")
-        self.verticalLayout_12 = QVBoxLayout(self.tabLLM)
-        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
-        self.gridLayout_2 = QGridLayout()
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.verticalLayout_11 = QVBoxLayout(self.tabLLM)
+        self.verticalLayout_11.setObjectName(u"verticalLayout_11")
+        self.cbUseLocalLLM = QCheckBox(self.tabLLM)
+        self.cbUseLocalLLM.setObjectName(u"cbUseLocalLLM")
+
+        self.verticalLayout_11.addWidget(self.cbUseLocalLLM)
+
+        self.horizontalLayout_13 = QHBoxLayout()
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
         self.label_16 = QLabel(self.tabLLM)
         self.label_16.setObjectName(u"label_16")
 
-        self.gridLayout_2.addWidget(self.label_16, 1, 0, 1, 1)
+        self.horizontalLayout_13.addWidget(self.label_16)
 
         self.leServerUrl = QLineEdit(self.tabLLM)
         self.leServerUrl.setObjectName(u"leServerUrl")
 
-        self.gridLayout_2.addWidget(self.leServerUrl, 1, 1, 1, 1)
+        self.horizontalLayout_13.addWidget(self.leServerUrl)
 
 
-        self.verticalLayout_12.addLayout(self.gridLayout_2)
+        self.verticalLayout_11.addLayout(self.horizontalLayout_13)
+
+        self.horizontalLayout_14 = QHBoxLayout()
+        self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
+        self.label_20 = QLabel(self.tabLLM)
+        self.label_20.setObjectName(u"label_20")
+
+        self.horizontalLayout_14.addWidget(self.label_20)
+
+        self.btnGithubCopilot = QPushButton(self.tabLLM)
+        self.btnGithubCopilot.setObjectName(u"btnGithubCopilot")
+
+        self.horizontalLayout_14.addWidget(self.btnGithubCopilot)
+
+        self.horizontalSpacer_11 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_14.addItem(self.horizontalSpacer_11)
+
+
+        self.verticalLayout_11.addLayout(self.horizontalLayout_14)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_11.addItem(self.verticalSpacer)
 
         self.tabWidget.addTab(self.tabLLM, "")
+        self.tabCommitMessage = QWidget()
+        self.tabCommitMessage.setObjectName(u"tabCommitMessage")
+        self.verticalLayout_10 = QVBoxLayout(self.tabCommitMessage)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.groupBox_11 = QGroupBox(self.tabCommitMessage)
+        self.groupBox_11.setObjectName(u"groupBox_11")
+        self.verticalLayout_13 = QVBoxLayout(self.groupBox_11)
+        self.verticalLayout_13.setObjectName(u"verticalLayout_13")
+        self.cbIgnoreComment = QCheckBox(self.groupBox_11)
+        self.cbIgnoreComment.setObjectName(u"cbIgnoreComment")
+
+        self.verticalLayout_13.addWidget(self.cbIgnoreComment)
+
+        self.cbTab = QCheckBox(self.groupBox_11)
+        self.cbTab.setObjectName(u"cbTab")
+
+        self.verticalLayout_13.addWidget(self.cbTab)
+
+        self.horizontalLayout_11 = QHBoxLayout()
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.label_19 = QLabel(self.groupBox_11)
+        self.label_19.setObjectName(u"label_19")
+
+        self.horizontalLayout_11.addWidget(self.label_19)
+
+        self.leGroupChars = QLineEdit(self.groupBox_11)
+        self.leGroupChars.setObjectName(u"leGroupChars")
+
+        self.horizontalLayout_11.addWidget(self.leGroupChars)
+
+
+        self.verticalLayout_13.addLayout(self.horizontalLayout_11)
+
+
+        self.verticalLayout_10.addWidget(self.groupBox_11)
+
+        self.groupBox_12 = QGroupBox(self.tabCommitMessage)
+        self.groupBox_12.setObjectName(u"groupBox_12")
+        self.verticalLayout_14 = QVBoxLayout(self.groupBox_12)
+        self.verticalLayout_14.setObjectName(u"verticalLayout_14")
+        self.tvActions = QTableView(self.groupBox_12)
+        self.tvActions.setObjectName(u"tvActions")
+        self.tvActions.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+
+        self.verticalLayout_14.addWidget(self.tvActions)
+
+        self.horizontalLayout_12 = QHBoxLayout()
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.btnAddAction = QPushButton(self.groupBox_12)
+        self.btnAddAction.setObjectName(u"btnAddAction")
+
+        self.horizontalLayout_12.addWidget(self.btnAddAction)
+
+        self.btnDelAction = QPushButton(self.groupBox_12)
+        self.btnDelAction.setObjectName(u"btnDelAction")
+
+        self.horizontalLayout_12.addWidget(self.btnDelAction)
+
+        self.horizontalSpacer_10 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_12.addItem(self.horizontalSpacer_10)
+
+
+        self.verticalLayout_14.addLayout(self.horizontalLayout_12)
+
+
+        self.verticalLayout_10.addWidget(self.groupBox_12)
+
+        self.tabWidget.addTab(self.tabCommitMessage, "")
 
         self.verticalLayout_2.addWidget(self.tabWidget)
 
@@ -548,7 +645,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(4)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -623,7 +720,21 @@ class Ui_Preferences(object):
 "imgdiff \"$BASE\" \"$LOCAL\" \"$REMOTE\" -o \"$MERGED\"", None))
 #endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
-        self.label_16.setText(QCoreApplication.translate("Preferences", u"Server:", None))
+        self.cbUseLocalLLM.setText(QCoreApplication.translate("Preferences", u"Use Local LLM", None))
+        self.label_16.setText(QCoreApplication.translate("Preferences", u"Local LLM Server:", None))
+        self.label_20.setText(QCoreApplication.translate("Preferences", u"Github Copilot:", None))
+        self.btnGithubCopilot.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
+        self.groupBox_11.setTitle(QCoreApplication.translate("Preferences", u"Commit &Message", None))
+        self.cbIgnoreComment.setText(QCoreApplication.translate("Preferences", u"Ignore comment line", None))
+        self.cbTab.setText(QCoreApplication.translate("Preferences", u"Tab to next group", None))
+        self.label_19.setText(QCoreApplication.translate("Preferences", u"Group Chars:", None))
+#if QT_CONFIG(tooltip)
+        self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
+#endif // QT_CONFIG(tooltip)
+        self.groupBox_12.setTitle(QCoreApplication.translate("Preferences", u"Commit &Action", None))
+        self.btnAddAction.setText(QCoreApplication.translate("Preferences", u"Add", None))
+        self.btnDelAction.setText(QCoreApplication.translate("Preferences", u"Delete", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Commit Message", None))
     # retranslateUi
 

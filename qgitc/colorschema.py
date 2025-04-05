@@ -21,6 +21,8 @@ class ColorSchemaLight():
     Modified = QColor(0xdbab09)
     Renamed = QColor(0x519143)
     RenamedModified = QColor(0x9a8246)
+    Untracked = QColor(0xd32f2f)
+    Ignored = QColor(0x757575)
     InfoBg = QColor(0xE8F0FE)
     InfoFg = QColor(0x2B5070)
     InfoBorder = QColor(0xC0D0E0)
@@ -82,6 +84,8 @@ class ColorSchemaLight():
     Splitter = Qt.darkGray
     LineNumber = Qt.darkGray
 
+    Comment = QColor(0x207f0b)
+
 
 class ColorSchemaDark():
 
@@ -91,6 +95,8 @@ class ColorSchemaDark():
     Modified = QColor(255, 213, 0)
     Renamed = QColor(106, 176, 76)
     RenamedModified = QColor(205, 149, 12)
+    Untracked = QColor(0xff5252)
+    Ignored = QColor(0x9e9e9e)
     InfoBg = QColor(0x282C34)
     InfoFg = QColor(0xDDDDDD)
     InfoBorder = QColor(0x4B5363)
@@ -151,3 +157,5 @@ class ColorSchemaDark():
 
     Splitter = QColor(112, 112, 112)
     LineNumber = QColor(0x999999)
+
+    Comment = QColor(0x6e9857)

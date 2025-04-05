@@ -308,17 +308,23 @@ def _selectSubmodule(submodules: List[str], path: str):
     return None
 
 
+def _pathStartsWith(path: str, prefix: str):
+    path = os.path.normcase(path)
+    prefix = os.path.normcase(prefix)
+    return path.startswith(prefix)
+
+
 def toSubmodulePath(submodule: str, path: str):
     if not submodule or submodule == ".":
         return path
 
-    repoDir = os.path.normpath(os.path.normcase(Git.REPO_DIR))
-    normalized_path = os.path.normpath(os.path.normcase(path))
-    if normalized_path.startswith(repoDir):
+    repoDir = os.path.normpath(Git.REPO_DIR)
+    normalized_path = os.path.normpath(path)
+    if _pathStartsWith(normalized_path, repoDir):
         normalized_path = normalized_path[len(repoDir)+1:]
 
-    normalized_submodule = os.path.normpath(os.path.normcase(submodule))
-    if normalized_path.startswith(normalized_submodule):
+    normalized_submodule = os.path.normpath(submodule)
+    if _pathStartsWith(normalized_path, normalized_submodule):
         return normalized_path[len(submodule) + 1:]
     return path
 

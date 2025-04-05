@@ -81,7 +81,7 @@ class SourceViewer(TextViewer):
             flags = self._option.flags()
             self._option.setFlags(flags | QTextOption.ShowTabsAndSpaces)
 
-        self.reloadBugPattern()
+        self._bugPatterns = TextViewer.reloadBugPattern()
 
     def _onVScrollBarValueChanged(self, value):
         if self._panel:

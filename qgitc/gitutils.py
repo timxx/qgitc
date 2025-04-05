@@ -6,7 +6,7 @@ import subprocess
 import os
 import bisect
 import re
-from typing import Dict, List
+from typing import Dict, List, Union
 
 
 class GitProcess():
@@ -130,7 +130,7 @@ class Git():
         return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None, repoDir=None):
+    def checkOutput(args, text=None, repoDir=None) -> Union[bytes, None]:
         process = Git.run(args, text, repoDir)
         data = process.communicate()[0]
         if process.returncode != 0:
@@ -569,6 +569,10 @@ class Git():
         return Git.getConfigValue("user.name", False)
 
     @staticmethod
+    def userEmail():
+        return Git.getConfigValue("user.email", False)
+
+    @staticmethod
     def initGit(gitBin: str):
         GitProcess.GIT_BIN = gitBin
 
@@ -606,7 +610,8 @@ class Git():
         """restore staged files
         return error message if any
         """
-        args = ["restore", "--staged", "--"]
+        # `restore --staged` is much slower than reset HEAD
+        args = ["reset", "HEAD", "--"]
         args.extend(files)
         process = GitProcess(repoDir, args)
         _, error = process.communicate()
@@ -639,7 +644,64 @@ class Git():
             fullRepoDir = repoDir
             if repoDir and repoDir != ".":
                 fullRepoDir = os.path.join(Git.REPO_TOP_DIR, repoDir)
-            error = Git.restoreFiles(fullRepoDir or Git.REPO_DIR, files, staged)
+            error = Git.restoreFiles(
+                fullRepoDir or Git.REPO_DIR, files, staged)
             if error:
                 return error
         return None
+
+    @staticmethod
+    def addFiles(repoDir, files):
+        """add files to the index
+        return error message if any
+        """
+        args = ["add", "-f", "--"]
+        args.extend(files)
+        process = GitProcess(repoDir, args)
+        _, error = process.communicate()
+        if process.returncode != 0 and error is not None:
+            return error.decode("utf-8")
+
+        return None
+
+    @staticmethod
+    def status(repoDir=None, showUntracked=True, showIgnored=False, nullFormat=True):
+        args = ["status", "--porcelain"]
+        args.append("--untracked-files={}".format(
+            "all" if showUntracked else "no"))
+        if showIgnored:
+            args.append("--ignored")
+        if Git.versionGE(1, 7, 2):
+            args.append("--ignore-submodules=dirty")
+        if nullFormat:
+            args.append("-z")
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if not data:
+            return None
+
+        return data
+
+    @staticmethod
+    def commit(message: str, amend: bool = False, repoDir: str = None):
+        args = ["commit", "--no-edit"]
+        if amend:
+            args.append("--amend")
+
+        if message:
+            args.append("-m")
+            args.append(message)
+        process = GitProcess(repoDir or Git.REPO_DIR, args)
+        out, error = process.communicate()
+        if out is not None:
+            out = out.decode("utf-8")
+        if error is not None:
+            error = error.decode("utf-8")
+        return out, error
+
+    @staticmethod
+    def activeBranch(repoDir=None):
+        args = ["rev-parse", "--abbrev-ref", "HEAD"]
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if data:
+            return data.rstrip(b'\n').decode("utf-8")
+        return ""

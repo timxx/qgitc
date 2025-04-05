@@ -14,11 +14,18 @@ from PySide6.QtCore import (
 
 from .aichatwindow import AiChatWindow
 from .colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
+from .commitwindow import CommitWindow
 from .common import dataDirPath
+from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .settings import Settings
 from .events import (
     BlameEvent,
     CodeReviewEvent,
+    LocalChangesCommittedEvent,
+    LoginFinished,
+    RequestCommitEvent,
+    RequestLoginGithubCopilot,
+    ShowAiAssistantEvent,
     ShowCommitEvent,
     OpenLinkEvent,
     GitBinChanged)
@@ -45,6 +52,7 @@ class Application(QApplication):
     LogWindow = 1
     BlameWindow = 2
     AiAssistant = 3
+    CommitWindow = 4
 
     def __init__(self, argv):
         super(Application, self).__init__(argv)
@@ -62,6 +70,7 @@ class Application(QApplication):
         self._logWindow = None
         self._blameWindow = None
         self._aiChatWindow = None
+        self._commitWindow = None
 
         gitBin = self._settings.gitBinPath() or shutil.which("git")
         if not gitBin or not os.path.exists(gitBin):
@@ -122,6 +131,12 @@ class Application(QApplication):
                 self._aiChatWindow.destroyed.connect(
                     self._onAiChatWindowDestroyed)
             window = self._aiChatWindow
+        elif type == Application.CommitWindow:
+            if not self._commitWindow:
+                self._commitWindow = CommitWindow()
+                self._commitWindow.destroyed.connect(
+                    self._onCommitWindowDestroyed)
+            window = self._commitWindow
 
         return window
 
@@ -146,12 +161,14 @@ class Application(QApplication):
                          event.lineNo, event.repoDir)
             self._ensureVisible(window)
             return True
-        elif type == ShowCommitEvent.Type:
+
+        if type == ShowCommitEvent.Type:
             window = self.getWindow(Application.LogWindow)
             window.showCommit(event.sha1)
             self._ensureVisible(window)
             return True
-        elif type == OpenLinkEvent.Type:
+
+        if type == OpenLinkEvent.Type:
             url = None
             link = event.link
             if link.type == Link.Email:
@@ -162,16 +179,45 @@ class Application(QApplication):
             if url:
                 QDesktopServices.openUrl(QUrl(url))
             return True
-        elif type == GitBinChanged.Type:
+
+        if type == GitBinChanged.Type:
             self._initGit(self._settings.gitBinPath())
             if self._logWindow:
                 self._logWindow.reloadRepo()
+            return True
 
-        elif type == CodeReviewEvent.Type:
+        if type == CodeReviewEvent.Type:
             window = self.getWindow(Application.AiAssistant)
             self._ensureVisible(window)
             window.codeReview(event.commit, event.args)
-        elif type == QEvent.ApplicationPaletteChange:
+            return True
+
+        if type == ShowAiAssistantEvent.Type:
+            window = self.getWindow(Application.AiAssistant)
+            self._ensureVisible(window)
+            return True
+
+        if type == RequestCommitEvent.Type:
+            needRefresh = self._commitWindow is not None
+            window = self.getWindow(Application.CommitWindow)
+            if needRefresh:
+                window.reloadLocalChanges()
+            self._ensureVisible(window)
+            return True
+
+        if type == LocalChangesCommittedEvent.Type:
+            if self._logWindow:
+                self._logWindow.reloadLocalChanges()
+            return True
+
+        if type == RequestLoginGithubCopilot.Type:
+            dialog = GithubCopilotLoginDialog(self.activeWindow())
+            dialog.exec()
+            self.postEvent(event.requestor, LoginFinished(
+                dialog.isLoginSuccessful()))
+            return True
+
+        if type == QEvent.ApplicationPaletteChange:
             self._setupColorSchema()
 
         return super().event(event)
@@ -184,6 +230,9 @@ class Application(QApplication):
 
     def _onAiChatWindowDestroyed(self, obj):
         self._aiChatWindow = None
+
+    def _onCommitWindowDestroyed(self, obj):
+        self._commitWindow = None
 
     def _onNewVersionAvailable(self, version):
         ignoredVersion = self.settings().ignoredVersion()

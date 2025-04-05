@@ -6,164 +6,26 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QFileDialog)
 from PySide6.QtCore import (
-    QAbstractTableModel,
-    Signal,
-    QModelIndex,
     QSize)
 
 from .colorschema import ColorSchemaMode
+from .commitactiontablemodel import CommitActionTableModel
+from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .ui_preferences import *
-from .mergetool import MergeTool
 from .comboboxitemdelegate import ComboBoxItemDelegate
 from .linkeditdialog import LinkEditDialog
 from .gitutils import Git, GitProcess
+from .tooltablemodel import ToolTableModel
+from .settings import Settings
 
 import sys
 import os
 import subprocess
 
 
-class ToolTableModel(QAbstractTableModel):
-    Col_Scenes = 0
-    Col_Suffix = 1
-    Col_Tool = 2
-
-    suffixExists = Signal(str)
-
-    def __init__(self, parent=None):
-        super(ToolTableModel, self).__init__(parent)
-
-        self._data = []
-        self._scenes = {MergeTool.Nothing: self.tr("Disabled"),
-                        MergeTool.CanDiff: self.tr("Diff"),
-                        MergeTool.CanMerge: self.tr("Merge"),
-                        MergeTool.Both: self.tr("Both")}
-
-    def _checkSuffix(self, row, suffix):
-        for i in range(len(self._data)):
-            if i == row:
-                continue
-            tool = self._data[i]
-            if tool.suffix == suffix:
-                return False
-
-        return True
-
-    def columnCount(self, parent=QModelIndex()):
-        return 3
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._data)
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation != Qt.Horizontal:
-            return None
-        if role != Qt.DisplayRole:
-            return None
-
-        if section == self.Col_Scenes:
-            return self.tr("Scenes")
-        if section == self.Col_Suffix:
-            return self.tr("Suffix")
-        if section == self.Col_Tool:
-            return self.tr("Tool")
-
-        return None
-
-    def flags(self, index):
-        f = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        f |= Qt.ItemIsEditable
-
-        return f
-
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
-
-        tool = self._data[index.row()]
-        col = index.column()
-        if role == Qt.DisplayRole or role == Qt.EditRole:
-            if col == self.Col_Suffix:
-                return tool.suffix
-            if col == self.Col_Tool:
-                return tool.command
-            if col == self.Col_Scenes and role == Qt.DisplayRole:
-                return self._scenes[tool.capabilities]
-
-        return None
-
-    def setData(self, index, value, role=Qt.EditRole):
-        row = index.row()
-        col = index.column()
-        tool = self._data[row]
-
-        if role == Qt.EditRole:
-            value = value.strip()
-            if not value:
-                return False
-            if col == self.Col_Suffix:
-                if not self._checkSuffix(row, value):
-                    self.suffixExists.emit(value)
-                    return False
-                tool.suffix = value
-            elif col == self.Col_Tool:
-                tool.command = value
-            elif col == self.Col_Scenes:
-                idx = list(self._scenes.values()).index(value)
-                tool.capabilities = list(self._scenes.keys())[idx]
-        else:
-            return False
-
-        self._data[row] = tool
-        return True
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        self.beginInsertRows(parent, row, row + count - 1)
-
-        for i in range(count):
-            self._data.insert(row, MergeTool(MergeTool.Both))
-
-        self.endInsertRows()
-
-        return True
-
-    def removeRows(self, row, count, parent=QModelIndex()):
-        if row >= len(self._data):
-            return False
-
-        self.beginRemoveRows(parent, row, row + count - 1)
-
-        for i in range(count - 1 + row, row - 1, -1):
-            if i < len(self._data):
-                del self._data[i]
-
-        self.endRemoveRows()
-
-        return True
-
-    def rawData(self):
-        return self._data
-
-    def setRawData(self, data):
-        parent = QModelIndex()
-
-        if self._data:
-            self.beginRemoveRows(parent, 0, len(self._data) - 1)
-            self._data = []
-            self.endRemoveRows()
-
-        if data:
-            self.beginInsertRows(parent, 0, len(data) - 1)
-            self._data = data
-            self.endInsertRows()
-
-    def getSceneNames(self):
-        return self._scenes.values()
-
-
 class Preferences(QDialog):
 
-    def __init__(self, settings, parent=None):
+    def __init__(self, settings: Settings, parent=None):
         super(Preferences, self).__init__(parent)
 
         self.ui = Ui_Preferences()
@@ -178,7 +40,7 @@ class Preferences(QDialog):
             ToolTableModel.Col_Tool,
             QHeaderView.Stretch)
 
-        delegate = ComboBoxItemDelegate(model.getSceneNames())
+        delegate = ComboBoxItemDelegate(model.getSceneNames(), self)
         self.ui.tableView.setItemDelegateForColumn(
             ToolTableModel.Col_Scenes, delegate)
 
@@ -203,6 +65,8 @@ class Preferences(QDialog):
 
         # default to General tab
         self.ui.tabWidget.setCurrentIndex(0)
+        self.ui.tabWidget.currentChanged.connect(
+            self._onTabChanged)
 
         self.ui.buttonBox.accepted.connect(
             self._onAccepted)
@@ -219,79 +83,45 @@ class Preferences(QDialog):
         self.ui.cbCommitSince.addItem(self.tr("3 Years"), 365 * 3)
         self.ui.cbCommitSince.addItem(self.tr("5 Years"), 365 * 5)
 
-        self._initSettings()
+        model = CommitActionTableModel(self)
+        self.ui.tvActions.setModel(model)
 
-    def _initSettings(self):
-        # TODO: delay load config for each tab
-        checked = self.settings.checkUpdatesEnabled()
-        self.ui.cbCheckUpdates.setChecked(checked)
-        self._onCheckUpdatesChanged(checked)
+        delegate = ComboBoxItemDelegate(model.getStatusNames(), self)
+        self.ui.tvActions.setItemDelegateForColumn(
+            CommitActionTableModel.Col_Status, delegate)
 
-        self.ui.sbDays.setValue(
-            self.settings.checkUpdatesInterval())
+        delegate = ComboBoxItemDelegate(model.getConditionNames(), self)
+        self.ui.tvActions.setItemDelegateForColumn(
+            CommitActionTableModel.Col_Condition, delegate)
 
-        font = self.settings.logViewFont()
-        self.ui.cbFamilyLog.setCurrentFont(font)
-        self.ui.cbFamilyLog.currentFontChanged.emit(font)
+        self.ui.tvActions.horizontalHeader().setSectionResizeMode(
+            CommitActionTableModel.Col_Cmd,
+            QHeaderView.Stretch)
 
-        font = self.settings.diffViewFont()
-        self.ui.cbFamilyDiff.setCurrentFont(font)
-        self.ui.cbFamilyDiff.currentFontChanged.emit(font)
+        self.ui.tvActions.horizontalHeader().resizeSection(
+            CommitActionTableModel.Col_Condition,
+            120)
 
-        self.ui.colorA.setColor(self.settings.commitColorA())
-        self.ui.colorB.setColor(self.settings.commitColorB())
+        self.ui.btnAddAction.clicked.connect(
+            self._onAddActionClicked)
+        self.ui.btnDelAction.clicked.connect(
+            self._onDeleteActionClicked)
 
-        repoName = qApp.repoName()
-        self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
+        self.ui.btnGithubCopilot.clicked.connect(
+            self._onGithubCopilotClicked)
 
-        self.ui.linkEditWidget.setBugPatterns(
-            self.settings.bugPatterns(repoName))
-        self.ui.cbFallback.setChecked(
-            self.settings.fallbackGlobalLinks(repoName))
+        self._initedTabs = set()
+        # FIXME: we'd better use interface to implement tabs
+        self._tabs = {
+            self.ui.tabGeneral: (self._initGeneralTab, self._saveGeneralTab),
+            self.ui.tabFonts: (self._initFontsTab, self._saveFontsTab),
+            self.ui.tabSummary: (self._initSummaryTab, self._saveSummaryTab),
+            self.ui.tabTools: (self._initToolsTab, self._saveToolsTab),
+            self.ui.tabLLM: (self._initLLMTab, self._saveLLMTab),
+            self.ui.tabCommitMessage: (self._initCommitMessageTab, self._saveCommitMessageTab),
+        }
 
-        self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
-        self.ui.sbTabSize.setValue(self.settings.tabSize())
-
-        self.ui.cbEsc.setChecked(self.settings.quitViaEsc())
-        self.ui.cbState.setChecked(self.settings.rememberWindowState())
-
-        index = self.settings.ignoreWhitespace()
-        if index < 0 or index >= self.ui.cbIgnoreWhitespace.count():
-            index = 0
-        self.ui.cbIgnoreWhitespace.setCurrentIndex(index)
-
-        tools = self.settings.mergeToolList()
-        self.ui.tableView.model().setRawData(tools)
-
-        name = self.settings.diffToolName()
-        self.ui.cbDiffName.setCurrentText(name)
-        self.ui.leDiffCmd.setText(Git.diffToolCmd(name))
-
-        name = self.settings.mergeToolName()
-        self.ui.cbMergeName.setCurrentText(name)
-        self.ui.leMergeCmd.setText(Git.mergeToolCmd(name))
-
-        git = self.settings.gitBinPath()
-        if not git and GitProcess.GIT_BIN:
-            git = GitProcess.GIT_BIN
-        self.ui.leGitPath.setText(git)
-
-        self.ui.leServerUrl.setText(self.settings.llmServer())
-
-        days = self.settings.maxCompositeCommitsSince()
-        for i in range(self.ui.cbCommitSince.count()):
-            if self.ui.cbCommitSince.itemData(i) == days:
-                self.ui.cbCommitSince.setCurrentIndex(i)
-                break
-
-        self.ui.cbShowPC.setChecked(self.settings.showParentChild())
-
-        self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
-        self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
-        self.ui.cbColorSchema.addItem(self.tr("Dark"), ColorSchemaMode.Dark)
-
-        index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
-        self.ui.cbColorSchema.setCurrentIndex(index)
+        self._onTabChanged(self.ui.tabWidget.currentIndex())
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -327,15 +157,21 @@ class Preferences(QDialog):
         self._updateFontSizes(font.family(), size, cbSize)
 
     def _onBtnAddClicked(self, checked=False):
-        model = self.ui.tableView.model()
+        self._tableViewAddItem(self.ui.tableView, ToolTableModel.Col_Suffix)
+
+    def _tableViewAddItem(self, tableView: QTableView, editCol: int):
+        model = tableView.model()
         row = model.rowCount()
         if not model.insertRow(row):
             return
-        index = model.index(row, ToolTableModel.Col_Suffix)
-        self.ui.tableView.edit(index)
+        index = model.index(row, editCol)
+        tableView.edit(index)
 
     def _onBtnDeleteClicked(self, checked=False):
-        indexes = self.ui.tableView.selectionModel().selectedRows()
+        self._tableViewAddItem(self.ui.tableView)
+
+    def _tableViewDeleteItem(self, tableView: QTableView):
+        indexes = tableView.selectionModel().selectedRows()
         if not indexes:
             QMessageBox.information(self,
                                     qApp.applicationName(),
@@ -354,7 +190,7 @@ class Preferences(QDialog):
 
         indexes.sort(reverse=True)
         for index in indexes:
-            self.ui.tableView.model().removeRow(index.row())
+            tableView.model().removeRow(index.row())
 
     def _onSuffixExists(self, suffix):
         QMessageBox.information(self,
@@ -492,13 +328,90 @@ class Preferences(QDialog):
         return None
 
     def save(self):
-        # TODO: only update those values that really changed
+        for tab in self._initedTabs:
+            self._tabs[tab][1]()
+
+    def _onTabChanged(self, index):
+        tab = self.ui.tabWidget.widget(index)
+        if tab in self._initedTabs:
+            return
+
+        self._initedTabs.add(tab)
+
+        assert tab in self._tabs
+        self._tabs[tab][0]()
+
+    def _initGeneralTab(self):
+        self.ui.cbEsc.setChecked(self.settings.quitViaEsc())
+        self.ui.cbState.setChecked(self.settings.rememberWindowState())
+
+        checked = self.settings.checkUpdatesEnabled()
+        self.ui.cbCheckUpdates.setChecked(checked)
+        self._onCheckUpdatesChanged(checked)
+        self.ui.sbDays.setValue(self.settings.checkUpdatesInterval())
+
+        self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
+        self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
+        self.ui.cbColorSchema.addItem(self.tr("Dark"), ColorSchemaMode.Dark)
+        index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
+        self.ui.cbColorSchema.setCurrentIndex(index)
+
+        git = self.settings.gitBinPath()
+        if not git and GitProcess.GIT_BIN:
+            git = GitProcess.GIT_BIN
+        self.ui.leGitPath.setText(git)
+
+        self.ui.cbShowWhitespace.setChecked(self.settings.showWhitespace())
+        self.ui.sbTabSize.setValue(self.settings.tabSize())
+
+        index = self.settings.ignoreWhitespace()
+        if index < 0 or index >= self.ui.cbIgnoreWhitespace.count():
+            index = 0
+        self.ui.cbIgnoreWhitespace.setCurrentIndex(index)
+
+        self.ui.cbShowPC.setChecked(self.settings.showParentChild())
+
+    def _saveGeneralTab(self):
+        value = self.ui.cbEsc.isChecked()
+        self.settings.setQuitViaEsc(value)
+
+        value = self.ui.cbState.isChecked()
+        self.settings.setRememberWindowState(value)
+
         value = self.ui.cbCheckUpdates.isChecked()
         self.settings.setCheckUpdatesEnabled(value)
 
         value = self.ui.sbDays.value()
         self.settings.setCheckUpdatesInterval(value)
 
+        value = self.ui.cbColorSchema.currentData()
+        self.settings.setColorSchemaMode(value)
+
+        value = self.ui.leGitPath.text()
+        self.settings.setGitBinPath(value)
+
+        value = self.ui.cbShowWhitespace.isChecked()
+        self.settings.setShowWhitespace(value)
+
+        value = self.ui.sbTabSize.value()
+        self.settings.setTabSize(value)
+
+        value = self.ui.cbIgnoreWhitespace.currentIndex()
+        self.settings.setIgnoreWhitespace(value)
+
+        value = self.ui.cbShowPC.isChecked()
+        self.settings.setShowParentChild(value)
+
+    def _initFontsTab(self):
+        font = self.settings.logViewFont()
+        self.ui.cbFamilyLog.setCurrentFont(font)
+        self.ui.cbFamilyLog.currentFontChanged.emit(font)
+
+        font = self.settings.diffViewFont()
+        self.ui.cbFamilyDiff.setCurrentFont(font)
+        self.ui.cbFamilyDiff.currentFontChanged.emit(font)
+
+    def _saveFontsTab(self):
         font = QFont(self.ui.cbFamilyLog.currentText(),
                      int(self.ui.cbSizeLog.currentText()))
 
@@ -509,6 +422,24 @@ class Preferences(QDialog):
 
         self.settings.setDiffViewFont(font)
 
+    def _initSummaryTab(self):
+        self.ui.colorA.setColor(self.settings.commitColorA())
+        self.ui.colorB.setColor(self.settings.commitColorB())
+
+        repoName = qApp.repoName()
+        self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
+        self.ui.linkEditWidget.setBugPatterns(
+            self.settings.bugPatterns(repoName))
+        self.ui.cbFallback.setChecked(
+            self.settings.fallbackGlobalLinks(repoName))
+
+        days = self.settings.maxCompositeCommitsSince()
+        for i in range(self.ui.cbCommitSince.count()):
+            if self.ui.cbCommitSince.itemData(i) == days:
+                self.ui.cbCommitSince.setCurrentIndex(i)
+                break
+
+    def _saveSummaryTab(self):
         color = self.ui.colorA.getColor()
         self.settings.setCommitColorA(color)
 
@@ -525,21 +456,22 @@ class Preferences(QDialog):
         value = self.ui.cbFallback.isChecked()
         self.settings.setFallbackGlobalLinks(repoName, value)
 
-        value = self.ui.cbShowWhitespace.isChecked()
-        self.settings.setShowWhitespace(value)
+        value = self.ui.cbCommitSince.currentData()
+        self.settings.setMaxCompositeCommitsSince(value)
 
-        value = self.ui.sbTabSize.value()
-        self.settings.setTabSize(value)
+    def _initToolsTab(self):
+        tools = self.settings.mergeToolList()
+        self.ui.tableView.model().setRawData(tools)
 
-        value = self.ui.cbEsc.isChecked()
-        self.settings.setQuitViaEsc(value)
+        name = self.settings.diffToolName()
+        self.ui.cbDiffName.setCurrentText(name)
+        self.ui.leDiffCmd.setText(Git.diffToolCmd(name))
 
-        value = self.ui.cbState.isChecked()
-        self.settings.setRememberWindowState(value)
+        name = self.settings.mergeToolName()
+        self.ui.cbMergeName.setCurrentText(name)
+        self.ui.leMergeCmd.setText(Git.mergeToolCmd(name))
 
-        value = self.ui.cbIgnoreWhitespace.currentIndex()
-        self.settings.setIgnoreWhitespace(value)
-
+    def _saveToolsTab(self):
         tools = self.ui.tableView.model().rawData()
         # TODO: validate if all tool isValid before saving
         self.settings.setMergeToolList(tools)
@@ -565,16 +497,52 @@ class Preferences(QDialog):
                 self, self.window().windowTitle(),
                 error)
 
-        value = self.ui.leGitPath.text()
-        self.settings.setGitBinPath(value)
+    def _initLLMTab(self):
+        self.ui.cbUseLocalLLM.setChecked(self.settings.useLocalLlm())
+        self.ui.leServerUrl.setText(self.settings.llmServer())
+        token = self.settings.githubCopilotAccessToken()
+        text = self.tr("Logout") if token else self.tr("Login")
+        self.ui.btnGithubCopilot.setText(text)
 
+    def _saveLLMTab(self):
+        self.settings.setUseLocalLlm(
+            self.ui.cbUseLocalLLM.isChecked())
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
 
-        value = self.ui.cbCommitSince.currentData()
-        self.settings.setMaxCompositeCommitsSince(value)
+    def _initCommitMessageTab(self):
+        self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())
+        self.ui.cbTab.setChecked(self.settings.tabToNextGroup())
+        self.ui.leGroupChars.setText(self.settings.groupChars())
 
-        value = self.ui.cbShowPC.isChecked()
-        self.settings.setShowParentChild(value)
+        actions = self.settings.commitActions()
+        self.ui.tvActions.model().setRawData(actions)
 
-        value = self.ui.cbColorSchema.currentData()
-        self.settings.setColorSchemaMode(value)
+    def _saveCommitMessageTab(self):
+        value = self.ui.cbIgnoreComment.isChecked()
+        self.settings.setIgnoreCommentLine(value)
+
+        value = self.ui.cbTab.isChecked()
+        self.settings.setTabToNextGroup(value)
+
+        value = self.ui.leGroupChars.text().strip()
+        self.settings.setGroupChars(value)
+
+        actions = self.ui.tvActions.model().rawData()
+        self.settings.setCommitActions(actions)
+
+    def _onAddActionClicked(self):
+        self._tableViewAddItem(
+            self.ui.tvActions, CommitActionTableModel.Col_Cmd)
+
+    def _onDeleteActionClicked(self):
+        self._tableViewDeleteItem(self.ui.tvActions)
+
+    def _onGithubCopilotClicked(self):
+        if self.ui.btnGithubCopilot.text() == self.tr("Logout"):
+            self.settings.setGithubCopilotAccessToken("")
+            self.ui.btnGithubCopilot.setText(self.tr("Login"))
+        else:
+            dialog = GithubCopilotLoginDialog(self)
+            dialog.exec()
+            if dialog.isLoginSuccessful():
+                self.ui.btnGithubCopilot.setText(self.tr("Logout"))

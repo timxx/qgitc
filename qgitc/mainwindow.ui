@@ -176,8 +176,15 @@
     </widget>
     <addaction name="menuCopy_To_Conflict_Log"/>
    </widget>
+   <widget class="QMenu" name="menu_Git">
+    <property name="title">
+     <string>&amp;Git</string>
+    </property>
+    <addaction name="acCommit"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_Edit"/>
+   <addaction name="menu_Git"/>
    <addaction name="menu_View"/>
    <addaction name="menu_Merge"/>
    <addaction name="menu_Settings"/>
@@ -372,6 +379,11 @@
    </property>
    <property name="text">
     <string>Com&amp;posite Mode</string>
+   </property>
+  </action>
+  <action name="acCommit">
+   <property name="text">
+    <string>&amp;Commit</string>
    </property>
   </action>
  </widget>
