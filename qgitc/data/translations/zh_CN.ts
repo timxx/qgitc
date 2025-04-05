@@ -1111,32 +1111,37 @@
         <translation>提交(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="230"/>
+        <location filename="../../mainwindow.py" line="87"/>
+        <source>Show AI Assistant</source>
+        <translation>显示AI助手</translation>
+    </message>
+    <message>
+        <location filename="../../mainwindow.py" line="231"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="239"/>
+        <location filename="../../mainwindow.py" line="240"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="255"/>
+        <location filename="../../mainwindow.py" line="256"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="576"/>
+        <location filename="../../mainwindow.py" line="577"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="577"/>
+        <location filename="../../mainwindow.py" line="578"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="565"/>
+        <location filename="../../mainwindow.py" line="566"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>

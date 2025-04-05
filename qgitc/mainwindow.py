@@ -84,6 +84,7 @@ class MainWindow(StateWindow):
         assistantButton.setIcon(icon)
         assistantButton.clicked.connect(
             self._onShowAiAssistant)
+        assistantButton.setToolTip(self.tr("Show AI Assistant"))
 
         self.statusBar().addPermanentWidget(assistantButton)
 
