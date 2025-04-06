@@ -86,6 +86,9 @@ class ColorSchemaLight():
 
     Comment = QColor(0x207f0b)
 
+    AiResponseFg = QColor(0x212121)
+    AiResponseBg = QColor(0xF5F5F5)
+
 
 class ColorSchemaDark():
 
@@ -159,3 +162,6 @@ class ColorSchemaDark():
     LineNumber = QColor(0x999999)
 
     Comment = QColor(0x6e9857)
+
+    AiResponseFg = QColor(0xEEEEEE)
+    AiResponseBg = QColor(0x373737)

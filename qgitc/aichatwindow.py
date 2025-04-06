@@ -342,7 +342,7 @@ class AiChatWidget(QWidget):
         index = self.cbBots.findData(model)
 
         assert (index != -1)
-        messages = self.stackWidget.widget(index)
+        messages: QTextBrowser = self.stackWidget.widget(index)
 
         cursor = messages.textCursor()
         cursor.movePosition(QTextCursor.End)
@@ -358,7 +358,8 @@ class AiChatWidget(QWidget):
             cursor.insertText(response.role + ":")
 
         if response.role != "user" and response.role != "system":
-            format.setBackground(Qt.lightGray)
+            format.setBackground(qApp.colorSchema().AiResponseBg)
+            format.setForeground(qApp.colorSchema().AiResponseFg)
 
         if not response.is_delta or response.first_delta:
             cursor.insertBlock(format, QTextCharFormat())
