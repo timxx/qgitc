@@ -287,10 +287,6 @@ class AiChatWidget(QWidget):
         self._tokenCalculator = None
 
     def __del__(self):
-        for i in range(self.cbBots.count()):
-            model: AiModelBase = self.cbBots.itemData(i)
-            model.requestInterruption()
-
         if self._tokenCalculator:
             self._tokenCalculator.calc_async(None, None)
             self._tokenCalculator.requestInterruption()

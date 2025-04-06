@@ -52,6 +52,10 @@ class AiModelBase(QThread):
         self._mutex = Lock()
         self._params: AiParameters = None
 
+    def __del__(self):
+        if self.isRunning():
+            self.requestInterruption()
+
     def clear(self):
         with self._mutex:
             self._history.clear()
