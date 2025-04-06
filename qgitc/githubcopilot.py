@@ -90,6 +90,8 @@ class GithubCopilot(AiModelBase):
             content = ""
             first_delta = True
             for chunk in response.iter_lines():
+                if self.isInterruptionRequested():
+                    return
                 if not chunk:
                     continue
                 if not chunk.startswith(b"data:"):

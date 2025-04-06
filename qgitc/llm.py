@@ -1,6 +1,6 @@
 import json
+from threading import Lock
 from PySide6.QtCore import (
-    QObject,
     Signal,
     QThread)
 import requests
@@ -40,7 +40,7 @@ class AiChatMode:
     CodeExplanation = 5
 
 
-class AiModelBase(QObject):
+class AiModelBase(QThread):
     responseAvailable = Signal(AiResponse)
     nameChanged = Signal()
     serviceUnavailable = Signal()
@@ -49,19 +49,30 @@ class AiModelBase(QObject):
         super().__init__(parent)
         self._history = []
         self.url_base = url
+        self._mutex = Lock()
+        self._params: AiParameters = None
 
     def clear(self):
-        self._history.clear()
+        with self._mutex:
+            self._history.clear()
+
+    def queryAsync(self, params: AiParameters):
+        self._params = params
+        self.start()
 
     def query(self, params: AiParameters):
         pass
 
     def add_history(self, message):
-        self._history.append(message)
+        with self._mutex:
+            self._history.append(message)
 
     @property
     def name(self):
         return None
+
+    def run(self):
+        self.query(self._params)
 
 
 class ChatGPTModel(AiModelBase):
@@ -127,6 +138,8 @@ class ChatGPTModel(AiModelBase):
             content = ""
             first_delta = True
             for chunk in response.iter_lines():
+                if self.isInterruptionRequested():
+                    return
                 if not chunk:
                     continue
                 if not chunk.startswith(b"data:"):

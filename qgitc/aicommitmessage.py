@@ -2,7 +2,7 @@
 
 import os
 from typing import List
-from PySide6.QtCore import QObject, Signal, QEvent, QThread
+from PySide6.QtCore import QObject, Signal, QEvent
 
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
@@ -67,24 +67,6 @@ class CommitInfoEvent(QEvent):
         self.repoLogs = repoLogs
 
 
-class GenerateThread(QThread):
-    responseAvailable = Signal(AiResponse)
-
-    def __init__(self, model: AiModelBase, parent=None):
-        super().__init__(parent)
-        self._model = model
-        self._params: AiParameters = None
-
-        self._model.responseAvailable.connect(self.responseAvailable)
-
-    def generate(self, params: AiParameters):
-        self._params = params
-        self.start()
-
-    def run(self):
-        self._model.query(self._params)
-
-
 class AiCommitMessage(QObject):
     messageAvailable = Signal(str)
 
@@ -99,7 +81,7 @@ class AiCommitMessage(QObject):
         self._diffs: List[str] = []
         self._message = ""
 
-        self._aiThread: GenerateThread = None
+        self._aiModel: AiModelBase = None
 
     def __del__(self):
         self.cancel()
@@ -128,13 +110,13 @@ class AiCommitMessage(QObject):
         self._executor.submit(repoData, self._fetchCommitInfo)
 
     def cancel(self):
-        if self._aiThread:
-            self._aiThread.responseAvailable.disconnect(
+        if self._aiModel:
+            self._aiModel.responseAvailable.disconnect(
                 self._onAiResponseAvailable)
-            self._aiThread.finished.disconnect(self._onAiResponseFinished)
-            self._aiThread.requestInterruption()
-            self._aiThread.wait(50)
-            self._aiThread = None
+            self._aiModel.finished.disconnect(self._onAiResponseFinished)
+            self._aiModel.requestInterruption()
+            self._aiModel.wait(50)
+            self._aiModel = None
 
         self._executor.cancel()
 
@@ -183,16 +165,15 @@ class AiCommitMessage(QObject):
             code_changes="\n".join(self._diffs)
         )
 
-        if self._aiThread:
-            # useless for now
-            self._aiThread.requestInterruption()
-            self._aiThread.wait(50)
+        if self._aiModel:
+            self._aiModel.requestInterruption()
+            self._aiModel.wait(50)
 
         # TODO: add model provider to provide models
-        self._aiThread = GenerateThread(GithubCopilot(self), self)
-        self._aiThread.responseAvailable.connect(self._onAiResponseAvailable)
-        self._aiThread.finished.connect(self._onAiResponseFinished)
-        self._aiThread.generate(params)
+        self._aiModel = GithubCopilot(self)
+        self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
+        self._aiModel.finished.connect(self._onAiResponseFinished)
+        self._aiModel.queryAsync(params)
 
     @staticmethod
     def _makeLogs(logs: List[str]):
@@ -240,4 +221,4 @@ class AiCommitMessage(QObject):
                 message = message[:-3]
             message = message.strip()
             self.messageAvailable.emit(message)
-        self._aiThread = None
+        self._aiModel = None

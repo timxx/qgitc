@@ -90,55 +90,6 @@ class LocalLLMTokensCalculator(QThread):
             return 0
 
 
-class ChatThread(QThread):
-
-    responseAvailable = Signal(AiModelBase, AiResponse)
-    responseFinish = Signal()
-    serviceUnavailable = Signal(AiModelBase)
-
-    def __init__(self, model: AiModelBase, parent=None):
-        super().__init__(parent)
-        self._lock = threading.Lock()
-        self._task_queue = queue.Queue(multiprocessing.cpu_count())
-        self._model = model
-        self._querying = False
-
-        self._model.responseAvailable.connect(
-            self._onResponseAvailable, Qt.UniqueConnection)
-        self._model.serviceUnavailable.connect(
-            self._onServiceUnavailable, Qt.UniqueConnection)
-
-    def addTask(self, params: AiParameters):
-        self._task_queue.put(params)
-
-    def clearHistory(self):
-        self._model.clear()
-
-    def run(self):
-        while not self.isInterruptionRequested():
-            task = self._task_queue.get()
-            if task is None:
-                break
-
-            with self._lock:
-                self._querying = True
-            self._model.query(task)
-            self.responseFinish.emit()
-
-            with self._lock:
-                self._querying = False
-
-    def inQuery(self):
-        with self._lock:
-            return self._querying
-
-    def _onResponseAvailable(self, response):
-        self.responseAvailable.emit(self._model, response)
-
-    def _onServiceUnavailable(self):
-        self.serviceUnavailable.emit(self._model)
-
-
 class ChatEdit(QWidget):
     MaxLines = 5
     enterPressed = Signal()
@@ -255,20 +206,23 @@ class AiChatWidget(QWidget):
         self.cbBots.setEditable(False)
         self.cbBots.setMinimumWidth(130)
 
-        self._ai_models = [
+        aiModels: List[AiModelBase] = [
             LocalLLM(qApp.settings().llmServer(), self),
             GithubCopilot(self),
         ]
 
-        self._ai_models[0].nameChanged.connect(
+        aiModels[0].nameChanged.connect(
             self._onModelNameChanged)
 
-        for model in self._ai_models:
-            self.cbBots.addItem(model.name)
+        for model in aiModels:
+            self.cbBots.addItem(model.name, model)
             tb = QTextBrowser(self)
             self.stackWidget.addWidget(tb)
             tb.verticalScrollBar().valueChanged.connect(
                 self._onTextBrowserScrollbarChanged)
+            model.responseAvailable.connect(self._onMessageReady)
+            model.finished.connect(self._onResponseFinish)
+            model.serviceUnavailable.connect(self._onServiceUnavailable)
 
         if qApp.settings().useLocalLlm():
             self.cbBots.setCurrentIndex(0)
@@ -318,8 +272,6 @@ class AiChatWidget(QWidget):
         self.btnSend.clicked.connect(self._onButtonSend)
         self.btnClear.clicked.connect(self._onButtonClear)
 
-        self._chatThreads = {}
-
         self.cbBots.currentIndexChanged.connect(
             self._onModelChanged)
         self.cbChatMode.currentIndexChanged.connect(
@@ -335,9 +287,9 @@ class AiChatWidget(QWidget):
         self._tokenCalculator = None
 
     def __del__(self):
-        for _, thread in self._chatThreads.items():
-            thread.requestInterruption()
-            thread.addTask(None)
+        for i in range(self.cbBots.count()):
+            model: AiModelBase = self.cbBots.itemData(i)
+            model.requestInterruption()
 
         if self._tokenCalculator:
             self._tokenCalculator.calc_async(None, None)
@@ -345,22 +297,6 @@ class AiChatWidget(QWidget):
 
     def sizeHint(self):
         return QSize(800, 600)
-
-    def _ensureChatThread(self):
-        index = self.cbBots.currentIndex()
-        if index in self._chatThreads:
-            return
-
-        chatThread = ChatThread(self._ai_models[index], self)
-        chatThread.responseAvailable.connect(
-            self._onMessageReady)
-        chatThread.responseFinish.connect(
-            self._onResponseFinish)
-        chatThread.serviceUnavailable.connect(
-            self._onServiceUnavailable)
-        chatThread.start()
-
-        self._chatThreads[index] = chatThread
 
     def _onButtonSend(self, clicked):
         self._doRequest(
@@ -383,11 +319,10 @@ class AiChatWidget(QWidget):
 
         self._disableAutoScroll = False
 
-        self._ensureChatThread()
+        model = self.currentChatModel()
+        self._doMessageReady(model, AiResponse("user", params.prompt))
 
-        self._onMessageReady(None, AiResponse("user", params.prompt))
-
-        self.currentChatThread().addTask(params)
+        model.queryAsync(params)
 
         self.btnSend.setEnabled(False)
         self.btnClear.setEnabled(False)
@@ -396,19 +331,19 @@ class AiChatWidget(QWidget):
         self.usrInput.setFocus()
 
     def _onButtonClear(self, clicked):
-        if chatThread := self.currentChatThread():
-            chatThread.clearHistory()
+        if model := self.currentChatModel():
+            model.clear()
         self.messages.clear()
 
-    def _onMessageReady(self, model, response: AiResponse):
+    def _onMessageReady(self, response: AiResponse):
         if response.message is None:
             return
 
-        index = -1
-        if model is None:
-            index = self.cbBots.currentIndex()
-        else:
-            index = self._ai_models.index(model)
+        model: AiModelBase = self.sender()
+        self._doMessageReady(model, response)
+
+    def _doMessageReady(self, model: AiModelBase, response: AiResponse):
+        index = self.cbBots.findData(model)
 
         assert (index != -1)
         messages = self.stackWidget.widget(index)
@@ -449,26 +384,23 @@ class AiChatWidget(QWidget):
 
     def _onResponseFinish(self):
         clear = True
-        for thread in self._chatThreads.values():
-            if thread.inQuery():
+        for i in range(self.cbBots.count()):
+            model: AiModelBase = self.cbBots.itemData(i)
+            if model.isRunning():
                 clear = False
                 break
 
-        thread = self.currentChatThread()
-        enabled = thread is None or not thread.inQuery()
+        model = self.currentChatModel()
+        enabled = model is None or not model.isRunning()
         self.btnSend.setEnabled(enabled)
         self.btnClear.setEnabled(enabled)
         if clear:
             self.statusBar.clearMessage()
         self.usrInput.setFocus()
 
-    def _onServiceUnavailable(self, model):
-        index = -1
-        if model is None:
-            index = self.cbBots.currentIndex()
-        else:
-            index = self._ai_models.index(model)
-
+    def _onServiceUnavailable(self):
+        model: AiModelBase = self.sender()
+        index = self.cbBots.findData(model)
         assert (index != -1)
         messages = self.stackWidget.widget(index)
 
@@ -490,8 +422,8 @@ class AiChatWidget(QWidget):
     def _onModelChanged(self, index):
         self.stackWidget.setCurrentIndex(index)
 
-        thread = self.currentChatThread()
-        enabled = thread is None or not thread.inQuery()
+        model = self.currentChatModel()
+        enabled = model is None or not model.isRunning()
 
         self.btnSend.setEnabled(enabled)
         self.btnClear.setEnabled(enabled)
@@ -527,14 +459,14 @@ class AiChatWidget(QWidget):
         if self._adjustingSccrollbar:
             return
 
-        chatThread = self.currentChatThread()
-        if chatThread is not None and chatThread.inQuery():
+        model = self.currentChatModel()
+        if model is not None and model.isRunning():
             sb: QScrollBar = self.messages.verticalScrollBar()
             self._disableAutoScroll = sb.value() != sb.maximum()
 
     def _onModelNameChanged(self):
-        model = self.sender()
-        index = self._ai_models.index(model)
+        model: AiModelBase = self.sender()
+        index = self.cbBots.findData(model)
         self.cbBots.setItemText(index, model.name)
 
     def _onCalcTokensFinished(self, tokens):
@@ -544,12 +476,8 @@ class AiChatWidget(QWidget):
     def messages(self):
         return self.stackWidget.currentWidget()
 
-    def currentChatThread(self):
-        index = self.cbBots.currentIndex()
-        if index not in self._chatThreads:
-            return None
-
-        return self._chatThreads[index]
+    def currentChatModel(self) -> AiModelBase:
+        return self.cbBots.currentData()
 
     def isLocalLLM(self):
         return self.cbBots.currentIndex() == 0
