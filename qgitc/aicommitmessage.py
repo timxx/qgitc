@@ -60,10 +60,11 @@ commit message goes here
 class CommitInfoEvent(QEvent):
     Type = QEvent.User + 1
 
-    def __init__(self, diff: str, logs: List[str]):
+    def __init__(self, diff: str, userLogs: List[str], repoLogs: List[str]):
         super().__init__(QEvent.Type(CommitInfoEvent.Type))
         self.diff = diff
-        self.logs = logs
+        self.userLogs = userLogs
+        self.repoLogs = repoLogs
 
 
 class GenerateThread(QThread):
@@ -93,7 +94,8 @@ class AiCommitMessage(QObject):
         self._executor = SubmoduleExecutor(self)
         self._executor.finished.connect(self._onFetchCommitInfoFinished)
 
-        self._logs: List[str] = []
+        self._userLogs: List[str] = []
+        self._repoLogs: List[str] = []
         self._diffs: List[str] = []
         self._message = ""
 
@@ -119,7 +121,8 @@ class AiCommitMessage(QObject):
 
         self.cancel()
 
-        self._logs.clear()
+        self._userLogs.clear()
+        self._repoLogs.clear()
         self._diffs.clear()
         self._message = ""
         self._executor.submit(repoData, self._fetchCommitInfo)
@@ -143,7 +146,22 @@ class AiCommitMessage(QObject):
         else:
             diff = ""
 
+        repoLogs = AiCommitMessage._fetchLogs(repoDir, commitCount)
+
+        author = Git.userName()
+        if author:
+            userLogs = AiCommitMessage._fetchLogs(repoDir, commitCount, author)
+        else:
+            userLogs = []
+
+        qApp.postEvent(self, CommitInfoEvent(diff, userLogs, repoLogs))
+
+    @staticmethod
+    def _fetchLogs(repoDir: str, commitCount: int, author=None):
         args = ["log", "--pretty=format:%B", "-z", "-n", str(commitCount)]
+        if author:
+            args.append("--author={}".format(author))
+
         logs = Git.checkOutput(args, repoDir=repoDir)
         if logs is not None:
             logs = logs.decode("utf-8", errors="replace").split("\0")
@@ -151,7 +169,7 @@ class AiCommitMessage(QObject):
         else:
             logs = []
 
-        qApp.postEvent(self, CommitInfoEvent(diff, logs))
+        return logs
 
     def _onFetchCommitInfoFinished(self):
         params = AiParameters()
@@ -159,10 +177,9 @@ class AiCommitMessage(QObject):
         params.temperature = 0.1
         params.max_tokens = 4096
 
-        logs = AiCommitMessage._makeLogs(self._logs)
         params.prompt = COMMIT_PROMPT.format(
-            user_commits=logs,
-            recent_commits=logs,
+            user_commits=AiCommitMessage._makeLogs(self._userLogs),
+            recent_commits=AiCommitMessage._makeLogs(self._repoLogs),
             code_changes="\n".join(self._diffs)
         )
 
@@ -196,16 +213,19 @@ class AiCommitMessage(QObject):
 
     def event(self, evt):
         if evt.type() == CommitInfoEvent.Type:
-            diff = evt.diff
-            logs = evt.logs
-            if diff:
-                self._diffs.append(diff)
-            for log in logs:
-                if log not in self._logs:
-                    self._logs.append(log)
+            if evt.diff:
+                self._diffs.append(evt.diff)
+            AiCommitMessage._appendLogs(self._userLogs, evt.userLogs)
+            AiCommitMessage._appendLogs(self._repoLogs, evt.repoLogs)
             return True
 
         return super().event(evt)
+
+    @staticmethod
+    def _appendLogs(oldLogs: List[str], newLogs: List[str]):
+        for log in newLogs:
+            if log not in oldLogs:
+                oldLogs.append(log)
 
     def _onAiResponseAvailable(self, response: AiResponse):
         if response.message:
