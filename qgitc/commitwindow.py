@@ -38,7 +38,7 @@ from .commitactiontablemodel import ActionCondition, CommitAction
 from .common import dataDirPath, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import DiffView, _makeTextIcon
-from .events import LocalChangesCommittedEvent, ShowCommitEvent
+from .events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
 from .findsubmodules import FindSubmoduleThread
 from .gitutils import Git
 from .preferences import Preferences
@@ -1120,6 +1120,13 @@ class CommitWindow(StateWindow):
                 QMessageBox.Ok)
 
     def _onGenMessageClicked(self):
+        submodules = self._collectStagedRepos()
+        assert (submodules)
+        self.ui.btnGenMessage.hide()
+        self.ui.btnCancelGen.show()
+        self._aiMessage.generate(list(submodules))
+
+    def _collectStagedRepos(self):
         model = self.ui.lvStaged.model()
         submodules = set()
         for row in range(model.rowCount()):
@@ -1127,10 +1134,8 @@ class CommitWindow(StateWindow):
             repoDir = model.data(
                 index, StatusFileListModel.RepoDirRole)
             submodules.add(repoDir)
-        assert (submodules)
-        self.ui.btnGenMessage.hide()
-        self.ui.btnCancelGen.show()
-        self._aiMessage.generate(list(submodules))
+
+        return submodules
 
     def _onAiMessageAvailable(self, message: str):
         self.ui.btnCancelGen.hide()
@@ -1159,4 +1164,8 @@ class CommitWindow(StateWindow):
         super().keyPressEvent(event)
 
     def _onCodeReviewClicked(self):
-        pass
+        submodules = self._collectStagedRepos()
+        assert (submodules)
+
+        event = CodeReviewEvent(list(submodules))
+        qApp.postEvent(qApp, event)

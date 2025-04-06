@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from typing import List, overload
 from PySide6.QtCore import QEvent, QObject
+
+from .common import Commit
 
 
 class BlameEvent(QEvent):
@@ -53,10 +56,21 @@ class GitBinChanged(QEvent):
 class CodeReviewEvent(QEvent):
     Type = QEvent.User + 6
 
-    def __init__(self, commit, args=None):
+    @overload
+    def __init__(self, commit: Commit, args: List[str] = None): ...
+
+    @overload
+    def __init__(self, submodules: List[str]): ...
+
+    def __init__(self, *args):
         super().__init__(QEvent.Type(CodeReviewEvent.Type))
-        self.commit = commit
-        self.args = args
+
+        if len(args) == 1 and isinstance(args[0], list):
+            self.submodules = args[0]
+        else:
+            self.submodules = None
+            self.commit = args[0]
+            self.args = args[1] if len(args) > 1 else None
 
 
 class RequestCommitEvent(QEvent):

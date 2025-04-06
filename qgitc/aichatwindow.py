@@ -1,3 +1,4 @@
+from typing import List
 from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -26,7 +27,8 @@ from PySide6.QtCore import (
     QThread,
     Signal,
     QSize,
-    Qt)
+    Qt,
+    QEvent)
 
 import json
 import queue as queue
@@ -34,11 +36,12 @@ import multiprocessing
 import threading
 import requests
 
-from .common import commitRepoDir
+from .common import commitRepoDir, fullRepoDir
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
 from .statewindow import StateWindow
+from .submoduleexecutor import SubmoduleExecutor
 
 
 class LocalLLMTokensCalculator(QThread):
@@ -553,18 +556,31 @@ class AiChatWidget(QWidget):
 
     def codeReview(self, commit, args):
         repoDir = commitRepoDir(commit)
-        data: bytes = Git.commitRawDiff(commit.sha1, gitArgs=args, repoDir=repoDir)
+        data: bytes = Git.commitRawDiff(
+            commit.sha1, gitArgs=args, repoDir=repoDir)
         if not data:
             return
-        
+
         for subCommit in commit.subCommits:
             repoDir = commitRepoDir(subCommit)
-            subData = Git.commitRawDiff(subCommit.sha1, gitArgs=args, repoDir=repoDir)
+            subData = Git.commitRawDiff(
+                subCommit.sha1, gitArgs=args, repoDir=repoDir)
             if subData:
                 data += b"\n" + subData
 
         diff = data.decode("utf-8", errors="replace")
         self._doRequest(diff, AiChatMode.CodeReview)
+
+    def codeReviewForDiff(self, diff: str):
+        self._doRequest(diff, AiChatMode.CodeReview)
+
+
+class DiffAvailableEvent(QEvent):
+    Type = QEvent.User + 1
+
+    def __init__(self, diff: str):
+        super().__init__(QEvent.Type(DiffAvailableEvent.Type))
+        self.diff = diff
 
 
 class AiChatWindow(StateWindow):
@@ -576,5 +592,40 @@ class AiChatWindow(StateWindow):
         centralWidget = AiChatWidget(self)
         self.setCentralWidget(centralWidget)
 
+        self._executor: SubmoduleExecutor = None
+        self._diffs: List[str] = []
+
     def codeReview(self, commit, args=None):
         self.centralWidget().codeReview(commit, args)
+
+    def codeReviewForStagedFiles(self, submodules: List[str]):
+        self._ensureExecutor()
+        self._diffs.clear()
+        self._executor.submit(submodules, self._fetchDiff)
+
+    def _ensureExecutor(self):
+        if self._executor is None:
+            self._executor = SubmoduleExecutor(self)
+            self._executor.finished.connect(self._onExecuteFinished)
+
+    def _onExecuteFinished(self):
+        if self._diffs:
+            diff = "\n".join(self._diffs)
+            self.centralWidget().codeReviewForDiff(diff)
+
+    def _fetchDiff(self, submodule: str, userData):
+        repoDir = fullRepoDir(submodule)
+        data: bytes = Git.commitRawDiff(Git.LCC_SHA1, repoDir=repoDir)
+        if not data:
+            return
+
+        diff = data.decode("utf-8", errors="replace")
+        qApp.postEvent(self, DiffAvailableEvent(diff))
+
+    def event(self, event: QEvent):
+        if event.type() == DiffAvailableEvent.Type:
+            if event.diff:
+                self._diffs.append(event.diff)
+            return True
+
+        return super().event(event)

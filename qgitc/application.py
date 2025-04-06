@@ -189,7 +189,10 @@ class Application(QApplication):
         if type == CodeReviewEvent.Type:
             window = self.getWindow(Application.AiAssistant)
             self._ensureVisible(window)
-            window.codeReview(event.commit, event.args)
+            if event.submodules is not None:
+                window.codeReviewForStagedFiles(event.submodules)
+            else:
+                window.codeReview(event.commit, event.args)
             return True
 
         if type == ShowAiAssistantEvent.Type:
