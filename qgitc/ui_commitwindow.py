@@ -219,6 +219,11 @@ class Ui_CommitWindow(object):
 
         self.horizontalLayout_3.addWidget(self.btnCancelGen)
 
+        self.btnCodeReview = ColoredIconToolButton(self.frame_4)
+        self.btnCodeReview.setObjectName(u"btnCodeReview")
+
+        self.horizontalLayout_3.addWidget(self.btnCodeReview)
+
         self.btnShowLog = ColoredIconToolButton(self.frame_4)
         self.btnShowLog.setObjectName(u"btnShowLog")
 
@@ -384,7 +389,11 @@ class Ui_CommitWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.btnCancelGen.setText("")
 #if QT_CONFIG(tooltip)
-        self.btnShowLog.setToolTip(QCoreApplication.translate("CommitWindow", u"Show log window", None))
+        self.btnCodeReview.setToolTip(QCoreApplication.translate("CommitWindow", u"Make Code Review With AI Assistant", None))
+#endif // QT_CONFIG(tooltip)
+        self.btnCodeReview.setText("")
+#if QT_CONFIG(tooltip)
+        self.btnShowLog.setToolTip(QCoreApplication.translate("CommitWindow", u"Show Log Window", None))
 #endif // QT_CONFIG(tooltip)
         self.btnShowLog.setText("")
         self.tbOptions.setText(QCoreApplication.translate("CommitWindow", u"Options", None))

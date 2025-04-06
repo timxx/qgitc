@@ -351,9 +351,19 @@
                 </widget>
                </item>
                <item>
+                <widget class="ColoredIconToolButton" name="btnCodeReview">
+                 <property name="toolTip">
+                  <string>Make Code Review With AI Assistant</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="ColoredIconToolButton" name="btnShowLog">
                  <property name="toolTip">
-                  <string>Show log window</string>
+                  <string>Show Log Window</string>
                  </property>
                  <property name="text">
                   <string/>

@@ -317,84 +317,84 @@
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="455"/>
+        <location filename="../../commitwindow.py" line="461"/>
         <source>Inconsistent branches</source>
         <translation>分支不一致</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="459"/>
+        <location filename="../../commitwindow.py" line="465"/>
         <source>You have different branches in submodules:</source>
         <translation>各仓库的分支不完全一致：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="588"/>
+        <location filename="../../commitwindow.py" line="594"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="592"/>
+        <location filename="../../commitwindow.py" line="598"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="594"/>
+        <location filename="../../commitwindow.py" line="600"/>
         <source>Invalid commit message</source>
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="768"/>
+        <location filename="../../commitwindow.py" line="775"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="797"/>
+        <location filename="../../commitwindow.py" line="804"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="857"/>
+        <location filename="../../commitwindow.py" line="864"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="867"/>
+        <location filename="../../commitwindow.py" line="874"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="913"/>
+        <location filename="../../commitwindow.py" line="920"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="922"/>
+        <location filename="../../commitwindow.py" line="929"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1003"/>
-        <location filename="../../commitwindow.ui" line="549"/>
+        <location filename="../../commitwindow.py" line="1010"/>
+        <location filename="../../commitwindow.ui" line="559"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1004"/>
+        <location filename="../../commitwindow.py" line="1011"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1006"/>
-        <location filename="../../commitwindow.ui" line="510"/>
+        <location filename="../../commitwindow.py" line="1013"/>
+        <location filename="../../commitwindow.ui" line="520"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1008"/>
+        <location filename="../../commitwindow.py" line="1015"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1111"/>
+        <location filename="../../commitwindow.py" line="1118"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
     </message>
@@ -435,40 +435,49 @@
     </message>
     <message>
         <location filename="../../commitwindow.ui" line="356"/>
-        <source>Show log window</source>
+        <source>Make Code Review With AI Assistant</source>
+        <translation>使用AI助手进行代码审查</translation>
+    </message>
+    <message>
+        <location filename="../../commitwindow.ui" line="366"/>
+        <source>Show Log Window</source>
         <translation>显示日志窗口</translation>
+    </message>
+    <message>
+        <source>Show log window</source>
+        <translation type="vanished">显示日志窗口</translation>
     </message>
     <message>
         <source>Show commit window</source>
         <translation type="vanished">显示日志窗口</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.ui" line="385"/>
+        <location filename="../../commitwindow.ui" line="395"/>
         <source>Options</source>
         <translation>选项</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.ui" line="415"/>
+        <location filename="../../commitwindow.ui" line="425"/>
         <source>&amp;Amend last message</source>
         <translation>修改最新提交(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.ui" line="435"/>
+        <location filename="../../commitwindow.ui" line="445"/>
         <source>&amp;Commit</source>
         <translation>提交(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.ui" line="438"/>
+        <location filename="../../commitwindow.ui" line="448"/>
         <source>Ctrl+Return</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../commitwindow.ui" line="458"/>
+        <location filename="../../commitwindow.ui" line="468"/>
         <source>Run custom actions after commit, please config actions in Options</source>
         <translation>在提交后执行自定义动作，请在选项处配置动作</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.ui" line="461"/>
+        <location filename="../../commitwindow.ui" line="471"/>
         <source>&amp;Run actions after commit</source>
         <translation>执行提交后动作(&amp;R)</translation>
     </message>

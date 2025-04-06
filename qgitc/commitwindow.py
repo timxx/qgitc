@@ -390,6 +390,12 @@ class CommitWindow(StateWindow):
         self._aiMessage.messageAvailable.connect(
             self._onAiMessageAvailable)
 
+        icon = QIcon(iconsPath + "/reviews.svg")
+        self.ui.btnCodeReview.setIcon(icon)
+        self.ui.btnCodeReview.clicked.connect(
+            self._onCodeReviewClicked)
+        self.ui.btnCodeReview.setEnabled(False)
+
         icon = QIcon(iconsPath + "/commit.svg")
         self.ui.btnShowLog.setIcon(icon)
         self.ui.btnShowLog.clicked.connect(
@@ -633,6 +639,7 @@ class CommitWindow(StateWindow):
         enabled = hasStagedFiles or self.ui.cbAmend.isChecked()
         self.ui.btnCommit.setEnabled(enabled)
         self.ui.btnGenMessage.setEnabled(hasStagedFiles)
+        self.ui.btnCodeReview.setEnabled(hasStagedFiles)
 
     def _doCommit(self, submodule: str, userData: Tuple[str, bool, list]):
         amend = userData[1]
@@ -1150,3 +1157,6 @@ class CommitWindow(StateWindow):
                 return
 
         super().keyPressEvent(event)
+
+    def _onCodeReviewClicked(self):
+        pass
