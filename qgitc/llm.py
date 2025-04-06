@@ -78,6 +78,9 @@ class AiModelBase(QThread):
     def run(self):
         self.query(self._params)
 
+    def isLocal(self):
+        return False
+
 
 class ChatGPTModel(AiModelBase):
 
@@ -247,6 +250,9 @@ class LocalLLM(ChatGPTModel):
     @property
     def name(self):
         return self._name
+
+    def isLocal(self):
+        return True
 
     def update_name(self, name):
         if self.model != name:

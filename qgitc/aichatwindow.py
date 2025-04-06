@@ -477,7 +477,7 @@ class AiChatWidget(QWidget):
         return self.cbBots.currentData()
 
     def isLocalLLM(self):
-        return self.cbBots.currentIndex() == 0
+        return self.currentChatModel().isLocal()
 
     def codeReview(self, commit, args):
         repoDir = commitRepoDir(commit)
