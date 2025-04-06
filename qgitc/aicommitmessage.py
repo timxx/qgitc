@@ -182,7 +182,7 @@ class AiCommitMessage(QObject):
             lines = log.splitlines()
             message += "- " + lines[0]
             for line in lines[1:]:
-                message += "  \n" + line
+                message += "  \n  " + line
             message += "\n"
         return message
 
