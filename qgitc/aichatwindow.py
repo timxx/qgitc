@@ -238,7 +238,7 @@ class AiChatWidget(QWidget):
         self.sbMaxTokens = QSpinBox(self)
         self.sbMaxTokens.setRange(1, 0x7FFFFFFF)
         self.sbMaxTokens.setSingleStep(500)
-        self.sbMaxTokens.setValue(2048)
+        self.sbMaxTokens.setValue(4096)
         self.sbMaxTokens.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         self.sbMaxTokens.setToolTip(self.tr("Max tokens to generate"))
