@@ -391,8 +391,8 @@ class CommitWindow(StateWindow):
             self._onAiMessageAvailable)
 
         icon = QIcon(iconsPath + "/commit.svg")
-        self.ui.btnShowCommit.setIcon(icon)
-        self.ui.btnShowCommit.clicked.connect(
+        self.ui.btnShowLog.setIcon(icon)
+        self.ui.btnShowLog.clicked.connect(
             self._onShowCommitClicked)
 
     def _setupSpinner(self, spinner):

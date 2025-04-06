@@ -351,9 +351,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="ColoredIconToolButton" name="btnShowCommit">
+                <widget class="ColoredIconToolButton" name="btnShowLog">
                  <property name="toolTip">
-                  <string>Show commit window</string>
+                  <string>Show log window</string>
                  </property>
                  <property name="text">
                   <string/>
