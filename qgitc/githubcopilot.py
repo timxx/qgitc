@@ -11,8 +11,13 @@ from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse
 from .settings import Settings
 
 
-CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions.
-Write your review in {language}:
+CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions. Please focus only on the modified sections of the code. If you notice any serious issues in the old code that could impact functionality or performance, feel free to mention them. Otherwise, concentrate on providing feedback and suggestions for the changes made.
+
+```diff
+{diff}
+```
+
+Please respond in {language}:
 """
 
 
@@ -48,8 +53,8 @@ class GithubCopilot(AiModelBase):
                 "system", params.sys_prompt))
         elif params.chat_mode == AiChatMode.CodeReview:
             prompt = CODE_REVIEW_PROMPT.format(
+                diff=params.prompt,
                 language=QLocale.system().nativeLanguageName())
-            prompt += "\n" + params.prompt
         self.add_history(self._makeMessage("user", prompt))
         payload["messages"] = self._history
 
