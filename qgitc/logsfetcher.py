@@ -74,20 +74,23 @@ class LogsFetcherImpl(DataFetcher):
                     "--pretty=format:{0}".format(log_fmt)]
 
         needBoundary = True
+        paths = None
         # reduce commits to analyze
         if self.repoDir and not self.hasSinceArg(logArgs):
-            days = qApp.settings().maxCompositeCommitsSince()
-            if days > 0:
-                since = date.today() - timedelta(days=days)
-                git_args.append(f"--since={since.isoformat()}")
-                needBoundary = False
+            paths = extractFilePaths(logArgs) if logArgs else None
+            if not paths:
+                days = qApp.settings().maxCompositeCommitsSince()
+                if days > 0:
+                    since = date.today() - timedelta(days=days)
+                    git_args.append(f"--since={since.isoformat()}")
+                    needBoundary = False
 
         if branch:
             git_args.append(branch)
 
         if logArgs:
             if self.repoDir and self.repoDir != ".":
-                paths = extractFilePaths(logArgs)
+                paths = paths or extractFilePaths(logArgs)
                 if paths:
                     for arg in logArgs:
                         if arg not in paths and arg != "--":
