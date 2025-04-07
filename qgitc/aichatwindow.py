@@ -28,6 +28,7 @@ import queue as queue
 import requests
 
 from .aichatbot import AiChatbot
+from .cancelevent import CancelEvent
 from .common import commitRepoDir, fullRepoDir
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
@@ -492,10 +493,13 @@ class AiChatWindow(StateWindow):
             diff = "\n".join(self._diffs)
             self.centralWidget().codeReviewForDiff(diff)
 
-    def _fetchDiff(self, submodule: str, userData):
+    def _fetchDiff(self, submodule: str, userData, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         data: bytes = Git.commitRawDiff(Git.LCC_SHA1, repoDir=repoDir)
         if not data:
+            return
+
+        if cancelEvent.isSet():
             return
 
         diff = data.decode("utf-8", errors="replace")

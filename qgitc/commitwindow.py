@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from .aicommitmessage import AiCommitMessage
+from .cancelevent import CancelEvent
 from .colorediconlabel import ColoredIconLabel
 from .coloredlabel import ColoredLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
@@ -641,19 +642,24 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.setEnabled(hasStagedFiles)
         self.ui.btnCodeReview.setEnabled(hasStagedFiles)
 
-    def _doCommit(self, submodule: str, userData: Tuple[str, bool, list]):
+    def _doCommit(self, submodule: str, userData: Tuple[str, bool, list], cancelEvent: CancelEvent):
         amend = userData[1]
         message = userData[0]
 
         actions: List[CommitAction] = userData[2]
 
         out, error = Git.commit(message, amend, submodule)
+        if cancelEvent.isSet():
+            return
+
         self._updateCommitProgress(submodule, out, error, not actions)
         if not actions:
             return
 
         out, error = None, None
         for action in actions:
+            if cancelEvent.isSet():
+                return
             o, e = CommitWindow._runCommitAction(submodule, action)
             if o:
                 out = out + "\n" + o if out else o
@@ -734,7 +740,7 @@ class CommitWindow(StateWindow):
             return Git.REPO_DIR
         return os.path.join(Git.REPO_DIR, submodule)
 
-    def _doUnstage(self, submodule: str, files: List[str]):
+    def _doUnstage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         repoDir = self._toRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.restoreStagedFiles(repoDir, repoFiles)
@@ -743,7 +749,7 @@ class CommitWindow(StateWindow):
         else:
             qApp.postEvent(self, GitErrorEvent(error))
 
-    def _doStage(self, submodule: str, files: List[str]):
+    def _doStage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         repoDir = self._toRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.addFiles(repoDir, repoFiles)
@@ -896,7 +902,7 @@ class CommitWindow(StateWindow):
         sender = self.sender()
         del sender
 
-    def _fetchRepoInfo(self, submodule: str, userData: any):
+    def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
         templateFile = Git.getConfigValue("commit.template", False)
         if templateFile and os.path.exists(templateFile):
             with open(templateFile, "r", encoding="utf-8") as f:
@@ -1063,8 +1069,10 @@ class CommitWindow(StateWindow):
 
         return out, error
 
-    def _runCommittedAction(self, submodule: str, actions: List[CommitAction]):
+    def _runCommittedAction(self, submodule: str, actions: List[CommitAction], cancelEvent: CancelEvent):
         for action in actions:
+            if cancelEvent and cancelEvent.is_set():
+                return
             out, error = CommitWindow._runCommitAction(submodule, action)
             self._updateCommitProgress(submodule, out, error)
 

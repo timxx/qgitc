@@ -4,6 +4,7 @@ import os
 from typing import List
 from PySide6.QtCore import QObject, Signal, QEvent
 
+from .cancelevent import CancelEvent
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiModelBase, AiParameters, AiResponse
@@ -121,21 +122,29 @@ class AiCommitMessage(QObject):
 
         self._executor.cancel()
 
-    def _fetchCommitInfo(self, submodule: str, commitCount: int):
+    def _fetchCommitInfo(self, submodule: str, commitCount: int, cancelEvent: CancelEvent):
         repoDir = AiCommitMessage._toRepoDir(submodule)
         diff = Git.commitRawDiff(Git.LCC_SHA1, repoDir=repoDir)
+        if cancelEvent.isSet():
+            return
+
         if diff is not None:
             diff = diff.decode("utf-8", errors="replace")
         else:
             diff = ""
 
         repoLogs = AiCommitMessage._fetchLogs(repoDir, commitCount)
+        if cancelEvent.isSet():
+            return
 
         author = Git.userName()
         if author:
             userLogs = AiCommitMessage._fetchLogs(repoDir, commitCount, author)
         else:
             userLogs = []
+
+        if cancelEvent.isSet():
+            return
 
         qApp.postEvent(self, CommitInfoEvent(diff, userLogs, repoLogs))
 

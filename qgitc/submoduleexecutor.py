@@ -5,6 +5,8 @@ import os
 from typing import Callable, Union
 from PySide6.QtCore import QThread, QObject, Signal
 
+from .cancelevent import CancelEvent
+
 
 class SubmoduleThread(QThread):
 
@@ -12,12 +14,15 @@ class SubmoduleThread(QThread):
         super().__init__(parent)
 
         self._submodules = submodules
-        self._actionHandler: Callable[[str, any], any] = None
+        self._actionHandler: Callable[[str, any, CancelEvent], any] = None
         self._resultHandler: Callable[[any], any] = None
+        self._cancellation = CancelEvent(self)
 
     def setActionHandler(self, action: Callable):
         """ Set the action to be performed on each submodule.
-        The action should be a callable that takes a submodule path as an argument, and optionally additional data."""
+        The action should be a callable that takes a a submodule path as an argument,
+        and optionally additional data.
+        The action can be cancelled if the CancelEvent is set."""
         self._actionHandler = action
 
     def setResultHandler(self, resultHandler: Callable):
@@ -28,8 +33,11 @@ class SubmoduleThread(QThread):
         """ Process a single submodule in background thread.
         The action handler is called with the submodule path as an argument.
         The result of the action is passed to the result handler."""
+        if self.isInterruptionRequested():
+            return None
+
         if self._actionHandler:
-            return self._actionHandler(submodule, userData)
+            return self._actionHandler(submodule, userData, self._cancellation)
         return None
 
     def onResultAvailable(self, *args):
@@ -97,6 +105,7 @@ class SubmoduleExecutor(QObject):
 
     def cancel(self):
         if self._thread:
+            self._thread.finished.disconnect(self.onFinished)
             self._thread.requestInterruption()
             self._thread.wait(50)
             self._thread = None

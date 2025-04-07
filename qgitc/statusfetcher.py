@@ -3,6 +3,7 @@
 import os
 from PySide6.QtCore import Signal
 
+from .cancelevent import CancelEvent
 from .gitutils import Git
 from .submoduleexecutor import SubmoduleExecutor
 
@@ -52,7 +53,7 @@ class StatusFetcher(SubmoduleExecutor):
     def setShowIgnoredFiles(self, showIgnoredFiles: bool):
         self._showIgnoredFiles = showIgnoredFiles
 
-    def _fetchStatus(self, repoDir, userData=None):
+    def _fetchStatus(self, repoDir, userData, cancelEvent: CancelEvent):
         if not repoDir or repoDir == '.':
             fullRepoDir = Git.REPO_DIR
         else:
@@ -64,6 +65,9 @@ class StatusFetcher(SubmoduleExecutor):
             if not data:
                 return None, None
         except Exception:
+            return None, None
+
+        if cancelEvent.isSet():
             return None, None
 
         lines = data.rstrip(b'\0').split(b'\0')
