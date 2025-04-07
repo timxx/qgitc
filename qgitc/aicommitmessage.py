@@ -46,6 +46,7 @@ COMMIT_PROMPT = \
 </changes>
 <reminder>
 Now generate a commit messages that describe the CODE CHANGES.
+Please follow the style of the RECENT USER/REPOSITORY COMMITS, and use SAME LANGUAGE.
 DO NOT COPY commits from RECENT COMMITS, but it as reference for the commit style.
 ONLY return a single markdown code block, NO OTHER PROSE!
 ```text
