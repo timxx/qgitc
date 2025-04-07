@@ -11,17 +11,10 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QDoubleSpinBox,
     QSpacerItem,
-    QTextBrowser,
     QComboBox,
     QPushButton,
     QStatusBar,
     QScrollBar)
-
-from PySide6.QtGui import (
-    QTextCursor,
-    QTextBlockFormat,
-    QTextCharFormat,
-    QFont)
 
 from PySide6.QtCore import (
     QThread,
@@ -32,10 +25,9 @@ from PySide6.QtCore import (
 
 import json
 import queue as queue
-import multiprocessing
-import threading
 import requests
 
+from .aichatbot import AiChatbot
 from .common import commitRepoDir, fullRepoDir
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
@@ -216,7 +208,7 @@ class AiChatWidget(QWidget):
 
         for model in aiModels:
             self.cbBots.addItem(model.name, model)
-            tb = QTextBrowser(self)
+            tb = AiChatbot(self)
             self.stackWidget.addWidget(tb)
             tb.verticalScrollBar().valueChanged.connect(
                 self._onTextBrowserScrollbarChanged)
@@ -342,32 +334,8 @@ class AiChatWidget(QWidget):
         index = self.cbBots.findData(model)
 
         assert (index != -1)
-        messages: QTextBrowser = self.stackWidget.widget(index)
-
-        cursor = messages.textCursor()
-        cursor.movePosition(QTextCursor.End)
-
-        format = QTextBlockFormat()
-        roleFormat = QTextCharFormat()
-        roleFormat.setFontWeight(QFont.Bold)
-        if messages.document().blockCount() == 1:
-            cursor.setBlockCharFormat(roleFormat)
-        elif not response.is_delta or response.first_delta:
-            cursor.insertBlock(format, roleFormat)
-        if not response.is_delta or response.first_delta:
-            cursor.insertText(response.role + ":")
-
-        if response.role != "user" and response.role != "system":
-            format.setBackground(qApp.colorSchema().AiResponseBg)
-            format.setForeground(qApp.colorSchema().AiResponseFg)
-
-        if not response.is_delta or response.first_delta:
-            cursor.insertBlock(format, QTextCharFormat())
-        cursor.insertText(response.message)
-
-        if not response.is_delta:
-            cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
-            cursor.insertText("")
+        messages: AiChatbot = self.stackWidget.widget(index)
+        messages.appendResponse(response)
 
         if not self._disableAutoScroll:
             sb = messages.verticalScrollBar()
@@ -399,22 +367,8 @@ class AiChatWidget(QWidget):
         model: AiModelBase = self.sender()
         index = self.cbBots.findData(model)
         assert (index != -1)
-        messages = self.stackWidget.widget(index)
-
-        cursor = messages.textCursor()
-        cursor.movePosition(QTextCursor.End)
-
-        format = QTextBlockFormat()
-        roleFormat = QTextCharFormat()
-        roleFormat.setFontWeight(QFont.Bold)
-        cursor.insertBlock(format, roleFormat)
-        cursor.insertText("System:")
-
-        errorFormat = QTextCharFormat()
-        errorFormat.setForeground(qApp.colorSchema().ErrorText)
-        cursor.insertBlock(QTextBlockFormat(), errorFormat)
-        cursor.insertText(self.tr("Service Unavailable"))
-        cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
+        messages: AiChatbot = self.stackWidget.widget(index)
+        messages.appendServiceUnavailable()
 
     def _onModelChanged(self, index):
         self.stackWidget.setCurrentIndex(index)
@@ -470,7 +424,7 @@ class AiChatWidget(QWidget):
         self.lbTokens.setText(f"{tokens} tokens")
 
     @property
-    def messages(self):
+    def messages(self) -> AiChatbot:
         return self.stackWidget.currentWidget()
 
     def currentChatModel(self) -> AiModelBase:

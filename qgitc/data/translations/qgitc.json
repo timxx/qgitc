@@ -8,6 +8,7 @@
         "sources": [
             "../../aboutdialog.py",
             "../../aboutdialog.ui",
+            "../../aichatbot.py",
             "../../aichatwindow.py",
             "../../application.py",
             "../../blameview.py",
