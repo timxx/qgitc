@@ -11,8 +11,7 @@ from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse
 from .settings import Settings
 
 
-CODE_REVIEW_SYSTEM_PROMPT = """Below is a code snippet, please help me do a brief code review on it.
-Any bug risks and/or improvement suggestions are welcome.
+CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions.
 Write your review in {language}:
 """
 
@@ -21,7 +20,6 @@ class GithubCopilot(AiModelBase):
 
     def __init__(self, parent=None):
         super().__init__(None, parent)
-        self._history = []
         self._token = qApp.settings().githubCopilotToken()
 
         self._eventLoop = None
@@ -44,14 +42,15 @@ class GithubCopilot(AiModelBase):
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
+        prompt = params.prompt
         if params.sys_prompt:
             self.add_history(self._makeMessage(
                 "system", params.sys_prompt))
         elif params.chat_mode == AiChatMode.CodeReview:
-            self.add_history(self._makeMessage(
-                "system", CODE_REVIEW_SYSTEM_PROMPT.format(
-                    language=QLocale.system().nativeTerritoryName())))
-        self.add_history(self._makeMessage("user", params.prompt))
+            prompt = CODE_REVIEW_PROMPT.format(
+                language=QLocale.system().nativeLanguageName())
+            prompt += "\n" + params.prompt
+        self.add_history(self._makeMessage("user", prompt))
         payload["messages"] = self._history
 
         try:
