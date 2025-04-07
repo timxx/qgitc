@@ -773,7 +773,7 @@
     <message>
         <location filename="../../githubcopilotlogindialog.ui" line="42"/>
         <source>Url:</source>
-        <translation>Url：</translation>
+        <translation>网址：</translation>
     </message>
     <message>
         <location filename="../../githubcopilotlogindialog.ui" line="76"/>
