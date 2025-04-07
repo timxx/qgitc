@@ -789,7 +789,6 @@ class CommitWindow(StateWindow):
             # only set template if user has not modified the message
             if not doc.isUndoAvailable() and not doc.isRedoAvailable():
                 self.ui.teMessage.setPlainText(evt.template)
-                doc.clearUndoRedoStacks()
             return True
 
         if evt.type() == UpdateCommitProgressEvent.Type:
@@ -1146,7 +1145,11 @@ class CommitWindow(StateWindow):
         if not message:
             return
 
-        self.ui.teMessage.setPlainText(message)
+        cursor = self.ui.teMessage.textCursor()
+        cursor.beginEditBlock()
+        cursor.select(QTextCursor.Document)
+        cursor.insertText(message)
+        cursor.endEditBlock()
         self.ui.teMessage.moveCursor(QTextCursor.End)
 
     def _onCancelGenMessageClicked(self):
