@@ -35,7 +35,7 @@ from .aicommitmessage import AiCommitMessage
 from .colorediconlabel import ColoredIconLabel
 from .coloredlabel import ColoredLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
-from .common import dataDirPath, toSubmodulePath
+from .common import dataDirPath, decodeFileData, toSubmodulePath
 from .difffetcher import DiffFetcher
 from .diffview import DiffView, _makeTextIcon
 from .events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
@@ -1051,10 +1051,13 @@ class CommitWindow(StateWindow):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 startupinfo=startupinfo,
-                universal_newlines=True,
                 shell=True)
 
             out, error = process.communicate()
+            if out is not None:
+                out, _ = decodeFileData(out)
+            if error is not None:
+                error, _ = decodeFileData(error)
         except Exception as e:
             out = None
             error = str(e)
