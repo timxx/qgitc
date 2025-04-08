@@ -23,7 +23,7 @@ class MenuButton(QToolButton):
 
         painter = QStylePainter(self)
 
-        if opt.state & QStyle.State_MouseOver:
+        if (opt.state & QStyle.State_MouseOver) and (opt.state & QStyle.State_Enabled):
             painter.drawPrimitive(QStyle.PE_PanelButtonTool, opt)
 
         opt.state &= ~QStyle.State_Sunken
