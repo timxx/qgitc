@@ -292,7 +292,7 @@ class AiChatWidget(QWidget):
             self.cbChatMode.currentData(),
             self.cbLang.currentText())
 
-    def _doRequest(self, prompt, chatMode, language=""):
+    def _doRequest(self, prompt: str, chatMode: AiChatMode, language=""):
         params = AiParameters()
         params.prompt = prompt
         params.stream = True
@@ -308,7 +308,10 @@ class AiChatWidget(QWidget):
         self._disableAutoScroll = False
 
         model = self.currentChatModel()
-        self._doMessageReady(model, AiResponse("user", params.prompt))
+        prompt = params.prompt
+        if chatMode == AiChatMode.CodeReview:
+            prompt = f"```diff\n{prompt}\n```"
+        self._doMessageReady(model, AiResponse("user", prompt))
 
         model.queryAsync(params)
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
 from PySide6.QtWidgets import QTextBrowser
 
 from .llm import AiResponse
@@ -10,48 +9,43 @@ class AiChatbot(QTextBrowser):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._rawText = ""
 
     def appendResponse(self, response: AiResponse):
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.End)
-
-        format = QTextBlockFormat()
-        roleFormat = QTextCharFormat()
-        roleFormat.setFontWeight(QFont.Bold)
-        if self.document().blockCount() == 1:
-            cursor.setBlockCharFormat(roleFormat)
-        elif not response.is_delta or response.first_delta:
-            cursor.insertBlock(format, roleFormat)
         if not response.is_delta or response.first_delta:
-            cursor.insertText(response.role + ":")
+            self._appendRoleText(response.role, False)
 
-        if response.role != "user" and response.role != "system":
-            format.setBackground(qApp.colorSchema().AiResponseBg)
-            format.setForeground(qApp.colorSchema().AiResponseFg)
+        if response.message:
+            self._rawText += response.message
 
-        if not response.is_delta or response.first_delta:
-            cursor.insertBlock(format, QTextCharFormat())
-        cursor.insertText(response.message)
-
-        if not response.is_delta:
-            cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
-            cursor.insertText("")
+        self.setMarkdown(self._rawText)
 
     def appendServiceUnavailable(self):
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.End)
+        self._appendRoleText(self.tr("System"))
+        self._rawText += "\n"
+        self._appendColoredText(
+            self.tr("Service Unavailable"), qApp.colorSchema().ErrorText.name())
+        self._rawText += "\n"
 
-        format = QTextBlockFormat()
-        roleFormat = QTextCharFormat()
-        roleFormat.setFontWeight(QFont.Bold)
-        cursor.insertBlock(format, roleFormat)
-        cursor.insertText("System:")
-
-        errorFormat = QTextCharFormat()
-        errorFormat.setForeground(qApp.colorSchema().ErrorText)
-        cursor.insertBlock(QTextBlockFormat(), errorFormat)
-        cursor.insertText(self.tr("Service Unavailable"))
-        cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
+        self.setMarkdown(self._rawText)
 
     def clear(self):
+        self._rawText = ""
         super().clear()
+
+    def _appendRoleText(self, role: str, applyNow=True):
+        if self._rawText and self._rawText[-1] != "\n":
+            self._rawText += "\n"
+
+        self._rawText += "\n"
+        color = qApp.palette().windowText().color().name()
+        self._rawText += '<span style="color:{}"><b>'.format(
+            color) + role + ":</b></span>"
+        self._rawText += "\n\n"
+        if applyNow:
+            self.setMarkdown(self._rawText)
+
+    def _appendColoredText(self, text: str, color: str):
+        self._rawText += '<span style="color:{}">'.format(
+            color) + text + "</span>"
+        self.setMarkdown(self._rawText)
