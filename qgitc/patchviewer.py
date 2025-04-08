@@ -127,6 +127,14 @@ class SummaryTextLine(TextLine):
         line.setPosition(QPointF(width, 0))
         self._layout.endLayout()
 
+    def boundingRect(self):
+        self.ensureLayout()
+        br = self._layout.boundingRect()
+        # since we adjust the line position
+        # we need to adjust the bounding rect too
+        br.setWidth(br.width() + br.left())
+        return br
+
 
 class PatchViewer(SourceViewer):
     fileRowChanged = Signal(int)
