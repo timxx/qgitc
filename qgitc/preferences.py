@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# from PySide6.QtGui import (
-# )
 from PySide6.QtWidgets import (
     QMessageBox,
     QFileDialog)
@@ -18,9 +16,10 @@ from .gitutils import Git, GitProcess
 from .tooltablemodel import ToolTableModel
 from .settings import Settings
 
-import sys
+import logging
 import os
 import subprocess
+import sys
 
 
 class Preferences(QDialog):
@@ -331,6 +330,10 @@ class Preferences(QDialog):
         for tab in self._initedTabs:
             self._tabs[tab][1]()
 
+        if self.ui.tabGeneral in self._initedTabs:
+            logging.getLogger().setLevel(
+                self.ui.cbLogLevel.currentData())
+
     def _onTabChanged(self, index):
         tab = self.ui.tabWidget.widget(index)
         if tab in self._initedTabs:
@@ -349,6 +352,15 @@ class Preferences(QDialog):
         self.ui.cbCheckUpdates.setChecked(checked)
         self._onCheckUpdatesChanged(checked)
         self.ui.sbDays.setValue(self.settings.checkUpdatesInterval())
+
+        self.ui.cbLogLevel.addItem(self.tr("Critical"), logging.CRITICAL)
+        self.ui.cbLogLevel.addItem(self.tr("Error"), logging.ERROR)
+        self.ui.cbLogLevel.addItem(self.tr("Warning"), logging.WARNING)
+        self.ui.cbLogLevel.addItem(self.tr("Info"), logging.INFO)
+        self.ui.cbLogLevel.addItem(self.tr("Debug"), logging.DEBUG)
+
+        index = self.ui.cbLogLevel.findData(self.settings.logLevel())
+        self.ui.cbLogLevel.setCurrentIndex(index)
 
         self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
         self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
@@ -383,6 +395,9 @@ class Preferences(QDialog):
 
         value = self.ui.sbDays.value()
         self.settings.setCheckUpdatesInterval(value)
+
+        value = self.ui.cbLogLevel.currentData()
+        self.settings.setLogLevel(value)
 
         value = self.ui.cbColorSchema.currentData()
         self.settings.setColorSchemaMode(value)

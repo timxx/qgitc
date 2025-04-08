@@ -93,7 +93,7 @@ def _setup_logging():
     logFile = os.path.join(logDir, "qgitc.log")
 
     logger = logging.getLogger()
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(qApp.settings().logLevel())
 
     handler = logging.handlers.RotatingFileHandler(
         logFile, maxBytes=1 * 1024 * 1024, backupCount=3, encoding="utf-8")

@@ -96,6 +96,25 @@ class Ui_Preferences(object):
 
         self.verticalLayout_5.addLayout(self.horizontalLayout_10)
 
+        self.horizontalLayout_15 = QHBoxLayout()
+        self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
+        self.label_21 = QLabel(self.groupBox_6)
+        self.label_21.setObjectName(u"label_21")
+
+        self.horizontalLayout_15.addWidget(self.label_21)
+
+        self.cbLogLevel = QComboBox(self.groupBox_6)
+        self.cbLogLevel.setObjectName(u"cbLogLevel")
+
+        self.horizontalLayout_15.addWidget(self.cbLogLevel)
+
+        self.horizontalSpacer_12 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_15.addItem(self.horizontalSpacer_12)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_15)
+
         self.horizontalLayout_9 = QHBoxLayout()
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.label_15 = QLabel(self.groupBox_6)
@@ -645,7 +664,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(4)
+        self.tabWidget.setCurrentIndex(0)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -661,6 +680,7 @@ class Ui_Preferences(object):
         self.cbCheckUpdates.setText(QCoreApplication.translate("Preferences", u"Check updates every", None))
         self.label_14.setText(QCoreApplication.translate("Preferences", u"day(s)", None))
         self.label_18.setText(QCoreApplication.translate("Preferences", u"Color Schema", None))
+        self.label_21.setText(QCoreApplication.translate("Preferences", u"Log Level", None))
         self.label_15.setText(QCoreApplication.translate("Preferences", u"Git:", None))
         self.btnChooseGit.setText(QCoreApplication.translate("Preferences", u"&Browse", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("Preferences", u"Diff view", None))

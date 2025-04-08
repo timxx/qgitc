@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 from typing import List
 from PySide6.QtCore import (
     QSettings,
@@ -434,3 +435,9 @@ class Settings(QSettings):
         self.beginGroup("GithubCopilot")
         self.setValue("token", token)
         self.endGroup()
+
+    def setLogLevel(self, level):
+        self.setValue("logLevel", level)
+
+    def logLevel(self):
+        return self.value("logLevel", logging.WARNING, type=int)
