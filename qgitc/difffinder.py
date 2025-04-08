@@ -22,9 +22,6 @@ class FindWorker(QObject):
         self._result = []
         self._dataFragment = None
 
-    def __del__(self):
-        self.cancel()
-
     def cancel(self):
         if not self._process:
             return

@@ -112,7 +112,7 @@ class BlameFetcher(DataFetcher):
                 elif line[8] == 105:  # "author-time "
                     self._curLine.authorTime = _timeStr(line[12:])
                 elif line[8] == 122:  # "author-tz "
-                    assert(self._curLine.authorTime is not None)
+                    assert (self._curLine.authorTime is not None)
                     self._curLine.authorTime += _decode(line[9:])
                 else:
                     logger.warning("Invalid line: %s", line)
@@ -124,7 +124,7 @@ class BlameFetcher(DataFetcher):
                 elif line[11] == 105:  # "committer-time "
                     self._curLine.committerTime = _timeStr(line[15:])
                 elif line[11] == 122:  # "committer-tz "
-                    assert(self._curLine.committerTime is not None)
+                    assert (self._curLine.committerTime is not None)
                     self._curLine.committerTime += _decode(line[12:])
                 else:
                     logger.warning("Invalid line: %s", line)
@@ -376,7 +376,8 @@ class RevisionPanel(TextViewer):
             painter.restore()
 
             lineNumber = str(i + 1)
-            rect = QRect(x + self._space, y, width - self._space * 2 - x, self._viewer.lineHeight)
+            rect = QRect(x + self._space, y, width -
+                         self._space * 2 - x, self._viewer.lineHeight)
             painter.setPen(colorSchema.LineNumber)
             painter.drawText(rect, Qt.AlignRight | Qt.AlignVCenter, lineNumber)
             painter.setPen(oldPen)
@@ -768,7 +769,7 @@ class HeaderWidget(QWidget):
         self._waitingSpinner.stop()
 
     def updateCurPos(self, lineNo):
-        assert(0 <= self._curIndex < len(self._histories))
+        assert (0 <= self._curIndex < len(self._histories))
         self._histories[self._curIndex].lineNo = lineNo + 1
 
 
@@ -884,3 +885,6 @@ class BlameView(QWidget):
     @property
     def commitPanel(self):
         return self._commitPanel
+
+    def queryClose(self):
+        self._fetcher.cancel()

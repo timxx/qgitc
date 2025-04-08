@@ -477,9 +477,6 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._finder.findFinished.connect(
             self.__onFindFinished)
 
-    def __del__(self):
-        self.cancelFindCommit()
-
     def __ensureContextMenu(self):
         if self.menu:
             return
@@ -1816,6 +1813,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def queryClose(self):
         self.fetcher.cancel()
         self._finder.cancel()
+        self.cancelFindCommit()
 
     def __onCompositeModeChanged(self):
         submodules = self.window().submodules()

@@ -279,10 +279,16 @@ class AiChatWidget(QWidget):
 
         self._tokenCalculator = None
 
-    def __del__(self):
+    def queryClose(self):
         if self._tokenCalculator:
             self._tokenCalculator.calc_async(None, None)
             self._tokenCalculator.requestInterruption()
+            self._tokenCalculator = None
+
+        for i in range(self.cbBots.count()):
+            model: AiModelBase = self.cbBots.itemData(i)
+            if model.isRunning():
+                model.requestInterruption()
 
     def sizeHint(self):
         return QSize(800, 600)
@@ -512,3 +518,10 @@ class AiChatWindow(StateWindow):
             return True
 
         return super().event(event)
+
+    def closeEvent(self, event):
+        if self._executor:
+            self._executor.cancel()
+            self._executor = None
+        self.centralWidget().queryClose()
+        return super().closeEvent(event)

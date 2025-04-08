@@ -230,3 +230,7 @@ class BlameWindow(StateWindow):
 
         self.acFindNext.setEnabled(self._findWidget.canFindNext())
         self.acFindPrev.setEnabled(self._findWidget.canFindPrevious())
+
+    def closeEvent(self, event):
+        self._view.queryClose()
+        super().closeEvent(event)

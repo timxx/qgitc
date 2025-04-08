@@ -1187,3 +1187,9 @@ class CommitWindow(StateWindow):
 
         event = CodeReviewEvent(list(submodules))
         qApp.postEvent(qApp, event)
+
+    def closeEvent(self, event):
+        self._aiMessage.cancel()
+        self._submoduleExecutor.cancel()
+        self._commitExecutor.cancel()
+        return super().closeEvent(event)

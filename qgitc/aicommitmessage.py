@@ -86,9 +86,6 @@ class AiCommitMessage(QObject):
 
         self._aiModel: AiModelBase = None
 
-    def __del__(self):
-        self.cancel()
-
     def generate(self, submodules: List[str]):
         if len(submodules) <= 1:
             commitCount = 5

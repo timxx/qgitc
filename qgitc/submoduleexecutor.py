@@ -88,9 +88,6 @@ class SubmoduleExecutor(QObject):
         super().__init__(parent)
         self._thread: SubmoduleThread = None
 
-    def __del__(self):
-        self.cancel()
-
     def submit(self, submodules: Union[list, dict], actionHandler: Callable, resultHandler: Callable = None):
         """ Submit a list of submodules and an action to be performed on each submodule.
         Submodules can be a list or a dictionary of submodule paths.

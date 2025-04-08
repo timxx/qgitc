@@ -169,10 +169,11 @@ class GithubCopilotLoginDialog(QDialog):
         self.ui.progressBar.setValue(1)
         # self._loginThread.startUserInfo()
 
-    def __del__(self):
+    def closeEvent(self, event):
         if self._loginThread.isRunning():
             self._loginThread.requestInterruption()
             self._loginThread.wait(5)
+        return super().closeEvent(event)
 
     def isLoginSuccessful(self):
         return self._loginThread.accessToken is not None
