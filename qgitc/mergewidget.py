@@ -42,7 +42,7 @@ from .conflictlog import (
     HAVE_XLSX_WRITER,
     MergeInfo)
 from .events import CopyConflictCommit
-from .common import dataDirPath
+from .common import dataDirPath, logger
 
 from datetime import datetime
 
@@ -406,7 +406,7 @@ class MergeWidget(QWidget):
             self.process.write(b"n\n")
         elif b'?' in data:
             # TODO: might have other prompt need yes no
-            print("unhandled prompt", data)
+            logger.warning("unhandled prompt: %s", data)
 
     def __onResolveFinished(self, exitCode, exitStatus):
         errorData = None

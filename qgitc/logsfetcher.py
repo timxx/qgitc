@@ -13,7 +13,7 @@ from PySide6.QtCore import (
     QObject
 )
 
-from .common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath
+from .common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath, logger
 from .datafetcher import DataFetcher
 from .gitutils import Git
 from sys import version_info
@@ -234,7 +234,7 @@ class LogsFetcherThread(QThread):
                 fetcher._branch, fetcher.repoDir, fetcher.commits, \
                 hasLCC, hasLUC
 
-        # b = time.time()
+        b = time.time()
 
         logsArgs = self._args[1]
         paths = extractFilePaths(logsArgs)
@@ -286,8 +286,8 @@ class LogsFetcherThread(QThread):
             exitCode |= code
             self._handleError(errorData, branch, repoDir)
 
-        # print(f"fetch elapsed: {time.time() - b}")
-        # b = time.time()
+        logger.debug("fetch elapsed: %fs", time.time() - b)
+        b = time.time()
 
         self.localChangesAvailable.emit(lccCommit, lucCommit)
 
@@ -296,7 +296,7 @@ class LogsFetcherThread(QThread):
                                 key=lambda x: x.committerDateTime, reverse=True)
             self.logsAvailable.emit(sortedLogs)
 
-        # print(f"sort elapsed: {time.time() - b}")
+        logger.debug("sort elapsed: %fms", (time.time() - b) * 1000)
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')

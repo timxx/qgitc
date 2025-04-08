@@ -14,7 +14,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QPainter,
     QFontMetrics,
-    QPen,
     QIcon)
 from PySide6.QtCore import (
     Qt,
@@ -37,7 +36,7 @@ from .events import (
     OpenLinkEvent)
 from .waitingspinnerwidget import QtWaitingSpinner
 from .textviewer import TextViewer
-from .common import dataDirPath, decodeFileData
+from .common import dataDirPath, decodeFileData, logger
 
 import re
 
@@ -116,7 +115,7 @@ class BlameFetcher(DataFetcher):
                     assert(self._curLine.authorTime is not None)
                     self._curLine.authorTime += _decode(line[9:])
                 else:
-                    print("Invalid line:", line)
+                    logger.warning("Invalid line: %s", line)
             elif line[0] == 99 and line[1] == 111:  # committer
                 if line[9] == 32:  # "committer "
                     self._curLine.committer = _decode(line[10:])
@@ -128,7 +127,7 @@ class BlameFetcher(DataFetcher):
                     assert(self._curLine.committerTime is not None)
                     self._curLine.committerTime += _decode(line[12:])
                 else:
-                    print("Invalid line:", line)
+                    logger.warning("Invalid line: %s", line)
             elif line[0] == 115:  # "summary "
                 pass  # useless
             elif line[0] == 112:  # "previous "
@@ -142,7 +141,7 @@ class BlameFetcher(DataFetcher):
             else:
                 parts = line.split(b' ')
                 if len(parts) < 3 or len(parts) > 4:
-                    print("Invalid line:", line)
+                    logger.warning("Invalid line: %s", line)
                 else:
                     self._curLine.sha1 = _decode(parts[0])
                     self._curLine.oldLineNo = int(parts[1])

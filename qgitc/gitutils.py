@@ -2,11 +2,15 @@
 
 from collections import defaultdict
 
+import logging
 import subprocess
 import os
 import bisect
 import re
 from typing import Dict, List, Union
+
+
+logger = logging.getLogger(__name__)
 
 
 class GitProcess():
@@ -402,7 +406,7 @@ class Git():
         for wt in worktrees:
             m = worktree_re.fullmatch(wt)
             if not m:
-                print("Oops! Wrong format for worktree:", wt)
+                logger.warning("Oops! Wrong format for worktree: %s", wt)
             elif m.group(3) == branch:
                 return m.group(1)
 

@@ -195,7 +195,7 @@ def decodeFileData(data, preferEncoding="utf-8"):
             pass
 
     # the last chance
-    print(b"Warning: can't decode '%s'" % data)
+    logger.warning(b"Warning: can't decode '%s'" % data)
     return data.decode(preferEncoding, "replace"), None
 
 

@@ -5,6 +5,8 @@ from PySide6.QtCore import (
     QThread)
 import requests
 
+from .common import logger
+
 
 class AiResponse:
 
@@ -119,7 +121,7 @@ class ChatGPTModel(AiModelBase):
         except requests.exceptions.ConnectionError as e:
             self.serviceUnavailable.emit()
         except Exception as e:
-            print(e)
+            logger.exception("Error in query")
 
     def _makeMessage(self, role, prompt):
         return {"role": role, "content": prompt}
@@ -154,7 +156,7 @@ class ChatGPTModel(AiModelBase):
                     continue
                 if not chunk.startswith(b"data:"):
                     if not chunk.startswith(b": ping - "):
-                        print(f"Corrupted chunk: '{chunk}'")
+                        logger.warning(b"Corrupted chunk: %s", chunk)
                     continue
                 data = json.loads(chunk[5:].decode("utf-8"))
                 delta = data["choices"][0]["delta"]
@@ -174,7 +176,7 @@ class ChatGPTModel(AiModelBase):
                     content += aiResponse.message
                     first_delta = False
                 else:
-                    print(f"Invalid delta: '{delta}'")
+                    logger.warning(b"Invalid delta: %s", delta)
         else:
             data = json.loads(response.text)
             usage = data["usage"]

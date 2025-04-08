@@ -6,6 +6,7 @@ import requests
 import json
 import time
 
+from .common import logger
 from .events import RequestLoginGithubCopilot, LoginFinished
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse
 from .settings import Settings
@@ -65,7 +66,7 @@ class GithubCopilot(AiModelBase):
         except requests.exceptions.ConnectionError as e:
             self.serviceUnavailable.emit()
         except Exception as e:
-            print(e)
+            logger.exception("Error in Github Copilot query")
 
     @property
     def name(self):
@@ -105,7 +106,7 @@ class GithubCopilot(AiModelBase):
                     continue
                 if not chunk.startswith(b"data:"):
                     if not chunk.startswith(b": ping - "):
-                        print(f"Corrupted chunk: '{chunk}'")
+                        logger.warning(b"Corrupted chunk: %s", chunk)
                     continue
 
                 if chunk == b"data: [DONE]":
@@ -135,7 +136,7 @@ class GithubCopilot(AiModelBase):
                     content += aiResponse.message
                     first_delta = False
                 else:
-                    print(f"Invalid delta: '{delta}'")
+                    logger.warning(b"Invalid delta: %s", delta)
         else:
             # TODO: handle non-streaming response
             pass
