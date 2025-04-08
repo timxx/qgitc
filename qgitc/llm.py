@@ -140,6 +140,9 @@ class ChatGPTModel(AiModelBase):
             self.responseAvailable.emit(aiResponse)
             return
 
+        if self.isInterruptionRequested():
+            return
+
         if stream:
             role = "assistant"
             content = ""

@@ -34,6 +34,8 @@ class GithubCopilot(AiModelBase):
             if not self.updateToken():
                 self.serviceUnavailable.emit()
                 return
+            if self.isInterruptionRequested():
+                return
 
         payload = {
             "model": "gpt-4o-mini",  # TODO: allow user to select model
@@ -87,6 +89,9 @@ class GithubCopilot(AiModelBase):
             aiResponse = AiResponse()
             aiResponse.message = response.text
             self.responseAvailable.emit(aiResponse)
+            return
+
+        if self.isInterruptionRequested():
             return
 
         if stream:
