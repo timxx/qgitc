@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import os
 from typing import List
 from PySide6.QtCore import QObject, Signal, QEvent
@@ -9,6 +10,9 @@ from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiModelBase, AiParameters, AiResponse
 from .submoduleexecutor import SubmoduleExecutor
+
+
+logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = \
@@ -112,12 +116,15 @@ class AiCommitMessage(QObject):
         self._executor.submit(repoData, self._fetchCommitInfo)
 
     def cancel(self):
-        if self._aiModel:
+        if self._aiModel and self._aiModel.isRunning():
+            logger.warning("cancelling AI model")
             self._aiModel.responseAvailable.disconnect(
                 self._onAiResponseAvailable)
             self._aiModel.finished.disconnect(self._onAiResponseFinished)
             self._aiModel.requestInterruption()
             self._aiModel.wait(50)
+            if self._aiModel.isRunning():
+                logger.error("AI model still running")
             self._aiModel = None
 
         self._executor.cancel()
@@ -174,10 +181,6 @@ class AiCommitMessage(QObject):
             recent_commits=AiCommitMessage._makeLogs(self._repoLogs),
             code_changes="\n".join(self._diffs)
         )
-
-        if self._aiModel:
-            self._aiModel.requestInterruption()
-            self._aiModel.wait(50)
 
         # TODO: add model provider to provide models
         self._aiModel = GithubCopilot(self)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import logging.handlers
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QStyle)
@@ -11,9 +12,10 @@ from .application import Application
 from .mainwindow import MainWindow
 from .shell import setup_shell_args
 
+import argparse
+import logging
 import os
 import sys
-import argparse
 
 
 def setAppUserId(appId):
@@ -85,11 +87,29 @@ def _move_center(window):
         qApp.primaryScreen().availableGeometry()))
 
 
+def _setup_logging():
+    logDir = os.path.join(os.path.expanduser("~"), ".qgitc")
+    os.makedirs(logDir, exist_ok=True)
+    logFile = os.path.join(logDir, "qgitc.log")
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.WARNING)
+
+    handler = logging.handlers.RotatingFileHandler(
+        logFile, maxBytes=1 * 1024 * 1024, backupCount=3, encoding="utf-8")
+    logger.addHandler(handler)
+
+    formatter = logging.Formatter(
+        "[%(levelname)s][%(asctime)s]%(filename)s:%(lineno)d - %(message)s")
+    handler.setFormatter(formatter)
+
+
 def _init_gui():
     setAppUserId("appid.qgitc.xyz")
     app = Application(sys.argv)
 
     sys.excepthook = ExceptHandler
+    _setup_logging()
 
     return app
 

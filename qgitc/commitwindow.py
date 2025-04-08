@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from enum import Enum
+import logging
 import os
 import subprocess
 from typing import Dict, List, Tuple
@@ -47,6 +48,9 @@ from .submoduleexecutor import SubmoduleExecutor
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
 from .ui_commitwindow import Ui_CommitWindow
+
+
+logger = logging.getLogger(__name__)
 
 
 class FileStatus(Enum):
@@ -414,6 +418,7 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setEnabled(False)
         self.ui.tbWDChanges.setEnabled(False)
         self.ui.spinnerUnstaged.start()
+        logger.debug("begin fetch status")
 
     def clear(self):
         self._filesModel.clear()
@@ -451,6 +456,8 @@ class CommitWindow(StateWindow):
         self._repoBranch.setdefault(repoDir, branch)
 
     def _onStatusFetchFinished(self):
+        logger.debug("end fetch status")
+
         self.ui.spinnerUnstaged.stop()
         self.ui.tbRefresh.setEnabled(True)
         self.ui.tbWDChanges.setEnabled(True)
@@ -1135,6 +1142,7 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self._aiMessage.generate(list(submodules))
+        logger.debug("begin generate commit message")
 
     def _collectStagedRepos(self):
         model = self.ui.lvStaged.model()

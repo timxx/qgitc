@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
 import os
 from typing import Callable, Union
 from PySide6.QtCore import QThread, QObject, Signal
 
 from .cancelevent import CancelEvent
+
+
+logger = logging.getLogger(__name__)
 
 
 class SubmoduleThread(QThread):
@@ -104,10 +108,13 @@ class SubmoduleExecutor(QObject):
         self._thread.start()
 
     def cancel(self):
-        if self._thread:
+        if self._thread and self._thread.isRunning():
+            logger.warning("cancelling submodule thread")
             self._thread.finished.disconnect(self.onFinished)
             self._thread.requestInterruption()
             self._thread.wait(50)
+            if self._thread.isRunning():
+                logger.error("submodule thread still running")
             self._thread = None
 
     def isRunning(self):
