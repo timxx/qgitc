@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import logging
 import os
 from typing import List
 from PySide6.QtCore import QObject, Signal, QEvent
 
 from .cancelevent import CancelEvent
+from .common import logger
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiModelBase, AiParameters, AiResponse
 from .submoduleexecutor import SubmoduleExecutor
-
-
-logger = logging.getLogger(__name__)
 
 
 SYSTEM_PROMPT = \

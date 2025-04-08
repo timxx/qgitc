@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import logging
 import os
 from typing import Callable, Union
 from PySide6.QtCore import QThread, QObject, Signal
 
 from .cancelevent import CancelEvent
-
-
-logger = logging.getLogger(__name__)
+from .common import logger
 
 
 class SubmoduleThread(QThread):

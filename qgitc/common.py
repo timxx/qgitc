@@ -2,6 +2,7 @@
 
 import cProfile
 from datetime import datetime
+import logging
 import pstats
 import io
 import os
@@ -22,6 +23,9 @@ html_escape_table = {
 
 str_split = str.split
 str_strip = str.strip
+
+
+logger = logging.getLogger("qgitc")
 
 
 class Commit():

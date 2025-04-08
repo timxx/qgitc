@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import logging.handlers
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QStyle)
@@ -14,6 +13,7 @@ from .shell import setup_shell_args
 
 import argparse
 import logging
+import logging.handlers
 import os
 import sys
 

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from enum import Enum
-import logging
 import os
 import subprocess
 from typing import Dict, List, Tuple
@@ -37,7 +36,7 @@ from .cancelevent import CancelEvent
 from .colorediconlabel import ColoredIconLabel
 from .coloredlabel import ColoredLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
-from .common import dataDirPath, decodeFileData, toSubmodulePath
+from .common import dataDirPath, decodeFileData, toSubmodulePath, logger
 from .difffetcher import DiffFetcher
 from .diffview import DiffView, _makeTextIcon
 from .events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
@@ -48,9 +47,6 @@ from .submoduleexecutor import SubmoduleExecutor
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
 from .ui_commitwindow import Ui_CommitWindow
-
-
-logger = logging.getLogger(__name__)
 
 
 class FileStatus(Enum):
