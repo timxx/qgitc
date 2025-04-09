@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, overload
+from typing import Dict, List, overload
 from PySide6.QtCore import QEvent, QObject
 
 from .common import Commit
@@ -62,10 +62,13 @@ class CodeReviewEvent(QEvent):
     @overload
     def __init__(self, submodules: List[str]): ...
 
+    @overload
+    def __init__(self, submoduleFiles: Dict[str, list]): ...
+
     def __init__(self, *args):
         super().__init__(QEvent.Type(CodeReviewEvent.Type))
 
-        if len(args) == 1 and isinstance(args[0], list):
+        if len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], dict)):
             self.submodules = args[0]
         else:
             self.submodules = None

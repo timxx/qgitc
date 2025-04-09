@@ -1197,10 +1197,11 @@ class CommitWindow(StateWindow):
         super().keyPressEvent(event)
 
     def _onCodeReviewClicked(self):
-        submodules = self._collectStagedRepos()
-        assert (submodules)
+        exts = qApp.settings().aiExcludedFileExtensions()
+        submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
+        assert (submoduleFiles)
 
-        event = CodeReviewEvent(list(submodules))
+        event = CodeReviewEvent(submoduleFiles)
         qApp.postEvent(qApp, event)
 
     def closeEvent(self, event):

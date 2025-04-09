@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -484,7 +484,7 @@ class AiChatWindow(StateWindow):
     def codeReview(self, commit, args=None):
         self.centralWidget().codeReview(commit, args)
 
-    def codeReviewForStagedFiles(self, submodules: List[str]):
+    def codeReviewForStagedFiles(self, submodules: Union[list, dict]):
         self._ensureExecutor()
         self._diffs.clear()
         self._executor.submit(submodules, self._fetchDiff)
@@ -499,9 +499,9 @@ class AiChatWindow(StateWindow):
             diff = "\n".join(self._diffs)
             self.centralWidget().codeReviewForDiff(diff)
 
-    def _fetchDiff(self, submodule: str, userData, cancelEvent: CancelEvent):
+    def _fetchDiff(self, submodule: str, files, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
-        data: bytes = Git.commitRawDiff(Git.LCC_SHA1, repoDir=repoDir)
+        data: bytes = Git.commitRawDiff(Git.LCC_SHA1, files, repoDir=repoDir)
         if not data:
             return
 
