@@ -784,7 +784,7 @@ class Ui_Preferences(object):
         self.groupBox_15.setTitle(QCoreApplication.translate("Preferences", u"AI Assistant", None))
         self.label_22.setText(QCoreApplication.translate("Preferences", u"Files to Exclude:", None))
 #if QT_CONFIG(tooltip)
-        self.leExcludedFiles.setToolTip(QCoreApplication.translate("Preferences", u"Specify the file extensions to exclude for code  review or generate commit message", None))
+        self.leExcludedFiles.setToolTip(QCoreApplication.translate("Preferences", u"Specify the file extensions to exclude for code review or generate commit message", None))
 #endif // QT_CONFIG(tooltip)
         self.leExcludedFiles.setPlaceholderText(QCoreApplication.translate("Preferences", u"e.g. .ts, .ui", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))

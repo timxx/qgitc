@@ -980,7 +980,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
             <item>
              <widget class="QLineEdit" name="leExcludedFiles">
               <property name="toolTip">
-               <string>Specify the file extensions to exclude for code  review or generate commit message</string>
+               <string>Specify the file extensions to exclude for code review or generate commit message</string>
               </property>
               <property name="placeholderText">
                <string>e.g. .ts, .ui</string>
