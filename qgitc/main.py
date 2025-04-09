@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QStyle)
 
-from .common import attachConsole
+from .common import attachConsole, logger
 from .gitutils import Git
 from .excepthandler import ExceptHandler
 from .application import Application
@@ -92,12 +92,12 @@ def _setup_logging():
     os.makedirs(logDir, exist_ok=True)
     logFile = os.path.join(logDir, "qgitc.log")
 
-    logger = logging.getLogger()
-    logger.setLevel(qApp.settings().logLevel())
+    rootLogger = logging.getLogger()
+    rootLogger.setLevel(qApp.settings().logLevel())
 
     handler = logging.handlers.RotatingFileHandler(
         logFile, maxBytes=1 * 1024 * 1024, backupCount=3, encoding="utf-8")
-    logger.addHandler(handler)
+    rootLogger.addHandler(handler)
 
     formatter = logging.Formatter(
         "[%(levelname)s][%(asctime)s]%(filename)s:%(lineno)d - %(message)s")
@@ -110,6 +110,11 @@ def _init_gui():
 
     sys.excepthook = ExceptHandler
     _setup_logging()
+
+    styleName = app.settings().styleName()
+    if styleName and styleName != app.style().name():
+        app.setStyle(styleName)
+        logger.info("Set style: %s", styleName)
 
     return app
 

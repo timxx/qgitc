@@ -447,3 +447,9 @@ class Settings(QSettings):
 
     def setAiExcludedFileExtensions(self, extensions: List[str]):
         self.setValue("aiExcludedFileExtensions", extensions)
+
+    def styleName(self):
+        return self.value("styleName", "")
+
+    def setStyleName(self, style):
+        self.setValue("styleName", style)

@@ -89,6 +89,16 @@ class Ui_Preferences(object):
 
         self.horizontalLayout_10.addWidget(self.cbColorSchema)
 
+        self.label_23 = QLabel(self.groupBox_6)
+        self.label_23.setObjectName(u"label_23")
+
+        self.horizontalLayout_10.addWidget(self.label_23)
+
+        self.cbStyle = QComboBox(self.groupBox_6)
+        self.cbStyle.setObjectName(u"cbStyle")
+
+        self.horizontalLayout_10.addWidget(self.cbStyle)
+
         self.horizontalSpacer_9 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_10.addItem(self.horizontalSpacer_9)
@@ -699,7 +709,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(4)
+        self.tabWidget.setCurrentIndex(0)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -715,6 +725,7 @@ class Ui_Preferences(object):
         self.cbCheckUpdates.setText(QCoreApplication.translate("Preferences", u"Check updates every", None))
         self.label_14.setText(QCoreApplication.translate("Preferences", u"day(s)", None))
         self.label_18.setText(QCoreApplication.translate("Preferences", u"Color Schema", None))
+        self.label_23.setText(QCoreApplication.translate("Preferences", u"UI Style", None))
         self.label_21.setText(QCoreApplication.translate("Preferences", u"Log Level", None))
         self.label_15.setText(QCoreApplication.translate("Preferences", u"Git:", None))
         self.btnChooseGit.setText(QCoreApplication.translate("Preferences", u"&Browse", None))

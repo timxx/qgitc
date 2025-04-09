@@ -2,10 +2,12 @@
 
 from PySide6.QtWidgets import (
     QMessageBox,
-    QFileDialog)
+    QFileDialog,
+    QStyleFactory)
 from PySide6.QtCore import (
     QSize)
 
+from .common import logger
 from .colorschema import ColorSchemaMode
 from .commitactiontablemodel import CommitActionTableModel
 from .githubcopilotlogindialog import GithubCopilotLoginDialog
@@ -368,6 +370,18 @@ class Preferences(QDialog):
         index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
         self.ui.cbColorSchema.setCurrentIndex(index)
 
+        styles = QStyleFactory.keys()
+        for style in styles:
+            self.ui.cbStyle.addItem(style)
+
+        index = self.ui.cbStyle.findText(self.settings.styleName())
+        if index == -1:
+            index = self.ui.cbStyle.findText(qApp.style().name())
+        if index != -1:
+            self.ui.cbStyle.setCurrentIndex(index)
+        else:
+            logger.warning("No style found in [%s]", ",".join(styles))
+
         git = self.settings.gitBinPath()
         if not git and GitProcess.GIT_BIN:
             git = GitProcess.GIT_BIN
@@ -401,6 +415,10 @@ class Preferences(QDialog):
 
         value = self.ui.cbColorSchema.currentData()
         self.settings.setColorSchemaMode(value)
+
+        value = self.ui.cbStyle.currentText()
+        self.settings.setStyleName(value)
+        qApp.setStyle(value)
 
         value = self.ui.leGitPath.text()
         self.settings.setGitBinPath(value)

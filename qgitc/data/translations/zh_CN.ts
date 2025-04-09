@@ -1526,94 +1526,94 @@ Run `{1}` for getting the latest version.</source>
         <translation>记录窗口状态(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="169"/>
-        <location filename="../../preferences.ui" line="326"/>
+        <location filename="../../preferences.ui" line="179"/>
+        <location filename="../../preferences.ui" line="336"/>
         <source>Diff view</source>
         <translation>Diff视图</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="177"/>
+        <location filename="../../preferences.ui" line="187"/>
         <source>&amp;Visualize whitespace</source>
         <translation>显示空白字符(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="184"/>
+        <location filename="../../preferences.ui" line="194"/>
         <source>&amp;Tab size:</source>
         <translation>Tab宽度(&amp;T)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="224"/>
+        <location filename="../../preferences.ui" line="234"/>
         <source>&amp;Ignore whitespace:</source>
         <translation>忽略空白改动(&amp;I)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="235"/>
+        <location filename="../../preferences.ui" line="245"/>
         <source>None</source>
         <translation>无</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="240"/>
+        <location filename="../../preferences.ui" line="250"/>
         <source>At end of line</source>
         <translation>行末</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="79"/>
-        <location filename="../../preferences.ui" line="245"/>
+        <location filename="../../preferences.py" line="81"/>
+        <location filename="../../preferences.ui" line="255"/>
         <source>All</source>
         <translation>全部</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="279"/>
+        <location filename="../../preferences.ui" line="289"/>
         <source>&amp;Fonts</source>
         <translation>字体(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="285"/>
+        <location filename="../../preferences.ui" line="295"/>
         <source>Log view</source>
         <translation>日志视图</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="300"/>
+        <location filename="../../preferences.ui" line="310"/>
         <source>&amp;Family:</source>
         <translation>字体(&amp;F)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="310"/>
+        <location filename="../../preferences.ui" line="320"/>
         <source>&amp;Size:</source>
         <translation>字号(&amp;S)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="335"/>
+        <location filename="../../preferences.ui" line="345"/>
         <source>S&amp;ize:</source>
         <translation>字号(&amp;I)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="354"/>
+        <location filename="../../preferences.ui" line="364"/>
         <source>F&amp;amily:</source>
         <translation>字体(&amp;a)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="368"/>
+        <location filename="../../preferences.ui" line="378"/>
         <source>Co&amp;mmit</source>
         <translation>记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="374"/>
+        <location filename="../../preferences.ui" line="384"/>
         <source>Color</source>
         <translation>颜色</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="393"/>
+        <location filename="../../preferences.ui" line="403"/>
         <source>Branch &amp;B:</source>
         <translation>分支&amp;B：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="403"/>
+        <location filename="../../preferences.ui" line="413"/>
         <source>Branch &amp;A:</source>
         <translation>分支&amp;A：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="429"/>
+        <location filename="../../preferences.ui" line="439"/>
         <source>Links</source>
         <translation>链接</translation>
     </message>
@@ -1622,12 +1622,12 @@ Run `{1}` for getting the latest version.</source>
         <translation type="obsolete">最大记录：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="892"/>
+        <location filename="../../preferences.ui" line="902"/>
         <source>&amp;LLM</source>
         <translation>大语言模型(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="913"/>
+        <location filename="../../preferences.ui" line="923"/>
         <source>Server:</source>
         <translation>服务器：</translation>
     </message>
@@ -1648,130 +1648,130 @@ Run `{1}` for getting the latest version.</source>
         <translation type="obsolete">合并(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="514"/>
+        <location filename="../../preferences.ui" line="524"/>
         <source>Tools</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="536"/>
+        <location filename="../../preferences.ui" line="546"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="543"/>
+        <location filename="../../preferences.ui" line="553"/>
         <source>&amp;Delete</source>
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="80"/>
+        <location filename="../../preferences.py" line="82"/>
         <source>1 Year</source>
         <translation>1年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="81"/>
+        <location filename="../../preferences.py" line="83"/>
         <source>2 Years</source>
         <translation>2年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="82"/>
+        <location filename="../../preferences.py" line="84"/>
         <source>3 Years</source>
         <translation>3年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="83"/>
+        <location filename="../../preferences.py" line="85"/>
         <source>5 Years</source>
         <translation>5年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="356"/>
+        <location filename="../../preferences.py" line="358"/>
         <source>Critical</source>
         <translation>严重</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="357"/>
+        <location filename="../../preferences.py" line="359"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="358"/>
+        <location filename="../../preferences.py" line="360"/>
         <source>Warning</source>
         <translation>警告</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="359"/>
+        <location filename="../../preferences.py" line="361"/>
         <source>Info</source>
         <translation>信息</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="360"/>
+        <location filename="../../preferences.py" line="362"/>
         <source>Debug</source>
         <translation>调试</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="365"/>
+        <location filename="../../preferences.py" line="367"/>
         <source>Auto</source>
         <translation>自动</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="366"/>
+        <location filename="../../preferences.py" line="368"/>
         <source>Light</source>
         <translation>浅色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="367"/>
+        <location filename="../../preferences.py" line="369"/>
         <source>Dark</source>
         <translation>深色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="519"/>
-        <location filename="../../preferences.py" line="569"/>
-        <location filename="../../preferences.py" line="575"/>
+        <location filename="../../preferences.py" line="537"/>
+        <location filename="../../preferences.py" line="587"/>
+        <location filename="../../preferences.py" line="593"/>
         <source>Logout</source>
         <translation>注销</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="520"/>
-        <location filename="../../preferences.py" line="570"/>
+        <location filename="../../preferences.py" line="538"/>
+        <location filename="../../preferences.py" line="588"/>
         <source>Login</source>
         <translation>登录</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="177"/>
+        <location filename="../../preferences.py" line="179"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="183"/>
+        <location filename="../../preferences.py" line="185"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="197"/>
+        <location filename="../../preferences.py" line="199"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="520"/>
+        <location filename="../../preferences.ui" line="530"/>
         <source>You must add the tool to git config mergetool/difftool section to make it works.</source>
         <translation>您必需将“工具”添加到git配置文件的mergetool/difftool配置项以使其可用。</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="508"/>
+        <location filename="../../preferences.ui" line="518"/>
         <source>&amp;Tools</source>
         <translation>工具(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="440"/>
+        <location filename="../../preferences.ui" line="450"/>
         <source>Use global settings when no match current setting</source>
         <translation>当前设置项无法匹配时使用全局设置</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="443"/>
+        <location filename="../../preferences.ui" line="453"/>
         <source>Fallbac&amp;k to Global</source>
         <translation>使用全局配置(&amp;K)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="450"/>
+        <location filename="../../preferences.ui" line="460"/>
         <source>&amp;Edit Global</source>
         <translation>编辑全局配置(&amp;E)</translation>
     </message>
@@ -1791,113 +1791,118 @@ Run `{1}` for getting the latest version.</source>
         <translation>配色方案</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="120"/>
+        <location filename="../../preferences.ui" line="103"/>
+        <source>UI Style</source>
+        <translation>界面风格</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="130"/>
         <source>Log Level</source>
         <translation>日志级别</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="268"/>
+        <location filename="../../preferences.ui" line="278"/>
         <source>Show parent and child</source>
         <translation>显示父子记录</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="475"/>
+        <location filename="../../preferences.ui" line="485"/>
         <source>Composite Mode</source>
         <translation>聚合模式</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="481"/>
+        <location filename="../../preferences.ui" line="491"/>
         <source>Max Commits:</source>
         <translation>最大记录数：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="563"/>
+        <location filename="../../preferences.ui" line="573"/>
         <source>&lt;a href=&apos;#config&apos;&gt;Config imgdiff as tool for diff or merge&lt;/a&gt;</source>
         <translation>&lt;a href=&apos;#config&apos;&gt;将imgdiff配置为diff和merge工具&lt;/a&gt;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="572"/>
+        <location filename="../../preferences.ui" line="582"/>
         <source>Diff</source>
         <translation>Diff</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="593"/>
-        <location filename="../../preferences.ui" line="751"/>
+        <location filename="../../preferences.ui" line="603"/>
+        <location filename="../../preferences.ui" line="761"/>
         <source>Name:</source>
         <translation>名称:</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="600"/>
+        <location filename="../../preferences.ui" line="610"/>
         <source>Specify diff tool name or choose default one</source>
         <translation>指定diff工具的名称或从默认列表选择一个</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="712"/>
-        <location filename="../../preferences.ui" line="870"/>
+        <location filename="../../preferences.ui" line="722"/>
+        <location filename="../../preferences.ui" line="880"/>
         <source>Command:</source>
         <translation>命令行:</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="719"/>
+        <location filename="../../preferences.ui" line="729"/>
         <source>The command line and arguments, for example:
 imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</source>
         <translation>命令行路径和参数，比如：
 imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="730"/>
+        <location filename="../../preferences.ui" line="740"/>
         <source>Merge</source>
         <translation>合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="758"/>
+        <location filename="../../preferences.ui" line="768"/>
         <source>Specify merge tool name or choose default one</source>
         <translation>指定merge工具的名称或从默认列表选择一个</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="877"/>
+        <location filename="../../preferences.ui" line="887"/>
         <source>The command line and arguments, for example:
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</source>
         <translation>命令行路径和参数，比如：
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="898"/>
+        <location filename="../../preferences.ui" line="908"/>
         <source>Local LLM</source>
         <translation>本地大语言模型</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="904"/>
+        <location filename="../../preferences.ui" line="914"/>
         <source>Use Local LLM</source>
         <translation>使用本地大语言模型</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="928"/>
+        <location filename="../../preferences.ui" line="938"/>
         <source>GitHub Copilot</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="936"/>
+        <location filename="../../preferences.ui" line="946"/>
         <source>Account:</source>
         <translation>账号：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="968"/>
+        <location filename="../../preferences.ui" line="978"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="976"/>
+        <location filename="../../preferences.ui" line="986"/>
         <source>Files to Exclude:</source>
         <translation>要排除的文件：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="983"/>
+        <location filename="../../preferences.ui" line="993"/>
         <source>Specify the file extensions to exclude for code review or generate commit message</source>
         <translation>指定要给代码审查或生成提交消息排除的文件扩展名</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="986"/>
+        <location filename="../../preferences.ui" line="996"/>
         <source>e.g. .ts, .ui</source>
         <translation>比如：.ts, .ui</translation>
     </message>
@@ -1910,17 +1915,17 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">Github Copilot：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1012"/>
+        <location filename="../../preferences.ui" line="1022"/>
         <source>&amp;Commit Message</source>
         <translation>提交信息(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1018"/>
+        <location filename="../../preferences.ui" line="1028"/>
         <source>Commit &amp;Message</source>
         <translation>提交信息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1059"/>
+        <location filename="../../preferences.ui" line="1069"/>
         <source>Commit &amp;Action</source>
         <translation>提交动作(&amp;A)</translation>
     </message>
@@ -1929,22 +1934,22 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">提交信息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1024"/>
+        <location filename="../../preferences.ui" line="1034"/>
         <source>Ignore comment line</source>
         <translation>忽略注释行</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1031"/>
+        <location filename="../../preferences.ui" line="1041"/>
         <source>Tab to next group</source>
         <translation>按Tab键跳转分组</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1040"/>
+        <location filename="../../preferences.ui" line="1050"/>
         <source>Group Chars:</source>
         <translation>分组字符：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1047"/>
+        <location filename="../../preferences.ui" line="1057"/>
         <source>Each pair separate by space, such as `() []`</source>
         <translation>每个对以空格分开，比如`() []`</translation>
     </message>
@@ -1953,47 +1958,47 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">提交动作</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1074"/>
+        <location filename="../../preferences.ui" line="1084"/>
         <source>Add</source>
         <translation>添加</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1081"/>
+        <location filename="../../preferences.ui" line="1091"/>
         <source>Delete</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="217"/>
+        <location filename="../../preferences.py" line="219"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="242"/>
+        <location filename="../../preferences.py" line="244"/>
         <source>The diff tool name can&apos;t be empty!</source>
         <translation>diff工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="250"/>
+        <location filename="../../preferences.py" line="252"/>
         <source>The merge tool name can&apos;t be empty!</source>
         <translation>merge工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="147"/>
+        <location filename="../../preferences.ui" line="157"/>
         <source>Git:</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="157"/>
+        <location filename="../../preferences.ui" line="167"/>
         <source>&amp;Browse</source>
         <translation>浏览(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="259"/>
+        <location filename="../../preferences.py" line="261"/>
         <source>The git path you specified is invalid.</source>
         <translation>无效的git路径。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="285"/>
+        <location filename="../../preferences.py" line="287"/>
         <source>Choose Git</source>
         <translation>选择Git</translation>
     </message>

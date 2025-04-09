@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>4</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -96,6 +96,16 @@
             </item>
             <item>
              <widget class="QComboBox" name="cbColorSchema"/>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_23">
+              <property name="text">
+               <string>UI Style</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="cbStyle"/>
             </item>
             <item>
              <spacer name="horizontalSpacer_9">
