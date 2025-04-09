@@ -232,7 +232,7 @@ class Git():
         return data
 
     @staticmethod
-    def commitRawDiff(sha1, filePath=None, gitArgs=None, repoDir=None):
+    def commitRawDiff(sha1, files=None, gitArgs=None, repoDir=None):
         if sha1 == Git.LCC_SHA1:
             args = ["diff-index", "--cached", "HEAD"]
         elif sha1 == Git.LUC_SHA1:
@@ -246,9 +246,9 @@ class Git():
         if gitArgs:
             args.extend(gitArgs)
 
-        if filePath:
+        if files:
             args.append("--")
-            args.append(filePath)
+            args.extend(files)
 
         data = Git.checkOutput(args, repoDir=repoDir)
         if not data:

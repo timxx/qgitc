@@ -963,6 +963,36 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_15">
+         <property name="title">
+          <string>AI Assistant</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_16">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_16">
+            <item>
+             <widget class="QLabel" name="label_22">
+              <property name="text">
+               <string>Files to Exclude:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="leExcludedFiles">
+              <property name="toolTip">
+               <string>Specify the file extensions to exclude for code  review or generate commit message</string>
+              </property>
+              <property name="placeholderText">
+               <string>e.g. .ts, .ui</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>

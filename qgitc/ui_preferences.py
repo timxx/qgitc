@@ -565,6 +565,28 @@ class Ui_Preferences(object):
 
         self.verticalLayout_11.addWidget(self.groupBox_14)
 
+        self.groupBox_15 = QGroupBox(self.tabLLM)
+        self.groupBox_15.setObjectName(u"groupBox_15")
+        self.verticalLayout_16 = QVBoxLayout(self.groupBox_15)
+        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.horizontalLayout_16 = QHBoxLayout()
+        self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
+        self.label_22 = QLabel(self.groupBox_15)
+        self.label_22.setObjectName(u"label_22")
+
+        self.horizontalLayout_16.addWidget(self.label_22)
+
+        self.leExcludedFiles = QLineEdit(self.groupBox_15)
+        self.leExcludedFiles.setObjectName(u"leExcludedFiles")
+
+        self.horizontalLayout_16.addWidget(self.leExcludedFiles)
+
+
+        self.verticalLayout_16.addLayout(self.horizontalLayout_16)
+
+
+        self.verticalLayout_11.addWidget(self.groupBox_15)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_11.addItem(self.verticalSpacer)
@@ -759,6 +781,12 @@ class Ui_Preferences(object):
         self.groupBox_14.setTitle(QCoreApplication.translate("Preferences", u"GitHub Copilot", None))
         self.label_20.setText(QCoreApplication.translate("Preferences", u"Account:", None))
         self.btnGithubCopilot.setText("")
+        self.groupBox_15.setTitle(QCoreApplication.translate("Preferences", u"AI Assistant", None))
+        self.label_22.setText(QCoreApplication.translate("Preferences", u"Files to Exclude:", None))
+#if QT_CONFIG(tooltip)
+        self.leExcludedFiles.setToolTip(QCoreApplication.translate("Preferences", u"Specify the file extensions to exclude for code  review or generate commit message", None))
+#endif // QT_CONFIG(tooltip)
+        self.leExcludedFiles.setPlaceholderText(QCoreApplication.translate("Preferences", u"e.g. .ts, .ui", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
         self.groupBox_11.setTitle(QCoreApplication.translate("Preferences", u"Commit &Message", None))
         self.cbIgnoreComment.setText(QCoreApplication.translate("Preferences", u"Ignore comment line", None))

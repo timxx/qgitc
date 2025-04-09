@@ -441,3 +441,9 @@ class Settings(QSettings):
 
     def logLevel(self):
         return self.value("logLevel", logging.WARNING, type=int)
+
+    def aiExcludedFileExtensions(self):
+        return self.value("aiExcludedFileExtensions", [])
+
+    def setAiExcludedFileExtensions(self, extensions: List[str]):
+        self.setValue("aiExcludedFileExtensions", extensions)

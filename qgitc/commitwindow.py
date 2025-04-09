@@ -686,11 +686,25 @@ class CommitWindow(StateWindow):
 
         return submoduleFiles
 
-    def _collectModelFiles(self, model: QAbstractListModel):
+    @staticmethod
+    def _isFileIgnored(file: str, extsToExclude: List[str] = []):
+        if not extsToExclude:
+            return False
+
+        lowerFile = file.lower()
+        for ext in extsToExclude:
+            if lowerFile.endswith(ext.lower()):
+                return True
+
+        return False
+
+    def _collectModelFiles(self, model: QAbstractListModel, extsToExclude=[]):
         submoduleFiles = {}
         for row in range(model.rowCount()):
             index = model.index(row, 0)
             file = model.data(index, Qt.DisplayRole)
+            if CommitWindow._isFileIgnored(file, extsToExclude):
+                continue
             repoDir = model.data(
                 index, StatusFileListModel.RepoDirRole)
             submoduleFiles.setdefault(repoDir, []).append(file)
@@ -1133,11 +1147,12 @@ class CommitWindow(StateWindow):
                 QMessageBox.Ok)
 
     def _onGenMessageClicked(self):
-        submodules = self._collectStagedRepos()
-        assert (submodules)
+        exts = qApp.settings().aiExcludedFileExtensions()
+        submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
+        assert (submoduleFiles)
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
-        self._aiMessage.generate(list(submodules))
+        self._aiMessage.generate(submoduleFiles)
         logger.debug("begin generate commit message")
 
     def _collectStagedRepos(self):

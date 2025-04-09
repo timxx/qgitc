@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from typing import List
+from typing import Dict, List, Tuple
 from PySide6.QtCore import QObject, Signal, QEvent
 
 from .cancelevent import CancelEvent
@@ -86,20 +86,20 @@ class AiCommitMessage(QObject):
 
         self._aiModel: AiModelBase = None
 
-    def generate(self, submodules: List[str]):
-        if len(submodules) <= 1:
+    def generate(self, submoduleFiles: Dict[str, str]):
+        if len(submoduleFiles) <= 1:
             commitCount = 5
-        elif len(submodules) < 3:
+        elif len(submoduleFiles) < 3:
             commitCount = 3
         else:
             commitCount = 2
 
-        commitCount = 5 if len(submodules) <= 1 else 3
+        commitCount = 5 if len(submoduleFiles) <= 1 else 3
         repoData = {}
-        for submodule in submodules:
-            repoData[submodule] = commitCount
+        for submodule, files in submoduleFiles.items():
+            repoData[submodule] = (files, commitCount)
         if not repoData:
-            repoData[None] = commitCount
+            repoData[None] = (files, commitCount)
 
         self.cancel()
 
@@ -123,9 +123,10 @@ class AiCommitMessage(QObject):
 
         self._executor.cancel()
 
-    def _fetchCommitInfo(self, submodule: str, commitCount: int, cancelEvent: CancelEvent):
+    def _fetchCommitInfo(self, submodule: str, userData: Tuple[list, int], cancelEvent: CancelEvent):
         repoDir = AiCommitMessage._toRepoDir(submodule)
-        diff = Git.commitRawDiff(Git.LCC_SHA1, repoDir=repoDir)
+        files, commitCount = userData
+        diff = Git.commitRawDiff(Git.LCC_SHA1, files, repoDir=repoDir)
         if cancelEvent.isSet():
             return
 

@@ -519,10 +519,22 @@ class Preferences(QDialog):
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
 
+        exts = self.settings.aiExcludedFileExtensions()
+        if exts:
+            self.ui.leExcludedFiles.setText(", ".join(exts))
+
     def _saveLLMTab(self):
         self.settings.setUseLocalLlm(
             self.ui.cbUseLocalLLM.isChecked())
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
+
+        exts = set()
+        for ext in self.ui.leExcludedFiles.text().strip().split(","):
+            ext = ext.strip()
+            if ext:
+                exts.add(ext)
+
+        self.settings.setAiExcludedFileExtensions(list(exts))
 
     def _initCommitMessageTab(self):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())
