@@ -29,7 +29,7 @@ class Ui_Preferences(object):
     def setupUi(self, Preferences):
         if not Preferences.objectName():
             Preferences.setObjectName(u"Preferences")
-        Preferences.resize(659, 404)
+        Preferences.resize(659, 430)
         self.verticalLayout_2 = QVBoxLayout(Preferences)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tabWidget = QTabWidget(Preferences)
@@ -512,34 +512,45 @@ class Ui_Preferences(object):
         self.tabLLM.setObjectName(u"tabLLM")
         self.verticalLayout_11 = QVBoxLayout(self.tabLLM)
         self.verticalLayout_11.setObjectName(u"verticalLayout_11")
-        self.cbUseLocalLLM = QCheckBox(self.tabLLM)
+        self.groupBox_13 = QGroupBox(self.tabLLM)
+        self.groupBox_13.setObjectName(u"groupBox_13")
+        self.verticalLayout_12 = QVBoxLayout(self.groupBox_13)
+        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
+        self.cbUseLocalLLM = QCheckBox(self.groupBox_13)
         self.cbUseLocalLLM.setObjectName(u"cbUseLocalLLM")
 
-        self.verticalLayout_11.addWidget(self.cbUseLocalLLM)
+        self.verticalLayout_12.addWidget(self.cbUseLocalLLM)
 
         self.horizontalLayout_13 = QHBoxLayout()
         self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
-        self.label_16 = QLabel(self.tabLLM)
+        self.label_16 = QLabel(self.groupBox_13)
         self.label_16.setObjectName(u"label_16")
 
         self.horizontalLayout_13.addWidget(self.label_16)
 
-        self.leServerUrl = QLineEdit(self.tabLLM)
+        self.leServerUrl = QLineEdit(self.groupBox_13)
         self.leServerUrl.setObjectName(u"leServerUrl")
 
         self.horizontalLayout_13.addWidget(self.leServerUrl)
 
 
-        self.verticalLayout_11.addLayout(self.horizontalLayout_13)
+        self.verticalLayout_12.addLayout(self.horizontalLayout_13)
 
+
+        self.verticalLayout_11.addWidget(self.groupBox_13)
+
+        self.groupBox_14 = QGroupBox(self.tabLLM)
+        self.groupBox_14.setObjectName(u"groupBox_14")
+        self.verticalLayout_15 = QVBoxLayout(self.groupBox_14)
+        self.verticalLayout_15.setObjectName(u"verticalLayout_15")
         self.horizontalLayout_14 = QHBoxLayout()
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
-        self.label_20 = QLabel(self.tabLLM)
+        self.label_20 = QLabel(self.groupBox_14)
         self.label_20.setObjectName(u"label_20")
 
         self.horizontalLayout_14.addWidget(self.label_20)
 
-        self.btnGithubCopilot = QPushButton(self.tabLLM)
+        self.btnGithubCopilot = QPushButton(self.groupBox_14)
         self.btnGithubCopilot.setObjectName(u"btnGithubCopilot")
 
         self.horizontalLayout_14.addWidget(self.btnGithubCopilot)
@@ -549,7 +560,10 @@ class Ui_Preferences(object):
         self.horizontalLayout_14.addItem(self.horizontalSpacer_11)
 
 
-        self.verticalLayout_11.addLayout(self.horizontalLayout_14)
+        self.verticalLayout_15.addLayout(self.horizontalLayout_14)
+
+
+        self.verticalLayout_11.addWidget(self.groupBox_14)
 
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
@@ -657,14 +671,13 @@ class Ui_Preferences(object):
         QWidget.setTabOrder(self.cbShowWhitespace, self.sbTabSize)
         QWidget.setTabOrder(self.sbTabSize, self.cbIgnoreWhitespace)
         QWidget.setTabOrder(self.cbIgnoreWhitespace, self.cbFamilyDiff)
-        QWidget.setTabOrder(self.cbFamilyDiff, self.tabWidget)
-        QWidget.setTabOrder(self.tabWidget, self.cbFamilyLog)
+        QWidget.setTabOrder(self.cbFamilyDiff, self.cbFamilyLog)
         QWidget.setTabOrder(self.cbFamilyLog, self.cbSizeLog)
 
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(4)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -740,9 +753,11 @@ class Ui_Preferences(object):
 "imgdiff \"$BASE\" \"$LOCAL\" \"$REMOTE\" -o \"$MERGED\"", None))
 #endif // QT_CONFIG(tooltip)
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabTools), QCoreApplication.translate("Preferences", u"&Tools", None))
+        self.groupBox_13.setTitle(QCoreApplication.translate("Preferences", u"Local LLM", None))
         self.cbUseLocalLLM.setText(QCoreApplication.translate("Preferences", u"Use Local LLM", None))
-        self.label_16.setText(QCoreApplication.translate("Preferences", u"Local LLM Server:", None))
-        self.label_20.setText(QCoreApplication.translate("Preferences", u"Github Copilot:", None))
+        self.label_16.setText(QCoreApplication.translate("Preferences", u"Server:", None))
+        self.groupBox_14.setTitle(QCoreApplication.translate("Preferences", u"GitHub Copilot", None))
+        self.label_20.setText(QCoreApplication.translate("Preferences", u"Account:", None))
         self.btnGithubCopilot.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabLLM), QCoreApplication.translate("Preferences", u"&LLM", None))
         self.groupBox_11.setTitle(QCoreApplication.translate("Preferences", u"Commit &Message", None))
