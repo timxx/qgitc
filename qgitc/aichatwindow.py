@@ -192,7 +192,7 @@ class AiChatWidget(QWidget):
         self.sbTemperature = QDoubleSpinBox(self)
         self.sbTemperature.setRange(0.0, 1.0)
         self.sbTemperature.setSingleStep(0.1)
-        self.sbTemperature.setValue(0)
+        self.sbTemperature.setValue(0.1)
         hlayout.addWidget(self.sbTemperature)
 
         self.cbBots = QComboBox(self)
