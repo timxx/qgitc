@@ -1154,7 +1154,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     self.setCurrentBlockState(
                         self.currentBlockState() + 1)
                 self.setFormat(i, textLen - i, formatComment)
-                return
+                return True
             else:
                 # we found a comment end
                 # mark this block as code if it was previously
@@ -1169,7 +1169,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.setFormat(i, next - i, formatComment)
                 i = next
                 if i >= textLen:
-                    return
+                    return True
+            return False
 
         while i < textLen:
             if self.currentBlockState() != -1 and self.currentBlockState() % 2 != 0:
@@ -1207,11 +1208,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
                 if i >= textLen:
                     break
-
                 i += 1
 
             pos = i
-
             if i == textLen or not text[i].isalpha():
                 continue
 
@@ -1993,11 +1992,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # 1. collect all em/strong delimiters
         delims: List[Delimiter] = []
-        for i in range(len(text)):
+        i = 0
+        while i < len(text):
             if text[i] != "_" and text[i] != "*":
+                i += 1
                 continue
             i = collectEmDelims(text, i, delims)
-            i -= 1
 
         # 2. Balance pairs
         balancePairs(delims)
