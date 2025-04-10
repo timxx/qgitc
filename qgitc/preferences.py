@@ -372,11 +372,17 @@ class Preferences(QDialog):
 
         styles = QStyleFactory.keys()
         for style in styles:
-            self.ui.cbStyle.addItem(style)
+            self.ui.cbStyle.addItem(style.capitalize())
 
-        index = self.ui.cbStyle.findText(self.settings.styleName())
+        def _findStyle(styleName):
+            for i in range(self.ui.cbStyle.count()):
+                if self.ui.cbStyle.itemText(i).lower() == styleName.lower():
+                    return i
+            return -1
+
+        index = _findStyle(self.settings.styleName())
         if index == -1:
-            index = self.ui.cbStyle.findText(qApp.style().name())
+            index = _findStyle(qApp.style().name())
         if index != -1:
             self.ui.cbStyle.setCurrentIndex(index)
         else:

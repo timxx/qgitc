@@ -112,7 +112,7 @@ def _init_gui():
     _setup_logging()
 
     styleName = app.settings().styleName()
-    if styleName and styleName != app.style().name():
+    if styleName and styleName.lower() != app.style().name().lower():
         app.setStyle(styleName)
         logger.info("Set style: %s", styleName)
 
