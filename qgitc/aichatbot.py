@@ -3,6 +3,7 @@
 from PySide6.QtGui import QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
 from PySide6.QtWidgets import QTextBrowser
 
+from .markdownhighlighter import MarkdownHighlighter
 from .llm import AiResponse
 
 
@@ -10,6 +11,7 @@ class AiChatbot(QTextBrowser):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._highlighter = MarkdownHighlighter(self.document())
 
     def appendResponse(self, response: AiResponse):
         cursor = self.textCursor()
@@ -54,4 +56,5 @@ class AiChatbot(QTextBrowser):
         cursor.insertBlock(QTextBlockFormat(), QTextCharFormat())
 
     def clear(self):
+        self._highlighter.clearDirtyBlocks()
         super().clear()
