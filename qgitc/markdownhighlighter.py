@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from enum import Flag, IntEnum
+from enum import Enum, Flag, IntEnum
 import string
 from typing import Dict, List
 from PySide6.QtCore import (
@@ -62,6 +62,7 @@ class HighlighterState(IntEnum):
     TrailingSpace = 28
     CheckBoxUnChecked = 29
     CheckBoxChecked = 30
+    StUnderline = 31
 
     # Code highlighting
     CodeKeyWord = 1000
@@ -111,6 +112,7 @@ class HighlighterState(IntEnum):
     CodeV = 222
     CodeVComment = 223
     CodeSQL = 224
+    CodeSQLComment = 225
     CodeJSON = 226
     CodeXML = 228
     CodeCSS = 230
@@ -124,6 +126,14 @@ class HighlighterState(IntEnum):
     CodeVexComment = 241
     CodeCMake = 242
     CodeMake = 244
+    CodeNix = 246,
+    CodeForth = 248
+    CodeForthComment = 249
+    CodeSystemVerilog = 250
+    CodeSystemVerilogComment = 251
+    CodeGDScript = 252
+    CodeTOML = 254
+    CodeTOMLString = 255
 
 
 class HighlightingRule:
@@ -134,6 +144,19 @@ class HighlightingRule:
         self.state = state
         self.capturingGroup = 0
         self.maskedGroup = 0
+
+
+class RangeType(Enum):
+    CodeSpan = 0
+    Emphasis = 1
+    Link = 2
+
+
+class InlineRange:
+    def __init__(self, begin: int, end: int, type: RangeType):
+        self.begin = begin
+        self.end = end
+        self.type = type
 
 
 def getIndentation(text):
@@ -271,6 +294,118 @@ def balancePairs(delims: List[Delimiter]):
             j -= curDelim.jump + 1
 
 
+def isParagraph(text: str):
+    # blank line
+    if not text:
+        return False
+
+    indent = getIndentation(text)
+    # code block
+    if indent >= 4:
+        return False
+
+    textView = text[indent:-1]
+    if not textView:
+        return False
+
+    # unordered listtextView
+    if textView.startswith("- ") or \
+            textView.startswith("+ ") or \
+            textView.startswith("* "):
+        return False
+
+    # block quote
+    if textView.startswith("> "):
+        return False
+
+    # atx heading
+    if textView.startswith("#"):
+        firstSpace = textView.find(' ')
+        if firstSpace > 0 and firstSpace <= 7:
+            return False
+
+    # hr
+    def isThematicBreak():
+        return (all(ch == '-' or ch == ' ' or ch == '\t' for ch in textView) or
+                all(ch == '+' or ch == ' ' or ch == '\t' for ch in textView) or
+                all(ch == '*' or ch == ' ' or ch == '\t' for ch in textView))
+
+    if isThematicBreak():
+        return False
+
+    # ordered list
+    if textView[0].isdigit():
+        i = 1
+        count = 1
+        while i < len(textView):
+            if textView[i].isdigit():
+                count += 1
+                i += 1
+                continue
+            else:
+                break
+
+        # ordered list marker can't be more than 9 numbers
+        if (count <= 9 and i + 1 < len(textView) and
+            (textView[i] == '.' or
+             textView[i] == ')') and
+                textView[i + 1] == ' '):
+            return False
+
+    return True
+
+
+def isBeginningOfList(front: str):
+    return front == '-' or front == '+' or front == '*' or front.isdigit()
+
+
+supportedSchemes = {
+    "http://",  "https://",
+    "file://",  "www.",
+    "ftp://",   "mailto:",
+    "tel:",     "sms:",
+    "smsto:",   "data:",
+    "irc://",   "gopher://",
+    "spotify:", "steam:",
+    "bitcoin:", "magnet:",
+    "ed2k://",  "news:",
+    "ssh://",   "note://"
+}
+
+
+def isLink(text: str):
+    for scheme in supportedSchemes:
+        if text.startswith(scheme):
+            return True
+
+    return False
+
+
+def isValidEmail(email: str):
+    # Check for a single '@' character
+    atIndex = email.find('@')
+    if atIndex == -1:
+        return False
+
+    # Check for at least one character before and after '@'
+    if atIndex == 0 or atIndex == email.length() - 1:
+        return False
+
+    # Split email into local part and domain
+    localPart = email[:atIndex]
+    domain = email[atIndex + 1:]
+
+    # Check local part for validity (e.g., no consecutive dots)
+    if not localPart or ".." in localPart:
+        return False
+
+    # Check domain for validity (e.g., at least one dot)
+    if not domain or domain.find('.') == -1:
+        return False
+
+    return True
+
+
 class MarkdownHighlighter(QSyntaxHighlighter):
     """
     Markdown syntax highlighting
@@ -292,6 +427,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         self._highlightingRules: List[HighlightingRule] = []
         self._linkRanges: List[tuple[int, int]] = []
+        self._ranges: Dict[int, list] = {}
         self._dirtyTextBlocks: List[QTextBlock] = []
         self._highlightingFinished = True
 
@@ -345,6 +481,10 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def setTextFormat(state: HighlighterState, format_: QTextCharFormat):
         MarkdownHighlighter._formats[state] = format_
 
+    @staticmethod
+    def isHeading(state: HighlighterState):
+        return HighlighterState.H1 <= state <= HighlighterState.H6
+
     def clearDirtyBlocks(self):
         self._dirtyTextBlocks.clear()
 
@@ -352,12 +492,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._highlightingOptions = options
 
     def initHighlightingRules(self):
-        # Highlight the reference of reference links
-        rule = HighlightingRule(HighlighterState.MaskedSyntax)
-        rule.pattern = QRegularExpression(r"^\[.+?\]: \w+://.+$")
-        rule.shouldContain = "://"
-        self._highlightingRules.append(rule)
-
         # Highlight block quotes
         rule = HighlightingRule(HighlighterState.BlockQuote)
         if self._highlightingOptions & HighlightingOptions.FullyHighlightedBlockQuote:
@@ -374,88 +508,15 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         #    rule.state = HighlighterState::Table;
         #    _highlightingRulesPre.append(rule);
 
-        # Highlight URLs
-        rule = HighlightingRule(HighlighterState.Link)
-
-        # URLs without any other markup
-        rule.pattern = QRegularExpression(r"\b\w+?:\/\/[^\s>]+")
-        rule.capturingGroup = 0
-        rule.shouldContain = "://"
-        self._highlightingRules.append(rule)
-
-        # URLs with <> but without any . in it
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"<(\w+?:\/\/[^\s]+)>")
-        rule.capturingGroup = 1
-        rule.shouldContain = "://"
-        self._highlightingRules.append(rule)
-
-        # Links with <> that have a . in them
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"<([^\s`][^`]*?\.[^`]*?[^\s`])>")
-        rule.capturingGroup = 1
-        rule.shouldContain = "<"
-        self._highlightingRules.append(rule)
-
-        # URLs with title
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"\[([^\[\]]+)\]\((\S+|.+?)\)\B")
-        rule.shouldContain = "]("
-        self._highlightingRules.append(rule)
-
-        # URLs with empty title
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"\[\]\((.+?)\)")
-        rule.shouldContain = "[]("
-        self._highlightingRules.append(rule)
-
-        # Email links
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"<(.+?@.+?)>")
-        rule.shouldContain = "@"
-        self._highlightingRules.append(rule)
-
-        # Reference links
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"\[(.+?)\]\[.+?\]")
-        rule.shouldContain = "["
-        self._highlightingRules.append(rule)
-
-        # Images with text
-        rule = HighlightingRule(HighlighterState.Image)
-        rule.pattern = QRegularExpression(r"!\[(.+?)\]\(.+?\)")
-        rule.shouldContain = "!["
-        rule.capturingGroup = 1
-        self._highlightingRules.append(rule)
-
-        # Images without text
-        rule = HighlightingRule(HighlighterState.Image)
-        rule.pattern = QRegularExpression(r"!\[\]\((.+?)\)")
-        rule.shouldContain = "![]"
-        self._highlightingRules.append(rule)
-
-        # Image links
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"\[!\[(.+?)\]\(.+?\)\]\(.+?\)")
-        rule.shouldContain = "!["
-        rule.capturingGroup = 1
-        self._highlightingRules.append(rule)
-
-        # Image links without text
-        rule = HighlightingRule(HighlighterState.Link)
-        rule.pattern = QRegularExpression(r"\[!\[\]\(.+?\)\]\((.+?)\)")
-        rule.shouldContain = "![]("
-        self._highlightingRules.append(rule)
-
         # Trailing spaces
         rule = HighlightingRule(HighlighterState.TrailingSpace)
         rule.pattern = QRegularExpression(r"( +)$")
         # Note: Python string handling is different, this might need adjustment
-        rule.shouldContain = " \0"
+        rule.shouldContain = "  "
         rule.capturingGroup = 1
         self._highlightingRules.append(rule)
 
-        # Inline comments for Rmarkdown
+        # Inline comments for Markdown
         rule = HighlightingRule(HighlighterState.Comment)
         rule.pattern = QRegularExpression(r"^\[.+?\]: # \(.+?\)$")
         rule.shouldContain = "]: # ("
@@ -463,8 +524,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Tables with starting |
         rule = HighlightingRule(HighlighterState.Table)
-        rule.pattern = QRegularExpression(r"^\|.+?\|$")
         rule.shouldContain = "|"
+        # Support up to 3 leading spaces, because md4c seems to support it
+        # See https://github.com/pbek/QOwnNotes/issues/3137
+        rule.pattern = QRegularExpression(r"^\\s{0,3}(\\|.+?\\|)$")
+        rule.capturingGroup = 1
         self._highlightingRules.append(rule)
 
     @staticmethod
@@ -537,6 +601,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         charFormat.setFontItalic(True)
         formats[HighlighterState.Italic] = charFormat
 
+        # set character format for underline
+        charFormat = QTextCharFormat()
+        charFormat.setFontUnderline(True)
+        formats[HighlighterState.StUnderline] = charFormat
+
         # Set character format for bold
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
@@ -568,6 +637,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         charFormat = QTextCharFormat()
         formats[HighlighterState.NoState] = charFormat
+
+        # set character format for trailing spaces
+        charFormat = QTextCharFormat()
+        charFormat.setBackground(QColor(252, 175, 62))
+        formats[HighlighterState.TrailingSpace] = charFormat
 
         # Formats for syntax highlighting
         charFormat = QTextCharFormat()
@@ -627,6 +701,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             "js": HighlighterState.CodeJs,
             "json": HighlighterState.CodeJSON,
             "make": HighlighterState.CodeMake,
+            "nix": HighlighterState.CodeNix,
             "php": HighlighterState.CodePHP,
             "py": HighlighterState.CodePython,
             "python": HighlighterState.CodePython,
@@ -641,7 +716,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             "vex": HighlighterState.CodeVex,
             "xml": HighlighterState.CodeXML,
             "yml": HighlighterState.CodeYAML,
-            "yaml": HighlighterState.CodeYAML
+            "yaml": HighlighterState.CodeYAML,
+            "forth": HighlighterState.CodeForth,
+            "systemverilog": HighlighterState.CodeSystemVerilog,
+            "gdscript": HighlighterState.CodeGDScript,
+            "toml": HighlighterState.CodeTOML,
         }
 
     def timerTick(self):
@@ -699,7 +778,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
     def highlightAdditionalRules(self, rules: List[HighlightingRule], text: str):
         maskedFormat = self._formats[HighlighterState.MaskedSyntax]
-        self._linkRanges.clear()
 
         for rule in rules:
             # continue if another current block state was already set if
@@ -729,21 +807,13 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                         currentMaskedFormat.setFontPointSize(
                             charFormat.fontPointSize())
 
-                    if self.currentBlockState() >= HighlighterState.H1 and self.currentBlockState() <= HighlighterState.H6:
+                    if self.isHeading(self.currentBlockState()):
                         pass
                     else:
-                        # store masked part of the link as a range
-                        if rule.state == HighlighterState.Link:
-                            start = match.capturedStart(capturingGroup)
-                            end = match.capturedEnd(
-                                capturingGroup) + match.capturedLength(maskedGroup)
-                            if (start, end) not in self._linkRanges:
-                                self._linkRanges.append((start, end))
-
                         self.setFormat(match.capturedStart(maskedGroup),
                                        match.capturedLength(maskedGroup), currentMaskedFormat)
 
-                if self.currentBlockState() >= HighlighterState.H1 and self.currentBlockState() <= HighlighterState.H6:
+                if self.isHeading(self.currentBlockState()):
                     self.setHeadingStyles(rule.state, match, capturingGroup)
                 else:
                     self.setFormat(match.capturedStart(capturingGroup),
@@ -762,38 +832,34 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             return
 
     def highlightThematicBreak(self, text: str):
-        if not text or text.startswith("    ") or text.startswith("\t"):
-            return
+        i = 0
+        while i < 4 and i < len(text):
+            if text[i] != ' ':
+                break
+            i += 1
 
-        sText = text.strip()
-        if not sText:
-            return
-
-        if not sText.startswith("-") and \
-            not sText.startswith("_") and \
-                not sText.startswith("*"):
+        sText = text[i:]
+        if not sText or i == 4 or text.startswith("\t"):
             return
 
         c = sText[0]
+        if c != '-' and c != '_' and c != '*':
+            return
+
+        length = 0
         hasSameChars = True
-        len = 0
         for sc in sText:
             if c != sc and sc != ' ':
                 hasSameChars = False
                 break
             if sc != " ":
-                len += 1
-        if len < 3:
+                length += 1
+        if length < 3:
             return
 
-        f = self._formats[HighlighterState.HorizontalRuler]
-        if c == "-":
-            f.setFontLetterSpacing(80)
-        elif c == "_":
-            f.setFontUnderline(True)
-
         if hasSameChars:
-            self.setFormat(0, len(text), f)
+            self.setFormat(
+                0, len(text), self._formats[HighlighterState.HorizontalRuler])
 
     def highlightHeadline(self, text: str):
         """ Highlight headlines """
@@ -820,7 +886,16 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 state = HighlighterState(
                     HighlighterState.H1 + headingLevel - 1)
 
-                self.setFormat(0, len(text), self._formats[state])
+                # Set styling of the "#"s to "masked syntax", but with the size of
+                # the heading
+                maskedFormat = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
+                maskedFormat.setFontPointSize(
+                    self._formats[state].fontPointSize())
+                self.setFormat(0, headingLevel, maskedFormat)
+
+                # Set the styling of the rest of the heading
+                self.setFormat(headingLevel + 1, len(text) - 1 - headingLevel,
+                               self._formats[state])
 
                 self.setCurrentBlockState(state)
                 return
@@ -836,14 +911,15 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         # take care of ==== and ---- headlines
         prev = self.currentBlock().previous().text()
         prevSpaces = getIndentation(prev)
+        isPrevParagraph = isParagraph(prev)
 
-        if text[spacesOffset] == '=' and prevSpaces < 4:
-            pattern1 = hasOnlyHeadChars(text, '=', spacesOffset)
+        if text[spacesOffset] == '=' and prevSpaces < 4 and isPrevParagraph:
+            pattern1 = prev and hasOnlyHeadChars(text, '=', spacesOffset)
             if pattern1:
                 self.highlightSubHeadline(text, HighlighterState.H1)
                 return
-        elif text[spacesOffset] == '-' and prevSpaces < 4:
-            pattern2 = hasOnlyHeadChars(text, '-', spacesOffset)
+        elif text[spacesOffset] == '-' and prevSpaces < 4 and isPrevParagraph:
+            pattern2 = prev and hasOnlyHeadChars(text, '-', spacesOffset)
             if pattern2:
                 self.highlightSubHeadline(text, HighlighterState.H2)
                 return
@@ -852,18 +928,19 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         if not nextBlockText:
             return
         nextSpaces = getIndentation(nextBlockText)
+        isCurrentParagraph = isParagraph(text)
 
         if nextSpaces >= len(nextBlockText):
             return
 
-        if nextBlockText[nextSpaces] == '=' and nextSpaces < 4:
+        if nextBlockText[nextSpaces] == '=' and nextSpaces < 4 and isCurrentParagraph:
             nextHasEqualChars = hasOnlyHeadChars(
                 nextBlockText, '=', nextSpaces)
             if nextHasEqualChars:
                 self.setFormat(
                     0, len(text), self._formats[HighlighterState.H1])
                 self.setCurrentBlockState(HighlighterState.H1)
-        elif nextBlockText[nextSpaces] == '-' and nextSpaces < 4:
+        elif nextBlockText[nextSpaces] == '-' and nextSpaces < 4 and isCurrentParagraph:
             nextHasMinusChars = hasOnlyHeadChars(
                 nextBlockText, '-', nextSpaces)
             if nextHasMinusChars:
@@ -880,12 +957,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         if not text or (not text.startswith("    ") and
                         not text.startswith('\t')):
             return
+
+        prevTrimmed = self.currentBlock().previous().text().strip()
         # previous line must be empty according to CommonMark except if it is a
         # heading https://spec.commonmark.org/0.29/#indented-code-block
-        if (self.currentBlock().previous().text().strip() and
-            self.previousBlockState() != HighlighterState.CodeBlockIndented and
-            (self.previousBlockState() < HighlighterState.H1 or self.previousBlockState() > HighlighterState.H6) and
-                self.previousBlockState() != HighlighterState.HeadlineEnd):
+        if (prevTrimmed and self.previousBlockState() != HighlighterState.CodeBlockIndented and
+                not self.isHeading(self.previousBlockState()) and self.previousBlockState() != HighlighterState.HeadlineEnd):
             return
 
         trimmed = text.strip()
@@ -918,17 +995,13 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def highlightSubHeadline(self, text: str, state: HighlighterState):
         maskedFormat = self._formats[HighlighterState.MaskedSyntax]
         previousBlock = self.currentBlock().previous()
-        prevEmpty = not previousBlock.text().strip()
-
-        if prevEmpty:
-            return
 
         # we check for both H1/H2 so that if the user changes his mind, and changes
         # === to ---, changes be reflected immediately
         if (self.previousBlockState() == HighlighterState.H1 or
             self.previousBlockState() == HighlighterState.H2 or
                 self.previousBlockState() == HighlighterState.NoState):
-            currentMaskedFormat = maskedFormat
+            currentMaskedFormat = QTextCharFormat(maskedFormat)
             # set the font size from the current rule's font format
             currentMaskedFormat.setFontPointSize(
                 self._formats[state].fontPointSize())
@@ -937,7 +1010,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self.setCurrentBlockState(HighlighterState.HeadlineEnd)
 
             # we want to re-highlight the previous block
-            # this must not done directly, but with a queue, otherwise it
+            # this must not be done directly, but with a queue, otherwise it
             # will crash
             # setting the character format of the previous text, because this
             # causes text to be formatted the same way when writing after
@@ -981,7 +1054,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.setCurrentBlockState(state)
 
             # set the font size from the current rule's font format
-            maskedFormat = self._formats[HighlighterState.MaskedSyntax]
+            maskedFormat = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
             maskedFormat.setFontPointSize(
                 self._formats[HighlighterState.CodeBlock].fontPointSize())
 
@@ -1001,12 +1074,19 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         isCSS = False
         isYAML = False
         isMake = False
+        isForth = False
+        isGDScript = False
+        isSQL = False
+        isTOML = False
 
         keywords = {}
         others = {}
         types = {}
         builtin = {}
         literals = {}
+
+        # apply the default code block format first
+        self.setFormat(0, textLen, self._formats[HighlighterState.CodeBlock])
 
         state = self.currentBlockState()
         if state in [HighlighterState.CodeCpp,
@@ -1068,8 +1148,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                        HighlighterState.CodeVComment + self.tildeOffset]:
             loadVData(types, keywords, builtin, literals, others)
         elif state in [HighlighterState.CodeSQL,
-                       HighlighterState.CodeSQL + self.tildeOffset]:
+                       HighlighterState.CodeSQL + self.tildeOffset,
+                       HighlighterState.CodeSQLComment,
+                       HighlighterState.CodeSQLComment + self.tildeOffset]:
             loadSQLData(types, keywords, builtin, literals, others)
+            isSQL = True
+            comment = "-"  # prevent the default comment highlighting
         elif state in [HighlighterState.CodeJSON,
                        HighlighterState.CodeJSON + self.tildeOffset]:
             loadJSONData(types, keywords, builtin, literals, others)
@@ -1106,7 +1190,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                        HighlighterState.CodeVexComment,
                        HighlighterState.CodeVexComment + self.tildeOffset]:
             loadVexData(types, keywords, builtin, literals, others)
-        elif state in [HighlighterState.CodeMake,
+        elif state in [HighlighterState.CodeCMake,
                        HighlighterState.CodeCMake + self.tildeOffset]:
             loadCMakeData(types, keywords, builtin, literals, others)
             comment = "#"
@@ -1115,23 +1199,47 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             isMake = True
             loadMakeData(types, keywords, builtin, literals, others)
             comment = "#"
+        elif state in [HighlighterState.CodeNix,
+                       HighlighterState.CodeNix + self.tildeOffset]:
+            loadNixData(types, keywords, builtin, literals, others)
+            comment = "#"
+        elif state in [HighlighterState.CodeForth,
+                       HighlighterState.CodeForth + self.tildeOffset,
+                       HighlighterState.CodeForthComment,
+                       HighlighterState.CodeForthComment + self.tildeOffset]:
+            isForth = True
+            loadForthData(types, keywords, builtin, literals, others)
+        elif state in [HighlighterState.CodeSystemVerilog,
+                       HighlighterState.CodeSystemVerilogComment]:
+            loadSystemVerilogData(types, keywords, builtin, literals, others)
+        elif state in [HighlighterState.CodeGDScript,
+                       HighlighterState.CodeGDScript + self.tildeOffset]:
+            isGDScript = True
+            loadGDScriptData(types, keywords, builtin, literals, others)
+            comment = "#"
+        elif state in [HighlighterState.CodeTOML,
+                       HighlighterState.CodeTOML + self.tildeOffset,
+                       HighlighterState.CodeTOMLString,
+                       HighlighterState.CodeTOMLString + self.tildeOffset]:
+            isTOML = True
+            loadTOMLData(types, keywords, builtin, literals, others)
+            comment = "#"
         else:
-            comment = ""
+            self.setFormat(
+                0, textLen, self._formats[HighlighterState.CodeBlock])
+            return
 
-        # apply the default code block format first
-        self.setFormat(0, textLen, self._formats[HighlighterState.CodeBlock])
-
-        def applyCodeFormat(i, data: Dict[str, str], text: str, fmt):
+        def applyCodeFormat(i, data: Dict[str, list], text: str, fmt):
             # check if we are at the beginning OR if this is the start of a word
-            if i == 0 or not text[i - 1].isalpha():
-                wordList = data.get(text[i].lower(), [])
+            if i == 0 or (not text[i - 1].isalnum() and text[i - 1] != '_'):
+                wordList = data.get(text[i], [])
                 for word in wordList:
                     # we have a word match check
                     # 1. if we are at the end
                     # 2. if we have a complete word
                     if (text[i:i+len(word)] == word and
                         (i + len(word) == len(text) or
-                         not text[i + len(word)].isalpha())):
+                         (not text[i + len(word)].isalnum() and text[i+len(word)] != '_'))):
                         self.setFormat(i, len(word), fmt)
                         i += len(word)
             return i
@@ -1257,7 +1365,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     if not text[cnt].isalpha():
                         break
                     cnt += 1
-                i = cnt
+                i = cnt - 1
 
         # POST PROCESSORS
         if isCSS:
@@ -1266,6 +1374,14 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self.ymlHighlighter(text)
         if isMake:
             self.makeHighlighter(text)
+        if isForth:
+            self.forthHighlighter(text)
+        if isGDScript:
+            self.gdscriptHighlighter(text)
+        if isSQL:
+            self.sqlHighlighter(text)
+        if isTOML:
+            self.tomlHighlighter(text)
 
     def highlightStringLiterals(self, strType: str, text: str, i: int):
         """ Highlight string literals in code """
@@ -1291,22 +1407,22 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 # octal esc sequence \123
                 elif nextChar in ['0', '1', '2', '3', '4', '5', '6', '7']:
                     if i + 4 <= len(text):
-                        isCurrentOctal = True
                         if not self.isOctal(text[i + 2]):
-                            isCurrentOctal = False
-                        if not self.isOctal(text[i + 3]):
-                            isCurrentOctal = False
-                        length = 4 if isCurrentOctal else 0
+                            pass
+                        elif not self.isOctal(text[i + 3]):
+                            pass
+                        else:
+                            length = 4
                 # hex numbers \xFA
                 elif nextChar == 'x':
                     if i + 3 <= len(text):
-                        isCurrentHex = True
                         if not self.isHex(text[i + 2]):
-                            isCurrentHex = False
-                        if not self.isHex(text[i + 3]):
-                            isCurrentHex = False
-                        length = 4 if isCurrentHex else 0
-                # TODO: implement unicode code point escaping
+                            pass
+                        elif not self.isHex(text[i + 3]):
+                            pass
+                        else:
+                            length = 4
+                # TODO: implement Unicode code point escaping
 
                 # if len is zero, that means this wasn't an esc seq
                 # increment i so that we skip this backslash
@@ -1324,7 +1440,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self.setFormat(i, 1, self._formats[HighlighterState.CodeString])
             i += 1
 
-        return i
+        return i - 1
 
     def highlightNumericLiterals(self, text: str, i: int):
         """
@@ -1374,7 +1490,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         isPostfixAllowed = False
         if i == len(text):
             # cant have e at the end
-            if isCurrentHex or (not isCurrentHex and text[i - 1] != 'e'):
+            if isCurrentHex or text[i - 1] != 'e':
                 isPostfixAllowed = True
         else:
             # these values are allowed after a number
@@ -1441,7 +1557,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                                    self._formats[HighlighterState.CodeType])
                 else:
                     # error highlighting
-                    errorFormat = self._formats[HighlighterState.NoState]
+                    errorFormat = QTextCharFormat(self._formats[HighlighterState.NoState])
                     errorFormat.setUnderlineColor(Qt.red)
                     errorFormat.setUnderlineStyle(
                         QTextCharFormat.WaveUnderline)
@@ -1534,7 +1650,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
             # underlined links
             if text[i] == 'h':
-                if text[i:i+5] == "https" or text[i:i+4] == "http":
+                if text[i:i+4] == "http":
                     space = text.find(' ', i)
                     if space == -1:
                         space = textLen
@@ -1662,7 +1778,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     if semicolon < 0:
                         semicolon = textLen
                     color = text[i:semicolon]
-                    f = self._formats[HighlighterState.CodeBlock]
                     c = QColor(color)
                     if color.startswith("rgb"):
                         t = text.find('(', i)
@@ -1698,6 +1813,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                         lightness = c.lightness() + 100
                         foreground = c.lighter(lightness)
 
+                    f = QTextCharFormat(
+                        self._formats[HighlighterState.CodeBlock])
                     f.setBackground(c)
                     f.setForeground(foreground)
                     # clear prev format
@@ -1766,11 +1883,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
     def highlightFrontmatterBlock(self, text):
         """ Highlight multi-line frontmatter blocks """
-
-        # return if there is no frontmatter in this document
-        if self.document().firstBlock().text() != "---":
-            return
-
         if text == "---":
             foundEnd = self.previousBlockState() == HighlighterState.FrontmatterBlock
 
@@ -1821,152 +1933,137 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def highlightLists(self, text: str):
         """ Highlight lists in markdown """
         spaces = 0
+        # Skip any spaces in the beginning
         while spaces < len(text) and text[spaces].isspace():
             spaces += 1
 
+        # return if we reached the end
         if spaces >= len(text):
             return
 
         # check for start of list
-        if (text[spaces] != '-' and
-            text[spaces] != '+' and
-            text[spaces] != '*' and
-                not text[spaces].isdigit()):  # ordered
+        front = text[spaces]
+        if not isBeginningOfList(front):
             return
 
+        curPos = spaces
         # Ordered List
         if text[spaces].isdigit():
-            number = spaces
+            number = curPos
+            # move forward till first non-number char
             while number < len(text) and text[number].isdigit():
                 number += 1
 
-            if number + 1 >= len(text):
+            count = number - curPos
+            # reached end?
+            if number + 1 >= len(text) or count > 9:
                 return
             # there should be a '.' or ')' after a number
             if ((text[number] == '.' or text[number] == ')') and
                     text[number + 1] == ' '):
                 self.setCurrentBlockState(HighlighterState.List)
-                self.setFormat(spaces, number - spaces + 1,
+                self.setFormat(curPos, number - curPos + 1,
                                self._formats[HighlighterState.List])
+                # highlight checkbox if any
+                self.highlightCheckbox(text, number)
             return
 
-        if spaces + 1 >= len(text):
+        # if its just a '-' etc, no highlighting
+        if curPos + 1 >= len(text):
             return
         # check for a space after it
-        if text[spaces + 1] != ' ':
+        if text[curPos + 1] != ' ':
             return
 
         # check if we are in checkbox list
-        if spaces + 2 < len(text) and text[spaces + 2] == '[':
-            if spaces + 4 >= len(text):
-                return
-            start = spaces + 2
-            length = 3
-            # checked checkbox
-            if text[spaces + 3] == 'x' and text[spaces + 4] == ']':
-                self.setFormat(
-                    start, length, self._formats[HighlighterState.CheckBoxChecked])
-            # unchecked checkbox
-            elif text[spaces + 3] == ' ' and text[spaces + 4] == ']':
-                self.setFormat(
-                    start, length, self._formats[HighlighterState.CheckBoxUnChecked])
-            # unchecked checkbox with no space bw brackets
-            elif text[spaces + 3] == ']':
-                self.setFormat(
-                    start, 2, self._formats[HighlighterState.CheckBoxUnChecked])
+        self.highlightCheckbox(text, curPos)
 
         # Unordered List
         self.setCurrentBlockState(HighlighterState.List)
-        self.setFormat(spaces, 1, self._formats[HighlighterState.List])
+        self.setFormat(curPos, 1, self._formats[HighlighterState.List])
 
     def highlightInlineRules(self, text: str):
         """
         Highlight inline rules aka Emphasis, bolds, inline code spans,
-        underlines, strikethrough.
+        underlines, strikethrough, links, and images.
         """
-        if not text:
-            return
+        # clear existing span ranges for this block
+        it = self._ranges.get(self.currentBlock().blockNumber(), [])
+        it.clear()
 
-        isEmStrongDone = False
-
-        # TODO: Add Links and Images parsing
         i = 0
         while i < len(text):
-            # make sure we are not in a link range
-            if self._linkRanges:
-                res = isInLinkRange(i, self._linkRanges)
-                if res > -1:
-                    i += res
-                    continue
-
-            if text[i] == '`' or text[i] == '~':
-                i = self.highlightInlineSpans(text, i, text[i])
-            elif (text[i] == '<' and i + 3 < len(text) and
-                  text[i + 1] == '!' and text[i + 2] == '-' and text[i + 3] == '-'):
+            currentChar = text[i]
+            if currentChar == '`' or currentChar == '~':
+                i = self.highlightInlineSpans(text, i, currentChar)
+            elif currentChar == '<' and i + 4 < len(text) and text[i, i + 4] == "<!--":
                 i = self.highlightInlineComment(text, i)
-            elif not isEmStrongDone and (text[i] == '*' or text[i] == '_'):
-                self.highlightEmAndStrong(text, i)
-                isEmStrongDone = True
-
+            else:
+                i = self.highlightLinkOrImage(text, i)
             i += 1
+        self.highlightEmAndStrong(text, 0)
 
     def highlightInlineSpans(self, text: str, currentPos: int, c: str):
         """ highlight inline code spans -> `code` and highlight strikethroughs """
+        # clear code span ranges for this block
+        i = currentPos
+        # found a backtick
+        length = 0
+        pos = i
 
-        if currentPos + 1 >= len(text):
+        if i != 0 and text[i - 1] == '\\':
             return currentPos
 
-        for i in range(currentPos, len(text)):
-            if text[i] != c:
-                continue
+        # keep moving forward in backtick sequence;
+        while pos < len(text) and text[pos] == c:
+            length += 1
+            pos += 1
 
-            # found a backtick
-            length = 0
-            pos = i
+        seq = text[i, i+length]
+        start = i
+        i += length
+        next = text.find(seq, i)
+        if next == -1:
+            return currentPos
 
-            if i != 0 and text[i - 1] == '\\':
-                continue
+        if next + length < len(text) and text[next + length] == c:
+            return currentPos
 
-            # keep moving forward in backtick sequence
-            while pos < len(text) and text[pos] == c:
-                length += 1
-                pos += 1
+        # get existing format if any
+        # we want to append to the existing format, not overwrite it
+        fmt = self.format(start + 1)
+        inlineFmt = QTextCharFormat()
 
-            seq = text[i:i+length]
-            start = i
-            i += length
-            next = text.find(seq, i)
-            if next == -1:
-                return currentPos + length
+        # select appropriate format for current text
+        if c != '~':
+            inlineFmt = QTextCharFormat(self._formats[HighlighterState.InlineCodeBlock])
 
-            if next + length < len(text) and text[next + length] == c:
-                continue
+        # make sure we don't change font size / existing formatting
+        if fmt.fontPointSize() > 0:
+            inlineFmt.setFontPointSize(fmt.fontPointSize())
 
-            fmt = self.format(start + i)
-            inlineFmt = self._formats[HighlighterState.NoState]
-            if c != "~":
-                inlineFmt = self._formats[HighlighterState.InlineCodeBlock]
-
+        if c == '~':
+            inlineFmt.setFontStrikeOut(True)
+            # we don't want these properties for "inline code span"
+            inlineFmt.setFontItalic(fmt.fontItalic())
+            inlineFmt.setFontWeight(fmt.fontWeight())
             inlineFmt.setFontUnderline(fmt.fontUnderline())
             inlineFmt.setUnderlineStyle(fmt.underlineStyle())
-            if fmt.fontPointSize() > 0:
-                inlineFmt.setFontPointSize(fmt.fontPointSize())
-            inlineFmt.setFontItalic(fmt.fontItalic())
 
-            if c == "~":
-                inlineFmt.setFontStrikeOut(True)
+        if c == '`':
+            self._ranges[self.currentBlock().blockNumber()].append(
+                InlineRange(start, next, RangeType.CodeSpan))
 
-            self.setFormat(start + 1, next - start, inlineFmt)
+        # format the text
+        self.setFormat(start + length, next - (start + length), inlineFmt)
 
-            # highlight backticks as masked
-            self.setFormat(
-                start, length, self._formats[HighlighterState.MaskedSyntax])
-            self.setFormat(
-                next, length, self._formats[HighlighterState.MaskedSyntax])
+        # format backticks as masked
+        self.setFormat(
+            start, length, self._formats[HighlighterState.MaskedSyntax])
+        self.setFormat(next, length, self._formats[HighlighterState.MaskedSyntax])
 
-            i = next + length
-
-        return currentPos
+        i = next + length
+        return i
 
     def highlightInlineComment(self, text: str, pos: int):
         """ highlight inline comments in markdown <!-- comment --> """
@@ -1997,6 +2094,10 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if text[i] != "_" and text[i] != "*":
                 i += 1
                 continue
+            isIncodeSpan = self.isPosInACodeSpan(
+                self.currentBlock().blockNumber(), i)
+            if isIncodeSpan:
+                continue
             i = collectEmDelims(text, i, delims)
 
         # 2. Balance pairs
@@ -2014,6 +2115,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 continue
 
             endDelim = delims[startDelim.end]
+            state: HighlighterState = self.currentBlockState()
 
             isStrong = i > 0 and delims[i - 1].end == startDelim.end + 1 and \
                 delims[i - 1].pos == startDelim.pos - 1 and \
@@ -2030,19 +2132,38 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     startDelim.marker == "_"
                 while k != (startDelim.pos + boldLen):
                     fmt = self.format(k)
-                    # if we are in plains text, use the format's specified color
+                    fontFamilies = self._formats[HighlighterState.Bold].fontFamilies(
+                    )
+                    if fontFamilies:
+                        fmt.setFontFamilies(fontFamilies)
+                    if self._formats[state].fontPointSize() > 0:
+                        fmt.setFontPointSize(
+                            self._formats[state].fontPointSize())
+
+                    # if we are in plain text, use the format's specified color
                     if fmt.foreground() == QTextCharFormat().foreground():
                         fmt.setForeground(
                             self._formats[HighlighterState.Bold].foreground())
                     if underline:
-                        fmt.setFontUnderline(True)
-                    else:
+                        fmt.setForeground(
+                            self._formats[HighlighterState.StUnderline].foreground())
+                        fmt.setFont(
+                            self._formats[HighlighterState.StUnderline].font())
+                        fmt.setFontUnderline(
+                            self._formats[HighlighterState.StUnderline].fontUnderline())
+                    elif self._formats[HighlighterState.Bold].font().bold():
                         fmt.setFontWeight(QFont.Bold)
                     self.setFormat(k, 1, fmt)
                     k += 1
 
                 masked.append((startDelim.pos - 1, 2))
                 masked.append((endDelim.pos, 2))
+
+                block = self.currentBlock().blockNumber()
+                self._ranges.setdefault(block, []).append(InlineRange(
+                    startDelim.pos, endDelim.pos + 1, RangeType.Emphasis))
+                self._ranges[block].append(InlineRange(
+                    startDelim.pos - 1, endDelim.pos, RangeType.Emphasis))
                 i -= 1
             else:
                 k = startDelim.pos
@@ -2054,23 +2175,496 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 itLen = endDelim.pos - startDelim.pos
                 while k != startDelim.pos + itLen:
                     fmt = self.format(k)
+                    fontFamilies = self._formats[HighlighterState.Italic].fontFamilies(
+                    )
+                    if fontFamilies:
+                        fmt.setFontFamilies(fontFamilies)
+                    if self._formats[state].fontPointSize() > 0:
+                        fmt.setFontPointSize(
+                            self._formats[state].fontPointSize())
                     if fmt.foreground() == QTextCharFormat().foreground():
                         fmt.setForeground(
                             self._formats[HighlighterState.Italic].foreground())
                     if underline:
-                        fmt.setFontUnderline(True)
+                        fmt.setFontUnderline(
+                            self._formats[HighlighterState.StUnderline].fontUnderline())
                     else:
-                        fmt.setFontItalic(True)
+                        fmt.setFontItalic(
+                            self._formats[HighlighterState.Italic].fontItalic())
                     self.setFormat(k, 1, fmt)
                     k += 1
                 masked.append((startDelim.pos, 1))
                 masked.append((endDelim.pos, 1))
 
+                block = self.currentBlock().blockNumber()
+                self._ranges.setdefault(block, []).append(InlineRange(
+                    startDelim.pos, endDelim.pos, RangeType.Emphasis))
+
         # 4. Apply masked syntax
         for i in range(len(masked)):
-            maskedFmt = self._formats[HighlighterState.MaskedSyntax]
+            maskedFmt = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
             state: HighlighterState = self.currentBlockState()
             if self._formats[state].fontPointSize() > 0:
                 maskedFmt.setFontPointSize(
                     self._formats[state].fontPointSize())
             self.setFormat(masked[i][0], masked[i][1], maskedFmt)
+
+    def forthHighlighter(self, text: str):
+        """ The Forth highlighter """
+        if not text:
+            return
+
+        textLen = len(text)
+
+        # Default Format
+        self.setFormat(0, textLen, self._formats[HighlighterState.CodeBlock])
+
+        for i in range(textLen):
+            # 1, It highlights the "\ " comments
+            if i + 1 <= textLen and text[i] == '\\' and \
+                    text[i + 1] == ' ':
+                # The full line is commented
+                self.setFormat(i + 1, textLen - 1,
+                               self._formats[HighlighterState.CodeComment])
+                break
+
+            # 2. It highlights the "( " comments
+            elif i + 1 <= textLen and text[i] == '(' and \
+                    text[i + 1] == ' ':
+                # Find the End bracket
+                lastBracket = text.rfind(')', i)
+                # Can't Handle wrong Format
+                if lastBracket <= 0:
+                    return
+                # ' )' at the end of the comment
+                if lastBracket <= textLen and \
+                        text[lastBracket] == ' ':
+                    self.setFormat(
+                        i, lastBracket, self._formats[HighlighterState.CodeComment])
+
+    def gdscriptHighlighter(self, text: str):
+        """ The GDScript highlighter """
+        if not text:
+            return
+
+        # 1. Hightlight '$' NodePath constructs.
+        # 2. Highlight '%' UniqueNode constructs.
+        re = QRegularExpression(
+            r"([$%][a-zA-Z_][a-zA-Z0-9_]*(/[a-zA-Z_][a-zA-Z0-9_]*)*|@)")
+        i = re.globalMatch(text)
+        while i.hasNext():
+            match = i.next()
+            # 3. Hightlight '@' annotation symbol
+            if match.captured().startswith('@'):
+                self.setFormat(match.capturedStart(), match.capturedLength(),
+                               self._formats[HighlighterState.CodeOther])
+            else:
+                self.setFormat(match.capturedStart(), match.capturedLength(),
+                               self._formats[HighlighterState.CodeNumLiteral])
+
+    def sqlHighlighter(self, text: str):
+        """ The SQL highlighter """
+        if not text:
+            return
+        textLen = len(text)
+
+        for i in range(textLen):
+            if i + 1 > textLen:
+                break
+
+            # Check for comments: single-line, or multi-line start or end
+            if text[i] == '-' and text[i + 1] == '-':
+                self.setFormat(
+                    i, textLen, self._formats[HighlighterState.CodeComment])
+            elif text[i] == '/' and text[i + 1] == '*':
+                # we're in a multi-line comment now
+                if self.currentBlockState() % 2 == 0:
+                    self.setCurrentBlockState(self.currentBlockState() + 1)
+                    # Did the multi-line comment end in the same line?
+                    endingComment = text.find("*/", i + 2)
+                    highlightEnd = textLen
+                    if endingComment > -1:
+                        highlightEnd = endingComment + 2
+
+                    self.setFormat(i, highlightEnd - i,
+                                   self._formats[HighlighterState.CodeComment])
+            elif text[i] == '*' and text[i + 1] == '/':
+                # we're now no longer in a multi-line comment
+                if self.currentBlockState() % 2 != 0:
+                    self.setCurrentBlockState(self.currentBlockState() - 1)
+                    # Did the multi-line comment start in the same line?
+                    startingComment = text.find("/*", 0)
+                    highlightStart = 0
+                    if startingComment > -1:
+                        highlightStart = startingComment
+
+                    self.setFormat(highlightStart - i, i + 1,
+                                   self._formats[HighlighterState.CodeComment])
+
+    def tomlHighlighter(self, text: str):
+        """ The TOML highlighter"""
+        if not text:
+            return
+
+        textLen = len(text)
+
+        onlyWhitespaceBeforeHeader = True
+        possibleAssignmentPos = text.find('=', 0)
+        singleQStringStart = -1
+        doubleQStringStart = -1
+        multiSingleQStringStart = -1
+        multiDoubleQStringStart = -1
+        singleQ = "'"
+        doubleQ = '"'
+
+        i = 0
+        while i < textLen:
+            if i + 1 > textLen:
+                break
+
+            # track the state of strings
+            # multiline highlighting doesn't quite behave due to clashing handling
+            # of " and ' chars, but this accomodates normal " and ' strings, as
+            # well as ones wrapped by either """ or '''
+            if text[i] == doubleQ:
+                if i + 2 <= textLen and text[i + 1] == doubleQ and \
+                        text[i + 2] == doubleQ:
+                    if multiDoubleQStringStart > -1:
+                        multiDoubleQStringStart = -1
+                    else:
+                        multiDoubleQStringStart = i
+                        multiDoubleQStringEnd = text.find('"""', i + 1)
+                        if multiDoubleQStringEnd > -1:
+                            self.setFormat(i, multiDoubleQStringEnd - i,
+                                           self._formats[HighlighterState.CodeString])
+                            i = multiDoubleQStringEnd + 2
+                            multiDoubleQStringEnd = -1
+                            multiDoubleQStringStart = -1
+                            i += 1
+                            continue
+                else:
+                    if doubleQStringStart > -1:
+                        doubleQStringStart = -1
+                    else:
+                        doubleQStringStart = i
+            elif text[i] == singleQ:
+                if i + 2 <= textLen and text[i + 1] == singleQ and \
+                        text[i + 2] == singleQ:
+                    if multiSingleQStringStart > -1:
+                        multiSingleQStringStart = -1
+                    else:
+                        multiSingleQStringStart = i
+                        multiSingleQStringEnd = text.find("'''", i + 1)
+                        if multiSingleQStringEnd > -1:
+                            self.setFormat(i, multiSingleQStringEnd - i,
+                                           self._formats[HighlighterState.CodeString])
+                            i = multiSingleQStringEnd + 2
+                            multiSingleQStringEnd = -1
+                            multiSingleQStringStart = -1
+                            i += 1
+                            continue
+                else:
+                    if singleQStringStart > -1:
+                        singleQStringStart = -1
+                    else:
+                        singleQStringStart = i
+
+            inString = doubleQStringStart > -1 or singleQStringStart > -1 or \
+                multiSingleQStringStart > -1 or \
+                multiDoubleQStringStart > -1
+
+            # do comment highlighting
+            if text[i] == '#' and not inString:
+                self.setFormat(
+                    i, textLen - i, self._formats[HighlighterState.CodeComment])
+                return
+
+            # table header (all stuff preceeding must only be whitespace)
+            if text[i] == '[' and onlyWhitespaceBeforeHeader:
+                headerEnd = text.find(']', i)
+                if headerEnd > -1:
+                    self.setFormat(i, headerEnd + 1 - i,
+                                   self._formats[HighlighterState.CodeType])
+                    return
+
+            # handle numbers, inf, nan and datetime the same way
+            if i > possibleAssignmentPos and not inString and \
+                (text[i].isdigit() or text.find("inf", i) > 0 or
+                 text.find("nan", i) > 0):
+                nextWhitespace = text.find(' ', i)
+                endOfNumber = textLen
+                if nextWhitespace > -1:
+                    if (text[nextWhitespace - 1] == ','):
+                        nextWhitespace -= 1
+                    endOfNumber = nextWhitespace
+
+                highlightStart = i
+                if i > 0:
+                    if text[i - 1] == '-' or \
+                            text[i - 1] == '+':
+                        highlightStart -= 1
+                self.setFormat(highlightStart, endOfNumber - highlightStart,
+                               self._formats[HighlighterState.CodeNumLiteral])
+                i = endOfNumber
+
+            if not text[i].isspace():
+                onlyWhitespaceBeforeHeader = False
+        i += 1
+
+    def highlightCheckbox(self, text: str, curPos: int):
+        if curPos + 4 >= len(text):
+            return
+
+        hasOpeningBracket = text[curPos + 2] == '['
+        hasClosingBracket = text[curPos + 4] == ']'
+        midChar = text[curPos + 3]
+        hasXorSpace = midChar == ' ' or \
+            midChar == 'x' or \
+            midChar == 'X'
+        hasDash = midChar == '-'
+
+        if hasOpeningBracket and hasClosingBracket and (hasXorSpace or hasDash):
+            start = curPos + 2
+            length = 3
+
+            if hasXorSpace:
+                if midChar == ' ':
+                    fmt = HighlighterState.CheckBoxUnChecked
+                else:
+                    fmt = HighlighterState.CheckBoxChecked
+            else:
+                fmt = HighlighterState.MaskedSyntax
+            self.setFormat(start, length, self._formats[fmt])
+
+    def formatAndMaskRemaining(self, formatBegin, formatLength, beginningText, endText, format: QTextCharFormat):
+        afterFormat = formatBegin + formatLength
+
+        maskedSyntax = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
+        maskedSyntax.setFontPointSize(
+            self.format(beginningText).fontPointSize())
+
+        # highlight before the link
+        self.setFormat(beginningText, formatBegin -
+                       beginningText, maskedSyntax)
+
+        # highlight the link if we are not in a heading
+        if not self.isHeading(self.currentBlockState()):
+            self.setFormat(formatBegin, formatLength, format)
+
+        # highlight after the link
+        maskedSyntax.setFontPointSize(
+            self.format(afterFormat).fontPointSize())
+        self.setFormat(afterFormat, endText - afterFormat, maskedSyntax)
+
+        self._ranges[self.currentBlock().blockNumber()].append(
+            InlineRange(beginningText, formatBegin, RangeType.Link))
+        self._ranges[self.currentBlock().blockNumber()].append(
+            InlineRange(afterFormat, endText, RangeType.Link))
+
+    def highlightLinkOrImage(self, text: str, startIndex: int):
+        """ This function highlights images and links in Markdown text. """
+        # If the first 4 characters are spaces (for 4-spaces fence code),
+        # but not list markers, return
+        if not text[:4].strip():
+            # Check for unordered list markers
+            leftChars = text.strip()[:2]
+
+            if leftChars not in ["- ", "+ ", "* "]:
+                # Check for a few ordered list markers
+                leftChars = text.strip()[:3]
+
+                markers = [
+                    f"{i}{sep} " for i in range(1, 10) for sep in [")", "."]
+                ]
+                if leftChars not in markers:
+                    # Check if text starts with a "\d+. ", "\d+) "
+                    patterns = ["\\d+\\. ", "\\d+\\) "]
+                    pattern_string = "^(" + "|".join(patterns) + ")"
+                    pattern = QRegularExpression(pattern_string)
+
+                    match = pattern.match(text.strip())
+                    if not match.hasMatch():
+                        return startIndex
+
+        # Get the character at the starting index
+        startChar = text[startIndex]
+
+        # If it starts with '<', it indicates a link or email enclosed in angle brackets
+        if startChar == '<':
+            closingChar = text.find('>', startIndex)
+            if closingChar == -1:
+                return startIndex
+
+            # Extract the content between '<' and '>'
+            linkContent = text[startIndex + 1:closingChar]
+
+            # Check if it's a valid link or email
+            if not isLink(linkContent) and not isValidEmail(linkContent) and '.' not in linkContent:
+                return startIndex
+
+            # Apply formatting to highlight the link
+            self.formatAndMaskRemaining(
+                startIndex + 1, closingChar - startIndex - 1,
+                startIndex, closingChar + 1, self._formats[HighlighterState.Link])
+
+            return closingChar
+
+        # Highlight http and www links
+        elif startChar != '[':
+            space = text.find(' ', startIndex)
+            if space == -1:
+                space = len(text)
+
+            # Allow highlighting href in HTML tags
+            if text[startIndex:startIndex+6] == 'href="':
+                hrefEnd = text.find('"', startIndex + 6)
+                if hrefEnd == -1:
+                    return space
+
+                blockNum = self.currentBlock().blockNumber()
+                if blockNum not in self._ranges:
+                    self._ranges[blockNum] = []
+
+                self._ranges[blockNum].append(
+                    InlineRange(startIndex + 6, hrefEnd, RangeType.Link))
+
+                self.setFormat(startIndex + 6, hrefEnd - startIndex -
+                               6, self._formats[HighlighterState.Link])
+                return hrefEnd
+
+            link = text[startIndex:space-1]
+            if not isLink(link):
+                return startIndex
+
+            linkLength = len(link)
+
+            blockNum = self.currentBlock().blockNumber()
+            if blockNum not in self._ranges:
+                self._ranges[blockNum] = []
+
+            self._ranges[blockNum].append(
+                InlineRange(startIndex, startIndex + linkLength, RangeType.Link))
+
+            self.setFormat(startIndex, linkLength + 1,
+                           self._formats[HighlighterState.Link])
+            return space
+
+        # Find the index of the closing ']' character
+        endIndex = text.find(']', startIndex)
+
+        # If end_index is not found or at the end of the text, the link is invalid
+        if endIndex == -1 or endIndex == len(text) - 1:
+            return startIndex
+
+        # If there is an '!' preceding the starting character, it's an image
+        if startIndex != 0 and text[startIndex - 1] == '!':
+            # Find the closing ')' character after the image link
+            closingIndex = text.find(')', endIndex)
+            if closingIndex == -1:
+                return startIndex
+            closingIndex += 1
+
+            # Apply formatting to highlight the image
+            self.formatAndMaskRemaining(
+                startIndex + 1, endIndex - startIndex - 1,
+                startIndex - 1, closingIndex, self._formats[HighlighterState.Image])
+            return closingIndex
+
+        # If the character after the closing ']' is '(', it's a regular link
+        elif text[endIndex + 1] == '(':
+            # Find the closing ')' character after the link
+            closingParenIndex = text.find(')', endIndex)
+            if closingParenIndex == -1:
+                return startIndex
+            closingParenIndex += 1
+
+            # Check for image with link
+            if text[startIndex:startIndex+3] == '[![':
+                # Find the end of the image alt text
+                altEndIndex = text.find(']', endIndex + 1)
+                if altEndIndex == -1:
+                    return startIndex
+
+                # Find the last ')'
+                hrefIndex = text.find(')', altEndIndex)
+                if hrefIndex == -1:
+                    return startIndex
+                hrefIndex += 1
+
+                self.formatAndMaskRemaining(
+                    startIndex + 3, endIndex - startIndex - 3,
+                    startIndex, hrefIndex, self._formats[HighlighterState.Link])
+                return hrefIndex
+
+            # Apply formatting to highlight the link
+            self.formatAndMaskRemaining(
+                startIndex + 1, endIndex - startIndex - 1,
+                startIndex, closingParenIndex, self._formats[HighlighterState.Link])
+            return closingParenIndex
+
+        # Reference links
+        elif text[endIndex + 1] == '[':
+            # Image with reference
+            origIndex = startIndex
+            if text[startIndex + 1] == '!':
+                startIndex = text.find('[', startIndex + 1)
+                if startIndex == -1:
+                    return origIndex
+
+            closingChar = text.find(']', endIndex + 1)
+            if closingChar == -1:
+                return startIndex
+            closingChar += 1
+
+            self.formatAndMaskRemaining(
+                startIndex + 1, endIndex - startIndex - 1,
+                origIndex, closingChar, self._formats[HighlighterState.Link])
+            return closingChar
+
+        # If the character after the closing ']' is ':', it's a reference link reference
+        elif text[endIndex + 1] == ':':
+            self.formatAndMaskRemaining(
+                0, 0, startIndex, endIndex + 1, QTextCharFormat())
+            return endIndex + 1
+
+        # If none of the conditions are met, continue processing from the same index
+        return startIndex
+
+    def findPositionInRanges(self, type: RangeType, blockNum: int, pos: int):
+        rangeList: List[InlineRange] = self._ranges.get(blockNum, [])
+        for rg in rangeList:
+            if (pos == rg.begin or pos == rg.end) and rg.type == type:
+                return (rg.begin, rg.end)
+        return (-1, -1)
+
+    def isPosInACodeSpan(self, blockNumber: int, position: int):
+        rangeList: List[InlineRange] = self._ranges.get(blockNumber, [])
+
+        for rg in rangeList:
+            if (position > rg.begin and
+                position < rg.end and
+                    rg.type == RangeType.CodeSpan):
+                return True
+
+        return False
+
+    def isPosInALink(self, blockNumber: int, position: int):
+        rangeList: List[InlineRange] = self._ranges.get(blockNumber, [])
+        for rg in rangeList:
+            if (position > rg.begin and
+                position < rg.end and
+                    rg.type == RangeType.Link):
+                return True
+
+        return False
+
+    def getSpanRange(self, rangeType: RangeType, blockNumber: int, position: int):
+        rangeList: List[InlineRange] = self._ranges.get(blockNumber, [])
+
+        for rg in rangeList:
+            if (position > rg.begin and
+                position < rg.end and
+                    rg.type == rangeType):
+                return (rg.begin, rg.end)
+
+        return (-1, -1)

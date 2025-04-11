@@ -78,3 +78,23 @@ def loadMakeData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[
 
 def loadYAMLData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[str, str], literals: Dict[str, str], others: Dict[str, str]):
     pass
+
+
+def loadNixData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[str, str], literals: Dict[str, str], others: Dict[str, str]):
+    pass
+
+
+def loadForthData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[str, str], literals: Dict[str, str], others: Dict[str, str]):
+    pass
+
+
+def loadSystemVerilogData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[str, str], literals: Dict[str, str], others: Dict[str, str]):
+    pass
+
+
+def loadGDScriptData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[str, str], literals: Dict[str, str], others: Dict[str, str]):
+    pass
+
+
+def loadTOMLData(types: Dict[str, str], keywords: Dict[str, str], builtin: Dict[str, str], literals: Dict[str, str], others: Dict[str, str]):
+    pass
