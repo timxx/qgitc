@@ -891,7 +891,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
                 # Set styling of the "#"s to "masked syntax", but with the size of
                 # the heading
-                maskedFormat = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
+                maskedFormat = QTextCharFormat(self._formats[state])
                 maskedFormat.setFontPointSize(
                     self._formats[state].fontPointSize())
                 self.setFormat(0, headingLevel, maskedFormat)
@@ -1032,9 +1032,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.setFormat(3, len(text) - 3,
                                self._formats[HighlighterState.InlineCodeBlock])
                 self.setFormat(
-                    0, 3, self._formats[HighlighterState.MaskedSyntax])
+                    0, 3, self._formats[HighlighterState.NoState])
                 self.setFormat(len(text) - 3, 3,
-                               self._formats[HighlighterState.MaskedSyntax])
+                               self._formats[HighlighterState.NoState])
                 return
 
             if ((self.previousBlockState() != HighlighterState.CodeBlock and
@@ -1057,7 +1057,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.setCurrentBlockState(state)
 
             # set the font size from the current rule's font format
-            maskedFormat = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
+            maskedFormat = QTextCharFormat(self._formats[HighlighterState.NoState])
             maskedFormat.setFontPointSize(
                 self._formats[HighlighterState.CodeBlock].fontPointSize())
 
@@ -2216,7 +2216,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # 4. Apply masked syntax
         for i in range(len(masked)):
-            maskedFmt = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
+            state = HighlighterState.Bold if isStrong else HighlighterState.Italic
+            maskedFmt = QTextCharFormat(self._formats[state])
             state: HighlighterState = self.currentBlockState()
             if self._formats[state].fontPointSize() > 0:
                 maskedFmt.setFontPointSize(
