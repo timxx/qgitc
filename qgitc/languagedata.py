@@ -57,28 +57,23 @@ cpp_literals = {
 }
 
 cpp_builtin = {
-    's': ["std", "string", "string_view", "stringstream", "stdin", "stdout", "stderr", "set", "shared_ptr"],
-    'w': ["wstring"],
-    'c': ["cin", "cout", "cerr", "clog", "complex"],
-    'i': ["istringstream"],
-    'o': ["ostringstream"],
     'a': ["auto_ptr", "abort", "abs", "acos", "asin", "atan2", "atan", "array"],
+    'b': ["bitset"],
+    'c': ["cin", "cout", "cerr", "clog", "complex"],
     'd': ["deque"],
-    'l': ["list"],
+    'e': ["endl", "exp", "exit"],
+    'f': ["future", "fabs", "floor", "fmod", "fprintf", "fputs", "free", "frexp", "fscanf"],
+    'i': ["istringstream", "initializer_list"],
+    'l': ["list", "labs", "ldexp", "log10", "log"],
+    'm': ["map", "multiset", "multimap", "main", "malloc", "memchr", "memcmp", "memcpy", "memset", "modf"],
+    'o': ["ostringstream"],
+    'p': ["pow", "printf", "putchar", "puts"],
     'q': ["queue"],
-    'm': ["map", "multiset", "multimap", "main"],
+    's': ["std", "string", "string_view", "stringstream", "stdin", "stdout", "stderr", "set", "shared_ptr", "stack", "scanf", "sin", "sinh", "sqrt", "snprintf", "sprintf", "strcat", "strchr", "strcmp", "strcpy", "strcspn", "strlen", "strncat", "strncmp", "strncpy", "strpbrk", "strrchr", "strspn", "strstr", "tanh", "tan", "vfprintf", "vprintf", "vsprintf"],
+    't': ["terminate"],
     'u': ["unordered_set", "unordered_map", "unordered_multiset", "unordered_multimap", "unique_ptr"],
     'v': ["vector"],
-    's': ["stack"],
-    'b': ["bitset"],
-    't': ["terminate"],
-    'f': ["future", "fabs", "floor", "fmod", "fprintf", "fputs", "free", "frexp", "fscanf", "sin", "sinh", "sqrt", "snprintf", "sprintf", "strcat", "strchr", "strcmp", "strcpy", "strcspn", "strlen", "strncat", "strncmp", "strncpy", "strpbrk", "strrchr", "strspn", "strstr", "tanh", "tan", "vfprintf", "vprintf", "vsprintf"],
-    'e': ["endl", "exp", "exit"],
-    'i': ["initializer_list"],
-    'l': ["labs", "ldexp", "log10", "log"],
-    'm': ["malloc", "memchr", "memcmp", "memcpy", "memset", "modf"],
-    'p': ["pow", "printf", "putchar", "puts"],
-    's': ["scanf"]
+    'w': ["wstring"],
 }
 
 cpp_other = {
@@ -86,9 +81,10 @@ cpp_other = {
     'e': ["else", "elif", "endif", "error"],
     'i': ["if", "ifdef", "ifndef", "include"],
     'l': ["line"],
-    'p': ["pragma", "_Pragma"],
+    'p': ["pragma"],
+    'P': ["_Pragma"],
     'u': ["undef"],
-    'w': ["warning"]
+    'w': ["warning"],
 }
 
 
@@ -219,14 +215,14 @@ py_other = {
 
 # Define the shell keywords as a dictionary with lists
 shell_keywords = {
-    'i': ["if"],
-    't': ["then"],
+    'B': ["Bash"],
+    'c': ["case"],
+    'd': ["do", "done"],
     'e': ["else", "elif"],
     'f': ["fi", "for"],
+    'i': ["if"],
+    't': ["then"],
     'w': ["while"],
-    'd': ["do", "done"],
-    'c': ["case"],
-    'B': ["Bash"]
 }
 
 # Define shell types as an empty dictionary
@@ -241,9 +237,10 @@ shell_literals = {
 # Define shell built-in commands
 shell_builtin = {
     'b': ["break"],
-    'c': ["cd", "continue", "caller", "command", "cap", "chdir", "clone", "comparguments", "compcall", "compctl", "compdescribe", "compfilescompgroups", "compquote", "comptags", "comptry", "compvalues"],
+    'c': ["cd", "continue", "caller", "command", "cap", "chdir", "clone", "comparguments", "compcall", "compctl", "compdescribe", "compfilescompgroups", "compquote", "comptags", "comptry", "compvalues", "curl"],
+    'd': ["docker"],
     'e': ["eval", "exec", "exit", "export", "echotc", "echoti", "emulatefc", "echo", "enable", "help"],
-    'f': ["fg", "float", "functions", "fdisk"],
+    'f': ["fg", "float", "functions", "fdisk", "flatpak"],
     'g': ["getopts", "git", "getcap", "getln"],
     'h': ["hash", "history", "help"],
     'i': ["integer"],
@@ -252,7 +249,9 @@ shell_builtin = {
     'l': ["let", "local", "logout", "limit", "log", "ls"],
     'm': ["mapfile", "mount", "mkdir", "mkswap", "modifiers"],
     'n': ["noglob", "nmcli"],
-    'p': ["pwd", "printfread", "popd", "printpushd", "pushln", "pacman", "pamac", "php", "python", "perl", "curl"],
+    'o': ["openssl"],
+    'p': ["pwd", "printfread", "popd", "printpushd", "pushln", "pacman", "pamac", "php", "python", "perl"],
+    'q': ["qownnotes"],
     'r': ["readonly", "return", "rehash", "readarray", "rm"],
     's': ["shift", "source", "set", "shopt", "sched", "setcap", "setopt", "stat", "suspend", "snap", "sudo"],
     't': ["test", "timestrap", "ttyctl"],
@@ -260,12 +259,8 @@ shell_builtin = {
     'v': ["vared"],
     'w': ["wait", "whence", "where", "which", "wget"],
     'z': ["zcompile", "zformat", "zftp", "zle", "zmodload", "zparseopts", "zprof", "zpty", "zregexparse", "zsocket", "zstyle", "ztcp"],
-    'Q': ["QOwnNotes"],
-    'q': ["qownnotes"],
-    'd': ["docker"],
-    'o': ["openssl"],
     'y': ["yaourt"],
-    'f': ["flatpak", "fdisk"]
+    'Q': ["QOwnNotes"],
 }
 
 # Define shell other as an empty dictionary
@@ -273,34 +268,34 @@ shell_other = {}
 
 
 js_keywords = {
-    'i': ["in", "if", "instanceof", "import"],
-    'o': ["of"],
-    'f': ["for", "finally", "function", "from"],
-    'w': ["while", "with"],
-    'n': ["new"],
-    'd': ["do", "default", "debugger"],
-    'r': ["return"],
-    'v': ["void"],
-    'e': ["else", "export"],
+    'a': ["as", "async", "await", "arguments"],
     'b': ["break", "boolean"],
     'c': ["catch", "case", "continue", "class", "const", "console"],
-    't': ["throw", "try", "this", "typeof", "static"],
+    'd': ["do", "default", "debugger"],
+    'e': ["else", "export"],
+    'f': ["for", "finally", "function", "from"],
+    'i': ["in", "if", "instanceof", "import"],
     'l': ["let", "long"],
+    'n': ["new"],
+    'o': ["of"],
+    'r': ["return"],
+    's': ["switch", "super", "static"],
+    't': ["throw", "try", "this", "typeof"],
+    'v': ["void"],
+    'w': ["while", "with"],
     'y': ["yield"],
-    's': ["switch", "super"],
-    'a': ["as", "async", "await", "arguments"],
 }
 
 js_types = {
-    'v': ["var", "void"],
-    'c': ["class"],
     'b': ["byte", "boolean"],
+    'c': ["class"],
+    'd': ["double"],
     'e': ["enum"],
     'f': ["float"],
-    's': ["short"],
-    'l': ["long"],
     'i': ["int"],
-    'd': ["double"],
+    'l': ["long"],
+    's': ["short"],
+    'v': ["var", "void"],
 }
 
 js_literals = {
@@ -313,28 +308,29 @@ js_literals = {
 }
 
 js_builtin = {
-    'e': ["eval", "encodeURI", "encodeURIComponent", "escape"],
-    'i': ["isFinite", "isNaN", "Intl"],
-    'p': ["parseFloat", "parseInt"],
-    'd': ["decodeURI", "decodeURIComponent", "document", "Date"],
-    'u': ["unescape", "window"],
-    'O': ["Object"],
-    'F': ["Function", "Float32Array", "Float64Array"],
+    'a': ["arguments"],
+    'A': ["Array", "ArrayBuffer"],
     'B': ["Boolean"],
+    'D': ["DataView", "Date"],
+    'd': ["decodeURI", "decodeURIComponent", "document"],
+    'e': ["eval", "encodeURI", "encodeURIComponent", "escape"],
     'E': ["Error", "EvalError"],
-    'I': ["InternalError", "Int16Array", "Int32Array", "Int8Array"],
+    'F': ["Function", "Float32Array", "Float64Array"],
+    'i': ["isFinite", "isNaN"],
+    'I': ["InternalError", "Int16Array", "Int32Array", "Int8Array", "Intl"],
+    'J': ["JSON"],
+    'm': ["module"],
+    'O': ["Object"],
+    'p': ["parseFloat", "parseInt"],
+    'P': ["Proxy", "Promise"],
+    'u': ["unescape"],
     'R': ["RangeError", "ReferenceError", "RegExp", "Reflect"],
+    'r': ["require"],
     'S': ["StopIteration", "SyntaxError", "String", "Symbol", "Set"],
     'T': ["TypeError"],
     'U': ["URIError", "Uint16Array", "Uint32Array", "Uint8Array", "Uint8ClampedArray"],
-    'A': ["Array", "ArrayBuffer"],
-    'D': ["DataView"],
-    'J': ["JSON"],
-    'a': ["arguments"],
-    'r': ["require"],
-    'm': ["module"],
+    'w': ["window"],
     'W': ["WeakSet", "WeakMap"],
-    'P': ["Proxy", "Promise"],
 }
 
 js_other = {}
