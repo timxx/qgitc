@@ -70,6 +70,7 @@ class ColorSchema:
     Other = QColor()
     Builtin = QColor()
     Literal = QColor()
+    InlineCode = QColor()
 
 
 class ColorSchemaLight(ColorSchema):
@@ -148,7 +149,7 @@ class ColorSchemaLight(ColorSchema):
     AiResponseFg = QColor(0x212121)
     AiResponseBg = QColor(0xF5F5F5)
 
-    Heading = QColor(2, 69, 150)
+    Heading = QColor(0x1300a0)
     List = QColor(0x1300a0)
     Bold = List
     Keyword = QColor(0x3102fc)
@@ -157,6 +158,7 @@ class ColorSchemaLight(ColorSchema):
     Other = QColor(0xab1ad9)
     Builtin = QColor(0x3a7e98)
     Literal = QColor(0x298559)
+    InlineCode = QColor(0x7a1007)
 
 
 class ColorSchemaDark(ColorSchema):
@@ -235,7 +237,7 @@ class ColorSchemaDark(ColorSchema):
     AiResponseFg = QColor(0xEEEEEE)
     AiResponseBg = QColor(0x373737)
 
-    Heading = QColor(0x00FF00)
+    Heading = QColor(0x649bd5)
     List = QColor(0x649bd5)
     Bold = List
     Keyword = QColor(0x649bd5)
@@ -244,3 +246,4 @@ class ColorSchemaDark(ColorSchema):
     Other = QColor(0xc188bf)
     Builtin = QColor(0x62c7b0)
     Literal = QColor(0xbdcda9)
+    InlineCode = QColor(0xc9937a)

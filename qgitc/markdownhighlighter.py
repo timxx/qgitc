@@ -592,10 +592,14 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         charFormat.setBackground(QColor(228, 255, 228))
         formats[HighlighterState.Image] = charFormat
 
+        fixedFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         # Set character format for code blocks
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         formats[HighlighterState.CodeBlock] = charFormat
+
+        charFormat = QTextCharFormat()
+        charFormat.setForeground(schema.InlineCode)
         formats[HighlighterState.InlineCodeBlock] = charFormat
 
         # Set character format for italic
@@ -626,7 +630,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set character format for tables
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(QColor(100, 148, 73))
         formats[HighlighterState.Table] = charFormat
 
@@ -648,37 +652,37 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Formats for syntax highlighting
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.Keyword)
         formats[HighlighterState.CodeKeyWord] = charFormat
 
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.String)
         formats[HighlighterState.CodeString] = charFormat
 
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.Comment)
         formats[HighlighterState.CodeComment] = charFormat
 
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.Type)
         formats[HighlighterState.CodeType] = charFormat
 
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.Other)
         formats[HighlighterState.CodeOther] = charFormat
 
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.Literal)
         formats[HighlighterState.CodeNumLiteral] = charFormat
 
         charFormat = QTextCharFormat()
-        charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
+        charFormat.setFont(fixedFont)
         charFormat.setForeground(schema.Builtin)
         formats[HighlighterState.CodeBuiltIn] = charFormat
 
@@ -2067,9 +2071,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self.setFormat(start + length, next - (start + length), inlineFmt)
 
         # format backticks as masked
-        self.setFormat(
-            start, length, self._formats[HighlighterState.MaskedSyntax])
-        self.setFormat(next, length, self._formats[HighlighterState.MaskedSyntax])
+        self.setFormat(start, length, inlineFmt)
+        self.setFormat(next, length, inlineFmt)
 
         i = next + length
         return i
