@@ -4,16 +4,18 @@ from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QApplication,
     QMenu,
-    QScrollBar)
+    QScrollBar,
+    QAbstractSlider)
 from PySide6.QtGui import (
     QPainter,
     QFontMetrics,
     QTextCharFormat,
     QTextOption,
     QBrush,
-    QColor,
     QKeySequence,
-    QIcon)
+    QIcon,
+    QCursor,
+    QMouseEvent)
 from PySide6.QtCore import (
     Qt,
     QRect,
@@ -24,7 +26,8 @@ from PySide6.QtCore import (
     QElapsedTimer,
     QTimer,
     QMimeData,
-    QEvent)
+    QEvent,
+    QBasicTimer)
 
 from .textline import (
     TextLine,
@@ -106,6 +109,8 @@ class TextViewer(QAbstractScrollArea):
         self._similarWordPattern = None
 
         self.setTextMargins(4)
+
+        self._autoScrollTimer = QBasicTimer(self)
 
     def updateFont(self, font):
         self._font = font
@@ -641,7 +646,8 @@ class TextViewer(QAbstractScrollArea):
         for i in range(low, len(self._highlightFind)):
             r = self._highlightFind[i]
             if r.beginLine() == lineIndex:
-                rg = createFormatRange(r.beginPos(), r.endPos() - r.beginPos(), fmt)
+                rg = createFormatRange(
+                    r.beginPos(), r.endPos() - r.beginPos(), fmt)
                 result.append(rg)
             elif r.beginLine() > lineIndex or r.beginLine() > endLine:
                 break
@@ -658,7 +664,8 @@ class TextViewer(QAbstractScrollArea):
 
         matches = self._similarWordPattern.finditer(textLine.text())
         for m in matches:
-            result.append(createFormatRange(m.start(), m.end() - m.start(), fmt))
+            result.append(createFormatRange(
+                m.start(), m.end() - m.start(), fmt))
 
         return result
 
@@ -759,7 +766,7 @@ class TextViewer(QAbstractScrollArea):
         else:
             findPart = FindPart.BeforeCurPage
 
-        assert(self._findIndex < low or high < self._findIndex)
+        assert (self._findIndex < low or high < self._findIndex)
 
         begin = self._findIndex
         end = begin + 1000
@@ -908,6 +915,10 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.moveTo(textLine.lineNo(), offset)
 
     def mouseReleaseEvent(self, event):
+        if event.source() == Qt.MouseEventNotSynthesized and \
+                self._autoScrollTimer.isActive():
+            self._autoScrollTimer.stop()
+
         if event.button() != Qt.LeftButton:
             return
 
@@ -916,7 +927,7 @@ class TextViewer(QAbstractScrollArea):
 
         self._clickOnLink = False
         if not self.hasTextLines() or \
-            self._cursor.hasSelection():
+                self._cursor.hasSelection():
             return
 
         textLine = self.textLineForPos(event.pos())
@@ -997,6 +1008,13 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.selectTo(n, offset)
 
             self._invalidateSelection()
+
+            if event.source() == Qt.MouseEventNotSynthesized:
+                visibleRect = self.viewport().rect()
+                if visibleRect.contains(event.pos()):
+                    self._autoScrollTimer.stop()
+                elif not self._autoScrollTimer.isActive():
+                    self._autoScrollTimer.start(100, self)
         elif event.buttons() == Qt.NoButton:
             x = event.pos().x() + self.horizontalScrollBar().value()
             if textLine.boundingRect().right() >= x:
@@ -1055,6 +1073,39 @@ class TextViewer(QAbstractScrollArea):
             self._onConvertEvent()
         elif id == self._findTimerId:
             self._onFindEvent()
+        elif id == self._autoScrollTimer.timerId():
+            self._handleAutoScroll()
+
+    def _handleAutoScroll(self):
+        visible = self.viewport().rect()
+        pos = QPoint()
+
+        globalPos = QCursor.pos()
+        pos = self.viewport().mapFromGlobal(globalPos)
+        topPos = self.viewport().mapTo(self.topLevelWidget(), pos)
+        ev = QMouseEvent(QEvent.MouseMove, pos, topPos, globalPos,
+                         Qt.LeftButton, Qt.LeftButton, qApp.keyboardModifiers())
+        self.mouseMoveEvent(ev)
+
+        deltaY = max(pos.y() - visible.top(), visible.bottom() -
+                     pos.y()) - visible.height()
+        deltaX = max(pos.x() - visible.left(),
+                     visible.right() - pos.x()) - visible.width()
+        delta = max(deltaX, deltaY)
+        if delta >= 0:
+            if delta < 7:
+                delta = 7
+            timeout = 4900 / (delta * delta)
+            self._autoScrollTimer.start(timeout, self)
+
+            if deltaY > 0:
+                vbar = self.verticalScrollBar()
+                vbar.triggerAction(QAbstractSlider.SliderSingleStepSub if pos.y(
+                ) < visible.center().y() else QAbstractSlider.SliderSingleStepAdd)
+            if deltaX > 0:
+                hbar = self.horizontalScrollBar()
+                hbar.triggerAction(QAbstractSlider.SliderSingleStepSub if pos.x(
+                ) < visible.center().x() else QAbstractSlider.SliderSingleStepAdd)
 
     def event(self, evt):
         if evt.type() == QEvent.PaletteChange:
@@ -1073,3 +1124,8 @@ class TextViewer(QAbstractScrollArea):
 
     def textMargins(self):
         return self.viewportMargins().left()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.ActivationChange:
+            if not self.isActiveWindow():
+                self._autoScrollTimer.stop()
