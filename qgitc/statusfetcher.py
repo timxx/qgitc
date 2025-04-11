@@ -4,6 +4,7 @@ import os
 from PySide6.QtCore import Signal
 
 from .cancelevent import CancelEvent
+from .common import logger
 from .gitutils import Git
 from .submoduleexecutor import SubmoduleExecutor
 
@@ -22,6 +23,8 @@ class StatusFetcher(SubmoduleExecutor):
     def fetch(self, submodules):
         self._needCheckBranch = len(submodules) > 1
         self.submit(submodules, self._fetchStatus, self._onResultAvailable)
+        logger.debug("Begin fetch submodules: %s", ",".join(
+            submodules) if submodules else "None")
 
     def cancel(self):
         super().cancel()
@@ -63,11 +66,15 @@ class StatusFetcher(SubmoduleExecutor):
             data = Git.status(
                 fullRepoDir, self._showUntrackedFiles, self._showIgnoredFiles)
             if not data:
+                logger.warning("No data from git status for repoDir: `%s`. Untracked: %s. Ignored: %s",
+                               fullRepoDir, self._showUntrackedFiles, self._showIgnoredFiles)
                 return None, None
         except Exception:
+            logger.exception("Error fetching status for `%s`", fullRepoDir)
             return None, None
 
         if cancelEvent.isSet():
+            logger.debug("Cancel event set, aborting status fetch for `%s`", fullRepoDir)
             return None, None
 
         lines = data.rstrip(b'\0').split(b'\0')
@@ -79,4 +86,7 @@ class StatusFetcher(SubmoduleExecutor):
             repoFile = os.path.join(
                 repoDir, file) if repoDir and repoDir != '.' else file
             result.append((status, os.path.normpath(repoFile)))
+
+        logger.debug("Status fetch result for `%s`: %s", fullRepoDir, result)
+
         return repoDir, result

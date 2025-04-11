@@ -138,6 +138,7 @@ class Git():
         process = Git.run(args, text, repoDir)
         data = process.communicate()[0]
         if process.returncode != 0:
+            logger.warning("Git command failed: %s", " ".join(args))
             return None
 
         return data

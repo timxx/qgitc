@@ -414,7 +414,7 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setEnabled(False)
         self.ui.tbWDChanges.setEnabled(False)
         self.ui.spinnerUnstaged.start()
-        logger.debug("begin fetch status")
+        logger.debug("Begin fetch status")
 
     def clear(self):
         self._filesModel.clear()
@@ -452,7 +452,7 @@ class CommitWindow(StateWindow):
         self._repoBranch.setdefault(repoDir, branch)
 
     def _onStatusFetchFinished(self):
-        logger.debug("end fetch status")
+        logger.debug("End fetch status")
 
         self.ui.spinnerUnstaged.stop()
         self.ui.tbRefresh.setEnabled(True)
@@ -1153,7 +1153,7 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self._aiMessage.generate(submoduleFiles)
-        logger.debug("begin generate commit message")
+        logger.debug("Begin generate commit message")
 
     def _collectStagedRepos(self):
         model = self.ui.lvStaged.model()
