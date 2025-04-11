@@ -2019,7 +2019,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             length += 1
             pos += 1
 
-        seq = text[i, i+length]
+        seq = text[i:i+length]
         start = i
         i += length
         next = text.find(seq, i)
@@ -2051,7 +2051,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             inlineFmt.setUnderlineStyle(fmt.underlineStyle())
 
         if c == '`':
-            self._ranges[self.currentBlock().blockNumber()].append(
+            self._ranges.setdefault(self.currentBlock().blockNumber(), []).append(
                 InlineRange(start, next, RangeType.CodeSpan))
 
         # format the text
@@ -2456,7 +2456,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self.format(afterFormat).fontPointSize())
         self.setFormat(afterFormat, endText - afterFormat, maskedSyntax)
 
-        self._ranges[self.currentBlock().blockNumber()].append(
+        self._ranges.setdefault(self.currentBlock().blockNumber(), []).append(
             InlineRange(beginningText, formatBegin, RangeType.Link))
         self._ranges[self.currentBlock().blockNumber()].append(
             InlineRange(afterFormat, endText, RangeType.Link))
@@ -2522,10 +2522,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     return space
 
                 blockNum = self.currentBlock().blockNumber()
-                if blockNum not in self._ranges:
-                    self._ranges[blockNum] = []
-
-                self._ranges[blockNum].append(
+                self._ranges.setdefault(blockNum, []).append(
                     InlineRange(startIndex + 6, hrefEnd, RangeType.Link))
 
                 self.setFormat(startIndex + 6, hrefEnd - startIndex -
@@ -2539,10 +2536,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             linkLength = len(link)
 
             blockNum = self.currentBlock().blockNumber()
-            if blockNum not in self._ranges:
-                self._ranges[blockNum] = []
-
-            self._ranges[blockNum].append(
+            self._ranges.setdefault(blockNum, []).append(
                 InlineRange(startIndex, startIndex + linkLength, RangeType.Link))
 
             self.setFormat(startIndex, linkLength + 1,
