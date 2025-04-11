@@ -1093,70 +1093,70 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                      HighlighterState.CodeCpp + self.tildeOffset,
                      HighlighterState.CodeCppComment,
                      HighlighterState.CodeCppComment + self.tildeOffset]:
-            loadCppData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadCppData()
         elif state in [HighlighterState.CodeJs,
                        HighlighterState.CodeJs + self.tildeOffset,
                        HighlighterState.CodeJsComment,
                        HighlighterState.CodeJsComment + self.tildeOffset]:
-            loadJSData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadJSData()
         elif state in [HighlighterState.CodeC,
                        HighlighterState.CodeC + self.tildeOffset,
                        HighlighterState.CodeCComment,
                        HighlighterState.CodeBlockComment + self.tildeOffset]:
-            loadCppData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadCppData()
         elif state in [HighlighterState.CodeBash,
                        HighlighterState.CodeBash + self.tildeOffset]:
-            loadShellData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadShellData()
             comment = '#'
         elif state in [HighlighterState.CodePHP,
                        HighlighterState.CodePHP + self.tildeOffset,
                        HighlighterState.CodePHPComment,
                        HighlighterState.CodePHPComment + self.tildeOffset]:
-            loadPHPData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadPHPData()
         elif state in [HighlighterState.CodeQML,
                        HighlighterState.CodeQML + self.tildeOffset,
                        HighlighterState.CodeQMLComment,
                        HighlighterState.CodeQMLComment + self.tildeOffset]:
-            loadQMLData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadQMLData()
         elif state in [HighlighterState.CodePython,
                        HighlighterState.CodePython + self.tildeOffset]:
-            loadPythonData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadPythonData()
             comment = '#'
         elif state in [HighlighterState.CodeRust,
                        HighlighterState.CodeRust + self.tildeOffset,
                        HighlighterState.CodeRustComment,
                        HighlighterState.CodeRustComment + self.tildeOffset]:
-            loadRustData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadRustData()
         elif state in [HighlighterState.CodeJava,
                        HighlighterState.CodeJava + self.tildeOffset,
                        HighlighterState.CodeJavaComment,
                        HighlighterState.CodeJavaComment + self.tildeOffset]:
-            loadJavaData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadJavaData()
         elif state in [HighlighterState.CodeCSharp,
                        HighlighterState.CodeCSharp + self.tildeOffset,
                        HighlighterState.CodeCSharpComment,
                        HighlighterState.CodeCSharpComment + self.tildeOffset]:
-            loadCSharpData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadCSharpData()
         elif state in [HighlighterState.CodeGo,
                        HighlighterState.CodeGo + self.tildeOffset,
                        HighlighterState.CodeGoComment,
                        HighlighterState.CodeGoComment + self.tildeOffset]:
-            loadGoData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadGoData()
         elif state in [HighlighterState.CodeV,
                        HighlighterState.CodeV + self.tildeOffset,
                        HighlighterState.CodeVComment,
                        HighlighterState.CodeVComment + self.tildeOffset]:
-            loadVData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadVData()
         elif state in [HighlighterState.CodeSQL,
                        HighlighterState.CodeSQL + self.tildeOffset,
                        HighlighterState.CodeSQLComment,
                        HighlighterState.CodeSQLComment + self.tildeOffset]:
-            loadSQLData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadSQLData()
             isSQL = True
             comment = "-"  # prevent the default comment highlighting
         elif state in [HighlighterState.CodeJSON,
                        HighlighterState.CodeJSON + self.tildeOffset]:
-            loadJSONData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadJSONData()
         elif state in [HighlighterState.CodeXML,
                        HighlighterState.CodeXML + self.tildeOffset]:
             self.xmlHighlighter(text)
@@ -1166,17 +1166,17 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                        HighlighterState.CodeCSSComment,
                        HighlighterState.CodeCSSComment + self.tildeOffset]:
             isCSS = True
-            loadCSSData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadCSSData()
         elif state in [HighlighterState.CodeTypeScript,
                        HighlighterState.CodeTypeScript + self.tildeOffset,
                        HighlighterState.CodeTypeScriptComment,
                        HighlighterState.CodeTypeScriptComment + self.tildeOffset]:
-            loadTypeScriptData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadTypeScriptData()
         elif state in [HighlighterState.CodeYAML,
                        HighlighterState.CodeYAML + self.tildeOffset]:
             isYAML = True
             comment = '#'
-            loadYAMLData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadYAMLData()
         elif state in [HighlighterState.CodeINI,
                        HighlighterState.CodeINI + self.tildeOffset]:
             self.iniHighlighter(types, keywords, builtin, literals, others)
@@ -1189,40 +1189,40 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                        HighlighterState.CodeVex + self.tildeOffset,
                        HighlighterState.CodeVexComment,
                        HighlighterState.CodeVexComment + self.tildeOffset]:
-            loadVexData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadVexData()
         elif state in [HighlighterState.CodeCMake,
                        HighlighterState.CodeCMake + self.tildeOffset]:
-            loadCMakeData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadCMakeData()
             comment = "#"
         elif state in [HighlighterState.CodeMake,
                        HighlighterState.CodeMake + self.tildeOffset]:
             isMake = True
-            loadMakeData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadMakeData()
             comment = "#"
         elif state in [HighlighterState.CodeNix,
                        HighlighterState.CodeNix + self.tildeOffset]:
-            loadNixData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadNixData()
             comment = "#"
         elif state in [HighlighterState.CodeForth,
                        HighlighterState.CodeForth + self.tildeOffset,
                        HighlighterState.CodeForthComment,
                        HighlighterState.CodeForthComment + self.tildeOffset]:
             isForth = True
-            loadForthData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadForthData()
         elif state in [HighlighterState.CodeSystemVerilog,
                        HighlighterState.CodeSystemVerilogComment]:
-            loadSystemVerilogData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadSystemVerilogData()
         elif state in [HighlighterState.CodeGDScript,
                        HighlighterState.CodeGDScript + self.tildeOffset]:
             isGDScript = True
-            loadGDScriptData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadGDScriptData()
             comment = "#"
         elif state in [HighlighterState.CodeTOML,
                        HighlighterState.CodeTOML + self.tildeOffset,
                        HighlighterState.CodeTOMLString,
                        HighlighterState.CodeTOMLString + self.tildeOffset]:
             isTOML = True
-            loadTOMLData(types, keywords, builtin, literals, others)
+            types, keywords, builtin, literals, others = loadTOMLData()
             comment = "#"
         else:
             self.setFormat(
@@ -1320,6 +1320,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
             pos = i
             if i == textLen or not text[i].isalpha():
+                i += 1
                 continue
 
             # Highlight Types
@@ -1328,21 +1329,25 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             # next letter is usually a space, in that case
             # going forward is useless, so continue;
             if i == textLen or not text[i].isalpha():
+                i += 1
                 continue
 
             # Highlight Keywords
             i = applyCodeFormat(i, keywords, text, formatKeyword)
             if i == textLen or not text[i].isalpha():
+                i += 1
                 continue
 
             # Highlight Literals (true/false/NULL,nullptr)
             i = applyCodeFormat(i, literals, text, formatNumLit)
             if i == textLen or not text[i].isalpha():
+                i += 1
                 continue
 
             # Highlight Builtin library stuff
             i = applyCodeFormat(i, builtin, text, formatBuiltIn)
             if i == textLen or not text[i].isalpha():
+                i += 1
                 continue
 
             # Highlight other stuff (preprocessor etc.)
@@ -1366,6 +1371,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                         break
                     cnt += 1
                 i = cnt - 1
+            i += 1
 
         # POST PROCESSORS
         if isCSS:
@@ -1996,7 +2002,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             currentChar = text[i]
             if currentChar == '`' or currentChar == '~':
                 i = self.highlightInlineSpans(text, i, currentChar)
-            elif currentChar == '<' and i + 4 < len(text) and text[i, i + 4] == "<!--":
+            elif currentChar == '<' and i + 4 < len(text) and text[i:i + 4] == "<!--":
                 i = self.highlightInlineComment(text, i)
             else:
                 i = self.highlightLinkOrImage(text, i)
