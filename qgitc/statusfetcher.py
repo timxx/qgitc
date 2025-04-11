@@ -66,8 +66,6 @@ class StatusFetcher(SubmoduleExecutor):
             data = Git.status(
                 fullRepoDir, self._showUntrackedFiles, self._showIgnoredFiles)
             if not data:
-                logger.warning("No data from git status for repoDir: `%s`. Untracked: %s. Ignored: %s",
-                               fullRepoDir, self._showUntrackedFiles, self._showIgnoredFiles)
                 return None, None
         except Exception:
             logger.exception("Error fetching status for `%s`", fullRepoDir)
