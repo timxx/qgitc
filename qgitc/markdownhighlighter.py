@@ -2097,6 +2097,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             isIncodeSpan = self.isPosInACodeSpan(
                 self.currentBlock().blockNumber(), i)
             if isIncodeSpan:
+                i += 1
                 continue
             i = collectEmDelims(text, i, delims)
 
@@ -2107,11 +2108,14 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         masked: List[tuple[int, int]] = []
 
         # 3. final processing & highlighting
-        for i in range(len(delims) - 1, 0, -1):
+        i = len(delims) - 1
+        while i >= 0:
             startDelim = delims[i]
             if startDelim.marker != "_" and startDelim.marker != "*":
+                i -= 1
                 continue
             if startDelim.end == -1:
+                i -= 1
                 continue
 
             endDelim = delims[startDelim.end]
@@ -2199,6 +2203,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 block = self.currentBlock().blockNumber()
                 self._ranges.setdefault(block, []).append(InlineRange(
                     startDelim.pos, endDelim.pos, RangeType.Emphasis))
+            i -= 1
 
         # 4. Apply masked syntax
         for i in range(len(masked)):
