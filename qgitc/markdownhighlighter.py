@@ -17,11 +17,11 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QTextDocument,
-    QBrush,
     QFontDatabase,
     QTextBlock
 )
 
+from .colorschema import ColorSchema
 from .languagedata import *
 
 
@@ -535,9 +535,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def initTextFormats(defaultFontSize=12):
         formats = {}
 
+        schema: ColorSchema = qApp.colorSchema()
+
         # Set character formats for headlines
         charFormat = QTextCharFormat()
-        charFormat.setForeground(QColor(2, 69, 150))
+        charFormat.setForeground(schema.Heading)
         charFormat.setFontWeight(QFont.Bold)
         charFormat.setFontPointSize(defaultFontSize * 1.6)
         formats[HighlighterState.H1] = QTextCharFormat(charFormat)
@@ -565,7 +567,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set character format for lists
         charFormat = QTextCharFormat()
-        charFormat.setForeground(QColor(163, 0, 123))
+        charFormat.setForeground(schema.List)
         formats[HighlighterState.List] = charFormat
 
         # Set character format for unchecked checkbox
@@ -580,7 +582,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set character format for links
         charFormat = QTextCharFormat()
-        charFormat.setForeground(QColor(0, 128, 255))
+        charFormat.setForeground(qApp.palette().link().color())
         charFormat.setFontUnderline(True)
         formats[HighlighterState.Link] = charFormat
 
@@ -609,11 +611,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         # Set character format for bold
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
+        charFormat.setForeground(schema.Bold)
         formats[HighlighterState.Bold] = charFormat
 
         # Set character format for comments
         charFormat = QTextCharFormat()
-        charFormat.setForeground(QBrush(Qt.gray))
+        charFormat.setForeground(schema.Comment)
         formats[HighlighterState.Comment] = charFormat
 
         # Set character format for masked syntax
@@ -646,37 +649,37 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         # Formats for syntax highlighting
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(249, 38, 114))
+        charFormat.setForeground(schema.Keyword)
         formats[HighlighterState.CodeKeyWord] = charFormat
 
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(163, 155, 78))
+        charFormat.setForeground(schema.String)
         formats[HighlighterState.CodeString] = charFormat
 
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(117, 113, 94))
+        charFormat.setForeground(schema.Comment)
         formats[HighlighterState.CodeComment] = charFormat
 
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(84, 174, 191))
+        charFormat.setForeground(schema.Type)
         formats[HighlighterState.CodeType] = charFormat
 
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(219, 135, 68))
+        charFormat.setForeground(schema.Other)
         formats[HighlighterState.CodeOther] = charFormat
 
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(174, 129, 255))
+        charFormat.setForeground(schema.Literal)
         formats[HighlighterState.CodeNumLiteral] = charFormat
 
         charFormat = QTextCharFormat()
         charFormat.setFont(QFontDatabase.systemFont(QFontDatabase.FixedFont))
-        charFormat.setForeground(QColor(1, 138, 15))
+        charFormat.setForeground(schema.Builtin)
         formats[HighlighterState.CodeBuiltIn] = charFormat
 
         MarkdownHighlighter._formats = formats

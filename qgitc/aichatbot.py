@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from PySide6.QtCore import QEvent
 from PySide6.QtGui import QTextCursor, QTextBlockFormat, QTextCharFormat, QFont
 from PySide6.QtWidgets import QTextBrowser
 
@@ -58,3 +59,10 @@ class AiChatbot(QTextBrowser):
     def clear(self):
         self._highlighter.clearDirtyBlocks()
         super().clear()
+
+    def event(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self._highlighter.initTextFormats()
+            self._highlighter.rehighlight()
+
+        return super().event(event)

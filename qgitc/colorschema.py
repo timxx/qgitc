@@ -13,7 +13,66 @@ class ColorSchemaMode:
     Dark = 2
 
 
-class ColorSchemaLight():
+class ColorSchema:
+    Newline = QColor()
+    Adding = QColor()
+    Deletion = QColor()
+    Modified = QColor()
+    Renamed = QColor()
+    RenamedModified = QColor()
+    Untracked = QColor()
+    Ignored = QColor()
+    InfoBg = QColor()
+    InfoFg = QColor()
+    InfoBorder = QColor()
+    Whitespace = QColor()
+    SelFocus = QColor()
+    SelNoFocus = QColor()
+    Submodule = QColor()
+    Submodule2 = QColor()
+    FindResult = QColor()
+    SimilarWord = QColor()
+    HighlightWordBg = QColor()
+    HighlightWordSelectedFg = QColor()
+
+    AuthorTagBg = QColor()
+    AuthorTagFg = QColor()
+    DateTagBg = QColor()
+    DateTagFg = QColor()
+    RepoTagBg = QColor()
+    RepoTagFg = QColor()
+    TagColorsBg = []
+    TagColorsFg = []
+    TagBorder = QColor()
+    GraphColors = []
+    GraphBorder = QColor()
+    LucColor = QColor()
+    LccColor = QColor()
+    Mark = QColor()
+    ErrorText = QColor()
+    HighlightLineBg = QColor()
+    SelectedItemBg = QColor()
+    SelectedItemFg = QColor()
+    HoverItemBg = QColor()
+    FocusItemBorder = QColor()
+    Splitter = QColor()
+    LineNumber = QColor()
+    Comment = QColor()
+    AiResponseFg = QColor()
+    AiResponseBg = QColor()
+
+    Heading = QColor()
+    List = QColor()
+    Bold = QColor()
+    Keyword = QColor()
+    String = QColor()
+    Type = QColor()
+    Other = QColor()
+    Builtin = QColor()
+    Literal = QColor()
+
+
+class ColorSchemaLight(ColorSchema):
 
     Newline = QColor(0, 0, 255)
     Adding = QColor(0, 128, 0)
@@ -89,8 +148,18 @@ class ColorSchemaLight():
     AiResponseFg = QColor(0x212121)
     AiResponseBg = QColor(0xF5F5F5)
 
+    Heading = QColor(2, 69, 150)
+    List = QColor(0x1300a0)
+    Bold = List
+    Keyword = QColor(0x3102fc)
+    String = QColor(0x9c221b)
+    Type = QColor(0x3a7e98)
+    Other = QColor(0xab1ad9)
+    Builtin = QColor(0x3a7e98)
+    Literal = QColor(0x298559)
 
-class ColorSchemaDark():
+
+class ColorSchemaDark(ColorSchema):
 
     Newline = QColor(100, 150, 255)
     Adding = QColor(76, 175, 80)
@@ -165,3 +234,13 @@ class ColorSchemaDark():
 
     AiResponseFg = QColor(0xEEEEEE)
     AiResponseBg = QColor(0x373737)
+
+    Heading = QColor(0x00FF00)
+    List = QColor(0x649bd5)
+    Bold = List
+    Keyword = QColor(0x649bd5)
+    String = QColor(0xc9856b)
+    Type = QColor(0x62c7b0)
+    Other = QColor(0xc188bf)
+    Builtin = QColor(0x62c7b0)
+    Literal = QColor(0xbdcda9)
