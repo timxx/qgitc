@@ -18,7 +18,8 @@ from PySide6.QtGui import (
     QFont,
     QTextDocument,
     QFontDatabase,
-    QTextBlock
+    QTextBlock,
+    QTextFormat
 )
 
 from .colorschema import ColorSchema
@@ -532,7 +533,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._highlightingRules.append(rule)
 
     @staticmethod
-    def initTextFormats(defaultFontSize=12):
+    def initTextFormats():
         formats = {}
 
         schema: ColorSchema = qApp.colorSchema()
@@ -541,22 +542,21 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         charFormat = QTextCharFormat()
         charFormat.setForeground(schema.Heading)
         charFormat.setFontWeight(QFont.Bold)
-        charFormat.setFontPointSize(defaultFontSize * 1.6)
+        charFormat.setProperty(QTextFormat.FontSizeAdjustment, 3)
         formats[HighlighterState.H1] = QTextCharFormat(charFormat)
 
-        charFormat.setFontPointSize(defaultFontSize * 1.5)
+        charFormat.setProperty(QTextFormat.FontSizeAdjustment, 2)
         formats[HighlighterState.H2] = QTextCharFormat(charFormat)
 
-        charFormat.setFontPointSize(defaultFontSize * 1.4)
+        charFormat.setProperty(QTextFormat.FontSizeAdjustment, 1)
         formats[HighlighterState.H3] = QTextCharFormat(charFormat)
 
-        charFormat.setFontPointSize(defaultFontSize * 1.3)
         formats[HighlighterState.H4] = QTextCharFormat(charFormat)
 
-        charFormat.setFontPointSize(defaultFontSize * 1.2)
+        charFormat.setProperty(QTextFormat.FontSizeAdjustment, -1)
         formats[HighlighterState.H5] = QTextCharFormat(charFormat)
 
-        charFormat.setFontPointSize(defaultFontSize * 1.1)
+        charFormat.setProperty(QTextFormat.FontSizeAdjustment, -2)
         formats[HighlighterState.H6] = QTextCharFormat(charFormat)
 
         # Set character format for horizontal rulers
