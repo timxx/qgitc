@@ -58,8 +58,6 @@ class ColorSchema:
     Splitter = QColor()
     LineNumber = QColor()
     Comment = QColor()
-    AiResponseFg = QColor()
-    AiResponseBg = QColor()
 
     Heading = QColor()
     List = QColor()
@@ -71,6 +69,10 @@ class ColorSchema:
     Builtin = QColor()
     Literal = QColor()
     InlineCode = QColor()
+
+    UserBlockBorder = QColor()
+    AssistantBlockBorder = QColor()
+    SystemBlockBorder = QColor()
 
 
 class ColorSchemaLight(ColorSchema):
@@ -146,9 +148,6 @@ class ColorSchemaLight(ColorSchema):
 
     Comment = QColor(0x207f0b)
 
-    AiResponseFg = QColor(0x212121)
-    AiResponseBg = QColor(0xF5F5F5)
-
     Heading = QColor(0x1300a0)
     List = QColor(0x1300a0)
     Bold = List
@@ -159,6 +158,10 @@ class ColorSchemaLight(ColorSchema):
     Builtin = QColor(0x3a7e98)
     Literal = QColor(0x298559)
     InlineCode = QColor(0x7a1007)
+
+    UserBlockBorder = QColor(0x1A73E8)
+    AssistantBlockBorder = QColor(0x0B8043)
+    SystemBlockBorder = QColor(0x673AB7)
 
 
 class ColorSchemaDark(ColorSchema):
@@ -234,9 +237,6 @@ class ColorSchemaDark(ColorSchema):
 
     Comment = QColor(0x6e9857)
 
-    AiResponseFg = QColor(0xEEEEEE)
-    AiResponseBg = QColor(0x373737)
-
     Heading = QColor(0x649bd5)
     List = QColor(0x649bd5)
     Bold = List
@@ -247,3 +247,7 @@ class ColorSchemaDark(ColorSchema):
     Builtin = QColor(0x62c7b0)
     Literal = QColor(0xbdcda9)
     InlineCode = QColor(0xc9937a)
+
+    UserBlockBorder = QColor(0x8AB4F8)
+    AssistantBlockBorder = QColor(0x81C995)
+    SystemBlockBorder = QColor(0xB39DDB)
