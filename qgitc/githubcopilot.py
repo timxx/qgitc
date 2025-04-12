@@ -8,7 +8,7 @@ import time
 
 from .common import logger
 from .events import RequestLoginGithubCopilot, LoginFinished
-from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse
+from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
 from .settings import Settings
 
 
@@ -129,7 +129,7 @@ class GithubCopilot(AiModelBase):
                         continue
                     aiResponse = AiResponse()
                     aiResponse.is_delta = True
-                    aiResponse.role = role
+                    aiResponse.role = AiRole.Assistant
                     aiResponse.message = delta["content"]
                     aiResponse.first_delta = first_delta
                     self.responseAvailable.emit(aiResponse)

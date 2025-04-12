@@ -32,7 +32,7 @@ from .cancelevent import CancelEvent
 from .common import commitRepoDir, fullRepoDir
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
-from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, LocalLLM
+from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole, LocalLLM
 from .statewindow import StateWindow
 from .submoduleexecutor import SubmoduleExecutor
 
@@ -318,7 +318,7 @@ class AiChatWidget(QWidget):
         prompt = params.prompt
         if chatMode == AiChatMode.CodeReview:
             prompt = f"```diff\n{prompt}\n```"
-        self._doMessageReady(model, AiResponse("user", prompt))
+        self._doMessageReady(model, AiResponse(AiRole.User, prompt))
 
         model.queryAsync(params)
 

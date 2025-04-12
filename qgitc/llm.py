@@ -1,3 +1,4 @@
+from enum import Enum
 import json
 from threading import Lock
 from PySide6.QtCore import (
@@ -8,9 +9,15 @@ import requests
 from .common import logger
 
 
+class AiRole(Enum):
+    User = 0
+    Assistant = 1
+    System = 2
+
+
 class AiResponse:
 
-    def __init__(self, role="assistant", message=None):
+    def __init__(self, role=AiRole.Assistant, message=None):
         self.role = role
         self.message = message
         self.total_tokens = None
@@ -165,7 +172,7 @@ class ChatGPTModel(AiModelBase):
                 elif "content" in delta:
                     aiResponse = AiResponse()
                     aiResponse.is_delta = True
-                    aiResponse.role = role
+                    aiResponse.role = AiRole.Assistant
                     aiResponse.message = delta["content"]
                     aiResponse.first_delta = first_delta
                     self.responseAvailable.emit(aiResponse)
@@ -186,7 +193,7 @@ class ChatGPTModel(AiModelBase):
                 message = choice["message"]
                 content = message["content"]
                 role = message["role"]
-                aiResponse.role = role
+                aiResponse.role = AiRole.Assistant
                 aiResponse.message = content
                 self.responseAvailable.emit(aiResponse)
                 break
