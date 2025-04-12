@@ -71,8 +71,16 @@ class ColorSchema:
     InlineCode = QColor()
 
     UserBlockBorder = QColor()
+    UserBlockBg = QColor()
+    UserBlockFg = QColor()
+
     AssistantBlockBorder = QColor()
+    AssistantBlockBg = QColor()
+    AssistantBlockFg = QColor()
+
     SystemBlockBorder = QColor()
+    SystemBlockBg = QColor()
+    SystemBlockFg = QColor()
 
 
 class ColorSchemaLight(ColorSchema):
@@ -160,8 +168,16 @@ class ColorSchemaLight(ColorSchema):
     InlineCode = QColor(0x7a1007)
 
     UserBlockBorder = QColor(0x1A73E8)
+    UserBlockBg = QColor(0xE8F0FE)
+    UserBlockFg = QColor(0x1A73E8)
+
     AssistantBlockBorder = QColor(0x0B8043)
+    AssistantBlockBg = QColor(0xE8F5E9)
+    AssistantBlockFg = QColor(0x0B8043)
+
     SystemBlockBorder = QColor(0x673AB7)
+    SystemBlockBg = QColor(0xF3E8FD)
+    SystemBlockFg = QColor(0x673AB7)
 
 
 class ColorSchemaDark(ColorSchema):
@@ -249,5 +265,13 @@ class ColorSchemaDark(ColorSchema):
     InlineCode = QColor(0xc9937a)
 
     UserBlockBorder = QColor(0x8AB4F8)
+    UserBlockBg = QColor(0x1E3A5F)
+    UserBlockFg = QColor(0x8AB4F8)
+
     AssistantBlockBorder = QColor(0x81C995)
+    AssistantBlockBg = QColor(0x2C463D)
+    AssistantBlockFg = QColor(0x81C995)
+
     SystemBlockBorder = QColor(0xB39DDB)
+    SystemBlockBg = QColor(0x362B4F)
+    SystemBlockFg = QColor(0xB39DDB)

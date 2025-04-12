@@ -12,7 +12,6 @@ from PySide6.QtGui import (
     QFont,
     QTextDocument,
     QPainter,
-    QPainterPath,
     QTextBlock
 )
 from PySide6.QtWidgets import QPlainTextEdit
@@ -43,21 +42,28 @@ class AiChatBotHighlighter(MarkdownHighlighter):
 
             elif text == self.tr("User:"):
                 self.setCurrentBlockState(AiChatBotState.UserBlock)
-                self._setTitleFormat(len(text))
+                self._setTitleFormat(len(text), AiRole.User)
             elif text == self.tr("Assistant:"):
                 self.setCurrentBlockState(AiChatBotState.AssistantBlock)
-                self._setTitleFormat(len(text))
+                self._setTitleFormat(len(text), AiRole.Assistant)
             elif text == self.tr("System:"):
                 self.setCurrentBlockState(AiChatBotState.SystemBlock)
-                self._setTitleFormat(len(text))
+                self._setTitleFormat(len(text), AiRole.System)
 
-    def _setTitleFormat(self, length: int):
+    def _setTitleFormat(self, length: int, role: AiRole):
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
+        if role == AiRole.User:
+            charFormat.setForeground(qApp.colorSchema().UserBlockFg)
+        elif role == AiRole.Assistant:
+            charFormat.setForeground(qApp.colorSchema().AssistantBlockFg)
+        elif role == AiRole.System:
+            charFormat.setForeground(qApp.colorSchema().SystemBlockFg)
         self.setFormat(0, length, charFormat)
 
 
 class AiChatbot(QPlainTextEdit):
+    cornerRadius = 5
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -123,6 +129,12 @@ class AiChatbot(QPlainTextEdit):
             offset.setY(offset.y() + r.height())
 
             blockType = block.userState()
+            if self._isAiBlock(blockType):
+                painter.setBrush(self._aiBlockBgColor(blockType))
+                painter.setPen(Qt.NoPen)
+                painter.drawRoundedRect(r, self.cornerRadius, self.cornerRadius)
+                painter.setBrush(Qt.NoBrush)
+
             if currBlockType is None and not self._isAiBlock(blockType):
                 currBlockType = self._findAiBlockType(block)
                 curClipTop = True
@@ -176,11 +188,17 @@ class AiChatbot(QPlainTextEdit):
         elif blockType == AiChatBotState.SystemBlock:
             painter.setPen(qApp.colorSchema().SystemBlockBorder)
 
-        cornerRadius = 5
         if clipTop:
             # make the top out of viewport
-            blockAreaRect.setTop(blockAreaRect.top() - cornerRadius)
+            blockAreaRect.setTop(blockAreaRect.top() - self.cornerRadius)
 
         # to avoid border overlap
         blockAreaRect.setHeight(blockAreaRect.height() - 2)
-        painter.drawRoundedRect(blockAreaRect, cornerRadius, cornerRadius)
+        painter.drawRoundedRect(blockAreaRect, self.cornerRadius, self.cornerRadius)
+
+    def _aiBlockBgColor(self, blockType):
+        if blockType == AiChatBotState.UserBlock:
+            return qApp.colorSchema().UserBlockBg
+        elif blockType == AiChatBotState.AssistantBlock:
+            return qApp.colorSchema().AssistantBlockBg
+        return qApp.colorSchema().SystemBlockBg
