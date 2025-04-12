@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QApplication,
     QVBoxLayout, QWidget)
 
 from .colorwidget import ColorWidget
+from .commitactionwidget import CommitActionWidget
 from .linkeditwidget import LinkEditWidget
 
 class Ui_Preferences(object):
@@ -642,30 +643,10 @@ class Ui_Preferences(object):
         self.groupBox_12.setObjectName(u"groupBox_12")
         self.verticalLayout_14 = QVBoxLayout(self.groupBox_12)
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
-        self.tvActions = QTableView(self.groupBox_12)
-        self.tvActions.setObjectName(u"tvActions")
-        self.tvActions.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.commitAction = CommitActionWidget(self.groupBox_12)
+        self.commitAction.setObjectName(u"commitAction")
 
-        self.verticalLayout_14.addWidget(self.tvActions)
-
-        self.horizontalLayout_12 = QHBoxLayout()
-        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.btnAddAction = QPushButton(self.groupBox_12)
-        self.btnAddAction.setObjectName(u"btnAddAction")
-
-        self.horizontalLayout_12.addWidget(self.btnAddAction)
-
-        self.btnDelAction = QPushButton(self.groupBox_12)
-        self.btnDelAction.setObjectName(u"btnDelAction")
-
-        self.horizontalLayout_12.addWidget(self.btnDelAction)
-
-        self.horizontalSpacer_10 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_12.addItem(self.horizontalSpacer_10)
-
-
-        self.verticalLayout_14.addLayout(self.horizontalLayout_12)
+        self.verticalLayout_14.addWidget(self.commitAction)
 
 
         self.verticalLayout_10.addWidget(self.groupBox_12)
@@ -709,7 +690,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(5)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
@@ -807,8 +788,6 @@ class Ui_Preferences(object):
         self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
 #endif // QT_CONFIG(tooltip)
         self.groupBox_12.setTitle(QCoreApplication.translate("Preferences", u"Commit &Action", None))
-        self.btnAddAction.setText(QCoreApplication.translate("Preferences", u"Add", None))
-        self.btnDelAction.setText(QCoreApplication.translate("Preferences", u"Delete", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Commit Message", None))
     # retranslateUi
 

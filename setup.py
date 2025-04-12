@@ -64,6 +64,7 @@ class BuildQt(Command):
                              rb"|emptystatelistview"
                              rb"|commitmessageedit"
                              rb"|menubutton"
+                             rb"|commitactionwidget"
                              rb") (import .*$)")
 
         for uiFile in glob("qgitc/*.ui"):

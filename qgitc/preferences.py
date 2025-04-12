@@ -84,30 +84,6 @@ class Preferences(QDialog):
         self.ui.cbCommitSince.addItem(self.tr("3 Years"), 365 * 3)
         self.ui.cbCommitSince.addItem(self.tr("5 Years"), 365 * 5)
 
-        model = CommitActionTableModel(self)
-        self.ui.tvActions.setModel(model)
-
-        delegate = ComboBoxItemDelegate(model.getStatusNames(), self)
-        self.ui.tvActions.setItemDelegateForColumn(
-            CommitActionTableModel.Col_Status, delegate)
-
-        delegate = ComboBoxItemDelegate(model.getConditionNames(), self)
-        self.ui.tvActions.setItemDelegateForColumn(
-            CommitActionTableModel.Col_Condition, delegate)
-
-        self.ui.tvActions.horizontalHeader().setSectionResizeMode(
-            CommitActionTableModel.Col_Cmd,
-            QHeaderView.Stretch)
-
-        self.ui.tvActions.horizontalHeader().resizeSection(
-            CommitActionTableModel.Col_Condition,
-            120)
-
-        self.ui.btnAddAction.clicked.connect(
-            self._onAddActionClicked)
-        self.ui.btnDelAction.clicked.connect(
-            self._onDeleteActionClicked)
-
         self.ui.btnGithubCopilot.clicked.connect(
             self._onGithubCopilotClicked)
 
@@ -566,7 +542,7 @@ class Preferences(QDialog):
         self.ui.leGroupChars.setText(self.settings.groupChars())
 
         actions = self.settings.commitActions()
-        self.ui.tvActions.model().setRawData(actions)
+        self.ui.commitAction.setActions(actions)
 
     def _saveCommitMessageTab(self):
         value = self.ui.cbIgnoreComment.isChecked()
@@ -578,15 +554,8 @@ class Preferences(QDialog):
         value = self.ui.leGroupChars.text().strip()
         self.settings.setGroupChars(value)
 
-        actions = self.ui.tvActions.model().rawData()
+        actions = self.ui.commitAction.actions()
         self.settings.setCommitActions(actions)
-
-    def _onAddActionClicked(self):
-        self._tableViewAddItem(
-            self.ui.tvActions, CommitActionTableModel.Col_Cmd)
-
-    def _onDeleteActionClicked(self):
-        self._tableViewDeleteItem(self.ui.tvActions)
 
     def _onGithubCopilotClicked(self):
         if self.ui.btnGithubCopilot.text() == self.tr("Logout"):
