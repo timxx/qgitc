@@ -23,6 +23,7 @@ from PySide6.QtGui import (
 )
 
 from .colorschema import ColorSchema
+from .diffutils import diff_begin_re
 from .languagedata import *
 
 
@@ -135,6 +136,7 @@ class HighlighterState(IntEnum):
     CodeGDScript = 252
     CodeTOML = 254
     CodeTOMLString = 255
+    Diff = 300
 
 
 class HighlightingRule:
@@ -467,7 +469,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 state == HighlighterState.CodeBlockTilde or
                 state == HighlighterState.CodeBlockComment or
                 state == HighlighterState.CodeBlockTildeComment or
-                state >= HighlighterState.CodeCpp)
+                state >= HighlighterState.CodeCpp or
+                state == HighlighterState.Diff)
 
     @staticmethod
     def isCodeBlockEnd(state):
@@ -728,6 +731,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             "systemverilog": HighlighterState.CodeSystemVerilog,
             "gdscript": HighlighterState.CodeGDScript,
             "toml": HighlighterState.CodeTOML,
+            "diff": HighlighterState.Diff,
         }
 
     def timerTick(self):
@@ -1061,7 +1065,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.setCurrentBlockState(state)
 
             # set the font size from the current rule's font format
-            maskedFormat = QTextCharFormat(self._formats[HighlighterState.NoState])
+            maskedFormat = QTextCharFormat(
+                self._formats[HighlighterState.NoState])
             maskedFormat.setFontPointSize(
                 self._formats[HighlighterState.CodeBlock].fontPointSize())
 
@@ -1231,6 +1236,10 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             isTOML = True
             types, keywords, builtin, literals, others = loadTOMLData()
             comment = "#"
+        elif state in [HighlighterState.Diff,
+                       HighlighterState.Diff + self.tildeOffset]:
+            self.diffHighlighter(text)
+            return
         else:
             self.setFormat(
                 0, textLen, self._formats[HighlighterState.CodeBlock])
@@ -1570,7 +1579,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                                    self._formats[HighlighterState.CodeType])
                 else:
                     # error highlighting
-                    errorFormat = QTextCharFormat(self._formats[HighlighterState.NoState])
+                    errorFormat = QTextCharFormat(
+                        self._formats[HighlighterState.NoState])
                     errorFormat.setUnderlineColor(Qt.red)
                     errorFormat.setUnderlineStyle(
                         QTextCharFormat.WaveUnderline)
@@ -2049,7 +2059,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # select appropriate format for current text
         if c != '~':
-            inlineFmt = QTextCharFormat(self._formats[HighlighterState.InlineCodeBlock])
+            inlineFmt = QTextCharFormat(
+                self._formats[HighlighterState.InlineCodeBlock])
 
         # make sure we don't change font size / existing formatting
         if fmt.fontPointSize() > 0:
@@ -2457,7 +2468,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def formatAndMaskRemaining(self, formatBegin, formatLength, beginningText, endText, format: QTextCharFormat):
         afterFormat = formatBegin + formatLength
 
-        maskedSyntax = QTextCharFormat(self._formats[HighlighterState.MaskedSyntax])
+        maskedSyntax = QTextCharFormat(
+            self._formats[HighlighterState.MaskedSyntax])
         maskedSyntax.setFontPointSize(
             self.format(beginningText).fontPointSize())
 
@@ -2680,3 +2692,28 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 return (rg.begin, rg.end)
 
         return (-1, -1)
+
+    def diffHighlighter(self, text: str):
+        if not text:
+            return
+
+        tcFormat = QTextCharFormat()
+        if text.startswith("+++ ") or text.startswith("--- "):
+            tcFormat.setFontWeight(QFont.Bold)
+        elif text[0] == "+":
+            if len(text) >= 2 and text[1] == "+":
+                tcFormat.setFontWeight(QFont.Bold)
+            else:
+                tcFormat.setForeground(qApp.colorSchema().Adding)
+        elif text[0] == "-":
+            tcFormat.setForeground(qApp.colorSchema().Deletion)
+        elif text[0] == " " and len(text) >= 2:
+            if text.startswith("  > "):
+                tcFormat.setForeground(qApp.colorSchema().Submodule)
+            elif text.startswith("  < "):
+                tcFormat.setForeground(qApp.colorSchema().Submodule2)
+        elif diff_begin_re.search(text) or text.startswith(r"\ No newline "):
+            tcFormat.setForeground(qApp.colorSchema().Newline)
+
+        if tcFormat.isValid():
+            self.setFormat(0, len(text), tcFormat)
