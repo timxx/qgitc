@@ -175,17 +175,6 @@ def getIndentation(text):
     return spaces
 
 
-def isInLinkRange(self, pos: int, ranges: List[tuple[int, int]]):
-    """ helper function to check if we are in a link while highlighting inline rules """
-    j = 0
-    for i in range(len(ranges)):
-        if pos > ranges[i][0] and pos < ranges[i][1]:
-            length = ranges[i][1] - ranges[i][0]
-            del ranges[j]
-            return length
-        j += 1
-    return -1
-
 # EM and Strong Parsing + Highlighting
 
 
@@ -429,7 +418,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._timer.start(1000)
 
         self._highlightingRules: List[HighlightingRule] = []
-        self._linkRanges: List[tuple[int, int]] = []
         self._ranges: Dict[int, list] = {}
         self._dirtyTextBlocks: List[QTextBlock] = []
         self._highlightingFinished = True
@@ -444,16 +432,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         # Initialize code languages if not already done
         if not MarkdownHighlighter._langStringToEnum:
             self.initCodeLangs()
-
-    @staticmethod
-    def codeBlockBackgroundColor():
-        brush = MarkdownHighlighter._formats[HighlighterState.CodeBlock].background(
-        )
-
-        if not brush.isOpaque():
-            return QColor(Qt.transparent)
-
-        return brush.color()
 
     @staticmethod
     def isOctal(c):
@@ -471,11 +449,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 state == HighlighterState.CodeBlockTildeComment or
                 state >= HighlighterState.CodeCpp or
                 state == HighlighterState.Diff)
-
-    @staticmethod
-    def isCodeBlockEnd(state):
-        return (state == HighlighterState.CodeBlockEnd or
-                state == HighlighterState.CodeBlockTildeEnd)
 
     @staticmethod
     def setTextFormats(formats: Dict[HighlighterState, QTextCharFormat]):
@@ -2654,13 +2627,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         # If none of the conditions are met, continue processing from the same index
         return startIndex
 
-    def findPositionInRanges(self, type: RangeType, blockNum: int, pos: int):
-        rangeList: List[InlineRange] = self._ranges.get(blockNum, [])
-        for rg in rangeList:
-            if (pos == rg.begin or pos == rg.end) and rg.type == type:
-                return (rg.begin, rg.end)
-        return (-1, -1)
-
     def isPosInACodeSpan(self, blockNumber: int, position: int):
         rangeList: List[InlineRange] = self._ranges.get(blockNumber, [])
 
@@ -2671,27 +2637,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 return True
 
         return False
-
-    def isPosInALink(self, blockNumber: int, position: int):
-        rangeList: List[InlineRange] = self._ranges.get(blockNumber, [])
-        for rg in rangeList:
-            if (position > rg.begin and
-                position < rg.end and
-                    rg.type == RangeType.Link):
-                return True
-
-        return False
-
-    def getSpanRange(self, rangeType: RangeType, blockNumber: int, position: int):
-        rangeList: List[InlineRange] = self._ranges.get(blockNumber, [])
-
-        for rg in rangeList:
-            if (position > rg.begin and
-                position < rg.end and
-                    rg.type == rangeType):
-                return (rg.begin, rg.end)
-
-        return (-1, -1)
 
     def diffHighlighter(self, text: str):
         if not text:
