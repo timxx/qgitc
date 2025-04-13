@@ -369,16 +369,38 @@ class Settings(QSettings):
         self.setValue("groupChars", chars)
         self.endGroup()
 
-    def commitActions(self) -> List[CommitAction]:
-        self.beginGroup("commit")
+    def commitActions(self, repoName: str) -> List[CommitAction]:
+        self.beginGroup(repoName)
         defaultActions = [CommitAction("git", "push", enabled=False)]
         actions = self.value("actions", defaultActions)
         self.endGroup()
         return actions
 
-    def setCommitActions(self, actions: List[CommitAction]):
+    def setCommitActions(self, repoName: str, actions: List[CommitAction]):
+        self.beginGroup(repoName)
+        self.setValue("actions", actions)
+        self.endGroup()
+
+    def globalCommitActions(self) -> List[CommitAction]:
+        self.beginGroup("commit")
+        actions = self.value("actions", [])
+        self.endGroup()
+        return actions
+
+    def setGlobalCommitActions(self, actions: List[CommitAction]):
         self.beginGroup("commit")
         self.setValue("actions", actions)
+        self.endGroup()
+
+    def useGlobalCommitActions(self):
+        self.beginGroup("commit")
+        use = self.value("useGlobalActions", False, type=bool)
+        self.endGroup()
+        return use
+
+    def setUseGlobalCommitActions(self, use):
+        self.beginGroup("commit")
+        self.setValue("useGlobalActions", use)
         self.endGroup()
 
     def runCommitActions(self):

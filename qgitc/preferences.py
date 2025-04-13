@@ -7,9 +7,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import (
     QSize)
 
+from .commitactioneditdialog import CommitActionEditDialog
 from .common import logger
 from .colorschema import ColorSchemaMode
-from .commitactiontablemodel import CommitActionTableModel
 from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .ui_preferences import *
 from .comboboxitemdelegate import ComboBoxItemDelegate
@@ -99,6 +99,9 @@ class Preferences(QDialog):
         }
 
         self._onTabChanged(self.ui.tabWidget.currentIndex())
+
+        self.ui.btnEditGlobalActions.clicked.connect(
+            self._onEditGlobalActionsClicked)
 
     def _updateFontSizes(self, family, size, cb):
         fdb = QFontDatabase()
@@ -541,8 +544,11 @@ class Preferences(QDialog):
         self.ui.cbTab.setChecked(self.settings.tabToNextGroup())
         self.ui.leGroupChars.setText(self.settings.groupChars())
 
-        actions = self.settings.commitActions()
+        actions = self.settings.commitActions(qApp.repoName())
         self.ui.commitAction.setActions(actions)
+
+        self.ui.cbUseGlobalActions.setChecked(
+            self.settings.useGlobalCommitActions())
 
     def _saveCommitMessageTab(self):
         value = self.ui.cbIgnoreComment.isChecked()
@@ -555,7 +561,10 @@ class Preferences(QDialog):
         self.settings.setGroupChars(value)
 
         actions = self.ui.commitAction.actions()
-        self.settings.setCommitActions(actions)
+        self.settings.setCommitActions(qApp.repoName(), actions)
+
+        self.settings.setUseGlobalCommitActions(
+            self.ui.cbUseGlobalActions.isChecked())
 
     def _onGithubCopilotClicked(self):
         if self.ui.btnGithubCopilot.text() == self.tr("Logout"):
@@ -566,3 +575,9 @@ class Preferences(QDialog):
             dialog.exec()
             if dialog.isLoginSuccessful():
                 self.ui.btnGithubCopilot.setText(self.tr("Logout"))
+
+    def _onEditGlobalActionsClicked(self):
+        dialog = CommitActionEditDialog(self)
+        dialog.widget.setActions(self.settings.globalCommitActions())
+        if dialog.exec() == QDialog.Accepted:
+            self.settings.setGlobalCommitActions(dialog.widget.actions())

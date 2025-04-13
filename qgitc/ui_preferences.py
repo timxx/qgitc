@@ -648,6 +648,25 @@ class Ui_Preferences(object):
 
         self.verticalLayout_14.addWidget(self.commitAction)
 
+        self.horizontalLayout_12 = QHBoxLayout()
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.cbUseGlobalActions = QCheckBox(self.groupBox_12)
+        self.cbUseGlobalActions.setObjectName(u"cbUseGlobalActions")
+
+        self.horizontalLayout_12.addWidget(self.cbUseGlobalActions)
+
+        self.btnEditGlobalActions = QPushButton(self.groupBox_12)
+        self.btnEditGlobalActions.setObjectName(u"btnEditGlobalActions")
+
+        self.horizontalLayout_12.addWidget(self.btnEditGlobalActions)
+
+        self.horizontalSpacer_10 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_12.addItem(self.horizontalSpacer_10)
+
+
+        self.verticalLayout_14.addLayout(self.horizontalLayout_12)
+
 
         self.verticalLayout_10.addWidget(self.groupBox_12)
 
@@ -788,6 +807,8 @@ class Ui_Preferences(object):
         self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
 #endif // QT_CONFIG(tooltip)
         self.groupBox_12.setTitle(QCoreApplication.translate("Preferences", u"Commit &Action", None))
+        self.cbUseGlobalActions.setText(QCoreApplication.translate("Preferences", u"Use &Global", None))
+        self.btnEditGlobalActions.setText(QCoreApplication.translate("Preferences", u"&Edit Global", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Commit Message", None))
     # retranslateUi
 
