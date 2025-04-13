@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>5</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -294,38 +294,9 @@
          <property name="title">
           <string>Log view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_3">
-          <item row="1" column="1">
-           <widget class="QComboBox" name="cbSizeLog"/>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_6">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>&amp;Family:</string>
-            </property>
-            <property name="buddy">
-             <cstring>cbFamilyLog</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_7">
-            <property name="text">
-             <string>&amp;Size:</string>
-            </property>
-            <property name="buddy">
-             <cstring>cbSizeLog</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QFontComboBox" name="cbFamilyLog"/>
+         <layout class="QVBoxLayout" name="verticalLayout_17">
+          <item>
+           <widget class="FontChooserWidget" name="logFonts" native="true"/>
           </item>
          </layout>
         </widget>
@@ -335,38 +306,9 @@
          <property name="title">
           <string>Diff view</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_4">
-          <item row="0" column="1">
-           <widget class="QFontComboBox" name="cbFamilyDiff"/>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_9">
-            <property name="text">
-             <string>S&amp;ize:</string>
-            </property>
-            <property name="buddy">
-             <cstring>cbSizeDiff</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="cbSizeDiff"/>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_8">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>F&amp;amily:</string>
-            </property>
-            <property name="buddy">
-             <cstring>cbFamilyDiff</cstring>
-            </property>
-           </widget>
+         <layout class="QVBoxLayout" name="verticalLayout_18">
+          <item>
+           <widget class="FontChooserWidget" name="diffFonts" native="true"/>
           </item>
          </layout>
         </widget>
@@ -1141,11 +1083,16 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
    <header>commitactionwidget.h</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>FontChooserWidget</class>
+   <extends>QWidget</extends>
+   <header>fontchooserwidget.h</header>
+   <container>1</container>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>btnAdd</tabstop>
   <tabstop>tableView</tabstop>
-  <tabstop>cbSizeDiff</tabstop>
   <tabstop>colorA</tabstop>
   <tabstop>colorB</tabstop>
   <tabstop>buttonBox</tabstop>
@@ -1154,9 +1101,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
   <tabstop>cbShowWhitespace</tabstop>
   <tabstop>sbTabSize</tabstop>
   <tabstop>cbIgnoreWhitespace</tabstop>
-  <tabstop>cbFamilyDiff</tabstop>
-  <tabstop>cbFamilyLog</tabstop>
-  <tabstop>cbSizeLog</tabstop>
  </tabstops>
  <resources/>
  <connections>

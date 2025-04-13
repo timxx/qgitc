@@ -47,6 +47,17 @@ def fixedFont(pointSize):
     return font
 
 
+def chineseFont():
+    if is_win:
+        defaultFont = "Microsoft YaHei UI"
+    elif platform.system() == "Darwin":
+        defaultFont = "PingFang SC"
+    else:
+        defaultFont = "WenQuanYi Micro Hei"
+
+    return defaultFont
+
+
 class Settings(QSettings):
 
     showWhitespaceChanged = Signal(bool)
@@ -69,23 +80,47 @@ class Settings(QSettings):
 
         self._fixedFont = None
 
-    def logViewFont(self):
-        return self.value("lvFont", QApplication.font())
+    @staticmethod
+    def _makeFont(families: List[str], pointSize: int):
+        font = QFont()
+        font.setFamilies(families)
+        font.setPointSize(pointSize)
+        return font
 
-    def setLogViewFont(self, font):
-        self.setValue("lvFont", font)
+    def logViewFont(self):
+        families = self.value("lvFonts", [])
+        fontSize = self.value(
+            "lvFontSize", QApplication.font().pointSize(), type=int)
+        if not families:
+            families = QApplication.font().families()
+            extraFamiliy = chineseFont()
+            if extraFamiliy not in families:
+                families.append(extraFamiliy)
+        return self._makeFont(families, fontSize)
+
+    def setLogViewFont(self, font: QFont):
+        # we can't save font directly
+        # as the family will be lost
+        self.setValue("lvFonts", font.families())
+        self.setValue("lvFontSize", font.pointSize())
         self.logViewFontChanged.emit(font)
 
     def diffViewFont(self):
-        font = self.value("dvFont", None, QFont)
-        if font is None:
+        families = self.value("dvFonts", [])
+        fontSize = self.value(
+            "dvFontSize", QApplication.font().pointSize(), type=int)
+        if not families:
             if self._fixedFont is None:
                 self._fixedFont = fixedFont(QApplication.font().pointSize())
-            return self._fixedFont
-        return font
+            families = self._fixedFont.families()
+            extraFamiliy = chineseFont()
+            if extraFamiliy not in families:
+                families.append(extraFamiliy)
+        return self._makeFont(families, fontSize)
 
-    def setDiffViewFont(self, font):
-        self.setValue("dvFont", font)
+    def setDiffViewFont(self, font: QFont):
+        self.setValue("dvFonts", font.families())
+        self.setValue("dvFontSize", font.pointSize())
         self.diffViewFontChanged.emit(font)
 
     def commitColorA(self):

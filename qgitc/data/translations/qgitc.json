@@ -28,6 +28,7 @@
             "../../events.py",
             "../../excepthandler.py",
             "../../findwidget.py",
+            "../../fontchooserwidget.py",
             "../../githubcopilotlogindialog.py",
             "../../githubcopilotlogindialog.ui",
             "../../gitutils.py",

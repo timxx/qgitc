@@ -46,11 +46,6 @@ class Preferences(QDialog):
         self.ui.tableView.setItemDelegateForColumn(
             ToolTableModel.Col_Scenes, delegate)
 
-        self.ui.cbFamilyLog.currentFontChanged.connect(
-            self._onFamilyChanged)
-        self.ui.cbFamilyDiff.currentFontChanged.connect(
-            self._onFamilyChanged)
-
         self.ui.btnAdd.clicked.connect(
             self._onBtnAddClicked)
         self.ui.btnDelete.clicked.connect(
@@ -103,39 +98,6 @@ class Preferences(QDialog):
 
         self.ui.btnEditGlobalActions.clicked.connect(
             self._onEditGlobalActionsClicked)
-
-    def _updateFontSizes(self, family, size, cb):
-        fdb = QFontDatabase()
-        sizes = fdb.pointSizes(family)
-        if not sizes:
-            sizes = QFontDatabase.standardSizes()
-
-        sizes.sort()
-        cb.clear()
-        cb.blockSignals(True)
-
-        curIdx = -1
-        for i in range(len(sizes)):
-            s = sizes[i]
-            cb.addItem(str(s))
-            # find the best one for @size
-            if curIdx == -1 and s >= size:
-                if i > 0 and (size - sizes[i - 1] < s - size):
-                    curIdx = i - 1
-                else:
-                    curIdx = i
-
-        cb.blockSignals(False)
-        cb.setCurrentIndex(0 if curIdx == -1 else curIdx)
-
-    def _onFamilyChanged(self, font):
-        cbSize = self.ui.cbSizeLog
-        size = self.settings.logViewFont().pointSize()
-        if self.sender() == self.ui.cbFamilyDiff:
-            cbSize = self.ui.cbSizeDiff
-            size = self.settings.diffViewFont().pointSize()
-
-        self._updateFontSizes(font.family(), size, cbSize)
 
     def _onBtnAddClicked(self, checked=False):
         self._tableViewAddItem(self.ui.tableView, ToolTableModel.Col_Suffix)
@@ -423,22 +385,16 @@ class Preferences(QDialog):
 
     def _initFontsTab(self):
         font = self.settings.logViewFont()
-        self.ui.cbFamilyLog.setCurrentFont(font)
-        self.ui.cbFamilyLog.currentFontChanged.emit(font)
+        self.ui.logFonts.setFont(font)
 
         font = self.settings.diffViewFont()
-        self.ui.cbFamilyDiff.setCurrentFont(font)
-        self.ui.cbFamilyDiff.currentFontChanged.emit(font)
+        self.ui.diffFonts.setFont(font)
 
     def _saveFontsTab(self):
-        font = QFont(self.ui.cbFamilyLog.currentText(),
-                     int(self.ui.cbSizeLog.currentText()))
-
+        font = self.ui.logFonts.font()
         self.settings.setLogViewFont(font)
 
-        font = QFont(self.ui.cbFamilyDiff.currentText(),
-                     int(self.ui.cbSizeDiff.currentText()))
-
+        font = self.ui.diffFonts.font()
         self.settings.setDiffViewFont(font)
 
     def _initSummaryTab(self):
