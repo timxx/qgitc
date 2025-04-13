@@ -152,7 +152,7 @@ class AiCommitMessage(QObject):
 
     @staticmethod
     def _fetchLogs(repoDir: str, commitCount: int, author=None):
-        args = ["log", "--pretty=format:%B", "-z", "-n", str(commitCount)]
+        args = ["log", "--pretty=format:%B", "--no-merges", "-z", "-n", str(commitCount)]
         if author:
             args.append("--author={}".format(author))
 
