@@ -30,4 +30,4 @@ class LinkEditDialog(QDialog):
         buttonBox.rejected.connect(self.reject)
 
     def sizeHint(self):
-        return QSize(400, 0)
+        return QSize(500, 250)

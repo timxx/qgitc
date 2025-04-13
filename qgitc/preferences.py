@@ -32,8 +32,9 @@ class Preferences(QDialog):
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
         self.settings = settings
+        self._repoName: str = qApp.repoName()
 
-        self.resize(QSize(655, 396))
+        self.resize(QSize(700, 490))
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
@@ -444,18 +445,20 @@ class Preferences(QDialog):
         self.ui.colorA.setColor(self.settings.commitColorA())
         self.ui.colorB.setColor(self.settings.commitColorB())
 
-        repoName = qApp.repoName()
-        self.ui.linkEditWidget.setCommitUrl(self.settings.commitUrl(repoName))
+        self.ui.linkEditWidget.setCommitUrl(
+            self.settings.commitUrl(self._repoName))
         self.ui.linkEditWidget.setBugPatterns(
-            self.settings.bugPatterns(repoName))
+            self.settings.bugPatterns(self._repoName))
         self.ui.cbFallback.setChecked(
-            self.settings.fallbackGlobalLinks(repoName))
+            self.settings.fallbackGlobalLinks(self._repoName))
 
         days = self.settings.maxCompositeCommitsSince()
         for i in range(self.ui.cbCommitSince.count()):
             if self.ui.cbCommitSince.itemData(i) == days:
                 self.ui.cbCommitSince.setCurrentIndex(i)
                 break
+        self.ui.linkGroup.setTitle(
+            self.tr("Links") + (" (" + self._repoName + ")"))
 
     def _saveSummaryTab(self):
         color = self.ui.colorA.getColor()
@@ -465,14 +468,13 @@ class Preferences(QDialog):
         self.settings.setCommitColorB(color)
 
         value = self.ui.linkEditWidget.commitUrl().strip()
-        repoName = qApp.repoName()
-        self.settings.setCommitUrl(repoName, value)
+        self.settings.setCommitUrl(self._repoName, value)
 
         value = self.ui.linkEditWidget.bugPatterns()
-        self.settings.setBugPatterns(repoName, value)
+        self.settings.setBugPatterns(self._repoName, value)
 
         value = self.ui.cbFallback.isChecked()
-        self.settings.setFallbackGlobalLinks(repoName, value)
+        self.settings.setFallbackGlobalLinks(self._repoName, value)
 
         value = self.ui.cbCommitSince.currentData()
         self.settings.setMaxCompositeCommitsSince(value)
@@ -544,11 +546,14 @@ class Preferences(QDialog):
         self.ui.cbTab.setChecked(self.settings.tabToNextGroup())
         self.ui.leGroupChars.setText(self.settings.groupChars())
 
-        actions = self.settings.commitActions(qApp.repoName())
+        actions = self.settings.commitActions(self._repoName)
         self.ui.commitAction.setActions(actions)
 
         self.ui.cbUseGlobalActions.setChecked(
             self.settings.useGlobalCommitActions())
+
+        self.ui.commitActionGroup.setTitle(
+            self.tr("Commit Actions") + (" (" + self._repoName + ")"))
 
     def _saveCommitMessageTab(self):
         value = self.ui.cbIgnoreComment.isChecked()
@@ -561,7 +566,7 @@ class Preferences(QDialog):
         self.settings.setGroupChars(value)
 
         actions = self.ui.commitAction.actions()
-        self.settings.setCommitActions(qApp.repoName(), actions)
+        self.settings.setCommitActions(self._repoName, actions)
 
         self.settings.setUseGlobalCommitActions(
             self.ui.cbUseGlobalActions.isChecked())

@@ -434,7 +434,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_2">
+        <widget class="QGroupBox" name="linkGroup">
          <property name="title">
           <string>Links</string>
          </property>
@@ -1064,9 +1064,9 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_12">
+        <widget class="QGroupBox" name="commitActionGroup">
          <property name="title">
-          <string>Commit &amp;Action</string>
+          <string>Commit &amp;Actions</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_14">
           <item>

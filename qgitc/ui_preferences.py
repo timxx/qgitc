@@ -317,23 +317,23 @@ class Ui_Preferences(object):
 
         self.verticalLayout_3.addWidget(self.groupBox)
 
-        self.groupBox_2 = QGroupBox(self.tabSummary)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.verticalLayout_9 = QVBoxLayout(self.groupBox_2)
+        self.linkGroup = QGroupBox(self.tabSummary)
+        self.linkGroup.setObjectName(u"linkGroup")
+        self.verticalLayout_9 = QVBoxLayout(self.linkGroup)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.linkEditWidget = LinkEditWidget(self.groupBox_2)
+        self.linkEditWidget = LinkEditWidget(self.linkGroup)
         self.linkEditWidget.setObjectName(u"linkEditWidget")
 
         self.verticalLayout_9.addWidget(self.linkEditWidget)
 
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.cbFallback = QCheckBox(self.groupBox_2)
+        self.cbFallback = QCheckBox(self.linkGroup)
         self.cbFallback.setObjectName(u"cbFallback")
 
         self.horizontalLayout_4.addWidget(self.cbFallback)
 
-        self.btnGlobal = QPushButton(self.groupBox_2)
+        self.btnGlobal = QPushButton(self.linkGroup)
         self.btnGlobal.setObjectName(u"btnGlobal")
 
         self.horizontalLayout_4.addWidget(self.btnGlobal)
@@ -346,7 +346,7 @@ class Ui_Preferences(object):
         self.verticalLayout_9.addLayout(self.horizontalLayout_4)
 
 
-        self.verticalLayout_3.addWidget(self.groupBox_2)
+        self.verticalLayout_3.addWidget(self.linkGroup)
 
         self.groupBox_10 = QGroupBox(self.tabSummary)
         self.groupBox_10.setObjectName(u"groupBox_10")
@@ -639,23 +639,23 @@ class Ui_Preferences(object):
 
         self.verticalLayout_10.addWidget(self.groupBox_11)
 
-        self.groupBox_12 = QGroupBox(self.tabCommitMessage)
-        self.groupBox_12.setObjectName(u"groupBox_12")
-        self.verticalLayout_14 = QVBoxLayout(self.groupBox_12)
+        self.commitActionGroup = QGroupBox(self.tabCommitMessage)
+        self.commitActionGroup.setObjectName(u"commitActionGroup")
+        self.verticalLayout_14 = QVBoxLayout(self.commitActionGroup)
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
-        self.commitAction = CommitActionWidget(self.groupBox_12)
+        self.commitAction = CommitActionWidget(self.commitActionGroup)
         self.commitAction.setObjectName(u"commitAction")
 
         self.verticalLayout_14.addWidget(self.commitAction)
 
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.cbUseGlobalActions = QCheckBox(self.groupBox_12)
+        self.cbUseGlobalActions = QCheckBox(self.commitActionGroup)
         self.cbUseGlobalActions.setObjectName(u"cbUseGlobalActions")
 
         self.horizontalLayout_12.addWidget(self.cbUseGlobalActions)
 
-        self.btnEditGlobalActions = QPushButton(self.groupBox_12)
+        self.btnEditGlobalActions = QPushButton(self.commitActionGroup)
         self.btnEditGlobalActions.setObjectName(u"btnEditGlobalActions")
 
         self.horizontalLayout_12.addWidget(self.btnEditGlobalActions)
@@ -668,7 +668,7 @@ class Ui_Preferences(object):
         self.verticalLayout_14.addLayout(self.horizontalLayout_12)
 
 
-        self.verticalLayout_10.addWidget(self.groupBox_12)
+        self.verticalLayout_10.addWidget(self.commitActionGroup)
 
         self.tabWidget.addTab(self.tabCommitMessage, "")
 
@@ -749,7 +749,7 @@ class Ui_Preferences(object):
         self.groupBox.setTitle(QCoreApplication.translate("Preferences", u"Color", None))
         self.label_2.setText(QCoreApplication.translate("Preferences", u"Branch &B:", None))
         self.label.setText(QCoreApplication.translate("Preferences", u"Branch &A:", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("Preferences", u"Links", None))
+        self.linkGroup.setTitle(QCoreApplication.translate("Preferences", u"Links", None))
 #if QT_CONFIG(tooltip)
         self.cbFallback.setToolTip(QCoreApplication.translate("Preferences", u"Use global settings when no match current setting", None))
 #endif // QT_CONFIG(tooltip)
@@ -806,7 +806,7 @@ class Ui_Preferences(object):
 #if QT_CONFIG(tooltip)
         self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
 #endif // QT_CONFIG(tooltip)
-        self.groupBox_12.setTitle(QCoreApplication.translate("Preferences", u"Commit &Action", None))
+        self.commitActionGroup.setTitle(QCoreApplication.translate("Preferences", u"Commit &Actions", None))
         self.cbUseGlobalActions.setText(QCoreApplication.translate("Preferences", u"Use &Global", None))
         self.btnEditGlobalActions.setText(QCoreApplication.translate("Preferences", u"&Edit Global", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Commit Message", None))
