@@ -574,6 +574,7 @@ class Preferences(QDialog):
     def _onGithubCopilotClicked(self):
         if self.ui.btnGithubCopilot.text() == self.tr("Logout"):
             self.settings.setGithubCopilotAccessToken("")
+            self.settings.setGithubCopilotToken("")
             self.ui.btnGithubCopilot.setText(self.tr("Login"))
         else:
             dialog = GithubCopilotLoginDialog(self)

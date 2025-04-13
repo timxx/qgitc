@@ -215,6 +215,7 @@ class Application(QApplication):
 
         if type == RequestLoginGithubCopilot.Type:
             dialog = GithubCopilotLoginDialog(self.activeWindow())
+            dialog.setAutoClose(event.autoClose)
             dialog.exec()
             self.postEvent(event.requestor, LoginFinished(
                 dialog.isLoginSuccessful()))

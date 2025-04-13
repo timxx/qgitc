@@ -121,6 +121,8 @@ class GithubCopilotLoginDialog(QDialog):
         self._loginThread.finished.connect(self._onLoginFinished)
         self._loginThread.startVerifyUrl()
 
+        self._autoClose = False
+
     def _onLoginFailed(self, error):
         msg = self.tr("Login failed: {}").format(error)
         self.ui.lbStatus.setText(msg)
@@ -169,6 +171,9 @@ class GithubCopilotLoginDialog(QDialog):
         self.ui.progressBar.setValue(1)
         # self._loginThread.startUserInfo()
 
+        if self._autoClose:
+            self.accept()
+
     def closeEvent(self, event):
         if self._loginThread.isRunning():
             self._loginThread.requestInterruption()
@@ -177,3 +182,6 @@ class GithubCopilotLoginDialog(QDialog):
 
     def isLoginSuccessful(self):
         return self._loginThread.accessToken is not None
+
+    def setAutoClose(self, autoClose: bool):
+        self._autoClose = autoClose

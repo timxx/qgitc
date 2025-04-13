@@ -93,9 +93,10 @@ class LocalChangesCommittedEvent(QEvent):
 class RequestLoginGithubCopilot(QEvent):
     Type = QEvent.User + 9
 
-    def __init__(self, requestor: QObject):
+    def __init__(self, requestor: QObject, autoClose: bool = True):
         super().__init__(QEvent.Type(RequestLoginGithubCopilot.Type))
         self.requestor = requestor
+        self.autoClose = autoClose
 
 
 class LoginFinished(QEvent):
