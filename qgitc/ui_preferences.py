@@ -806,7 +806,7 @@ class Ui_Preferences(object):
 #if QT_CONFIG(tooltip)
         self.leGroupChars.setToolTip(QCoreApplication.translate("Preferences", u"Each pair separate by space, such as `() []`", None))
 #endif // QT_CONFIG(tooltip)
-        self.commitActionGroup.setTitle(QCoreApplication.translate("Preferences", u"Commit &Actions", None))
+        self.commitActionGroup.setTitle(QCoreApplication.translate("Preferences", u"Commit Actions", None))
         self.cbUseGlobalActions.setText(QCoreApplication.translate("Preferences", u"Use &Global", None))
         self.btnEditGlobalActions.setText(QCoreApplication.translate("Preferences", u"&Edit Global", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tabCommitMessage), QCoreApplication.translate("Preferences", u"&Commit Message", None))

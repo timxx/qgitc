@@ -1066,7 +1066,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
        <item>
         <widget class="QGroupBox" name="commitActionGroup">
          <property name="title">
-          <string>Commit &amp;Actions</string>
+          <string>Commit Actions</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_14">
           <item>

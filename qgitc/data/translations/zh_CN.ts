@@ -30,6 +30,24 @@
     </message>
 </context>
 <context>
+    <name>AiChatBotHighlighter</name>
+    <message>
+        <location filename="../../aichatbot.py" line="44"/>
+        <source>User:</source>
+        <translation>用户：</translation>
+    </message>
+    <message>
+        <location filename="../../aichatbot.py" line="47"/>
+        <source>Assistant:</source>
+        <translation>助手：</translation>
+    </message>
+    <message>
+        <location filename="../../aichatbot.py" line="50"/>
+        <source>System:</source>
+        <translation>系统：</translation>
+    </message>
+</context>
+<context>
     <name>AiChatWidget</name>
     <message>
         <location filename="../../aichatwindow.py" line="160"/>
@@ -97,7 +115,7 @@
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="325"/>
+        <location filename="../../aichatwindow.py" line="328"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -109,7 +127,7 @@
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="477"/>
+        <location filename="../../aichatwindow.py" line="480"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -117,9 +135,24 @@
 <context>
     <name>AiChatbot</name>
     <message>
-        <location filename="../../aichatbot.py" line="53"/>
+        <location filename="../../aichatbot.py" line="92"/>
         <source>Service Unavailable</source>
         <translation>服务不可用</translation>
+    </message>
+    <message>
+        <location filename="../../aichatbot.py" line="108"/>
+        <source>User:</source>
+        <translation>用户：</translation>
+    </message>
+    <message>
+        <location filename="../../aichatbot.py" line="111"/>
+        <source>Assistant:</source>
+        <translation>助手：</translation>
+    </message>
+    <message>
+        <location filename="../../aichatbot.py" line="113"/>
+        <source>System:</source>
+        <translation>系统：</translation>
     </message>
 </context>
 <context>
@@ -199,19 +232,27 @@
 <context>
     <name>BugPatternModel</name>
     <message>
-        <location filename="../../linkeditwidget.py" line="56"/>
+        <location filename="../../linkeditwidget.py" line="54"/>
         <source>Bug Pattern</source>
         <translation>Bug模式</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="59"/>
+        <location filename="../../linkeditwidget.py" line="57"/>
         <source>Bug Url</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="101"/>
+        <location filename="../../linkeditwidget.py" line="99"/>
         <source>Invalid regular expression: </source>
         <translation>无效的正则表达式：</translation>
+    </message>
+</context>
+<context>
+    <name>CommitActionEditDialog</name>
+    <message>
+        <location filename="../../commitactioneditdialog.py" line="18"/>
+        <source>Edit Commit Actions</source>
+        <translation>编辑提交动作</translation>
     </message>
 </context>
 <context>
@@ -263,6 +304,29 @@
     </message>
 </context>
 <context>
+    <name>CommitActionWidget</name>
+    <message>
+        <location filename="../../commitactionwidget.py" line="67"/>
+        <source>Please select one row at least to delete.</source>
+        <translation>请至少选择一行来删除。</translation>
+    </message>
+    <message>
+        <location filename="../../commitactionwidget.py" line="73"/>
+        <source>You have selected more than one record, do you really want delete all of them?</source>
+        <translation>您选择超过了一条记录，是否全部都要删除？</translation>
+    </message>
+    <message>
+        <location filename="../../commitactionwidget.ui" line="41"/>
+        <source>Add</source>
+        <translation>添加</translation>
+    </message>
+    <message>
+        <location filename="../../commitactionwidget.ui" line="48"/>
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+</context>
+<context>
     <name>CommitPanel</name>
     <message>
         <location filename="../../blameview.py" line="602"/>
@@ -288,120 +352,120 @@
 <context>
     <name>CommitWindow</name>
     <message>
-        <location filename="../../commitwindow.py" line="238"/>
+        <location filename="../../commitwindow.py" line="240"/>
         <location filename="../../commitwindow.ui" line="14"/>
         <source>QGitc Commit</source>
         <translation>QGitc提交</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="264"/>
+        <location filename="../../commitwindow.py" line="266"/>
         <source>There are no unstaged changes</source>
         <translation>所有改动已被暂存或工作区无修改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="276"/>
+        <location filename="../../commitwindow.py" line="278"/>
         <source>There are no staged changes</source>
         <translation>没有已暂存的更改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="290"/>
+        <location filename="../../commitwindow.py" line="292"/>
         <source>Unstage all</source>
         <translation>取消全部暂存</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="299"/>
+        <location filename="../../commitwindow.py" line="301"/>
         <source>Stage all</source>
         <translation>暂存全部</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="304"/>
+        <location filename="../../commitwindow.py" line="306"/>
         <source>Refresh</source>
         <translation>刷新</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="325"/>
+        <location filename="../../commitwindow.py" line="327"/>
         <source>Enter commit message here...</source>
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="465"/>
+        <location filename="../../commitwindow.py" line="467"/>
         <source>Inconsistent branches</source>
         <translation>分支不一致</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="469"/>
+        <location filename="../../commitwindow.py" line="471"/>
         <source>You have different branches in submodules:</source>
         <translation>各仓库的分支不完全一致：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="598"/>
+        <location filename="../../commitwindow.py" line="623"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="602"/>
+        <location filename="../../commitwindow.py" line="627"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="604"/>
+        <location filename="../../commitwindow.py" line="629"/>
         <source>Invalid commit message</source>
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="798"/>
+        <location filename="../../commitwindow.py" line="823"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="826"/>
+        <location filename="../../commitwindow.py" line="851"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="886"/>
+        <location filename="../../commitwindow.py" line="911"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="896"/>
+        <location filename="../../commitwindow.py" line="921"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="942"/>
+        <location filename="../../commitwindow.py" line="968"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="951"/>
+        <location filename="../../commitwindow.py" line="977"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1032"/>
+        <location filename="../../commitwindow.py" line="1058"/>
         <location filename="../../commitwindow.ui" line="559"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1033"/>
+        <location filename="../../commitwindow.py" line="1059"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1035"/>
+        <location filename="../../commitwindow.py" line="1061"/>
         <location filename="../../commitwindow.ui" line="520"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1037"/>
+        <location filename="../../commitwindow.py" line="1063"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1145"/>
+        <location filename="../../commitwindow.py" line="1171"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
     </message>
@@ -817,42 +881,42 @@
 <context>
     <name>LinkEditWidget</name>
     <message>
-        <location filename="../../linkeditwidget.py" line="175"/>
+        <location filename="../../linkeditwidget.py" line="173"/>
         <source>Co&amp;mmit Url:</source>
         <translation>记录URL(&amp;M)：</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="196"/>
+        <location filename="../../linkeditwidget.py" line="194"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="197"/>
+        <location filename="../../linkeditwidget.py" line="195"/>
         <source>&amp;Remove</source>
         <translation>删除(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="198"/>
+        <location filename="../../linkeditwidget.py" line="196"/>
         <source>Auto &amp;Detect</source>
         <translation>自动识别(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="238"/>
+        <location filename="../../linkeditwidget.py" line="236"/>
         <source>Please select one row at least to remove.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="244"/>
+        <location filename="../../linkeditwidget.py" line="242"/>
         <source>You have selected more than one row, do you really want remove all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="260"/>
+        <location filename="../../linkeditwidget.py" line="258"/>
         <source>Unable to detect current repo&apos;s name</source>
         <translation>无法识别当前仓库</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="291"/>
+        <location filename="../../linkeditwidget.py" line="289"/>
         <source>Unsupported repository</source>
         <translation>暂不支持自动识别此仓库</translation>
     </message>
@@ -1557,7 +1621,7 @@ Run `{1}` for getting the latest version.</source>
         <translation>行末</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="81"/>
+        <location filename="../../preferences.py" line="82"/>
         <location filename="../../preferences.ui" line="255"/>
         <source>All</source>
         <translation>全部</translation>
@@ -1613,6 +1677,7 @@ Run `{1}` for getting the latest version.</source>
         <translation>分支&amp;A：</translation>
     </message>
     <message>
+        <location filename="../../preferences.py" line="461"/>
         <location filename="../../preferences.ui" line="439"/>
         <source>Links</source>
         <translation>链接</translation>
@@ -1663,90 +1728,100 @@ Run `{1}` for getting the latest version.</source>
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="82"/>
+        <location filename="../../preferences.py" line="83"/>
         <source>1 Year</source>
         <translation>1年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="83"/>
+        <location filename="../../preferences.py" line="84"/>
         <source>2 Years</source>
         <translation>2年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="84"/>
+        <location filename="../../preferences.py" line="85"/>
         <source>3 Years</source>
         <translation>3年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="85"/>
+        <location filename="../../preferences.py" line="86"/>
         <source>5 Years</source>
         <translation>5年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="358"/>
+        <location filename="../../preferences.py" line="338"/>
         <source>Critical</source>
         <translation>严重</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="359"/>
+        <location filename="../../preferences.py" line="339"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="360"/>
+        <location filename="../../preferences.py" line="340"/>
         <source>Warning</source>
         <translation>警告</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="361"/>
+        <location filename="../../preferences.py" line="341"/>
         <source>Info</source>
         <translation>信息</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="362"/>
+        <location filename="../../preferences.py" line="342"/>
         <source>Debug</source>
         <translation>调试</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="367"/>
+        <location filename="../../preferences.py" line="347"/>
         <source>Auto</source>
         <translation>自动</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="368"/>
+        <location filename="../../preferences.py" line="348"/>
         <source>Light</source>
         <translation>浅色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="369"/>
+        <location filename="../../preferences.py" line="349"/>
         <source>Dark</source>
         <translation>深色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="537"/>
-        <location filename="../../preferences.py" line="587"/>
-        <location filename="../../preferences.py" line="593"/>
+        <location filename="../../preferences.py" line="524"/>
+        <location filename="../../preferences.py" line="576"/>
+        <location filename="../../preferences.py" line="582"/>
         <source>Logout</source>
         <translation>注销</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="538"/>
-        <location filename="../../preferences.py" line="588"/>
+        <location filename="../../preferences.py" line="525"/>
+        <location filename="../../preferences.py" line="577"/>
         <source>Login</source>
         <translation>登录</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="179"/>
+        <location filename="../../preferences.py" line="556"/>
+        <location filename="../../preferences.ui" line="1069"/>
+        <source>Commit Actions</source>
+        <translation>提交动作</translation>
+    </message>
+    <message>
+        <source>Commit &amp;Actions</source>
+        <translation type="vanished">提交动作(&amp;A)</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.py" line="159"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="185"/>
+        <location filename="../../preferences.py" line="165"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="199"/>
+        <location filename="../../preferences.py" line="179"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
@@ -1772,6 +1847,7 @@ Run `{1}` for getting the latest version.</source>
     </message>
     <message>
         <location filename="../../preferences.ui" line="460"/>
+        <location filename="../../preferences.ui" line="1087"/>
         <source>&amp;Edit Global</source>
         <translation>编辑全局配置(&amp;E)</translation>
     </message>
@@ -1907,6 +1983,11 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>比如：.ts, .ui</translation>
     </message>
     <message>
+        <location filename="../../preferences.ui" line="1080"/>
+        <source>Use &amp;Global</source>
+        <translation>使用全局配置(&amp;G)</translation>
+    </message>
+    <message>
         <source>Local LLM Server:</source>
         <translation type="vanished">本地大语言模型服务：</translation>
     </message>
@@ -1925,9 +2006,8 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>提交信息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1069"/>
         <source>Commit &amp;Action</source>
-        <translation>提交动作(&amp;A)</translation>
+        <translation type="vanished">提交动作(&amp;A)</translation>
     </message>
     <message>
         <source>&amp;Message</source>
@@ -1958,27 +2038,25 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">提交动作</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1084"/>
         <source>Add</source>
-        <translation>添加</translation>
+        <translation type="vanished">添加</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1091"/>
         <source>Delete</source>
-        <translation>删除</translation>
+        <translation type="vanished">删除</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="219"/>
+        <location filename="../../preferences.py" line="199"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="244"/>
+        <location filename="../../preferences.py" line="224"/>
         <source>The diff tool name can&apos;t be empty!</source>
         <translation>diff工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="252"/>
+        <location filename="../../preferences.py" line="232"/>
         <source>The merge tool name can&apos;t be empty!</source>
         <translation>merge工具名称不能为空！</translation>
     </message>
@@ -1993,12 +2071,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>浏览(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="261"/>
+        <location filename="../../preferences.py" line="241"/>
         <source>The git path you specified is invalid.</source>
         <translation>无效的git路径。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="287"/>
+        <location filename="../../preferences.py" line="267"/>
         <source>Choose Git</source>
         <translation>选择Git</translation>
     </message>
@@ -2019,12 +2097,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>TextViewer</name>
     <message>
-        <location filename="../../textviewer.py" line="508"/>
+        <location filename="../../textviewer.py" line="513"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="514"/>
+        <location filename="../../textviewer.py" line="519"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>

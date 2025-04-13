@@ -59,7 +59,7 @@ class Ui_CommitActionWidget(object):
     # setupUi
 
     def retranslateUi(self, CommitActionWidget):
-        CommitActionWidget.setWindowTitle(QCoreApplication.translate("CommitActionWidget", u"Form", None))
+        CommitActionWidget.setWindowTitle("")
         self.btnAddAction.setText(QCoreApplication.translate("CommitActionWidget", u"Add", None))
         self.btnDelAction.setText(QCoreApplication.translate("CommitActionWidget", u"Delete", None))
     # retranslateUi
