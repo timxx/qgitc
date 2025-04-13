@@ -43,6 +43,7 @@ from .events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
 from .findsubmodules import FindSubmoduleThread
 from .gitutils import Git
 from .preferences import Preferences
+from .settings import Settings
 from .submoduleexecutor import SubmoduleExecutor
 from .statewindow import StateWindow
 from .statusfetcher import StatusFetcher
@@ -189,6 +190,7 @@ class RepoInfo:
         self.userName: str = None
         self.userEmail: str = None
         self.branch: str = None
+        self.repoUrl: str = None
 
 
 class RepoInfoEvent(QEvent):
@@ -544,6 +546,27 @@ class CommitWindow(StateWindow):
     def _onStagedFileClicked(self, index: QModelIndex):
         self._showIndexDiff(index, True)
 
+    def _collectCommitActions(self, commitActions: List[CommitAction], filterActions: List[CommitAction], committedActions: List[CommitAction]):
+        for action in commitActions:
+            if not action.enabled:
+                continue
+            if not action.command:
+                continue
+            if action.condition == ActionCondition.AllCommitted:
+                committedActions.append(action)
+            else:
+                filterActions.append(action)
+
+    def _repoName(self):
+        if not self._repoInfo or not self._repoInfo.repoUrl:
+            return qApp.repoName()
+
+        repoUrl = self._repoInfo.repoUrl
+        index = repoUrl.rfind('/')
+        if index == -1:
+            return repoUrl
+        return repoUrl[index+1:]
+
     def _onCommitClicked(self):
         if not self._checkMessage():
             return
@@ -553,18 +576,20 @@ class CommitWindow(StateWindow):
             self.ui.teMessage.toPlainText().strip())
 
         if self.ui.cbRunAction.isChecked():
-            allActions = qApp.settings().commitActions()
             actions = []
             self._committedActions = []
-            for action in allActions:
-                if not action.enabled:
-                    continue
-                if not action.command:
-                    continue
-                if action.condition == ActionCondition.AllCommitted:
-                    self._committedActions.append(action)
-                else:
-                    actions.append(action)
+
+            settings: Settings = qApp.settings()
+            self._collectCommitActions(
+                settings.commitActions(self._repoName()),
+                actions,
+                self._committedActions)
+
+            if settings.useGlobalCommitActions():
+                self._collectCommitActions(
+                    settings.globalCommitActions(),
+                    actions,
+                    self._committedActions)
         else:
             actions = []
             self._committedActions = []
@@ -931,6 +956,7 @@ class CommitWindow(StateWindow):
         info.userName = Git.userName()
         info.userEmail = Git.userEmail()
         info.branch = Git.activeBranch()
+        info.repoUrl = Git.repoUrl()
 
         qApp.postEvent(self, RepoInfoEvent(info))
 
@@ -1088,7 +1114,7 @@ class CommitWindow(StateWindow):
 
     def _runCommittedAction(self, submodule: str, actions: List[CommitAction], cancelEvent: CancelEvent):
         for action in actions:
-            if cancelEvent and cancelEvent.is_set():
+            if cancelEvent and cancelEvent.isSet():
                 return
             out, error = CommitWindow._runCommitAction(submodule, action)
             self._updateCommitProgress(submodule, out, error)
