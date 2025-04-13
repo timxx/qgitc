@@ -106,7 +106,11 @@
           <widget class="QLineEdit" name="leFilterFiles"/>
          </item>
          <item>
-          <widget class="EmptyStateListView" name="lvFiles"/>
+          <widget class="EmptyStateListView" name="lvFiles">
+           <property name="selectionMode">
+            <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -218,7 +222,11 @@
           <widget class="QLineEdit" name="leFilterStaged"/>
          </item>
          <item>
-          <widget class="EmptyStateListView" name="lvStaged"/>
+          <widget class="EmptyStateListView" name="lvStaged">
+           <property name="selectionMode">
+            <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>

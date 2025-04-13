@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QPlainTextEdit,
-    QProgressBar, QPushButton, QSizePolicy, QSpacerItem,
-    QSplitter, QStackedWidget, QStatusBar, QToolButton,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QFrame,
+    QHBoxLayout, QLabel, QLineEdit, QMainWindow,
+    QPlainTextEdit, QProgressBar, QPushButton, QSizePolicy,
+    QSpacerItem, QSplitter, QStackedWidget, QStatusBar,
+    QToolButton, QVBoxLayout, QWidget)
 
 from .coloredicontoolbutton import ColoredIconToolButton
 from .commitmessageedit import CommitMessageEdit
@@ -91,6 +91,7 @@ class Ui_CommitWindow(object):
 
         self.lvFiles = EmptyStateListView(self.frame)
         self.lvFiles.setObjectName(u"lvFiles")
+        self.lvFiles.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         self.verticalLayout_5.addWidget(self.lvFiles)
 
@@ -147,6 +148,7 @@ class Ui_CommitWindow(object):
 
         self.lvStaged = EmptyStateListView(self.frame_2)
         self.lvStaged.setObjectName(u"lvStaged")
+        self.lvStaged.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         self.verticalLayout_3.addWidget(self.lvStaged)
 
