@@ -7,6 +7,20 @@
 
 A file conflict viewer for git
 
+## Screenshots
+
+### Main Window
+![Main Window](./screenshots/main.png)
+
+### Blame Window
+![Blame](./screenshots/blame.png)
+
+### Commit Window
+![Commit](./screenshots/commit.png)
+
+### AI Assistant
+![AI Assistant](./screenshots/assistant.png)
+
 ## Features
 
 - [x] Two branches view for easy comparing a conflict commit base on the file.
@@ -22,6 +36,7 @@ A file conflict viewer for git
 - [x] File blame support
 - [x] AI intergrated
 - [x] Composite mode
+- [x] AI-based commits
 
 
 ## Requirements
