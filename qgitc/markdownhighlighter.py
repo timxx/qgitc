@@ -874,8 +874,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 # Set styling of the "#"s to "masked syntax", but with the size of
                 # the heading
                 maskedFormat = QTextCharFormat(self._formats[state])
-                maskedFormat.setFontPointSize(
-                    self._formats[state].fontPointSize())
+                fontSize = self._formats[state].fontPointSize()
+                if fontSize > 0:
+                    maskedFormat.setFontPointSize(fontSize)
                 self.setFormat(0, headingLevel, maskedFormat)
 
                 # Set the styling of the rest of the heading
