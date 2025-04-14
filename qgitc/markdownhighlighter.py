@@ -698,6 +698,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             "v": HighlighterState.CodeV,
             "vex": HighlighterState.CodeVex,
             "xml": HighlighterState.CodeXML,
+            "svg": HighlighterState.CodeXML,
             "yml": HighlighterState.CodeYAML,
             "yaml": HighlighterState.CodeYAML,
             "forth": HighlighterState.CodeForth,
