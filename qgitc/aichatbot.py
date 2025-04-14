@@ -12,7 +12,8 @@ from PySide6.QtGui import (
     QFont,
     QTextDocument,
     QPainter,
-    QTextBlock
+    QTextBlock,
+    QTextBlockFormat
 )
 from PySide6.QtWidgets import QPlainTextEdit
 from .markdownhighlighter import HighlighterState, MarkdownHighlighter
@@ -87,10 +88,7 @@ class AiChatbot(QPlainTextEdit):
         cursor.movePosition(QTextCursor.End)
 
         if not response.is_delta or response.first_delta:
-            if self.blockCount() > 1:
-                cursor.insertBlock()
-            cursor.insertText(self._roleString(response.role))
-            cursor.block().setUserState(AiChatBotHighlighter.roleToBlockState(response.role))
+            self._insertRoleBlock(cursor, response.role)
             cursor.insertBlock()
         cursor.insertText(response.message)
 
@@ -98,12 +96,16 @@ class AiChatbot(QPlainTextEdit):
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
 
-        cursor.insertBlock()
-        cursor.insertText(self._roleString(AiRole.System))
-        cursor.block().setUserState(AiChatBotHighlighter.roleToBlockState(AiRole.System))
+        self._insertRoleBlock(cursor, AiRole.System)
 
         cursor.insertBlock()
         cursor.insertText(self.tr("Service Unavailable"))
+
+    def _insertRoleBlock(self, cursor: QTextCursor, role: AiRole):
+        if self.blockCount() > 1:
+            cursor.insertBlock()
+        cursor.insertText(self._roleString(role))
+        cursor.block().setUserState(AiChatBotHighlighter.roleToBlockState(role))
 
     def clear(self):
         self._highlighter.clearDirtyBlocks()
@@ -206,8 +208,7 @@ class AiChatbot(QPlainTextEdit):
             # make the top out of viewport
             blockAreaRect.setTop(blockAreaRect.top() - self.cornerRadius)
 
-        # to avoid border overlap
-        blockAreaRect.setHeight(blockAreaRect.height() - 2)
+        blockAreaRect.adjust(1, 1, -1, -1)
         painter.drawRoundedRect(blockAreaRect, self.cornerRadius, self.cornerRadius)
 
     def _aiBlockBgColor(self, blockType):
