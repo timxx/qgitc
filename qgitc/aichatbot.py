@@ -12,8 +12,7 @@ from PySide6.QtGui import (
     QFont,
     QTextDocument,
     QPainter,
-    QTextBlock,
-    QTextBlockFormat
+    QTextBlock
 )
 from PySide6.QtWidgets import QPlainTextEdit
 from .markdownhighlighter import HighlighterState, MarkdownHighlighter

@@ -2646,6 +2646,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             return
 
         tcFormat = QTextCharFormat()
+        tcFormat.setFont(self._formats[HighlighterState.CodeBlock].font())
+
         if text.startswith("+++ ") or text.startswith("--- "):
             tcFormat.setFontWeight(QFont.Bold)
         elif text[0] == "+":
@@ -2663,5 +2665,4 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         elif diff_begin_re.search(text) or text.startswith(r"\ No newline "):
             tcFormat.setForeground(qApp.colorSchema().Newline)
 
-        if tcFormat.isValid():
-            self.setFormat(0, len(text), tcFormat)
+        self.setFormat(0, len(text), tcFormat)
