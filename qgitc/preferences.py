@@ -34,8 +34,6 @@ class Preferences(QDialog):
         self.settings = settings
         self._repoName: str = qApp.repoName()
 
-        self.resize(QSize(700, 490))
-
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(

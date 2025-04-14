@@ -31,7 +31,7 @@ class Ui_Preferences(object):
     def setupUi(self, Preferences):
         if not Preferences.objectName():
             Preferences.setObjectName(u"Preferences")
-        Preferences.resize(659, 430)
+        Preferences.resize(721, 436)
         self.verticalLayout_2 = QVBoxLayout(Preferences)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.tabWidget = QTabWidget(Preferences)
@@ -211,6 +211,10 @@ class Ui_Preferences(object):
 
         self.verticalLayout.addWidget(self.groupBox_5)
 
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer_2)
+
         self.tabWidget.addTab(self.tabGeneral, "")
         self.tabFonts = QWidget()
         self.tabFonts.setObjectName(u"tabFonts")
@@ -239,6 +243,10 @@ class Ui_Preferences(object):
 
 
         self.verticalLayout_4.addWidget(self.groupBox_4)
+
+        self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_4.addItem(self.verticalSpacer_3)
 
         self.tabWidget.addTab(self.tabFonts, "")
         self.tabSummary = QWidget()
@@ -332,6 +340,10 @@ class Ui_Preferences(object):
 
 
         self.verticalLayout_3.addWidget(self.groupBox_10)
+
+        self.verticalSpacer_4 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_3.addItem(self.verticalSpacer_4)
 
         self.tabWidget.addTab(self.tabSummary, "")
         self.tabTools = QWidget()
@@ -481,6 +493,10 @@ class Ui_Preferences(object):
 
 
         self.verticalLayout_7.addWidget(self.groupBox_7)
+
+        self.verticalSpacer_5 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_7.addItem(self.verticalSpacer_5)
 
         self.tabWidget.addTab(self.tabTools, "")
         self.tabLLM = QWidget()
@@ -634,6 +650,10 @@ class Ui_Preferences(object):
 
         self.verticalLayout_10.addWidget(self.commitActionGroup)
 
+        self.verticalSpacer_6 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_10.addItem(self.verticalSpacer_6)
+
         self.tabWidget.addTab(self.tabCommitMessage, "")
 
         self.verticalLayout_2.addWidget(self.tabWidget)
@@ -665,7 +685,7 @@ class Ui_Preferences(object):
         self.retranslateUi(Preferences)
         self.buttonBox.rejected.connect(Preferences.reject)
 
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(5)
         self.cbDiffName.setCurrentIndex(-1)
         self.cbMergeName.setCurrentIndex(-1)
 
