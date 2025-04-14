@@ -21,6 +21,9 @@ A file conflict viewer for git
 ### AI Assistant
 ![AI Assistant](./screenshots/assistant.png)
 
+### Merge Tool
+![Merge Tool](./screenshots/resolve.png)
+
 ## Features
 
 - [x] Two branches view for easy comparing a conflict commit base on the file.
