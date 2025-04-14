@@ -32,6 +32,17 @@ class AiChatBotHighlighter(MarkdownHighlighter):
         super().__init__(document)
 
     def highlightBlock(self, text: str):
+        state = self.currentBlockState()
+        if state == AiChatBotState.UserBlock:
+            self._setTitleFormat(len(text), AiRole.User)
+            return
+        if state == AiChatBotState.AssistantBlock:
+            self._setTitleFormat(len(text), AiRole.Assistant)
+            return
+        if state == AiChatBotState.SystemBlock:
+            self._setTitleFormat(len(text), AiRole.System)
+            return
+
         super().highlightBlock(text)
 
         if self.currentBlockState() == HighlighterState.NoState:
@@ -39,16 +50,6 @@ class AiChatBotHighlighter(MarkdownHighlighter):
                 charFormat = QTextCharFormat()
                 charFormat.setForeground(qApp.colorSchema().ErrorText)
                 self.setFormat(0, len(text), charFormat)
-
-            elif text == self.tr("User:"):
-                self.setCurrentBlockState(AiChatBotState.UserBlock)
-                self._setTitleFormat(len(text), AiRole.User)
-            elif text == self.tr("Assistant:"):
-                self.setCurrentBlockState(AiChatBotState.AssistantBlock)
-                self._setTitleFormat(len(text), AiRole.Assistant)
-            elif text == self.tr("System:"):
-                self.setCurrentBlockState(AiChatBotState.SystemBlock)
-                self._setTitleFormat(len(text), AiRole.System)
 
     def _setTitleFormat(self, length: int, role: AiRole):
         charFormat = QTextCharFormat()
@@ -60,6 +61,17 @@ class AiChatBotHighlighter(MarkdownHighlighter):
         elif role == AiRole.System:
             charFormat.setForeground(qApp.colorSchema().SystemBlockFg)
         self.setFormat(0, length, charFormat)
+
+    @staticmethod
+    def roleToBlockState(role: AiRole):
+        if role == AiRole.User:
+            return AiChatBotState.UserBlock
+        elif role == AiRole.Assistant:
+            return AiChatBotState.AssistantBlock
+        elif role == AiRole.System:
+            return AiChatBotState.SystemBlock
+
+        return HighlighterState.NoState
 
 
 class AiChatbot(QPlainTextEdit):
@@ -78,6 +90,7 @@ class AiChatbot(QPlainTextEdit):
             if self.blockCount() > 1:
                 cursor.insertBlock()
             cursor.insertText(self._roleString(response.role))
+            cursor.block().setUserState(AiChatBotHighlighter.roleToBlockState(response.role))
             cursor.insertBlock()
         cursor.insertText(response.message)
 
@@ -87,6 +100,7 @@ class AiChatbot(QPlainTextEdit):
 
         cursor.insertBlock()
         cursor.insertText(self._roleString(AiRole.System))
+        cursor.block().setUserState(AiChatBotHighlighter.roleToBlockState(AiRole.System))
 
         cursor.insertBlock()
         cursor.insertText(self.tr("Service Unavailable"))
