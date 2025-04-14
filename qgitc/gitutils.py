@@ -136,9 +136,13 @@ class Git():
     @staticmethod
     def checkOutput(args, text=None, repoDir=None) -> Union[bytes, None]:
         process = Git.run(args, text, repoDir)
-        data = process.communicate()[0]
+        data, error = process.communicate()
         if process.returncode != 0:
-            logger.warning("Git command failed: %s", " ".join(args))
+            if not text:
+                msg = error.decode("utf-8", errors="replace")
+            else:
+                msg = error
+            logger.warning("Git command failed: %s (%s)", " ".join(args), msg.rstrip())
             return None
 
         return data
@@ -281,7 +285,7 @@ class Git():
     def conflictFiles():
         args = ["diff", "--name-only",
                 "--diff-filter=U",
-                "-no-color"]
+                "--no-color"]
         data = Git.checkOutput(args)
         if not data:
             return None
