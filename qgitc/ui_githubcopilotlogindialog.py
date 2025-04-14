@@ -23,11 +23,17 @@ class Ui_GithubCopilotLoginDialog(object):
     def setupUi(self, GithubCopilotLoginDialog):
         if not GithubCopilotLoginDialog.objectName():
             GithubCopilotLoginDialog.setObjectName(u"GithubCopilotLoginDialog")
-        GithubCopilotLoginDialog.resize(532, 125)
+        GithubCopilotLoginDialog.resize(532, 126)
         self.verticalLayout = QVBoxLayout(GithubCopilotLoginDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.lbStatus = QLabel(GithubCopilotLoginDialog)
         self.lbStatus.setObjectName(u"lbStatus")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.lbStatus.sizePolicy().hasHeightForWidth())
+        self.lbStatus.setSizePolicy(sizePolicy)
+        self.lbStatus.setWordWrap(True)
 
         self.verticalLayout.addWidget(self.lbStatus)
 
