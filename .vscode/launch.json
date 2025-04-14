@@ -5,14 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: QGitc (Integrated Terminal)",
+            "name": "QGitc",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Blame (Integrated Terminal)",
+            "name": "Blame",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
@@ -23,7 +23,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Commit (Integrated Terminal)",
+            "name": "Commit",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
@@ -33,7 +33,17 @@
             ]
         },
         {
-            "name": "Python: MergeTool (Integrated Terminal)",
+            "name": "Chat",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "console": "integratedTerminal",
+            "args": [
+                "chat"
+            ]
+        },
+        {
+            "name": "MergeTool",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
@@ -43,7 +53,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Register Shell (Integrated Terminal)",
+            "name": "Register Shell",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",
@@ -54,7 +64,7 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Python: Unregister Shell (Integrated Terminal)",
+            "name": "Unregister Shell",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceRoot}/qgitc.py",

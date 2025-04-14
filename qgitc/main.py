@@ -75,6 +75,11 @@ def _setup_argument(prog):
         help="Show commit window to commit changes.")
     commit_parser.set_defaults(func=_do_commit)
 
+    chat_parser = subparsers.add_parser(
+        "chat",
+        help="Show chat window.")
+    chat_parser.set_defaults(func=_do_chat)
+
     setup_shell_args(subparsers)
 
     return parser.parse_args()
@@ -191,6 +196,20 @@ def _do_commit(args):
     app = _init_gui()
 
     window = app.getWindow(Application.CommitWindow)
+    _move_center(window)
+
+    if window.restoreState():
+        window.show()
+    else:
+        window.showMaximized()
+
+    return app.exec()
+
+
+def _do_chat(args):
+    app = _init_gui()
+
+    window = app.getWindow(Application.AiAssistant)
     _move_center(window)
 
     if window.restoreState():
