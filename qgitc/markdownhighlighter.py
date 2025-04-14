@@ -741,7 +741,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def highlightMarkdown(self, text: str):
         # Check if this is a code block
         isBlockCodeBlock = (self.isCodeBlock(self.previousBlockState()) or
-                            text.startswith("```") or
+                            text.lstrip().startswith("```") or
                             text.startswith("~~~"))
 
         if text and not isBlockCodeBlock:
@@ -1006,7 +1006,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def highlightCodeBlock(self, text: str, opener="```"):
         """ Highlight multi-line code blocks """
 
-        if text.startswith(opener):
+        trimmed = text.lstrip()
+        if trimmed.startswith(opener):
             # if someone decides to put these on the same line
             # interpret it as inline code, not code block
             if text.endswith("```") and len(text) > 3:
@@ -1023,11 +1024,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 (self.previousBlockState() != HighlighterState.CodeBlockComment and
                 self.previousBlockState() != HighlighterState.CodeBlockTildeComment) and
                     self.previousBlockState() < HighlighterState.CodeCpp):
-                lang = text[3:].lower()
+                lang = trimmed[3:].lower()
                 progLang = self._langStringToEnum.get(lang)
 
                 if progLang and progLang >= HighlighterState.CodeCpp:
-                    state = progLang if text.startswith(
+                    state = progLang if trimmed.startswith(
                         "```") else progLang + self.tildeOffset
                     self.setCurrentBlockState(state)
                 else:
