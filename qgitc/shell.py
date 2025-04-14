@@ -53,7 +53,8 @@ def _shell_register_win(args):
     def _do_register(subkey, name, ico, exe, cmd="log", arg="%1"):
         with CreateKeyEx(HKEY_CURRENT_USER, subkey) as key:
             SetValueEx(key, "MUIVerb", 0, REG_SZ, name)
-            SetValueEx(key, "Icon", 0, REG_SZ, ico)
+            if ico:
+                SetValueEx(key, "Icon", 0, REG_SZ, ico)
 
         with CreateKeyEx(HKEY_CURRENT_USER, subkey + "\\command") as key:
             if arg:
@@ -75,17 +76,22 @@ def _shell_register_win(args):
     exe = _exePath()
 
     ret = _create_menu(r"Software\Classes\*\shell\QGitc", "QGitc", ico)
-    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Log", "Log", ico, exe)
-    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Blame", "Blame", ico, exe, "blame")
-    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Commit", "Commit", ico, exe, "commit", None)
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Log", "Log", None, exe)
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Blame", "Blame", None, exe, "blame")
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Commit", "Commit", None, exe, "commit", None)
+
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Chat", "Chat", None, exe, "chat", None)
+    ret |= _do_register(r"Software\Classes\*\shell\QGitc\shell\Chat", "Chat", None, exe, "chat", None)
 
     ret |= _create_menu(r"Software\Classes\Directory\Background\shell\QGitc", "QGitc", ico)
-    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Log", "Log", ico, exe, arg=None)
-    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Commit", "Commit", ico, exe, "commit", None)
+    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Log", "Log", None, exe, arg=None)
+    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Commit", "Commit", None, exe, "commit", None)
+    ret |= _do_register(r"Software\Classes\Directory\Background\shell\QGitc\shell\Chat", "Chat", None, exe, "chat", None)
 
     ret |= _create_menu(r"Software\Classes\Directory\shell\QGitc", "QGitc", ico)
-    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Log", "Log", ico, exe)
-    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Commit", "Commit", ico, exe, "commit", None)
+    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Log", "Log", None, exe)
+    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Commit", "Commit", None, exe, "commit", None)
+    ret |= _do_register(r"Software\Classes\Directory\shell\QGitc\shell\Chat", "Chat", None, exe, "chat", None)
 
     return ret
 
@@ -101,7 +107,7 @@ def _shell_unregister_win(args):
         return 1
 
     ret = 0
-    file_cmds = ["log", "blame", "commit"]
+    file_cmds = ["log", "blame", "commit", "chat"]
     for cmd in file_cmds:
         ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\{}\command".format(cmd))
         ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\{}".format(cmd))
@@ -109,7 +115,7 @@ def _shell_unregister_win(args):
     ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell")
     ret |= _do_delete(r"Software\Classes\*\shell\QGitc")
 
-    dir_cmds = ["log", "commit"]
+    dir_cmds = ["log", "commit", "chat"]
     for cmd in dir_cmds:
         ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\{}\command".format(cmd))
         ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\{}".format(cmd))
