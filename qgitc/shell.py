@@ -100,26 +100,26 @@ def _shell_unregister_win(args):
             return 0
         return 1
 
-    ret = _do_delete(r"Software\Classes\*\shell\QGitc\shell\log\command")
-    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\log")
-    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\blame\command")
-    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\blame")
-    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\commit\command")
-    ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\commit")
+    ret = 0
+    file_cmds = ["log", "blame", "commit"]
+    for cmd in file_cmds:
+        ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\{}\command".format(cmd))
+        ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell\{}".format(cmd))
+
     ret |= _do_delete(r"Software\Classes\*\shell\QGitc\shell")
     ret |= _do_delete(r"Software\Classes\*\shell\QGitc")
 
-    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\log\command")
-    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\log")
-    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\commit\command")
-    ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\commit") 
+    dir_cmds = ["log", "commit"]
+    for cmd in dir_cmds:
+        ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\{}\command".format(cmd))
+        ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell\{}".format(cmd))
+
+        ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\{}\command".format(cmd))
+        ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\{}".format(cmd))
+
     ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc\shell")
     ret |= _do_delete(r"Software\Classes\Directory\Background\shell\QGitc")
 
-    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\log\command")
-    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\log")
-    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\commit\command")
-    ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell\commit")
     ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc\shell")
     ret |= _do_delete(r"Software\Classes\Directory\shell\QGitc")
 
