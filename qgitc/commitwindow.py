@@ -3,7 +3,7 @@
 from enum import Enum
 import os
 import subprocess
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 from PySide6.QtCore import (
     QTimer,
     QAbstractListModel,
@@ -220,6 +220,16 @@ class UpdateCommitProgressEvent(QEvent):
         self.updateProgress = updateProgress
 
 
+class FileRestoreEvent(QEvent):
+    Type = QEvent.User + 6
+
+    def __init__(self, submodule: str, files: List[str], error: str = None):
+        super().__init__(QEvent.Type(FileRestoreEvent.Type))
+        self.submodule = submodule
+        self.files = files
+        self.error = error
+
+
 class CommitWindow(StateWindow):
 
     def __init__(self, parent=None):
@@ -264,6 +274,9 @@ class CommitWindow(StateWindow):
             self._onFileClicked)
         self.ui.lvFiles.setEmptyStateText(
             self.tr("There are no unstaged changes"))
+        self.ui.lvFiles.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ui.lvFiles.customContextMenuRequested.connect(
+            self._onFilesContextMenuRequested)
 
         self._stagedModel = StatusFileListModel(self)
         stagedProxyModel = QSortFilterProxyModel(self)
@@ -276,6 +289,9 @@ class CommitWindow(StateWindow):
             self._onStagedFileClicked)
         self.ui.lvStaged.setEmptyStateText(
             self.tr("There are no staged changes"))
+        self.ui.lvStaged.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ui.lvStaged.customContextMenuRequested.connect(
+            self._onStagedContextMenuRequested)
 
         self._stagedModel.rowsInserted.connect(self._onStagedFilesChanged)
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)
@@ -403,6 +419,8 @@ class CommitWindow(StateWindow):
         self.ui.btnShowLog.setIcon(icon)
         self.ui.btnShowLog.clicked.connect(
             self._onShowCommitClicked)
+
+        self._setupContextMenu()
 
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
@@ -696,7 +714,7 @@ class CommitWindow(StateWindow):
 
         self._updateCommitProgress(submodule, out, error)
 
-    def _collectSectionFiles(self, view: QListView):
+    def _collectSectionFiles(self, view: QListView, filter: Callable = None):
         indexes = view.selectionModel().selectedRows()
         if not indexes:
             return {}
@@ -704,6 +722,8 @@ class CommitWindow(StateWindow):
         model = view.model()
         submoduleFiles = {}
         for index in indexes:
+            if filter and filter(model, index):
+                continue
             file = model.data(index, Qt.DisplayRole)
             repoDir = model.data(
                 index, StatusFileListModel.RepoDirRole)
@@ -874,6 +894,9 @@ class CommitWindow(StateWindow):
             self.ui.teOutput.moveCursor(QTextCursor.End)
             self.ui.teOutput.ensureCursorVisible()
             return True
+
+        if evt.type() == FileRestoreEvent.Type:
+            self._handleFileRestoreEvent(evt.submodule, evt.files, evt.error)
 
         return super().event(evt)
 
@@ -1235,3 +1258,77 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.cancel()
         self._commitExecutor.cancel()
         return super().closeEvent(event)
+
+    def _onFilesContextMenuRequested(self, pos):
+        self._showStatusContextMenu(pos, self.ui.lvFiles)
+
+    def _onStagedContextMenuRequested(self, pos):
+        self._showStatusContextMenu(pos, self.ui.lvStaged)
+
+    def _showStatusContextMenu(self, pos, listView: QListView):
+        if self._submoduleExecutor.isRunning():
+            return
+
+        indexes = listView.selectedIndexes()
+        if not indexes:
+            return
+
+        text = self.tr("&Restore these files") if len(
+            indexes) > 1 else self.tr("&Restore this file")
+        self._acRestoreFiles.setText(text)
+        self._acRestoreFiles.setData(listView)
+        self._contexMenu.exec(listView.mapToGlobal(pos))
+
+    def _setupContextMenu(self):
+        self._contexMenu = QMenu(self)
+        self._acRestoreFiles = self._contexMenu.addAction(
+            self.tr("&Restore this file"),
+            self._onRestoreFiles)
+
+    @staticmethod
+    def _filterUntrackedFiles(model: QAbstractListModel, index: QModelIndex):
+        statusCode = model.data(index, StatusFileListModel.StatusCodeRole)
+        return statusCode in ["?", "!"]
+
+    def _onRestoreFiles(self):
+        listView: QListView = self._acRestoreFiles.data()
+        repoFiles = self._collectSectionFiles(
+            listView, CommitWindow._filterUntrackedFiles)
+        if not repoFiles:
+            return
+
+        staged = listView == self.ui.lvStaged
+
+        self._blockUI()
+        self.ui.spinnerUnstaged.start()
+        self._submoduleExecutor.submit(
+            repoFiles, self._doRestoreStaged if staged else self._doRestore)
+        self._curFile = None
+        self._curFileStatus = None
+
+    def _doRestore(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
+        self._doRestoreFiles(submodule, files, cancelEvent, False)
+
+    def _doRestoreStaged(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
+        self._doRestoreFiles(submodule, files, cancelEvent, True)
+
+    def _doRestoreFiles(self, submodule: str, files: List[str], cancelEvent: CancelEvent, isStaged: bool):
+        if cancelEvent.isSet():
+            return
+
+        repoDir = self._toRepoDir(submodule)
+        error = Git.restoreFiles(repoDir, files, isStaged)
+        qApp.postEvent(self, FileRestoreEvent(submodule, files, error))
+
+    def _handleFileRestoreEvent(self, submodule: str, files: List[str], error: str):
+        if error:
+            QMessageBox.critical(
+                self,
+                self.tr("Restore File Failed"),
+                error,
+                QMessageBox.Ok)
+            return
+
+        for file in files:
+            self._stagedModel.removeFile(file, submodule)
+            self._filesModel.removeFile(file, submodule)

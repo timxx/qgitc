@@ -32,19 +32,16 @@
 <context>
     <name>AiChatBotHighlighter</name>
     <message>
-        <location filename="../../aichatbot.py" line="44"/>
         <source>User:</source>
-        <translation>用户：</translation>
+        <translation type="vanished">用户：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="47"/>
         <source>Assistant:</source>
-        <translation>助手：</translation>
+        <translation type="vanished">助手：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="50"/>
         <source>System:</source>
-        <translation>系统：</translation>
+        <translation type="vanished">系统：</translation>
     </message>
 </context>
 <context>
@@ -135,22 +132,22 @@
 <context>
     <name>AiChatbot</name>
     <message>
-        <location filename="../../aichatbot.py" line="92"/>
+        <location filename="../../aichatbot.py" line="106"/>
         <source>Service Unavailable</source>
         <translation>服务不可用</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="108"/>
+        <location filename="../../aichatbot.py" line="122"/>
         <source>User:</source>
         <translation>用户：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="111"/>
+        <location filename="../../aichatbot.py" line="125"/>
         <source>Assistant:</source>
         <translation>助手：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="113"/>
+        <location filename="../../aichatbot.py" line="127"/>
         <source>System:</source>
         <translation>系统：</translation>
     </message>
@@ -352,122 +349,138 @@
 <context>
     <name>CommitWindow</name>
     <message>
-        <location filename="../../commitwindow.py" line="240"/>
+        <location filename="../../commitwindow.py" line="250"/>
         <location filename="../../commitwindow.ui" line="14"/>
         <source>QGitc Commit</source>
         <translation>QGitc提交</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="266"/>
+        <location filename="../../commitwindow.py" line="276"/>
         <source>There are no unstaged changes</source>
         <translation>所有改动已被暂存或工作区无修改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="278"/>
+        <location filename="../../commitwindow.py" line="291"/>
         <source>There are no staged changes</source>
         <translation>没有已暂存的更改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="292"/>
+        <location filename="../../commitwindow.py" line="308"/>
         <source>Unstage all</source>
         <translation>取消全部暂存</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="301"/>
+        <location filename="../../commitwindow.py" line="317"/>
         <source>Stage all</source>
         <translation>暂存全部</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="306"/>
+        <location filename="../../commitwindow.py" line="322"/>
         <source>Refresh</source>
         <translation>刷新</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="327"/>
+        <location filename="../../commitwindow.py" line="343"/>
         <source>Enter commit message here...</source>
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="467"/>
+        <location filename="../../commitwindow.py" line="485"/>
         <source>Inconsistent branches</source>
         <translation>分支不一致</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="471"/>
+        <location filename="../../commitwindow.py" line="489"/>
         <source>You have different branches in submodules:</source>
         <translation>各仓库的分支不完全一致：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="623"/>
+        <location filename="../../commitwindow.py" line="641"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="627"/>
+        <location filename="../../commitwindow.py" line="645"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="629"/>
+        <location filename="../../commitwindow.py" line="647"/>
         <source>Invalid commit message</source>
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="823"/>
+        <location filename="../../commitwindow.py" line="843"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="851"/>
+        <location filename="../../commitwindow.py" line="871"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="911"/>
+        <location filename="../../commitwindow.py" line="934"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="921"/>
+        <location filename="../../commitwindow.py" line="944"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="968"/>
+        <location filename="../../commitwindow.py" line="991"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="977"/>
+        <location filename="../../commitwindow.py" line="1000"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1058"/>
+        <location filename="../../commitwindow.py" line="1081"/>
         <location filename="../../commitwindow.ui" line="567"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1059"/>
+        <location filename="../../commitwindow.py" line="1082"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1061"/>
+        <location filename="../../commitwindow.py" line="1084"/>
         <location filename="../../commitwindow.ui" line="528"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1063"/>
+        <location filename="../../commitwindow.py" line="1086"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1171"/>
+        <location filename="../../commitwindow.py" line="1194"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
+    </message>
+    <message>
+        <location filename="../../commitwindow.py" line="1276"/>
+        <source>&amp;Restore these files</source>
+        <translation>还原选中文件(&amp;R)</translation>
+    </message>
+    <message>
+        <location filename="../../commitwindow.py" line="1278"/>
+        <location filename="../../commitwindow.py" line="1285"/>
+        <source>&amp;Restore this file</source>
+        <translation>还原此文件(&amp;R)</translation>
+    </message>
+    <message>
+        <location filename="../../commitwindow.py" line="1327"/>
+        <source>Restore File Failed</source>
+        <translation>还原文件失败</translation>
     </message>
     <message>
         <location filename="../../commitwindow.ui" line="74"/>
@@ -1614,7 +1627,7 @@ Run `{1}` for getting the latest version.</source>
     </message>
     <message>
         <location filename="../../preferences.ui" line="179"/>
-        <location filename="../../preferences.ui" line="307"/>
+        <location filename="../../preferences.ui" line="320"/>
         <source>Diff view</source>
         <translation>Diff视图</translation>
     </message>
@@ -1644,18 +1657,18 @@ Run `{1}` for getting the latest version.</source>
         <translation>行末</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="77"/>
+        <location filename="../../preferences.py" line="75"/>
         <location filename="../../preferences.ui" line="255"/>
         <source>All</source>
         <translation>全部</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="289"/>
+        <location filename="../../preferences.ui" line="302"/>
         <source>&amp;Fonts</source>
         <translation>字体(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="295"/>
+        <location filename="../../preferences.ui" line="308"/>
         <source>Log view</source>
         <translation>日志视图</translation>
     </message>
@@ -1676,28 +1689,28 @@ Run `{1}` for getting the latest version.</source>
         <translation type="vanished">字体(&amp;a)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="320"/>
+        <location filename="../../preferences.ui" line="346"/>
         <source>Co&amp;mmit</source>
         <translation>记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="326"/>
+        <location filename="../../preferences.ui" line="352"/>
         <source>Color</source>
         <translation>颜色</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="345"/>
+        <location filename="../../preferences.ui" line="371"/>
         <source>Branch &amp;B:</source>
         <translation>分支&amp;B：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="355"/>
+        <location filename="../../preferences.ui" line="381"/>
         <source>Branch &amp;A:</source>
         <translation>分支&amp;A：</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="417"/>
-        <location filename="../../preferences.ui" line="381"/>
+        <location filename="../../preferences.py" line="415"/>
+        <location filename="../../preferences.ui" line="407"/>
         <source>Links</source>
         <translation>链接</translation>
     </message>
@@ -1706,12 +1719,12 @@ Run `{1}` for getting the latest version.</source>
         <translation type="obsolete">最大记录：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="844"/>
+        <location filename="../../preferences.ui" line="896"/>
         <source>&amp;LLM</source>
         <translation>大语言模型(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="865"/>
+        <location filename="../../preferences.ui" line="917"/>
         <source>Server:</source>
         <translation>服务器：</translation>
     </message>
@@ -1732,96 +1745,96 @@ Run `{1}` for getting the latest version.</source>
         <translation type="obsolete">合并(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="466"/>
+        <location filename="../../preferences.ui" line="505"/>
         <source>Tools</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="488"/>
+        <location filename="../../preferences.ui" line="527"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="495"/>
+        <location filename="../../preferences.ui" line="534"/>
         <source>&amp;Delete</source>
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="78"/>
+        <location filename="../../preferences.py" line="76"/>
         <source>1 Year</source>
         <translation>1年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="79"/>
+        <location filename="../../preferences.py" line="77"/>
         <source>2 Years</source>
         <translation>2年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="80"/>
+        <location filename="../../preferences.py" line="78"/>
         <source>3 Years</source>
         <translation>3年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="81"/>
+        <location filename="../../preferences.py" line="79"/>
         <source>5 Years</source>
         <translation>5年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="300"/>
+        <location filename="../../preferences.py" line="298"/>
         <source>Critical</source>
         <translation>严重</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="301"/>
+        <location filename="../../preferences.py" line="299"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="302"/>
+        <location filename="../../preferences.py" line="300"/>
         <source>Warning</source>
         <translation>警告</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="303"/>
+        <location filename="../../preferences.py" line="301"/>
         <source>Info</source>
         <translation>信息</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="304"/>
+        <location filename="../../preferences.py" line="302"/>
         <source>Debug</source>
         <translation>调试</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="309"/>
+        <location filename="../../preferences.py" line="307"/>
         <source>Auto</source>
         <translation>自动</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="310"/>
+        <location filename="../../preferences.py" line="308"/>
         <source>Light</source>
         <translation>浅色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="311"/>
+        <location filename="../../preferences.py" line="309"/>
         <source>Dark</source>
         <translation>深色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="480"/>
-        <location filename="../../preferences.py" line="532"/>
-        <location filename="../../preferences.py" line="539"/>
+        <location filename="../../preferences.py" line="478"/>
+        <location filename="../../preferences.py" line="530"/>
+        <location filename="../../preferences.py" line="537"/>
         <source>Logout</source>
         <translation>注销</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="481"/>
-        <location filename="../../preferences.py" line="534"/>
+        <location filename="../../preferences.py" line="479"/>
+        <location filename="../../preferences.py" line="532"/>
         <source>Login</source>
         <translation>登录</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="512"/>
-        <location filename="../../preferences.ui" line="1011"/>
+        <location filename="../../preferences.py" line="510"/>
+        <location filename="../../preferences.ui" line="1063"/>
         <source>Commit Actions</source>
         <translation>提交动作</translation>
     </message>
@@ -1830,43 +1843,43 @@ Run `{1}` for getting the latest version.</source>
         <translation type="vanished">提交动作(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="121"/>
+        <location filename="../../preferences.py" line="119"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="127"/>
+        <location filename="../../preferences.py" line="125"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="141"/>
+        <location filename="../../preferences.py" line="139"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="472"/>
+        <location filename="../../preferences.ui" line="511"/>
         <source>You must add the tool to git config mergetool/difftool section to make it works.</source>
         <translation>您必需将“工具”添加到git配置文件的mergetool/difftool配置项以使其可用。</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="460"/>
+        <location filename="../../preferences.ui" line="499"/>
         <source>&amp;Tools</source>
         <translation>工具(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="392"/>
+        <location filename="../../preferences.ui" line="418"/>
         <source>Use global settings when no match current setting</source>
         <translation>当前设置项无法匹配时使用全局设置</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="395"/>
+        <location filename="../../preferences.ui" line="421"/>
         <source>Fallbac&amp;k to Global</source>
         <translation>使用全局配置(&amp;K)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="402"/>
-        <location filename="../../preferences.ui" line="1029"/>
+        <location filename="../../preferences.ui" line="428"/>
+        <location filename="../../preferences.ui" line="1081"/>
         <source>&amp;Edit Global</source>
         <translation>编辑全局配置(&amp;E)</translation>
     </message>
@@ -1901,108 +1914,108 @@ Run `{1}` for getting the latest version.</source>
         <translation>显示父子记录</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="427"/>
+        <location filename="../../preferences.ui" line="453"/>
         <source>Composite Mode</source>
         <translation>聚合模式</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="433"/>
+        <location filename="../../preferences.ui" line="459"/>
         <source>Max Commits:</source>
         <translation>最大记录数：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="515"/>
+        <location filename="../../preferences.ui" line="554"/>
         <source>&lt;a href=&apos;#config&apos;&gt;Config imgdiff as tool for diff or merge&lt;/a&gt;</source>
         <translation>&lt;a href=&apos;#config&apos;&gt;将imgdiff配置为diff和merge工具&lt;/a&gt;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="524"/>
+        <location filename="../../preferences.ui" line="563"/>
         <source>Diff</source>
         <translation>Diff</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="545"/>
-        <location filename="../../preferences.ui" line="703"/>
+        <location filename="../../preferences.ui" line="584"/>
+        <location filename="../../preferences.ui" line="742"/>
         <source>Name:</source>
         <translation>名称:</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="552"/>
+        <location filename="../../preferences.ui" line="591"/>
         <source>Specify diff tool name or choose default one</source>
         <translation>指定diff工具的名称或从默认列表选择一个</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="664"/>
-        <location filename="../../preferences.ui" line="822"/>
+        <location filename="../../preferences.ui" line="703"/>
+        <location filename="../../preferences.ui" line="861"/>
         <source>Command:</source>
         <translation>命令行:</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="671"/>
+        <location filename="../../preferences.ui" line="710"/>
         <source>The command line and arguments, for example:
 imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</source>
         <translation>命令行路径和参数，比如：
 imgdiff &quot;$LOCAL&quot; &quot;$REMOTE&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="682"/>
+        <location filename="../../preferences.ui" line="721"/>
         <source>Merge</source>
         <translation>合并</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="710"/>
+        <location filename="../../preferences.ui" line="749"/>
         <source>Specify merge tool name or choose default one</source>
         <translation>指定merge工具的名称或从默认列表选择一个</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="829"/>
+        <location filename="../../preferences.ui" line="868"/>
         <source>The command line and arguments, for example:
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</source>
         <translation>命令行路径和参数，比如：
 imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGED&quot;</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="850"/>
+        <location filename="../../preferences.ui" line="902"/>
         <source>Local LLM</source>
         <translation>本地大语言模型</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="856"/>
+        <location filename="../../preferences.ui" line="908"/>
         <source>Use Local LLM</source>
         <translation>使用本地大语言模型</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="880"/>
+        <location filename="../../preferences.ui" line="932"/>
         <source>GitHub Copilot</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="888"/>
+        <location filename="../../preferences.ui" line="940"/>
         <source>Account:</source>
         <translation>账号：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="920"/>
+        <location filename="../../preferences.ui" line="972"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="928"/>
+        <location filename="../../preferences.ui" line="980"/>
         <source>Files to Exclude:</source>
         <translation>要排除的文件：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="935"/>
+        <location filename="../../preferences.ui" line="987"/>
         <source>Specify the file extensions to exclude for code review or generate commit message</source>
         <translation>指定要给代码审查或生成提交消息排除的文件扩展名</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="938"/>
+        <location filename="../../preferences.ui" line="990"/>
         <source>e.g. .ts, .ui</source>
         <translation>比如：.ts, .ui</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1022"/>
+        <location filename="../../preferences.ui" line="1074"/>
         <source>Use &amp;Global</source>
         <translation>使用全局配置(&amp;G)</translation>
     </message>
@@ -2015,12 +2028,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">Github Copilot：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="964"/>
+        <location filename="../../preferences.ui" line="1016"/>
         <source>&amp;Commit Message</source>
         <translation>提交信息(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="970"/>
+        <location filename="../../preferences.ui" line="1022"/>
         <source>Commit &amp;Message</source>
         <translation>提交信息(&amp;M)</translation>
     </message>
@@ -2033,22 +2046,22 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">提交信息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="976"/>
+        <location filename="../../preferences.ui" line="1028"/>
         <source>Ignore comment line</source>
         <translation>忽略注释行</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="983"/>
+        <location filename="../../preferences.ui" line="1035"/>
         <source>Tab to next group</source>
         <translation>按Tab键跳转分组</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="992"/>
+        <location filename="../../preferences.ui" line="1044"/>
         <source>Group Chars:</source>
         <translation>分组字符：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="999"/>
+        <location filename="../../preferences.ui" line="1051"/>
         <source>Each pair separate by space, such as `() []`</source>
         <translation>每个对以空格分开，比如`() []`</translation>
     </message>
@@ -2065,17 +2078,17 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">删除</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="161"/>
+        <location filename="../../preferences.py" line="159"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="186"/>
+        <location filename="../../preferences.py" line="184"/>
         <source>The diff tool name can&apos;t be empty!</source>
         <translation>diff工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="194"/>
+        <location filename="../../preferences.py" line="192"/>
         <source>The merge tool name can&apos;t be empty!</source>
         <translation>merge工具名称不能为空！</translation>
     </message>
@@ -2090,12 +2103,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>浏览(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="203"/>
+        <location filename="../../preferences.py" line="201"/>
         <source>The git path you specified is invalid.</source>
         <translation>无效的git路径。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="229"/>
+        <location filename="../../preferences.py" line="227"/>
         <source>Choose Git</source>
         <translation>选择Git</translation>
     </message>
