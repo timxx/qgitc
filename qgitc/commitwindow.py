@@ -1317,7 +1317,8 @@ class CommitWindow(StateWindow):
             return
 
         repoDir = self._toRepoDir(submodule)
-        error = Git.restoreFiles(repoDir, files, isStaged)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+        error = Git.restoreFiles(repoDir, repoFiles, isStaged)
         qApp.postEvent(self, FileRestoreEvent(submodule, files, error))
 
     def _handleFileRestoreEvent(self, submodule: str, files: List[str], error: str):
