@@ -29,7 +29,7 @@ import requests
 
 from .aichatbot import AiChatbot
 from .cancelevent import CancelEvent
-from .common import commitRepoDir, fullRepoDir
+from .common import commitRepoDir, fullRepoDir, toSubmodulePath
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole, LocalLLM
@@ -504,7 +504,8 @@ class AiChatWindow(StateWindow):
 
     def _fetchDiff(self, submodule: str, files, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
-        data: bytes = Git.commitRawDiff(Git.LCC_SHA1, files, repoDir=repoDir)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+        data: bytes = Git.commitRawDiff(Git.LCC_SHA1, repoFiles, repoDir=repoDir)
         if not data:
             return
 

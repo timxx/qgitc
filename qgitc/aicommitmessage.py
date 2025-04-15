@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from PySide6.QtCore import QObject, Signal, QEvent
 
 from .cancelevent import CancelEvent
-from .common import logger
+from .common import logger, toSubmodulePath
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiModelBase, AiParameters, AiResponse
@@ -126,7 +126,9 @@ class AiCommitMessage(QObject):
     def _fetchCommitInfo(self, submodule: str, userData: Tuple[list, int], cancelEvent: CancelEvent):
         repoDir = AiCommitMessage._toRepoDir(submodule)
         files, commitCount = userData
-        diff = Git.commitRawDiff(Git.LCC_SHA1, files, repoDir=repoDir)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+
+        diff = Git.commitRawDiff(Git.LCC_SHA1, repoFiles, repoDir=repoDir)
         if cancelEvent.isSet():
             return
 
