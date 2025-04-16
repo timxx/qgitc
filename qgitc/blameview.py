@@ -783,6 +783,7 @@ class BlameView(QWidget):
 
         mainLayout = QVBoxLayout(self)
         mainLayout.setContentsMargins(0, 0, 0, 0)
+        mainLayout.setSpacing(4)
 
         sourceWidget = QWidget(self)
         layout = QVBoxLayout(sourceWidget)

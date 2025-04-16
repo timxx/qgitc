@@ -29,7 +29,7 @@ class BlameWindow(StateWindow):
 
         centralWidget = QWidget(self)
         layout = QVBoxLayout(centralWidget)
-        margin = 5
+        margin = 4
         layout.setContentsMargins(margin, margin, margin, margin)
 
         self._view = BlameView(self)
