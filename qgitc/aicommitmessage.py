@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import os
 from typing import Dict, List, Tuple
 from PySide6.QtCore import QObject, Signal, QEvent
 
 from .cancelevent import CancelEvent
-from .common import logger, toSubmodulePath
+from .common import fullRepoDir, logger, toSubmodulePath
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiModelBase, AiParameters, AiResponse
@@ -124,7 +123,7 @@ class AiCommitMessage(QObject):
         self._executor.cancel()
 
     def _fetchCommitInfo(self, submodule: str, userData: Tuple[list, int], cancelEvent: CancelEvent):
-        repoDir = AiCommitMessage._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
         files, commitCount = userData
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
 
@@ -195,12 +194,6 @@ class AiCommitMessage(QObject):
                 message += "  \n  " + line
             message += "\n"
         return message
-
-    @staticmethod
-    def _toRepoDir(submodule: str):
-        if not submodule or submodule == ".":
-            return Git.REPO_DIR
-        return os.path.join(Git.REPO_DIR, submodule)
 
     def event(self, evt):
         if evt.type() == CommitInfoEvent.Type:

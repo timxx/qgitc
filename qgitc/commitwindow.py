@@ -36,7 +36,7 @@ from .cancelevent import CancelEvent
 from .colorediconlabel import ColoredIconLabel
 from .coloredlabel import ColoredLabel
 from .commitactiontablemodel import ActionCondition, CommitAction
-from .common import dataDirPath, decodeFileData, toSubmodulePath, logger
+from .common import dataDirPath, decodeFileData, fullRepoDir, toSubmodulePath, logger
 from .difffetcher import DiffFetcher
 from .diffview import DiffView, _makeTextIcon
 from .events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
@@ -797,14 +797,8 @@ class CommitWindow(StateWindow):
         self._curFile = None
         self._curFileStatus = None
 
-    @staticmethod
-    def _toRepoDir(submodule: str):
-        if not submodule or submodule == ".":
-            return Git.REPO_DIR
-        return os.path.join(Git.REPO_DIR, submodule)
-
     def _doUnstage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
-        repoDir = self._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.restoreStagedFiles(repoDir, repoFiles)
         if not error:
@@ -813,7 +807,7 @@ class CommitWindow(StateWindow):
             qApp.postEvent(self, GitErrorEvent(error))
 
     def _doStage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
-        repoDir = self._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.addFiles(repoDir, repoFiles)
         if not error:
@@ -1105,7 +1099,7 @@ class CommitWindow(StateWindow):
             if not (not submodule or submodule == "."):
                 return None, None
 
-        repoDir = CommitWindow._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
 
         startupinfo = None
         if os.name == "nt":
@@ -1191,7 +1185,7 @@ class CommitWindow(StateWindow):
         args.append("--")
         args.append(file)
 
-        repoDir = CommitWindow._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
         try:
             process = Git.run(args, repoDir=repoDir)
         except Exception as e:
@@ -1325,7 +1319,7 @@ class CommitWindow(StateWindow):
         if cancelEvent.isSet():
             return
 
-        repoDir = self._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.restoreFiles(repoDir, repoFiles, isStaged)
         qApp.postEvent(self, FileRestoreEvent(submodule, files, error))
@@ -1383,7 +1377,7 @@ class CommitWindow(StateWindow):
         if cancelEvent.isSet():
             return
 
-        repoDir = self._toRepoDir(submodule)
+        repoDir = fullRepoDir(submodule)
         message = Git.commitMessage("HEAD", repoDir)
         if cancelEvent.isSet():
             return
