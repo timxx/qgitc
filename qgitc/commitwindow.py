@@ -11,13 +11,17 @@ from PySide6.QtCore import (
     QModelIndex,
     QSortFilterProxyModel,
     QEvent,
-    QSize
+    QSize,
+    QProcess,
+    QFileInfo,
+    QUrl
 )
 from PySide6.QtGui import (
     QFont,
     QIcon,
     QTextCursor,
-    QTextCharFormat
+    QTextCharFormat,
+    QDesktopServices
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -1288,6 +1292,12 @@ class CommitWindow(StateWindow):
         self._acRestoreFiles = self._contexMenu.addAction(
             self.tr("&Restore this file"),
             self._onRestoreFiles)
+        self._contexMenu.addSeparator()
+        self._contexMenu.addAction(self.tr("External &diff"),
+                                   self._onExternalDiff)
+        self._contexMenu.addSeparator()
+        self._contexMenu.addAction(self.tr("&Open Containing Folder"),
+                                   self._onOpenContainingFolder)
 
     @staticmethod
     def _filterUntrackedFiles(model: QAbstractListModel, index: QModelIndex):
@@ -1383,3 +1393,27 @@ class CommitWindow(StateWindow):
         if cancelEvent.isSet():
             return
         qApp.postEvent(self, TemplateReadyEvent(message, True))
+
+    def _onExternalDiff(self):
+        listView: QListView = self._acRestoreFiles.data()
+        index = listView.currentIndex()
+        if not index.isValid():
+            return
+        if listView == self.ui.lvFiles:
+            self._onFilesDoubleClicked(index)
+        else:
+            self._onStagedDoubleClicked(index)
+
+    def _onOpenContainingFolder(self):
+        listView: QListView = self._acRestoreFiles.data()
+        index = listView.currentIndex()
+        if not index.isValid():
+            return
+
+        fullPath = os.path.join(Git.REPO_DIR, index.data())
+        if os.name == "nt":
+            args = ["/select,", fullPath.replace("/", "\\")]
+            QProcess.startDetached("explorer", args)
+        else:
+            dir = QFileInfo(fullPath).absolutePath()
+            QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
