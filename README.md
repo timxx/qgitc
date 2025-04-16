@@ -58,8 +58,8 @@ A file conflict viewer for git
 ## Build & Run
 
 - Using source directly
+  - Run **python setup.py build** to build the project
   - Run **qgitc.py** under project root directory.
-  - NOTE: If you want translation other than English or updated the UI files, run **python setup.py build** for the first time.
 
 - Build from source
   - Run *pip install .* under project root directory to install qgitc, and then run *qgitc* command.
