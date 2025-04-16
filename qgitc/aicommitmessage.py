@@ -167,6 +167,11 @@ class AiCommitMessage(QObject):
         return logs
 
     def _onFetchCommitInfoFinished(self):
+        if not self._diffs:
+            logger.warning(
+                "No code changes found, skipping AI commit message generation")
+            return
+
         params = AiParameters()
         params.sys_prompt = SYSTEM_PROMPT
         params.temperature = 0.1

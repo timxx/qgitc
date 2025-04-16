@@ -29,7 +29,7 @@ import requests
 
 from .aichatbot import AiChatbot
 from .cancelevent import CancelEvent
-from .common import commitRepoDir, fullRepoDir, toSubmodulePath
+from .common import commitRepoDir, fullRepoDir, toSubmodulePath, logger
 from .githubcopilot import GithubCopilot
 from .gitutils import Git
 from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole, LocalLLM
@@ -507,6 +507,7 @@ class AiChatWindow(StateWindow):
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         data: bytes = Git.commitRawDiff(Git.LCC_SHA1, repoFiles, repoDir=repoDir)
         if not data:
+            logger.warning("AiChat: no diff for %s", repoDir)
             return
 
         if cancelEvent.isSet():
