@@ -4,7 +4,7 @@ import os
 from PySide6.QtCore import Signal
 
 from .cancelevent import CancelEvent
-from .common import logger
+from .common import fullRepoDir, logger
 from .gitutils import Git
 from .submoduleexecutor import SubmoduleExecutor
 
@@ -47,7 +47,7 @@ class StatusFetcher(SubmoduleExecutor):
         self.resultAvailable.emit(repoDir, result)
 
         if self._needCheckBranch:
-            branch = Git.activeBranch(repoDir)
+            branch = Git.activeBranch(fullRepoDir(repoDir))
             self.branchInfoAvailable.emit(repoDir, branch)
 
     def setShowUntrackedFiles(self, showUntrackedFiles: bool):
@@ -56,23 +56,19 @@ class StatusFetcher(SubmoduleExecutor):
     def setShowIgnoredFiles(self, showIgnoredFiles: bool):
         self._showIgnoredFiles = showIgnoredFiles
 
-    def _fetchStatus(self, repoDir, userData, cancelEvent: CancelEvent):
-        if not repoDir or repoDir == '.':
-            fullRepoDir = Git.REPO_DIR
-        else:
-            fullRepoDir = os.path.join(Git.REPO_DIR, repoDir)
-
+    def _fetchStatus(self, submodule, userData, cancelEvent: CancelEvent):
+        repoDir = fullRepoDir(submodule)
         try:
             data = Git.status(
-                fullRepoDir, self._showUntrackedFiles, self._showIgnoredFiles)
+                repoDir, self._showUntrackedFiles, self._showIgnoredFiles)
             if not data:
                 return None, None
         except Exception:
-            logger.exception("Error fetching status for `%s`", fullRepoDir)
+            logger.exception("Error fetching status for `%s`", repoDir)
             return None, None
 
         if cancelEvent.isSet():
-            logger.debug("Cancel event set, aborting status fetch for `%s`", fullRepoDir)
+            logger.debug("Cancel event set, aborting status fetch for `%s`", repoDir)
             return None, None
 
         lines = data.rstrip(b'\0').split(b'\0')
@@ -82,9 +78,9 @@ class StatusFetcher(SubmoduleExecutor):
             status = line[:2].decode()
             file = line[3:].decode()
             repoFile = os.path.join(
-                repoDir, file) if repoDir and repoDir != '.' else file
+                submodule, file) if submodule and submodule != '.' else file
             result.append((status, os.path.normpath(repoFile)))
 
-        logger.debug("Status fetch result for `%s`: %s", fullRepoDir, result)
+        logger.debug("Status fetch result for `%s`: %s", repoDir, result)
 
-        return repoDir, result
+        return submodule, result

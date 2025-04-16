@@ -699,7 +699,8 @@ class CommitWindow(StateWindow):
 
         actions: List[CommitAction] = userData[2]
 
-        out, error = Git.commit(message, amend, submodule)
+        repoDir = fullRepoDir(submodule)
+        out, error = Git.commit(message, amend, repoDir)
         if cancelEvent.isSet():
             return
 
