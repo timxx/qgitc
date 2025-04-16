@@ -204,9 +204,10 @@ class RepoInfoEvent(QEvent):
 class TemplateReadyEvent(QEvent):
     Type = QEvent.User + 4
 
-    def __init__(self, template: str):
+    def __init__(self, template: str, updateMessage: bool = False):
         super().__init__(QEvent.Type(TemplateReadyEvent.Type))
         self.template = template
+        self.updateMessage = updateMessage
 
 
 class UpdateCommitProgressEvent(QEvent):
@@ -379,7 +380,7 @@ class CommitWindow(StateWindow):
             self._onFilterStagedChanged)
 
         self.ui.cbAmend.toggled.connect(
-            self._updateCommitButtonState)
+            self._onAmendToggled)
 
         if not qApp.style().styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
             self.ui.lvFiles.activated.connect(
@@ -830,6 +831,7 @@ class CommitWindow(StateWindow):
         self.ui.tbStage.setEnabled(not blocked)
         self.ui.tbStageAll.setEnabled(not blocked)
         self.ui.tbRefresh.setEnabled(not blocked)
+        self.ui.cbAmend.setEnabled(not blocked)
 
     def event(self, evt):
         if evt.type() == UpdateFilesEvent.Type:
@@ -854,9 +856,13 @@ class CommitWindow(StateWindow):
 
         if evt.type() == TemplateReadyEvent.Type:
             doc = self.ui.teMessage.document()
-            # only set template if user has not modified the message
-            if not doc.isUndoAvailable() and not doc.isRedoAvailable():
+            if evt.updateMessage:
+                if self._canUpdateMessage():
+                    self._replaceMessage(evt.template)
+            elif not doc.isUndoAvailable() and not doc.isRedoAvailable():
+                # only set template if user has not modified the message
                 self.ui.teMessage.setPlainText(evt.template)
+
             return True
 
         if evt.type() == UpdateCommitProgressEvent.Type:
@@ -1221,6 +1227,9 @@ class CommitWindow(StateWindow):
         if not message:
             return
 
+        self._replaceMessage(message)
+
+    def _replaceMessage(self, message: str):
         cursor = self.ui.teMessage.textCursor()
         cursor.beginEditBlock()
         cursor.select(QTextCursor.Document)
@@ -1333,3 +1342,49 @@ class CommitWindow(StateWindow):
         for file in files:
             self._stagedModel.removeFile(file, submodule)
             self._filesModel.removeFile(file, submodule)
+
+    def _onAmendToggled(self, checked: bool):
+        self._updateCommitButtonState()
+        if not checked:
+            return
+
+        if not self._canUpdateMessage():
+            return
+
+        submoduleFiles = self._collectModelFiles(self._stagedModel)
+        if not submoduleFiles:
+            return
+
+        if self._submoduleExecutor.isRunning():
+            logger.info(
+                "Submodule executor is running, ignore get last commit message")
+            return
+
+        # get the last commit message
+        self._blockUI()
+        self.ui.spinnerUnstaged.start()
+        self._submoduleExecutor.submit(
+            list(submoduleFiles.keys()), self._doGetMessage)
+
+    def _canUpdateMessage(self):
+        doc = self.ui.teMessage.document()
+
+        # should be template if no undo
+        if not doc.isUndoAvailable():
+            return True
+
+        isEmpty = doc.isEmpty() or not doc.toPlainText().strip()
+        if isEmpty:
+            return True
+
+        return False
+
+    def _doGetMessage(self, submodule: str, userData, cancelEvent: CancelEvent):
+        if cancelEvent.isSet():
+            return
+
+        repoDir = self._toRepoDir(submodule)
+        message = Git.commitMessage("HEAD", repoDir)
+        if cancelEvent.isSet():
+            return
+        qApp.postEvent(self, TemplateReadyEvent(message, True))

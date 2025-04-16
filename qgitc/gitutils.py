@@ -142,7 +142,8 @@ class Git():
                 msg = error.decode("utf-8", errors="replace")
             else:
                 msg = error
-            logger.warning("Git command failed: %s (%s)", " ".join(args), msg.rstrip())
+            logger.warning("Git command failed: %s (%s)",
+                           " ".join(args), msg.rstrip())
             return None
 
         return data
@@ -713,4 +714,12 @@ class Git():
         data = Git.checkOutput(args, repoDir=repoDir)
         if data:
             return data.rstrip(b'\n').decode("utf-8")
+        return ""
+
+    @staticmethod
+    def commitMessage(sha1, repoDir=None):
+        args = ["log", "-1", "--pretty=format:%B", sha1]
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if data:
+            return data.rstrip().decode("utf-8")
         return ""
