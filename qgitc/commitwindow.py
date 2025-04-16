@@ -1260,6 +1260,7 @@ class CommitWindow(StateWindow):
         self._aiMessage.cancel()
         self._submoduleExecutor.cancel()
         self._commitExecutor.cancel()
+        self._statusFetcher.cancel()
         return super().closeEvent(event)
 
     def _onFilesContextMenuRequested(self, pos):
