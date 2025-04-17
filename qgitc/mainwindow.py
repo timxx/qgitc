@@ -30,7 +30,6 @@ from .preferences import Preferences
 from .gitutils import Git, GitProcess
 from .diffview import PatchViewer
 from .aboutdialog import AboutDialog
-from .mergewidget import MergeWidget
 from .statewindow import StateWindow
 from .logview import LogView
 from .events import GitBinChanged, RequestCommitEvent, ShowAiAssistantEvent
@@ -592,6 +591,7 @@ class MainWindow(StateWindow):
                 self.gitViewB.reloadBranches(branch)
             self.ui.acCompare.setChecked(True)
         elif mode == MainWindow.MergeMode:
+            from .mergewidget import MergeWidget
             self.mergeWidget = MergeWidget()
             self.mergeWidget.requestResolve.connect(
                 self.__onRequestResolve)
