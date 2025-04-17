@@ -135,6 +135,36 @@ class SummaryTextLine(TextLine):
         br.setWidth(br.width() + br.left())
         return br
 
+    def rehighlight(self):
+        super().rehighlight()
+
+        ranges = []
+        text: str = self.text()
+        start = 0
+        while start < len(text):
+            start = text.find('`', start)
+            if start == -1:
+                break
+
+            end = text.find('`', start + 1)
+            if end == -1:
+                break
+
+            ranges.append((start, end - start + 1))
+            start = end + 1
+
+        if not ranges:
+            return
+
+        formats = self._layout.formats()
+        fmt = QTextCharFormat()
+        fmt.setForeground(qApp.colorSchema().InlineCode)
+        for start, length in ranges:
+            fmtRg = createFormatRange(start, length, fmt)
+            formats.append(fmtRg)
+
+        self._layout.setFormats(formats)
+
 
 class PatchViewer(SourceViewer):
     fileRowChanged = Signal(int)
