@@ -13,6 +13,7 @@ from PySide6.QtCore import (
     QObject
 )
 
+from .cancelevent import CancelEvent
 from .common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath, logger
 from .datafetcher import DataFetcher
 from .gitutils import Git
@@ -151,13 +152,10 @@ class LogsFetcherThread(QThread):
         # del profile
 
     @staticmethod
-    def _fetchLocalChanges(branch: str, repoDir: str = None):
+    def _fetchLocalChanges(branch: str, repoDir: str, submodule: str = None):
         repoPath = repoDir
-        if repoPath:
-            if repoPath == '.':
-                repoPath = Git.REPO_DIR
-            else:
-                repoPath = os.path.join(Git.REPO_DIR, repoDir)
+        if submodule and submodule != '.':
+            repoPath = os.path.join(repoDir, submodule)
         hasLCC = Git.hasLocalChanges(branch, True, repoPath)
         hasLUC = Git.hasLocalChanges(branch, repoDir=repoPath)
 
@@ -190,7 +188,7 @@ class LogsFetcherThread(QThread):
 
         branch = self._args[0]
         if not self._args[1]:
-            hasLCC, hasLUC = self._fetchLocalChanges(branch)
+            hasLCC, hasLUC = self._fetchLocalChanges(branch, Git.REPO_DIR)
             if hasLCC or hasLUC:
                 lccCommit = Commit()
                 lucCommit = Commit()
@@ -221,17 +219,29 @@ class LogsFetcherThread(QThread):
         self.fetchFinished.emit(fetcher._exitCode)
 
     def _fetchComposite(self):
-        def _fetch(submodule):
+        def _fetch(submodule: str, repoDir: str, cancelEvent: CancelEvent):
+            if cancelEvent.isSet():
+                return
+
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
-                fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
+                fetcher.cwd = os.path.join(repoDir, submodule)
             fetcher.fetch(*self._args)
+
+            if cancelEvent.isSet():
+                fetcher.cancel()
+                return
 
             branch = self._args[0]
             if not self._args[1]:
-                hasLCC, hasLUC = self._fetchLocalChanges(branch, submodule)
+                hasLCC, hasLUC = self._fetchLocalChanges(
+                    branch, repoDir, submodule)
             else:
                 hasLCC, hasLUC = False, False
+
+            if cancelEvent.isSet():
+                fetcher.cancel()
+                return
 
             fetcher._process.waitForFinished()
             return fetcher._exitCode, fetcher._errorData, \
@@ -246,7 +256,8 @@ class LogsFetcherThread(QThread):
 
         max_workers = max(2, os.cpu_count() - 2)
         executor = ThreadPoolExecutor(max_workers=max_workers)
-        tasks = [executor.submit(_fetch, submodule)
+        cancelEvent = CancelEvent(self)
+        tasks = [executor.submit(_fetch, submodule, Git.REPO_DIR, cancelEvent)
                  for submodule in submodules]
 
         mergedLogs = {}
