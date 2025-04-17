@@ -78,7 +78,7 @@ class Ref():
         self._name = name
 
     @classmethod
-    def fromRawString(cls, string):
+    def fromRawString(cls, string: str):
         if not string or len(string) < 46:
             return None
 
@@ -94,10 +94,10 @@ class Ref():
         if name.startswith("heads/"):
             _type = Ref.HEAD
             _name = name[6:]
-        elif name.startswith("remotes") \
+        elif name.startswith("remotes/") \
                 and not name.endswith("HEAD"):
             _type = Ref.REMOTE
-            _name = name
+            _name = name[8:]
         elif name.startswith("tags/"):
             _type = Ref.TAG
             if name.endswith("^{}"):
