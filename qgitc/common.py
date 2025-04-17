@@ -260,9 +260,7 @@ def fileRealCommit(filePath: str, commit: Commit):
 
 
 def fullRepoDir(repoDir: str, branchDir: str = None):
-    if not repoDir:
-        return None
-    if repoDir == ".":
+    if not repoDir or repoDir == ".":
         return branchDir or Git.REPO_DIR
     return os.path.join(branchDir or Git.REPO_DIR, repoDir)
 

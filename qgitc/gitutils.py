@@ -623,7 +623,7 @@ class Git():
         # `restore --staged` is much slower than reset HEAD
         args = ["reset", "HEAD", "--"]
         args.extend(files)
-        process = GitProcess(repoDir, args)
+        process = GitProcess(repoDir or Git.REPO_DIR, args)
         _, error = process.communicate()
         if process.returncode != 0 and error is not None:
             return error.decode("utf-8")
@@ -641,7 +641,7 @@ class Git():
 
         args = ["restore", "--"]
         args.extend(files)
-        process = GitProcess(repoDir, args)
+        process = GitProcess(repoDir or Git.REPO_DIR, args)
         _, error = process.communicate()
         if process.returncode != 0 and error is not None:
             return error.decode("utf-8")
@@ -667,7 +667,7 @@ class Git():
         """
         args = ["add", "-f", "--"]
         args.extend(files)
-        process = GitProcess(repoDir, args)
+        process = GitProcess(repoDir or Git.REPO_DIR, args)
         _, error = process.communicate()
         if process.returncode != 0 and error is not None:
             return error.decode("utf-8")
