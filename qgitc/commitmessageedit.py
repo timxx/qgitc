@@ -26,6 +26,8 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
             self.setFormat(0, len(text), qApp.colorSchema().Comment)
             return
 
+        self.highlightInlineRules(text)
+
         builtinPatterns = TextLine.builtinPatterns()
         patterns = list(self._bugPatterns)
         for type, pattern in builtinPatterns.items():
@@ -40,6 +42,25 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
 
         for link in links:
             self.setFormat(link.start, link.end - link.start, fmt)
+
+    def highlightInlineRules(self, text: str):
+        i = 0
+        while i < len(text):
+            currentChar = text[i]
+            if currentChar == '`':
+                i = self.highlightInlineSpans(text, i, currentChar)
+            i += 1
+
+    def highlightInlineSpans(self, text: str, currentPos: int, c: str):
+        end = text.find(c, currentPos + 1)
+        if end == -1:
+            return len(text)
+
+        inlineFmt = QTextCharFormat()
+        inlineFmt.setForeground(qApp.colorSchema().InlineCode)
+        self.setFormat(currentPos, end - currentPos + 1, inlineFmt)
+
+        return end + 1
 
     def reloadBugPattern(self):
         self._bugPatterns = TextViewer.reloadBugPattern()
