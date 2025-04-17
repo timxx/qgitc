@@ -207,6 +207,10 @@ class LogsFetcherThread(QThread):
         self._eventLoop.exec()
         self._eventLoop = None
 
+        # the fetcher may still be running
+        # we have to cancel to avoid crash
+        fetcher.cancel()
+
         self._handleError(fetcher.errorData, fetcher._branch, fetcher.repoDir)
 
         self._fetchers.remove(fetcher)

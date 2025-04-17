@@ -6,6 +6,8 @@ from PySide6.QtCore import (
     SIGNAL,
     QProcess,
     QProcessEnvironment)
+
+from .common import logger
 from .gitutils import Git, GitProcess
 
 
@@ -90,6 +92,7 @@ class DataFetcher(QObject):
 
     def cancel(self):
         if self._process:
+            logger.warning("Cancel git process")
             # self._process.disconnect(self)
             QObject.disconnect(self._process,
                                SIGNAL("readyReadStandardOutput()"),
@@ -100,6 +103,10 @@ class DataFetcher(QObject):
             QObject.disconnect(self._process, SIGNAL("readyReadStandardError()"),
                                self.onProcessError)
             self._process.close()
+            self._process.waitForFinished(100)
+            if self._process.state() == QProcess.Running:
+                logger.warning("Kill git process")
+                self._process.kill()
             self._process = None
 
         self._dataChunk = None
