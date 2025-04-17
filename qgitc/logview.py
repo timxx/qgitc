@@ -1650,13 +1650,19 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.__drawGraph(painter, graphPainter, rect, i)
 
             if not commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
+                if commit.repoDir:
+                    author = commit.committer
+                    date = commit.committerDate
+                else:
+                    author = commit.author
+                    date = commit.authorDate
                 # author
-                text = self.authorRe.sub("\\1", commit.author)
+                text = self.authorRe.sub("\\1", author)
                 color = colorSchema.AuthorTagBg
                 self.__drawTag(painter, rect, color, text, textColor=colorSchema.AuthorTagFg)
 
                 # date
-                text = commit.authorDate.split(' ')[0]
+                text = date.split(' ')[0]
                 color = colorSchema.DateTagBg
                 self.__drawTag(painter, rect, color, text, textColor=colorSchema.DateTagFg)
                 needMargin = True
