@@ -19,9 +19,13 @@
         <translation>许可证(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="32"/>
         <source>Git file conflicts and logs viewer</source>
-        <translation>Git文件冲突、日志查看器</translation>
+        <translation type="vanished">Git文件冲突、日志查看器</translation>
+    </message>
+    <message>
+        <location filename="../../aboutdialog.py" line="32"/>
+        <source>A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.</source>
+        <translation>跨平台 Git 图形界面工具，旨在简化提交历史记录探索、代码责任追溯、提交更改和冲突解决。利用人工智能生成提交信息并执行代码审查。</translation>
     </message>
     <message>
         <location filename="../../aboutdialog.py" line="35"/>
@@ -410,85 +414,85 @@
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="843"/>
+        <location filename="../../commitwindow.py" line="844"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="875"/>
+        <location filename="../../commitwindow.py" line="876"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="938"/>
+        <location filename="../../commitwindow.py" line="939"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="948"/>
+        <location filename="../../commitwindow.py" line="949"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="995"/>
+        <location filename="../../commitwindow.py" line="996"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1004"/>
+        <location filename="../../commitwindow.py" line="1005"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1085"/>
+        <location filename="../../commitwindow.py" line="1086"/>
         <location filename="../../commitwindow.ui" line="582"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1086"/>
+        <location filename="../../commitwindow.py" line="1087"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1088"/>
+        <location filename="../../commitwindow.py" line="1089"/>
         <location filename="../../commitwindow.ui" line="543"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1090"/>
+        <location filename="../../commitwindow.py" line="1091"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1198"/>
+        <location filename="../../commitwindow.py" line="1199"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1284"/>
+        <location filename="../../commitwindow.py" line="1285"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1286"/>
-        <location filename="../../commitwindow.py" line="1293"/>
+        <location filename="../../commitwindow.py" line="1287"/>
+        <location filename="../../commitwindow.py" line="1294"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1296"/>
+        <location filename="../../commitwindow.py" line="1297"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1299"/>
+        <location filename="../../commitwindow.py" line="1300"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1342"/>
+        <location filename="../../commitwindow.py" line="1343"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
@@ -1241,37 +1245,37 @@
         <translation>提交(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="87"/>
+        <location filename="../../mainwindow.py" line="86"/>
         <source>Show AI Assistant</source>
         <translation>显示AI助手</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="231"/>
+        <location filename="../../mainwindow.py" line="230"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="240"/>
+        <location filename="../../mainwindow.py" line="239"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="256"/>
+        <location filename="../../mainwindow.py" line="255"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="577"/>
+        <location filename="../../mainwindow.py" line="576"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="578"/>
+        <location filename="../../mainwindow.py" line="577"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="566"/>
+        <location filename="../../mainwindow.py" line="565"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -1582,12 +1586,12 @@ Run `{1}` for getting the latest version.</source>
 <context>
     <name>PatchViewer</name>
     <message>
-        <location filename="../../patchviewer.py" line="236"/>
+        <location filename="../../patchviewer.py" line="266"/>
         <source>Copy Plain &amp;Text</source>
         <translation>复制纯文本(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../patchviewer.py" line="245"/>
+        <location filename="../../patchviewer.py" line="275"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
     </message>

@@ -28,7 +28,7 @@ class AboutDialog(QDialog):
     def __initTabs(self):
         about = "<center><h3>QGitc " + VERSION + "</h3></center>"
         about += "<center>"
-        about += self.tr("Git file conflicts and logs viewer")
+        about += self.tr("A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.")
         about += "</center>"
         about += "<center><a href=https://github.com/timxx/qgitc>"
         about += self.tr("Visit project host")
