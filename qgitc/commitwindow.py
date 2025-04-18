@@ -31,7 +31,6 @@ from PySide6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QLabel,
-    QDialog,
     QStyle
 )
 
@@ -1063,8 +1062,7 @@ class CommitWindow(StateWindow):
         preferences = Preferences(qApp.settings(), self)
         preferences.ui.tabWidget.setCurrentWidget(
             preferences.ui.tabCommitMessage)
-        if preferences.exec() == QDialog.Accepted:
-            preferences.save()
+        preferences.exec()
 
     def _onCommitFinished(self):
         # we're not really done yet

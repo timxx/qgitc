@@ -5,8 +5,7 @@ from PySide6.QtWidgets import (
     QCompleter,
     QLineEdit,
     QMessageBox,
-    QFileDialog,
-    QDialog)
+    QFileDialog)
 
 from PySide6.QtGui import (
     QActionGroup,
@@ -27,12 +26,12 @@ from .findwidget import FindWidget
 from .ui_mainwindow import Ui_MainWindow
 from .gitview import GitView
 from .preferences import Preferences
-from .gitutils import Git, GitProcess
+from .gitutils import Git
 from .diffview import PatchViewer
 from .aboutdialog import AboutDialog
 from .statewindow import StateWindow
 from .logview import LogView
-from .events import GitBinChanged, RequestCommitEvent, ShowAiAssistantEvent
+from .events import RequestCommitEvent, ShowAiAssistantEvent
 
 import os
 import sys
@@ -303,10 +302,7 @@ class MainWindow(StateWindow):
     def __onAcPreferencesTriggered(self):
         settings = qApp.instance().settings()
         preferences = Preferences(settings, self)
-        if preferences.exec() == QDialog.Accepted:
-            preferences.save()
-            if settings.gitBinPath() != GitProcess.GIT_BIN:
-                qApp.postEvent(qApp, GitBinChanged())
+        preferences.exec()
 
     def __onIgnoreWhitespaceChanged(self, index):
         actions = [self.ui.acIgnoreNone,
