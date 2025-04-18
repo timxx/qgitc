@@ -326,12 +326,9 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
         self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
 
-        QTimer.singleShot(0, self._loadLocalChanges)
-
         self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
         self._findSubmoduleThread.finished.connect(
             self._onFindSubmoduleFinished)
-        self._findSubmoduleThread.start()
 
         self._curFile: str = None
         self._curFileStatus: FileStatus = None
@@ -358,9 +355,6 @@ class CommitWindow(StateWindow):
         self._commitExecutor.finished.connect(
             self._onCommitFinished)
 
-        infoFetcher = SubmoduleExecutor(self)
-        infoFetcher.finished.connect(self._onInfoFetchFinished)
-        infoFetcher.submit(None, self._fetchRepoInfo)
         self._repoInfo: RepoInfo = None
 
         self._setupWDMenu()
@@ -426,6 +420,12 @@ class CommitWindow(StateWindow):
 
         self._setupContextMenu()
 
+        qApp.repoDirChanged.connect(
+            self._onRepoDirChanged)
+
+        if Git.REPO_DIR:
+            self._onRepoDirChanged()
+
     def _setupSpinner(self, spinner):
         height = self.ui.tbRefresh.height() // 7
         spinner.setLineLength(height)
@@ -448,6 +448,7 @@ class CommitWindow(StateWindow):
         self._repoBranch.clear()
         self._branchMessage.clear()
         self._branchWidget.setVisible(False)
+        self._branchLabel.setText("")
 
     def _onFindSubmoduleFinished(self):
         submodules = self._findSubmoduleThread.submodules
@@ -1259,11 +1260,14 @@ class CommitWindow(StateWindow):
         event = CodeReviewEvent(submoduleFiles)
         qApp.postEvent(qApp, event)
 
-    def closeEvent(self, event):
+    def cancel(self):
         self._aiMessage.cancel()
         self._submoduleExecutor.cancel()
         self._commitExecutor.cancel()
         self._statusFetcher.cancel()
+
+    def closeEvent(self, event):
+        self.cancel()
         return super().closeEvent(event)
 
     def _onFilesContextMenuRequested(self, pos):
@@ -1416,3 +1420,16 @@ class CommitWindow(StateWindow):
         else:
             dir = QFileInfo(fullPath).absolutePath()
             QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
+
+    def _onRepoDirChanged(self):
+        self.clear()
+        self.cancel()
+        if not Git.REPO_DIR:
+            return
+
+        infoFetcher = SubmoduleExecutor(self)
+        infoFetcher.finished.connect(self._onInfoFetchFinished)
+        infoFetcher.submit(None, self._fetchRepoInfo)
+
+        self._findSubmoduleThread.start()
+        self._loadLocalChanges()
