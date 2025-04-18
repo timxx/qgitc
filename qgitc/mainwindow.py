@@ -64,6 +64,8 @@ class MainWindow(StateWindow):
         self._delayTimer = QTimer(self)
         self._delayTimer.setSingleShot(True)
 
+        self._repoTopDir = None
+
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
 
@@ -261,13 +263,13 @@ class MainWindow(StateWindow):
             repoDir = None
             # clear
             Git.REPO_DIR = None
-            Git.REPO_TOP_DIR = None
+            self._repoTopDir = None
             if Git.REF_MAP:
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
             Git.REPO_DIR = topLevelDir
-            Git.REPO_TOP_DIR = topLevelDir
+            self._repoTopDir = topLevelDir
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
 
@@ -346,10 +348,10 @@ class MainWindow(StateWindow):
     def __onAcCompositeModeTriggered(self, checked):
         if checked:
             # use top level repo dir
-            Git.REPO_DIR = Git.REPO_TOP_DIR
+            Git.REPO_DIR = self._repoTopDir
         elif self.ui.cbSubmodule.count() > 0 and self.ui.cbSubmodule.currentIndex() > 0:
             newRepo = os.path.join(
-                Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
+                self._repoTopDir, self.ui.cbSubmodule.currentText())
             Git.REPO_DIR = newRepo
 
         self.ui.cbSubmodule.setEnabled(not checked)
@@ -413,10 +415,10 @@ class MainWindow(StateWindow):
         self.setFilterFile(filePath)
 
     def __onSubmoduleChanged(self, index):
-        newRepo = Git.REPO_TOP_DIR
+        newRepo = self._repoTopDir
         if index > 0:
             newRepo = os.path.join(
-                Git.REPO_TOP_DIR, self.ui.cbSubmodule.currentText())
+                self._repoTopDir, self.ui.cbSubmodule.currentText())
         if os.path.normcase(os.path.normpath(newRepo)) == os.path.normcase(os.path.normpath(Git.REPO_DIR)):
             return
 

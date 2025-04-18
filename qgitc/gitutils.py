@@ -112,7 +112,6 @@ class Ref():
 
 class Git():
     REPO_DIR = None
-    REPO_TOP_DIR = None
     REF_MAP = {}
     REV_HEAD = None
 
