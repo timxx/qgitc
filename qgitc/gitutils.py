@@ -111,7 +111,7 @@ class Ref():
 
 
 class Git():
-    REPO_DIR = None
+    REPO_DIR = os.getcwd()
     REF_MAP = {}
     REV_HEAD = None
 

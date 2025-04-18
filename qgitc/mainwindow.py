@@ -27,12 +27,12 @@ from .findwidget import FindWidget
 from .ui_mainwindow import Ui_MainWindow
 from .gitview import GitView
 from .preferences import Preferences
-from .gitutils import Git
+from .gitutils import Git, GitProcess
 from .diffview import PatchViewer
 from .aboutdialog import AboutDialog
 from .statewindow import StateWindow
 from .logview import LogView
-from .events import RequestCommitEvent, ShowAiAssistantEvent
+from .events import GitBinChanged, RequestCommitEvent, ShowAiAssistantEvent
 
 import os
 import sys
@@ -179,8 +179,6 @@ class MainWindow(StateWindow):
         self.ui.acCommit.triggered.connect(
             self.__onCommitTriggered)
 
-        qApp.gitInitialized.connect(self._onGitInitialized)
-
     def __setupMenus(self):
         acGroup = QActionGroup(self)
         acGroup.addAction(self.ui.acIgnoreNone)
@@ -307,6 +305,8 @@ class MainWindow(StateWindow):
         preferences = Preferences(settings, self)
         if preferences.exec() == QDialog.Accepted:
             preferences.save()
+            if settings.gitBinPath() != GitProcess.GIT_BIN:
+                qApp.postEvent(qApp, GitBinChanged())
 
     def __onIgnoreWhitespaceChanged(self, index):
         actions = [self.ui.acIgnoreNone,
@@ -534,8 +534,8 @@ class MainWindow(StateWindow):
         super(MainWindow, self).showEvent(event)
         if not self.isWindowReady:
             self.isWindowReady = True
-            if Git.available():
-                self._onGitInitialized()
+            if Git.REPO_DIR:
+                self.ui.leRepo.setText(Git.REPO_DIR)
 
     def closeEvent(self, event):
         if self.mergeWidget:
@@ -679,6 +679,3 @@ class MainWindow(StateWindow):
 
     def _onShowAiAssistant(self):
         qApp.postEvent(qApp, ShowAiAssistantEvent())
-
-    def _onGitInitialized(self):
-        self.ui.leRepo.setText(Git.REPO_DIR)

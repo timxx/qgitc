@@ -125,7 +125,15 @@ def _init_gui():
 
 
 def _detect_and_fix_repo(filterFile):
-    os.chdir(os.path.dirname(filterFile))
+    needFix = False
+    if Git.REPO_DIR:
+        needFix = Git.repoTopLevelDir(Git.REPO_DIR) is None
+    else:
+        needFix = True
+    if needFix:
+        repoDir = Git.repoTopLevelDir(os.path.dirname(filterFile))
+        if repoDir:
+            Git.REPO_DIR = repoDir
 
 
 def _do_log(args):

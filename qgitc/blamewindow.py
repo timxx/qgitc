@@ -12,7 +12,6 @@ from PySide6.QtCore import (
     Qt)
 
 from .blameview import BlameView
-from .gitutils import Git
 from .gotodialog import GotoDialog
 from .findwidget import FindWidget
 from .statewindow import StateWindow
@@ -50,9 +49,6 @@ class BlameWindow(StateWindow):
         self._view.viewer.findResultAvailable.connect(
             self._onFindResultAvailable)
 
-        self._delayBlame = None
-        qApp.gitInitialized.connect(self._onGitInitialized)
-
     def _setupMenuBar(self):
         self._setupFileMenu()
         self._setupEditMenu()
@@ -60,8 +56,8 @@ class BlameWindow(StateWindow):
     def _setupFileMenu(self):
         fileMenu = self.menuBar().addMenu(self.tr("&File"))
         acClose = fileMenu.addAction(self.tr("Close &Window"),
-                                     self.close,
-                                     QKeySequence("Ctrl+W"))
+                           self.close,
+                           QKeySequence("Ctrl+W"))
         acClose.setIcon(QIcon.fromTheme("window-close"))
 
     def _setupEditMenu(self):
@@ -203,10 +199,6 @@ class BlameWindow(StateWindow):
         self._findWidget.showAnimate()
 
     def blame(self, file, rev=None, lineNo=0, repoDir=None):
-        if not Git.available():
-            self._delayBlame = (file, rev, lineNo, repoDir)
-            return
-        self._delayBlame = None
         self._view.blame(file, rev, lineNo, repoDir)
 
     def keyPressEvent(self, event):
@@ -242,9 +234,3 @@ class BlameWindow(StateWindow):
     def closeEvent(self, event):
         self._view.queryClose()
         super().closeEvent(event)
-
-    def _onGitInitialized(self):
-        if self._delayBlame:
-            file, rev, lineNo, repoDir = self._delayBlame
-            self._delayBlame = None
-            self.blame(file, rev, lineNo, repoDir)
