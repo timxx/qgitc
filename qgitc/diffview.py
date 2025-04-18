@@ -382,7 +382,7 @@ class DiffView(QWidget):
             return
 
         staged = self.commit.sha1 == Git.LCC_SHA1
-        error = Git.restoreRepoFiles(repoFiles, staged)
+        error = Git.restoreRepoFiles(repoFiles, staged, self.branchDir)
         if error:
             QMessageBox.critical(
                 self, self.window().windowTitle(),

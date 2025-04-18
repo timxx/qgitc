@@ -649,11 +649,11 @@ class Git():
         return None
 
     @staticmethod
-    def restoreRepoFiles(repoFiles: Dict[str, List[str]], staged=False):
+    def restoreRepoFiles(repoFiles: Dict[str, List[str]], staged=False, branchDir=None):
         for repoDir, files in repoFiles.items():
-            fullRepoDir = repoDir
+            fullRepoDir = repoDir or branchDir
             if repoDir and repoDir != ".":
-                fullRepoDir = os.path.join(Git.REPO_TOP_DIR, repoDir)
+                fullRepoDir = os.path.join(branchDir or Git.REPO_DIR, repoDir)
             error = Git.restoreFiles(
                 fullRepoDir or Git.REPO_DIR, files, staged)
             if error:
