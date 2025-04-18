@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-
+from PySide6.QtCore import QRectF
 from PySide6.QtGui import (
     QDesktopServices,
     QTextCharFormat,
@@ -8,7 +8,8 @@ from PySide6.QtGui import (
     QAction,
     QPainter,
     QFont,
-    QFontMetricsF)
+    QFontMetricsF,
+    QPen)
 from PySide6.QtWidgets import (
     QApplication)
 from PySide6.QtCore import (
@@ -97,6 +98,18 @@ class InfoTextLine(TextLine):
         formats.append(fmtRg)
 
         self._layout.setFormats(formats)
+
+    def _relayout(self):
+        self._layout.beginLayout()
+        line = self._layout.createLine()
+        line.setPosition(QPointF(1, 0))
+        self._layout.endLayout()
+
+    def boundingRect(self):
+        self.ensureLayout()
+        br = self._layout.boundingRect()
+        br.setWidth(br.width() + br.left())
+        return br
 
 
 class AuthorTextLine(LinkTextLine):
@@ -237,10 +250,12 @@ class PatchViewer(SourceViewer):
     def canDrawLineBorder(self, textLine):
         return isinstance(textLine, InfoTextLine)
 
-    def drawLinesBorder(self, painter: QPainter, rect):
+    def drawLinesBorder(self, painter: QPainter, rect: QRectF):
         oldPen = painter.pen()
-        painter.setPen(qApp.colorSchema().InfoBorder)
-        painter.drawRect(rect)
+        pen = QPen(qApp.colorSchema().InfoBorder)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+        painter.drawRect(rect.adjusted(0.5, 0, -0.5, -0.5))
         painter.setPen(oldPen)
 
     def textLineFormatRange(self, textLine):

@@ -1102,9 +1102,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         return rect
 
-    def __drawTag(self, painter, rect, color, text, bold=False, textColor=Qt.black):
+    def __drawTag(self, painter: QPainter, rect, color, text, bold=False, textColor=Qt.black):
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.Antialiasing, False)
 
         if bold:
             font = painter.font()
@@ -1115,7 +1115,10 @@ class LogView(QAbstractScrollArea, CommitSource):
         br = painter.boundingRect(rect, flags, text)
         br.adjust(0, -1, 4, 1)
 
-        painter.setPen(qApp.colorSchema().TagBorder)
+        pen = QPen(qApp.colorSchema().TagBorder)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+
         painter.fillRect(br, color)
         painter.drawRect(br)
 
@@ -1678,8 +1681,12 @@ class LogView(QAbstractScrollArea, CommitSource):
             if i == self.curIdx:
                 painter.fillRect(rect, colorSchema.SelectedItemBg)
                 if self.hasFocus():
-                    painter.setPen(QPen(colorSchema.FocusItemBorder))
-                    painter.drawRect(rect.adjusted(0, 0, -1, -1))
+                    pen = QPen(colorSchema.FocusItemBorder)
+                    pen.setCosmetic(True)
+                    painter.setPen(pen)
+                    borderRect = QRectF(rect)
+                    borderRect.adjust(0, 0, -0.5, -0.5)
+                    painter.drawRect(borderRect)
                 painter.setPen(colorSchema.SelectedItemFg)
             elif i == self.hoverIdx:
                 painter.fillRect(rect, colorSchema.HoverItemBg)

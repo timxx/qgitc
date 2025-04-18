@@ -14,7 +14,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QPainter,
     QFontMetrics,
-    QIcon)
+    QIcon,
+    QPen)
 from PySide6.QtCore import (
     Qt,
     Signal,
@@ -582,7 +583,9 @@ class BlameSourceViewer(SourceViewer):
                 return
 
             painter = QPainter(self.viewport())
-            painter.setPen(Qt.gray)
+            pen = QPen(Qt.gray)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
             painter.drawRect(lineRect.adjusted(1, 0, 0, 0))
 
 
