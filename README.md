@@ -5,7 +5,9 @@
 [![Python version](https://img.shields.io/pypi/pyversions/qgitc.svg)](https://pypi.org/project/qgitc)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-A file conflict viewer for git
+
+A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.
+
 
 ## Screenshots
 
@@ -39,7 +41,8 @@ A file conflict viewer for git
 - [x] File blame support
 - [x] AI intergrated
 - [x] Composite mode
-- [x] AI-based commits
+- [x] AI-based commit
+- [x] AI-based code review
 
 
 ## Requirements
