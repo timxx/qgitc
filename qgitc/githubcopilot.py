@@ -209,3 +209,6 @@ class GithubCopilot(AiModelBase):
             return True
 
         return super().event(evt)
+
+    def supportedChatModes(self):
+        return [AiChatMode.Chat, AiChatMode.CodeReview]

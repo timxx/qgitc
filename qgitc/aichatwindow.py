@@ -217,26 +217,12 @@ class AiChatWidget(QWidget):
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
 
-        if qApp.settings().useLocalLlm():
-            self.cbBots.setCurrentIndex(0)
-        else:
-            self.cbBots.setCurrentIndex(1)
-
         self.stackWidget.setCurrentIndex(self.cbBots.currentIndex())
 
         hlayout.addWidget(self.cbBots)
 
         self.cbChatMode = QComboBox(self)
         self.cbChatMode.setEditable(False)
-        self.cbChatMode.addItem(self.tr("Chat"), AiChatMode.Chat)
-        self.cbChatMode.addItem(self.tr("Completion"), AiChatMode.Completion)
-        self.cbChatMode.addItem(self.tr("Infilling"), AiChatMode.Infilling)
-        self.cbChatMode.addItem(self.tr("Code Review"), AiChatMode.CodeReview)
-        self.cbChatMode.addItem(self.tr("Code Fix"), AiChatMode.CodeFix)
-        self.cbChatMode.addItem(
-            self.tr("Code Explanation"), AiChatMode.CodeExplanation)
-        self.cbChatMode.setEnabled(self.isLocalLLM())
-
         hlayout.addWidget(self.cbChatMode)
 
         self.cbLang = QComboBox(self)
@@ -270,6 +256,11 @@ class AiChatWidget(QWidget):
         self.cbChatMode.currentIndexChanged.connect(
             self._onChatModeChanged)
 
+        if qApp.settings().useLocalLlm():
+            self.cbBots.setCurrentIndex(0)
+        else:
+            self.cbBots.setCurrentIndex(1)
+
         QWidget.setTabOrder(self.usrInput, self.btnSend)
         QWidget.setTabOrder(self.btnSend, self.btnClear)
         QWidget.setTabOrder(self.btnClear, self.usrInput)
@@ -278,6 +269,17 @@ class AiChatWidget(QWidget):
         self._adjustingSccrollbar = False
 
         self._tokenCalculator = None
+
+    def _chatModeStr(self, mode: AiChatMode):
+        strings = {
+            AiChatMode.Chat: self.tr("Chat"),
+            AiChatMode.Completion: self.tr("Completion"),
+            AiChatMode.Infilling: self.tr("Infilling"),
+            AiChatMode.CodeReview: self.tr("Code Review"),
+            AiChatMode.CodeFix: self.tr("Code Fix"),
+            AiChatMode.CodeExplanation: self.tr("Code Explanation"),
+        }
+        return strings[mode]
 
     def queryClose(self):
         if self._tokenCalculator:
@@ -308,9 +310,8 @@ class AiChatWidget(QWidget):
         params.chat_mode = chatMode
         params.language = language
 
-        if self.isLocalLLM():
-            if params.chat_mode == AiChatMode.Infilling:
-                params.fill_point = self.usrInput.textCursor().position()
+        if params.chat_mode == AiChatMode.Infilling:
+            params.fill_point = self.usrInput.textCursor().position()
 
         self._disableAutoScroll = False
 
@@ -390,12 +391,20 @@ class AiChatWidget(QWidget):
         self.btnClear.setEnabled(enabled)
         self.usrInput.setFocus()
 
-        self.cbChatMode.setEnabled(self.isLocalLLM())
+        self._initChatMode(model)
         self._onChatModeChanged(self.cbChatMode.currentIndex())
+
+    def _initChatMode(self, model: AiModelBase):
+        modes = model.supportedChatModes()
+        self.cbChatMode.clear()
+        for mode in modes:
+            self.cbChatMode.addItem(self._chatModeStr(mode), mode)
+        self.cbChatMode.setCurrentIndex(0)
+        self.cbChatMode.setEnabled(len(modes) > 0)
 
     def _onChatModeChanged(self, index):
         self.cbLang.setEnabled(
-            self.isLocalLLM() and self.cbChatMode.currentData() == AiChatMode.Infilling)
+            self.cbChatMode.currentData() == AiChatMode.Infilling)
 
     def _onEnterKeyPressed(self):
         self._onButtonSend(False)

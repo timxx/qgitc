@@ -39,7 +39,7 @@ class AiParameters:
         self.language = None
 
 
-class AiChatMode:
+class AiChatMode(Enum):
 
     Chat = 0
     Completion = 1
@@ -85,6 +85,9 @@ class AiModelBase(QThread):
 
     def isLocal(self):
         return False
+
+    def supportedChatModes(self):
+        return [AiChatMode.Chat]
 
 
 class ChatGPTModel(AiModelBase):
@@ -273,3 +276,12 @@ class LocalLLM(ChatGPTModel):
             self.update_name(self.nameFetcher.name)
         self.nameFetcher.deleteLater()
         self.nameFetcher = None
+
+    def supportedChatModes(self):
+        return [AiChatMode.Chat,
+                AiChatMode.Completion,
+                AiChatMode.Infilling,
+                AiChatMode.CodeReview,
+                AiChatMode.CodeFix,
+                AiChatMode.CodeExplanation
+                ]
