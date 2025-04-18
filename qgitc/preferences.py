@@ -4,12 +4,11 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QStyleFactory)
-from PySide6.QtCore import (
-    QSize)
 
 from .commitactioneditdialog import CommitActionEditDialog
 from .common import logger
 from .colorschema import ColorSchemaMode
+from .events import GitBinChanged
 from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .ui_preferences import *
 from .comboboxitemdelegate import ComboBoxItemDelegate
@@ -275,6 +274,9 @@ class Preferences(QDialog):
         if self.ui.tabGeneral in self._initedTabs:
             logging.getLogger().setLevel(
                 self.ui.cbLogLevel.currentData())
+
+        if self.settings.gitBinPath() != GitProcess.GIT_BIN:
+            qApp.postEvent(qApp, GitBinChanged())
 
     def _onTabChanged(self, index):
         tab = self.ui.tabWidget.widget(index)

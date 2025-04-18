@@ -10,14 +10,17 @@ from PySide6.QtCore import (
     QUrl,
     QTimer,
     qVersion,
-    QEvent)
+    QEvent,
+    Signal)
 
 from .aichatwindow import AiChatWindow
+from .cancelevent import CancelEvent
 from .colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
 from .commitwindow import CommitWindow
 from .common import dataDirPath
 from .githubcopilotlogindialog import GithubCopilotLoginDialog
 from .settings import Settings
+from .submoduleexecutor import SubmoduleExecutor
 from .events import (
     BlameEvent,
     CodeReviewEvent,
@@ -54,6 +57,8 @@ class Application(QApplication):
     AiAssistant = 3
     CommitWindow = 4
 
+    gitInitialized = Signal()
+
     def __init__(self, argv):
         super(Application, self).__init__(argv)
 
@@ -72,12 +77,6 @@ class Application(QApplication):
         self._aiChatWindow = None
         self._commitWindow = None
 
-        gitBin = self._settings.gitBinPath() or shutil.which("git")
-        if not gitBin or not os.path.exists(gitBin):
-            QTimer.singleShot(0, self._warnGitMissing)
-        else:
-            self._initGit(gitBin)
-
         QTimer.singleShot(0, self._onDelayInit)
 
         self._lastFocusWidget = None
@@ -91,6 +90,11 @@ class Application(QApplication):
 
         self._settings.colorSchemaModeChanged.connect(
             self.overrideColorSchema)
+
+        self._executor = SubmoduleExecutor(self)
+        self._executor.submit([], self._initGit)
+
+        self.aboutToQuit.connect(self._executor.cancel)
 
     def settings(self):
         return self._settings
@@ -181,7 +185,7 @@ class Application(QApplication):
             return True
 
         if type == GitBinChanged.Type:
-            self._initGit(self._settings.gitBinPath())
+            self._executor.submit([], self._initGit)
             if self._logWindow:
                 self._logWindow.reloadRepo()
             return True
@@ -309,11 +313,24 @@ class Application(QApplication):
             self.tr(
                 "No git found, please check your settings."))
 
-    def _initGit(self, gitBin):
+    def _initGit(self, submodule, data, cancelEvent: CancelEvent):
+        if cancelEvent.isSet():
+            return
+
+        gitBin = Settings().gitBinPath() or shutil.which("git")
+        if not gitBin or not os.path.exists(gitBin):
+            QTimer.singleShot(0, self, self._warnGitMissing)
+            return
+
         Git.initGit(gitBin)
         cwd = os.getcwd()
         repoDir = Git.repoTopLevelDir(cwd)
         Git.REPO_DIR = repoDir or cwd
+
+        if cancelEvent.isSet():
+            return
+
+        self.gitInitialized.emit()
 
     def isDarkTheme(self):
         return self._isDarkTheme

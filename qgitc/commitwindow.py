@@ -332,7 +332,10 @@ class CommitWindow(StateWindow):
         self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
         self._findSubmoduleThread.finished.connect(
             self._onFindSubmoduleFinished)
-        self._findSubmoduleThread.start()
+
+        qApp.gitInitialized.connect(self._onGitInitialized)
+        if Git.available():
+            self._onGitInitialized()
 
         self._curFile: str = None
         self._curFileStatus: FileStatus = None
@@ -359,9 +362,6 @@ class CommitWindow(StateWindow):
         self._commitExecutor.finished.connect(
             self._onCommitFinished)
 
-        infoFetcher = SubmoduleExecutor(self)
-        infoFetcher.finished.connect(self._onInfoFetchFinished)
-        infoFetcher.submit(None, self._fetchRepoInfo)
         self._repoInfo: RepoInfo = None
 
         self._setupWDMenu()
@@ -1418,3 +1418,10 @@ class CommitWindow(StateWindow):
         else:
             dir = QFileInfo(fullPath).absolutePath()
             QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
+
+    def _onGitInitialized(self):
+        infoFetcher = SubmoduleExecutor(self)
+        infoFetcher.finished.connect(self._onInfoFetchFinished)
+        infoFetcher.submit(None, self._fetchRepoInfo)
+
+        self._findSubmoduleThread.start()
