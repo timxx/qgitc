@@ -259,13 +259,13 @@ class MainWindow(StateWindow):
             # let gitview clear the old branches
             repoDir = None
             # clear
-            Git.REPO_DIR = None
+            qApp.updateRepoDir(None)
             self._repoTopDir = None
             if Git.REF_MAP:
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            Git.REPO_DIR = topLevelDir
+            qApp.updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
@@ -344,11 +344,11 @@ class MainWindow(StateWindow):
     def __onAcCompositeModeTriggered(self, checked):
         if checked:
             # use top level repo dir
-            Git.REPO_DIR = self._repoTopDir
+            qApp.updateRepoDir(self._repoTopDir)
         elif self.ui.cbSubmodule.count() > 0 and self.ui.cbSubmodule.currentIndex() > 0:
             newRepo = os.path.join(
                 self._repoTopDir, self.ui.cbSubmodule.currentText())
-            Git.REPO_DIR = newRepo
+            qApp.updateRepoDir(newRepo)
 
         self.ui.cbSubmodule.setEnabled(not checked)
         qApp.settings().setCompositeMode(checked)
@@ -418,7 +418,7 @@ class MainWindow(StateWindow):
         if os.path.normcase(os.path.normpath(newRepo)) == os.path.normcase(os.path.normpath(Git.REPO_DIR)):
             return
 
-        Git.REPO_DIR = newRepo
+        qApp.updateRepoDir(newRepo)
         self.ui.gitViewA.reloadBranches(
             self.ui.gitViewA.currentBranch())
         if self.gitViewB:

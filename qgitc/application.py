@@ -10,7 +10,8 @@ from PySide6.QtCore import (
     QUrl,
     QTimer,
     qVersion,
-    QEvent)
+    QEvent,
+    Signal)
 
 from .aichatwindow import AiChatWindow
 from .colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
@@ -53,6 +54,8 @@ class Application(QApplication):
     BlameWindow = 2
     AiAssistant = 3
     CommitWindow = 4
+
+    repoDirChanged = Signal()
 
     def __init__(self, argv):
         super(Application, self).__init__(argv)
@@ -313,7 +316,20 @@ class Application(QApplication):
         Git.initGit(gitBin)
         cwd = os.getcwd()
         repoDir = Git.repoTopLevelDir(cwd)
-        Git.REPO_DIR = repoDir or cwd
+        self.updateRepoDir(repoDir or cwd)
+
+    def updateRepoDir(self, repoDir: str):
+        if Git.REPO_DIR == repoDir:
+            return
+
+        if repoDir is not None and Git.REPO_DIR is not None:
+            newDir = os.path.normpath(os.path.normcase(repoDir))
+            oldDir = os.path.normpath(os.path.normcase(Git.REPO_DIR))
+            if newDir == oldDir:
+                return
+
+        Git.REPO_DIR = repoDir
+        self.repoDirChanged.emit()
 
     def isDarkTheme(self):
         return self._isDarkTheme

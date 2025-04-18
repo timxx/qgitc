@@ -133,7 +133,7 @@ def _detect_and_fix_repo(filterFile):
     if needFix:
         repoDir = Git.repoTopLevelDir(os.path.dirname(filterFile))
         if repoDir:
-            Git.REPO_DIR = repoDir
+            qApp.updateRepoDir(repoDir)
 
 
 def _do_log(args):
