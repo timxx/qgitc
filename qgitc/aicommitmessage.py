@@ -228,5 +228,11 @@ class AiCommitMessage(QObject):
             if message.endswith("```"):
                 message = message[:-3]
             message = message.strip()
-            self.messageAvailable.emit(message)
+            stripMessage = ""
+            for line in message.splitlines():
+                if stripMessage:
+                    stripMessage += "\n"
+                stripMessage += line.rstrip()
+            if stripMessage:
+                self.messageAvailable.emit(stripMessage)
         self._aiModel = None
