@@ -116,7 +116,11 @@ class UpdateTs(Command):
 
 
 with open("README.md", "r") as f:
-    long_description = f.read()
+    long_description = ""
+    pattern = re.compile(r"\./screenshots/(.*\.png)")
+    for line in f.readlines():
+        long_description += pattern.sub(
+            "https://raw.githubusercontent.com/timxx/qgitc/refs/heads/master/screenshots/\\1", line)
 
 
 setup(name="qgitc",
