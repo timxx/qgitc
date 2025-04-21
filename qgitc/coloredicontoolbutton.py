@@ -85,7 +85,7 @@ class ColoredIconToolButton(QToolButton):
         if self.toolButtonStyle() == Qt.ToolButtonTextBesideIcon:
             fm = self.fontMetrics()
             textSize = fm.size(Qt.TextShowMnemonic, self.text())
-            textSize.setWidth(textSize.width() + fm.horizontalAdvance(' '))
+            textSize.setWidth(textSize.width() + fm.horizontalAdvance(' ') * 2)
             size.setWidth(size.width() + 4 + textSize.width())
 
         return size
