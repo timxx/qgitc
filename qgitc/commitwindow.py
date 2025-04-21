@@ -403,6 +403,12 @@ class CommitWindow(StateWindow):
             self._onCancelGenMessageClicked)
         self.ui.btnCancelGen.hide()
 
+        icon = QIcon(iconsPath + "/wand-shine.svg")
+        self.ui.btnRefineMsg.setIcon(icon)
+        self.ui.btnRefineMsg.setIconSize(QSize(16, 16))
+        self.ui.btnRefineMsg.clicked.connect(
+            self._onRefineMessageClicked)
+
         self._aiMessage = AiCommitMessage(self)
         self._aiMessage.messageAvailable.connect(
             self._onAiMessageAvailable)
@@ -1207,6 +1213,9 @@ class CommitWindow(StateWindow):
         self.ui.btnCancelGen.show()
         self._aiMessage.generate(submoduleFiles)
         logger.debug("Begin generate commit message")
+
+    def _onRefineMessageClicked(self):
+        pass
 
     def _collectStagedRepos(self):
         model = self.ui.lvStaged.model()

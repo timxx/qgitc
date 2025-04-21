@@ -374,6 +374,16 @@
                 </widget>
                </item>
                <item>
+                <widget class="ColoredIconToolButton" name="btnRefineMsg">
+                 <property name="toolTip">
+                  <string>Refine Commit Message with AI Assistant</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="ColoredIconToolButton" name="btnCodeReview">
                  <property name="toolTip">
                   <string>Make Code Review With AI Assistant</string>
