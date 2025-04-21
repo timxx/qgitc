@@ -342,6 +342,8 @@ class CommitWindow(StateWindow):
 
         self.ui.teMessage.setPlaceholderText(
             self.tr("Enter commit message here..."))
+        self.ui.teMessage.textChanged.connect(
+            self._onMessageChanged)
 
         self.ui.btnCommit.clicked.connect(self._onCommitClicked)
 
@@ -408,6 +410,7 @@ class CommitWindow(StateWindow):
         self.ui.btnRefineMsg.setIconSize(QSize(16, 16))
         self.ui.btnRefineMsg.clicked.connect(
             self._onRefineMessageClicked)
+        self.ui.btnRefineMsg.setEnabled(False)
 
         self._aiMessage = AiCommitMessage(self)
         self._aiMessage.messageAvailable.connect(
@@ -1211,11 +1214,14 @@ class CommitWindow(StateWindow):
         assert (submoduleFiles)
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
+        self.ui.btnRefineMsg.setEnabled(False)
         self._aiMessage.generate(submoduleFiles)
         logger.debug("Begin generate commit message")
 
     def _onRefineMessageClicked(self):
-        pass
+        self.ui.btnRefineMsg.hide()
+        self.ui.btnCancelGen.show()
+        self.ui.btnGenMessage.setEnabled(False)
 
     def _collectStagedRepos(self):
         model = self.ui.lvStaged.model()
@@ -1228,9 +1234,19 @@ class CommitWindow(StateWindow):
 
         return submodules
 
-    def _onAiMessageAvailable(self, message: str):
+    def _restoreAiMessageButtons(self):
         self.ui.btnCancelGen.hide()
-        self.ui.btnGenMessage.show()
+        if self.ui.btnGenMessage.isHidden():
+            self.ui.btnGenMessage.show()
+            doc = self.ui.teMessage.document()
+            isEmpty = doc.isEmpty() or not doc.toPlainText().strip()
+            self.ui.btnRefineMsg.setEnabled(not isEmpty)
+        else:
+            self.ui.btnGenMessage.setEnabled(self._stagedModel.rowCount() > 0)
+            self.ui.btnRefineMsg.show()
+
+    def _onAiMessageAvailable(self, message: str):
+        self._restoreAiMessageButtons()
         if not message:
             return
 
@@ -1246,8 +1262,7 @@ class CommitWindow(StateWindow):
 
     def _onCancelGenMessageClicked(self):
         self._aiMessage.cancel()
-        self.ui.btnCancelGen.hide()
-        self.ui.btnGenMessage.show()
+        self._restoreAiMessageButtons()
 
     def _onShowCommitClicked(self):
         qApp.postEvent(qApp, ShowCommitEvent(None))
@@ -1439,3 +1454,8 @@ class CommitWindow(StateWindow):
 
         self._findSubmoduleThread.start()
         self._loadLocalChanges()
+
+    def _onMessageChanged(self):
+        doc = self.ui.teMessage.document()
+        isEmpty = doc.isEmpty() or not doc.toPlainText().strip()
+        self.ui.btnRefineMsg.setEnabled(not isEmpty)
