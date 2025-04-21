@@ -1314,12 +1314,9 @@ class CommitWindow(StateWindow):
         if not repoFiles:
             return
 
-        staged = listView == self.ui.lvStaged
-
         self._blockUI()
         self.ui.spinnerUnstaged.start()
-        self._submoduleExecutor.submit(
-            repoFiles, self._doRestoreStaged if staged else self._doRestore)
+        self._submoduleExecutor.submit(repoFiles, self._doRestoreStaged)
         self._curFile = None
         self._curFileStatus = None
 
