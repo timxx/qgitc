@@ -133,7 +133,7 @@ class CommitMessageEdit(QPlainTextEdit):
 
             cursorPos = cursor.positionInBlock()
             text = lineText[:cursorPos] if isBackward else lineText[cursorPos:]
-            if self._doFind(cursor, text, groupChars, isBackward):
+            if self._doFind(cursor, text, groupChars, isBackward, ignoreCommentLine):
                 break
             else:
                 firstRound = self._nextLine(cursor, isBackward, firstRound)
@@ -165,26 +165,27 @@ class CommitMessageEdit(QPlainTextEdit):
         cursor.setPosition(postion)
         return lineText
 
-    def _doFind(self, cursor: QTextCursor, text: str, groupChars: List[str], isBackward=False):
+    def _doFind(self, cursor: QTextCursor, text: str, groupChars: List[str], isBackward=False, ignoreCommentLine=False):
         if not text:
             return False
 
         findFunc = self._doFindPrev if isBackward else self._doFindNext
         for groupChar in groupChars:
-            if findFunc(cursor, text, groupChar[0], groupChar[1]):
+            if findFunc(cursor, text, groupChar[0], groupChar[1], ignoreCommentLine):
                 return True
 
         return False
 
-    def _doFindNext(self, cursor: QTextCursor, text: str, openChar: str, closeChar: str):
+    def _doFindNext(self, cursor: QTextCursor, text: str, openChar: str, closeChar: str, ignoreCommentLine: bool):
         begin = text.find(openChar)
         if begin != -1:
             end = text.find(closeChar, begin + 1)
             # maybe end in next line
-            while not cursor.atEnd() and end == -1 and self.blockCount() > 1:
+            while end == -1 and cursor.block().blockNumber() != self.blockCount() - 1:
                 self._nextLine(cursor, False)
                 text = self._curLineText(cursor)
-                end = text.find(closeChar)
+                if not ignoreCommentLine or not text.startswith("#"):
+                    end = text.find(closeChar)
 
             if end != -1:
                 cursor.setPosition(cursor.position() + end)
@@ -193,15 +194,16 @@ class CommitMessageEdit(QPlainTextEdit):
 
         return False
 
-    def _doFindPrev(self, cursor: QTextCursor, text: str, openChar: str, closeChar: str):
+    def _doFindPrev(self, cursor: QTextCursor, text: str, openChar: str, closeChar: str, ignoreCommentLine: bool):
         end = text.rfind(closeChar)
         if end != -1:
             begin = text.rfind(openChar, 0, end - 1)
             # maybe start in prev line
-            while not cursor.atStart() and begin == -1 and self.blockCount() > 1:
+            while begin == -1 and cursor.block().blockNumber() != 0:
                 self._nextLine(cursor, True)
                 text = self._curLineText(cursor)
-                begin = text.rfind(openChar)
+                if not ignoreCommentLine or not text.startswith("#"):
+                    begin = text.rfind(openChar)
 
             if begin != -1:
                 cursor.setPosition(cursor.position() - len(text[end:]))
