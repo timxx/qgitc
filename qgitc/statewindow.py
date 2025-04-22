@@ -49,3 +49,12 @@ class StateWindow(QMainWindow):
 
     def isMaximizedByDefault(self):
         return True
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            sett = qApp.settings()
+            if sett.quitViaEsc():
+                self.close()
+                return
+
+        super().keyPressEvent(event)

@@ -519,12 +519,8 @@ class MainWindow(StateWindow):
                 if qApp.lastFocusWidget():
                     qApp.lastFocusWidget().setFocus()
                 return
-            sett = qApp.instance().settings()
-            if sett.quitViaEsc():
-                self.close()
-                return
 
-        super(MainWindow, self).keyPressEvent(event)
+        super().keyPressEvent(event)
 
     def showEvent(self, event):
         super(MainWindow, self).showEvent(event)
