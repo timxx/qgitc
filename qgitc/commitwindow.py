@@ -600,6 +600,18 @@ class CommitWindow(StateWindow):
         return repoUrl[index+1:]
 
     def _onCommitClicked(self):
+        doc = self.ui.teMessage.document()
+        if not doc.isEmpty() and not doc.isUndoAvailable():
+            r = QMessageBox.question(
+                self,
+                self.tr("Confirm commit"),
+                self.tr(
+                    "You did not edit the message template. Do you want to use the template as commit message?"),
+                QMessageBox.Yes | QMessageBox.No)
+            if r == QMessageBox.No:
+                self.ui.teMessage.setFocus()
+                return
+
         if not self._checkMessage():
             return
 
