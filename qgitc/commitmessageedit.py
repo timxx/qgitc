@@ -115,9 +115,15 @@ class CommitMessageEdit(QPlainTextEdit):
                 cursor.movePosition(QTextCursor.MoveOperation.End)
             self.setTextCursor(cursor)
 
-        while firstRound or not (cursor.atStart() if isBackward else cursor.atEnd()):
-            lineText = self._curLineText(cursor)
+        processedBlocks = set()
+        while True:
+            # we've processed all blocks
+            if cursor.blockNumber() in processedBlocks:
+                _updateNotFoundCursor()
+                break
+            processedBlocks.add(cursor.blockNumber())
 
+            lineText = self._curLineText(cursor)
             if not lineText or (ignoreCommentLine and lineText.startswith("#")):
                 if self.blockCount() == 1:
                     _updateNotFoundCursor()
@@ -128,9 +134,6 @@ class CommitMessageEdit(QPlainTextEdit):
             cursorPos = cursor.positionInBlock()
             text = lineText[:cursorPos] if isBackward else lineText[cursorPos:]
             if self._doFind(cursor, text, groupChars, isBackward):
-                break
-            elif not firstRound and self.blockCount() == 1:
-                _updateNotFoundCursor()
                 break
             else:
                 firstRound = self._nextLine(cursor, isBackward, firstRound)
