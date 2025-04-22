@@ -254,6 +254,7 @@ class AiCommitMessage(QObject):
             self._message += response.message
 
     def _onAiResponseFinished(self):
+        stripMessage = ""
         if self._message:
             message = self._message.strip()
             if message.startswith("```text"):
@@ -261,11 +262,10 @@ class AiCommitMessage(QObject):
             if message.endswith("```"):
                 message = message[:-3]
             message = message.strip()
-            stripMessage = ""
             for line in message.splitlines():
                 if stripMessage:
                     stripMessage += "\n"
                 stripMessage += line.rstrip()
-            if stripMessage:
-                self.messageAvailable.emit(stripMessage)
+
+        self.messageAvailable.emit(stripMessage)
         self._aiModel = None
