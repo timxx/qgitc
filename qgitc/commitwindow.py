@@ -1223,6 +1223,9 @@ class CommitWindow(StateWindow):
         self.ui.btnCancelGen.show()
         self.ui.btnGenMessage.setEnabled(False)
 
+        self._aiMessage.refine(self.ui.teMessage.toPlainText().strip())
+        logger.debug("Begin refine commit message")
+
     def _collectStagedRepos(self):
         model = self.ui.lvStaged.model()
         submodules = set()
@@ -1247,7 +1250,12 @@ class CommitWindow(StateWindow):
 
     def _onAiMessageAvailable(self, message: str):
         self._restoreAiMessageButtons()
+        logger.debug("AI message: %s", message)
         if not message:
+            return
+
+        oldMessage = self.ui.teMessage.toPlainText().strip()
+        if oldMessage == message:
             return
 
         self._replaceMessage(message)

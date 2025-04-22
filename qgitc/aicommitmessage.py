@@ -59,6 +59,20 @@ commit message goes here
 </custom-instructions>"""
 
 
+REFINE_MESSAGE_PROMPT = \
+    """Please optimize the provided git commit message by correcting spelling/grammar errors, improving clarity, and refining phrasing without altering its original structure (e.g., preserve line breaks, template sections like "Co-authored-by", "Signed-off-by", or issue references). Retain technical terms, jargon, and specific formatting.
+
+# Instructions:
+1. Fix errors: Correct typos, grammar, and punctuation.
+2. Improve clarity: Rephrase ambiguous or redundant descriptions concisely while preserving intent.
+3. Preserve structure: Do NOT reorder, add, or remove sections (e.g., keep lines like "Fixes #123" unchanged).
+4. Output: Return only the optimized commit message in plain text. No explanations, markdown, or extra text.
+
+# Commit Message:
+{message}
+"""
+
+
 class CommitInfoEvent(QEvent):
     Type = QEvent.User + 1
 
@@ -107,6 +121,25 @@ class AiCommitMessage(QObject):
         self._diffs.clear()
         self._message = ""
         self._executor.submit(repoData, self._fetchCommitInfo)
+
+    def refine(self, message: str):
+        if not message:
+            self.messageAvailable.emit("")
+            logger.info("No commit message to refine")
+            return
+
+        self.cancel()
+        self._message = ""
+
+        params = AiParameters()
+        params.temperature = 0.1
+        params.max_tokens = 4096
+        params.prompt = REFINE_MESSAGE_PROMPT.format(message=message)
+
+        self._aiModel = GithubCopilot(self)
+        self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
+        self._aiModel.finished.connect(self._onAiResponseFinished)
+        self._aiModel.queryAsync(params)
 
     def cancel(self):
         if self._aiModel and self._aiModel.isRunning():
