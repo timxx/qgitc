@@ -105,6 +105,11 @@ class Application(QApplication):
         else:
             locale = QLocale(lang)
 
+        # Do nothing for English locale, as the strings are already in English.
+        # This fix addresses the issue where the translator misloaded Chinese when the locale is set to "en".
+        if locale.language() == QLocale.English:
+            return
+
         # the Qt translations
         dirPath = QLibraryInfo.location(QLibraryInfo.TranslationsPath)
         self._installTranslator(locale, dirPath, "qt", "_")
