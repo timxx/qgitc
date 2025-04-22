@@ -99,12 +99,7 @@ class Application(QApplication):
         return self._settings
 
     def setupTranslator(self):
-        lang = self._settings.language()
-        if lang == "":
-            locale = QLocale.system()
-        else:
-            locale = QLocale(lang)
-
+        locale = self.uiLocale()
         # Do nothing for English locale, as the strings are already in English.
         # This fix addresses the issue where the translator misloaded Chinese when the locale is set to "en".
         if locale.language() == QLocale.English:
@@ -376,3 +371,16 @@ class Application(QApplication):
 
     def colorSchema(self):
         return self._colorSchema
+
+    def uiLocale(self):
+        lang = self._settings.language()
+        if not lang:
+            locale = QLocale.system()
+        else:
+            locale = QLocale(lang)
+
+        return locale
+
+    def uiLanguage(self):
+        locale = self.uiLocale()
+        return locale.languageToString(locale.language())

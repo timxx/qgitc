@@ -57,7 +57,7 @@ class GithubCopilot(AiModelBase):
         elif params.chat_mode == AiChatMode.CodeReview:
             prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
-                language=QLocale.system().nativeLanguageName())
+                language=qApp.uiLanguage())
         self.add_history(self._makeMessage("user", prompt))
         payload["messages"] = self._history
 
