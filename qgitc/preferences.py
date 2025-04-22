@@ -313,6 +313,15 @@ class Preferences(QDialog):
         index = self.ui.cbColorSchema.findData(self.settings.colorSchemaMode())
         self.ui.cbColorSchema.setCurrentIndex(index)
 
+        langs = self._uiLanguages()
+        for lang, desc in langs:
+            self.ui.cbLanguage.addItem(desc, lang)
+
+        index = self.ui.cbLanguage.findData(self.settings.language())
+        if index == -1:
+            index = 0
+        self.ui.cbLanguage.setCurrentIndex(index)
+
         styles = QStyleFactory.keys()
         for style in styles:
             self.ui.cbStyle.addItem(style.capitalize())
@@ -368,6 +377,9 @@ class Preferences(QDialog):
         value = self.ui.cbStyle.currentText()
         self.settings.setStyleName(value)
         qApp.setStyle(value)
+
+        value = self.ui.cbLanguage.currentData()
+        self.settings.setLanguage(value)
 
         value = self.ui.leGitPath.text()
         self.settings.setGitBinPath(value)
@@ -544,3 +556,10 @@ class Preferences(QDialog):
         dialog.widget.setActions(self.settings.globalCommitActions())
         if dialog.exec() == QDialog.Accepted:
             self.settings.setGlobalCommitActions(dialog.widget.actions())
+
+    def _uiLanguages(self):
+        return [
+            ("", self.tr("System Default")),
+            ("en_US", self.tr("English")),
+            ("zh_CN", self.tr("Simplified Chinese")),
+        ]

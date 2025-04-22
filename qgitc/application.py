@@ -67,8 +67,8 @@ class Application(QApplication):
         iconPath = dataDirPath() + "/icons/qgitc.svg"
         self.setWindowIcon(QIcon(iconPath))
 
-        self.setupTranslator()
         self._settings = Settings(self)
+        self.setupTranslator()
 
         self._logWindow = None
         self._blameWindow = None
@@ -99,17 +99,22 @@ class Application(QApplication):
         return self._settings
 
     def setupTranslator(self):
+        lang = self._settings.language()
+        if lang == "":
+            locale = QLocale.system()
+        else:
+            locale = QLocale(lang)
+
         # the Qt translations
         dirPath = QLibraryInfo.location(QLibraryInfo.TranslationsPath)
-        translator = QTranslator(self)
-        if translator.load(QLocale.system(), "qt", "_", dirPath):
-            self.installTranslator(translator)
-        else:
-            translator = None
+        self._installTranslator(locale, dirPath, "qt", "_")
 
-        translator = QTranslator(self)
         dirPath = dataDirPath() + "/translations"
-        if translator.load(QLocale.system(), "", "", dirPath):
+        self._installTranslator(locale, dirPath, "", "")
+
+    def _installTranslator(self, locale: QLocale, dirPath: str, name: str, prefix: str):
+        translator = QTranslator(self)
+        if translator.load(locale, name, prefix, dirPath):
             self.installTranslator(translator)
         else:
             translator = None

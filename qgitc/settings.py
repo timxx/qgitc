@@ -510,3 +510,9 @@ class Settings(QSettings):
 
     def setStyleName(self, style):
         self.setValue("styleName", style)
+
+    def language(self) -> str:
+        return self.value("language", "")
+
+    def setLanguage(self, lang: str):
+        self.setValue("language", lang)
