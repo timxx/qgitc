@@ -56,6 +56,11 @@ class StatusFetcher(SubmoduleExecutor):
     def setShowIgnoredFiles(self, showIgnoredFiles: bool):
         self._showIgnoredFiles = showIgnoredFiles
 
+    def fetchStatus(self, submodule, cancelEvent: CancelEvent):
+        _, result = self._fetchStatus(submodule, None, cancelEvent)
+        if result:
+            self.resultAvailable.emit(submodule, result)
+
     def _fetchStatus(self, submodule, userData, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         try:
@@ -73,13 +78,30 @@ class StatusFetcher(SubmoduleExecutor):
 
         lines = data.rstrip(b'\0').split(b'\0')
         result = []
-        for line in lines:
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            i += 1
+
             assert (len(line) > 3)
+            if line[2] != 32:
+                logger.warning("Unexpected status line `%s`", line.decode())
+                continue
+
             status = line[:2].decode()
             file = line[3:].decode()
-            repoFile = os.path.join(
-                submodule, file) if submodule and submodule != '.' else file
-            result.append((status, os.path.normpath(repoFile)))
+            repoFile = os.path.normpath(os.path.join(
+                submodule, file) if submodule and submodule != '.' else file)
+
+            oldRepoFile = None
+            # rename followed by old name
+            if status[0] == 'R' and i + 1 < len(lines):
+                oldFile = lines[i].decode()
+                oldRepoFile = os.path.normpath(os.path.join(
+                    submodule, oldFile) if submodule and submodule != '.' else oldFile)
+                i += 1
+
+            result.append((status, repoFile, oldRepoFile))
 
         logger.debug("Status fetch result for `%s`: %s", repoDir, result)
 

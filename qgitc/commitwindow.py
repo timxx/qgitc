@@ -62,16 +62,18 @@ class FileStatus(Enum):
 
 class StatusFileInfo():
 
-    def __init__(self, file: str, repoDir: str, statusCode: str):
+    def __init__(self, file: str, repoDir: str, statusCode: str, oldFile: str = None):
         self.file = file
         self.repoDir = repoDir
         self.statusCode = statusCode
+        self.oldFile = oldFile
 
 
 class StatusFileListModel(QAbstractListModel):
 
     StatusCodeRole = Qt.UserRole
     RepoDirRole = Qt.UserRole + 1
+    OldFileRole = Qt.UserRole + 2
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -110,13 +112,20 @@ class StatusFileListModel(QAbstractListModel):
             return self._fileList[row].repoDir
         elif role == Qt.DecorationRole:
             return self._statusIcon(self._fileList[row].statusCode)
+        elif role == Qt.ToolTipRole:
+            oldFile = self._fileList[row].oldFile
+            if oldFile:
+                return self.tr("Renamed from: ") + oldFile
+        elif role == StatusFileListModel.OldFileRole:
+            return self._fileList[row].oldFile
 
         return None
 
-    def addFile(self, file: str, repoDir: str, statusCode: str):
+    def addFile(self, file: str, repoDir: str, statusCode: str, oldFile: str = None):
         rowCount = self.rowCount()
         self.beginInsertRows(QModelIndex(), rowCount, rowCount)
-        self._fileList.append(StatusFileInfo(file, repoDir, statusCode))
+        self._fileList.append(StatusFileInfo(
+            file, repoDir, statusCode, oldFile))
         self.endInsertRows()
 
     def tryAddFile(self, file: str, repoDir: str, statusCode: str):
@@ -167,16 +176,6 @@ class StatusFileListModel(QAbstractListModel):
             icon = _makeTextIcon(statusCode, color, font)
             self._icons[statusCode] = icon
         return icon
-
-
-class UpdateFilesEvent(QEvent):
-    Type = QEvent.User + 1
-
-    def __init__(self, isStaged: bool, submodule: str, files: List[str]):
-        super().__init__(QEvent.Type(UpdateFilesEvent.Type))
-        self.isStaged = isStaged
-        self.submodule = submodule
-        self.files = files
 
 
 class GitErrorEvent(QEvent):
@@ -450,14 +449,17 @@ class CommitWindow(StateWindow):
         logger.debug("Begin fetch status")
 
     def clear(self):
-        self._filesModel.clear()
-        self._stagedModel.clear()
-        self._curFile = None
-        self._curFileStatus = None
+        self.clearModels()
         self._repoBranch.clear()
         self._branchMessage.clear()
         self._branchWidget.setVisible(False)
         self._branchLabel.setText("")
+
+    def clearModels(self):
+        self._filesModel.clear()
+        self._stagedModel.clear()
+        self._curFile = None
+        self._curFileStatus = None
 
     def _onFindSubmoduleFinished(self):
         submodules = self._findSubmoduleThread.submodules
@@ -475,10 +477,10 @@ class CommitWindow(StateWindow):
         else:
             self._statusFetcher.fetch(newSubmodules)
 
-    def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str]]):
-        for status, file in fileList:
+    def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str, str]]):
+        for status, file, oldFile in fileList:
             if status[0] != " " and status[0] not in ["?", "!"]:
-                self._stagedModel.addFile(file, repoDir, status[0])
+                self._stagedModel.addFile(file, repoDir, status[0], oldFile)
             if status[1] != " ":
                 self._filesModel.addFile(file, repoDir, status[1])
 
@@ -518,8 +520,8 @@ class CommitWindow(StateWindow):
         if not current.isValid():
             return
 
-        file = self._filesModel.data(current, Qt.DisplayRole)
-        repoDir = self._filesModel.data(
+        file = self._stagedModel.data(current, Qt.DisplayRole)
+        repoDir = self._stagedModel.data(
             current, StatusFileListModel.RepoDirRole)
 
         self._showDiff(file, repoDir, FileStatus.Staged)
@@ -791,6 +793,7 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
+        self.clearModels()
 
     def _onUnstageAllClicked(self):
         submoduleFiles = self._collectModelFiles(self.ui.lvStaged.model())
@@ -800,8 +803,7 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
-        self._curFile = None
-        self._curFileStatus = None
+        self.clearModels()
 
     def _onStageClicked(self):
         submoduleFiles = self._collectSectionFiles(self.ui.lvFiles)
@@ -811,6 +813,7 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
+        self.clearModels()
 
     def _onStageAllClicked(self):
         submoduleFiles = self._collectModelFiles(self.ui.lvFiles.model())
@@ -820,25 +823,22 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
-        self._curFile = None
-        self._curFileStatus = None
+        self.clearModels()
 
     def _doUnstage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.restoreStagedFiles(repoDir, repoFiles)
-        if not error:
-            qApp.postEvent(self, UpdateFilesEvent(True, submodule, files))
-        else:
+        self._statusFetcher.fetchStatus(submodule, cancelEvent)
+        if error:
             qApp.postEvent(self, GitErrorEvent(error))
 
     def _doStage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.addFiles(repoDir, repoFiles)
-        if not error:
-            qApp.postEvent(self, UpdateFilesEvent(False, submodule, files))
-        else:
+        self._statusFetcher.fetchStatus(submodule, cancelEvent)
+        if error:
             qApp.postEvent(self, GitErrorEvent(error))
 
     def _onNonUITaskFinished(self):
@@ -854,10 +854,6 @@ class CommitWindow(StateWindow):
         self.ui.cbAmend.setEnabled(not blocked)
 
     def event(self, evt):
-        if evt.type() == UpdateFilesEvent.Type:
-            self._updateFiles(evt.isStaged, evt.submodule, evt.files)
-            return True
-
         if evt.type() == GitErrorEvent.Type:
             # TODO: merge the same error and report at end
             QMessageBox.critical(
@@ -925,30 +921,6 @@ class CommitWindow(StateWindow):
             self._handleFileRestoreEvent(evt.submodule, evt.files, evt.error)
 
         return super().event(evt)
-
-    def _updateFiles(self, isStaged: bool, submodule: str, files: List[str]):
-        model = self._stagedModel if isStaged else self._filesModel
-        status = self._removeFiles(model, submodule, files)
-
-        model = self._filesModel if isStaged else self._stagedModel
-        self._addFiles(model, submodule, files, status)
-
-    def _removeFiles(self, model: StatusFileListModel, submodule: str, files: List[str]):
-        status = {}
-        for file in files:
-            info = model.removeFile(file, submodule)
-            status.setdefault(file, info.statusCode)
-        return status
-
-    def _addFiles(self, model: StatusFileListModel, submodule: str, files: List[str], oldStatus: Dict[str, str]):
-        for file in files:
-            status = oldStatus.get(file)
-            if status in ["?", "!"] and model == self._stagedModel:
-                status = "A"
-            elif status == "A" and model == self._filesModel:
-                # TODO: might be ignored files
-                status = "?"
-            model.tryAddFile(file, submodule, status)
 
     def reloadLocalChanges(self):
         self.clear()
