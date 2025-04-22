@@ -672,7 +672,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # to avoid bad reset on each repo
         if enabled and qApp.settings().isCompositeMode():
-            enabled = False
+            # disable only if have submodules
+            enabled = not self.window().submodules()
         self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
