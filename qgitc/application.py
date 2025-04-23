@@ -57,7 +57,7 @@ class Application(QApplication):
 
     repoDirChanged = Signal()
 
-    def __init__(self, argv):
+    def __init__(self, argv, testing=False):
         super(Application, self).__init__(argv)
 
         self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
@@ -67,7 +67,7 @@ class Application(QApplication):
         iconPath = dataDirPath() + "/icons/qgitc.svg"
         self.setWindowIcon(QIcon(iconPath))
 
-        self._settings = Settings(self)
+        self._settings = Settings(self, testing=testing)
         self.setupTranslator()
 
         self._logWindow = None

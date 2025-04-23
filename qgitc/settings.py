@@ -71,11 +71,12 @@ class Settings(QSettings):
     colorSchemaModeChanged = Signal(int)
     ignoreCommentLineChanged = Signal(bool)
 
-    def __init__(self, parent=None):
-        super(Settings, self).__init__(
+    def __init__(self, parent=None, testing=False):
+        super().__init__(
             QSettings.NativeFormat,
             QSettings.UserScope,
             "qgitc",
+            "test" if testing else "",
             parent=parent)
 
         self._fixedFont = None

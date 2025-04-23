@@ -1,26 +1,10 @@
 # -*- coding: utf-8 -*-
-from qgitc.application import Application
 from PySide6.QtTest import QTest
+from qgitc.application import Application
+from tests.base import TestBase
 
-import sys
-import unittest
 
-
-class TestApp(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.app = Application(sys.argv)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.processEvents(cls)
-        cls.app.quit()
-        del cls.app
-
-    def processEvents(self):
-        self.app.sendPostedEvents()
-        self.app.processEvents()
-
+class TestApp(TestBase):
     def testRepoName(self):
         name = self.app.repoName()
         self.assertIn(name, ["qgitc.git", "qgitc"])
