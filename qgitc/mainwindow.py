@@ -270,11 +270,7 @@ class MainWindow(StateWindow):
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
 
-        if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
-            self.findSubmoduleThread.disconnect(self)
-            self.findSubmoduleThread.requestInterruption()
-            self.findSubmoduleThread.wait()
-
+        self.cancel()
         if repoDir:
             self.ui.leRepo.setReadOnly(True)
             self.ui.btnRepoBrowse.setDisabled(True)
@@ -539,6 +535,7 @@ class MainWindow(StateWindow):
         if self.gitViewB is not None:
             self.gitViewB.queryClose()
 
+        self.cancel()
         super().closeEvent(event)
 
     def setFilterFile(self, filePath):
@@ -671,3 +668,12 @@ class MainWindow(StateWindow):
 
     def _onShowAiAssistant(self):
         qApp.postEvent(qApp, ShowAiAssistantEvent())
+
+    def cancel(self):
+        self._delayTimer.stop()
+
+        if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
+            self.findSubmoduleThread.disconnect(self)
+            self.findSubmoduleThread.requestInterruption()
+            self.findSubmoduleThread.wait()
+            self.findSubmoduleThread = None

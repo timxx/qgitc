@@ -89,6 +89,9 @@ class AiModelBase(QThread):
     def supportedChatModes(self):
         return [AiChatMode.Chat]
 
+    def cleanup(self):
+        pass
+
 
 class ChatGPTModel(AiModelBase):
 
@@ -217,9 +220,12 @@ class LocalLLMNameFetcher(QThread):
     def run(self):
         try:
             url = f"{self.url_base}/models"
-            response = requests.get(url)
+            response = requests.get(url, timeout=0.3)
             if not response.ok:
                 return
+            if self.isInterruptionRequested():
+                return
+
             model_list = json.loads(response.text)
             if not model_list or "data" not in model_list:
                 return
@@ -285,3 +291,14 @@ class LocalLLM(ChatGPTModel):
                 AiChatMode.CodeFix,
                 AiChatMode.CodeExplanation
                 ]
+
+    def cleanup(self):
+        if self.nameFetcher and self.nameFetcher.isRunning():
+            self.nameChanged.disconnect(self)
+            self.nameFetcher.requestInterruption()
+            self.nameFetcher.wait(500)
+            if self.nameFetcher.isRunning():
+                logger.warning(
+                    "Name fetcher thread is still running, terminating it.")
+                self.nameFetcher.terminate()
+            self.nameFetcher = None

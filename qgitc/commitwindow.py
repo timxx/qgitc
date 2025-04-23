@@ -1272,6 +1272,10 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.cancel()
         self._commitExecutor.cancel()
         self._statusFetcher.cancel()
+        if self._findSubmoduleThread.isRunning():
+            self._findSubmoduleThread.requestInterruption()
+            # it should be fast (less than 1s)
+            self._findSubmoduleThread.wait()
 
     def closeEvent(self, event):
         self.cancel()

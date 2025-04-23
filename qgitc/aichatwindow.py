@@ -291,6 +291,7 @@ class AiChatWidget(QWidget):
             model: AiModelBase = self.cbBots.itemData(i)
             if model.isRunning():
                 model.requestInterruption()
+            model.cleanup()
 
     def sizeHint(self):
         return QSize(800, 600)

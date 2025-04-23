@@ -12,6 +12,7 @@ class FindSubmoduleThread(QThread):
 
         self._repoDir = os.path.normcase(os.path.normpath(repoDir))
         self._submodules = []
+        self._process: GitProcess = None
 
     @property
     def submodules(self):
@@ -25,13 +26,14 @@ class FindSubmoduleThread(QThread):
             return
 
         # try git submodule first
-        process = GitProcess(self._repoDir,
-                             ["submodule", "foreach", "--quiet", "echo $name"],
-                             True)
-        data = process.communicate()[0]
+        self._process = GitProcess(self._repoDir,
+                                   ["submodule", "foreach",
+                                       "--quiet", "echo $name"],
+                                   True)
+        data = self._process.communicate()[0]
         if self.isInterruptionRequested():
             return
-        if process.returncode == 0 and data:
+        if self._process.returncode == 0 and data:
             self._submodules = data.rstrip().split('\n')
             self._submodules.insert(0, ".")
             return
@@ -60,3 +62,8 @@ class FindSubmoduleThread(QThread):
             submodules.insert(0, '.')
 
         self._submodules = submodules
+
+    def requestInterruption(self):
+        if self._process:
+            self._process.process.kill()
+        super().requestInterruption()
