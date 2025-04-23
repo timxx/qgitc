@@ -143,7 +143,7 @@ class AiCommitMessage(QObject):
 
     def cancel(self):
         if self._aiModel and self._aiModel.isRunning():
-            logger.warning("cancelling AI model")
+            logger.info("cancelling AI model")
             self._aiModel.responseAvailable.disconnect(
                 self._onAiResponseAvailable)
             self._aiModel.finished.disconnect(self._onAiResponseFinished)

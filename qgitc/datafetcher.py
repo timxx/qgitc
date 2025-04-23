@@ -92,7 +92,7 @@ class DataFetcher(QObject):
 
     def cancel(self):
         if self._process:
-            logger.warning("Cancel git process")
+            logger.info("Cancel git process")
             # self._process.disconnect(self)
             QObject.disconnect(self._process,
                                SIGNAL("readyReadStandardOutput()"),
