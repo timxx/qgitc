@@ -1,6 +1,7 @@
 # QGitc
 
 [![Build Status](https://github.com/timxx/qgitc/actions/workflows/main.yml/badge.svg)](https://github.com/timxx/qgitc/actions)
+[![Unit Testing](https://github.com/timxx/qgitc/actions/workflows/tests.yml/badge.svg)](https://github.com/timxx/qgitc/actions)
 [![PyPI version](https://img.shields.io/pypi/v/qgitc.svg)](https://pypi.org/project/qgitc)
 [![Python version](https://img.shields.io/pypi/pyversions/qgitc.svg)](https://pypi.org/project/qgitc)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
