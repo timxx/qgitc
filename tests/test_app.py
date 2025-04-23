@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QTest, QSignalSpy
 from qgitc.application import Application
+from qgitc.gitutils import Git
 from tests.base import TestBase
 
 
@@ -34,3 +35,19 @@ class TestApp(TestBase):
             window.close()
 
             self.processEvents()
+
+    def testUpdateRepo(self):
+        oldRepoDir = Git.REPO_DIR
+        self.assertIsNotNone(Git.REPO_DIR)
+
+        spy = QSignalSpy(self.app.repoDirChanged)
+        self.app.updateRepoDir(None)
+        self.assertEqual(spy.count(), 1)
+        self.assertIsNone(Git.REPO_DIR)
+
+        self.app.updateRepoDir(oldRepoDir)
+        self.assertEqual(spy.count(), 2)
+        self.assertEqual(Git.REPO_DIR, oldRepoDir)
+
+        self.app.updateRepoDir(oldRepoDir)
+        self.assertEqual(spy.count(), 2)
