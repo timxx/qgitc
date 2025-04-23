@@ -1,0 +1,11 @@
+PySide6-Essentials
+chardet
+requests
+psutil; sys_platform == 'win32'
+
+# for building the package
+setuptools
+wheel
+
+# for uploading the package
+# twine
