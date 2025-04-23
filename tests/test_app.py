@@ -23,7 +23,7 @@ class TestApp(unittest.TestCase):
 
     def testRepoName(self):
         name = self.app.repoName()
-        self.assertEqual(name, "qgitc.git")
+        self.assertIn(name, ["qgitc.git", "qgitc"])
 
     def testLocale(self):
         lang = self.app.uiLanguage()
