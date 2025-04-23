@@ -17,11 +17,11 @@ def _setup_logging():
 
     _log_inited = True
     rootLogger = logging.getLogger()
-    rootLogger.setLevel(logging.DEBUG)
+    rootLogger.setLevel(logging.WARNING)
 
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-        "[%(levelname)s]%(filename)s:%(lineno)d - %(message)s")
+        "[%(levelname)s][%(asctime)s]%(filename)s:%(lineno)d - %(message)s")
     handler.setFormatter(formatter)
 
     rootLogger.addHandler(handler)
