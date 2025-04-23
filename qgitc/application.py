@@ -106,7 +106,7 @@ class Application(QApplication):
             return
 
         # the Qt translations
-        dirPath = QLibraryInfo.location(QLibraryInfo.TranslationsPath)
+        dirPath = QLibraryInfo.path(QLibraryInfo.TranslationsPath)
         self._installTranslator(locale, dirPath, "qtbase", "_")
 
         dirPath = dataDirPath() + "/translations"
