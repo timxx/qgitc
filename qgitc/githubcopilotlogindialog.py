@@ -6,6 +6,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 import requests
 
+from .common import logger
 from .ui_githubcopilotlogindialog import Ui_GithubCopilotLoginDialog
 
 
@@ -76,8 +77,13 @@ class LoginThread(QThread):
             self.loginFailed.emit(self.tr("Failed to get verification URL"))
 
     def _getAccessCode(self):
+        i = 0
         while not self.accessToken and not self.isInterruptionRequested():
-            self.sleep(5)
+            self.msleep(50)
+            i += 1
+            if i % 100 != 0:
+                continue
+
             response = requests.post(
                 "https://github.com/login/oauth/access_token",
                 headers={
@@ -177,7 +183,10 @@ class GithubCopilotLoginDialog(QDialog):
     def closeEvent(self, event):
         if self._loginThread.isRunning():
             self._loginThread.requestInterruption()
-            self._loginThread.wait(5)
+            self._loginThread.wait(55)
+            if self._loginThread.isRunning():
+                self._loginThread.terminate()
+                logger.warning("Terminating login thread")
         return super().closeEvent(event)
 
     def isLoginSuccessful(self):

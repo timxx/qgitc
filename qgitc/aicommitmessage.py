@@ -150,7 +150,8 @@ class AiCommitMessage(QObject):
             self._aiModel.requestInterruption()
             self._aiModel.wait(50)
             if self._aiModel.isRunning():
-                logger.error("AI model still running")
+                self._aiModel.terminate()
+                logger.warning("Terminating AI model thread")
             self._aiModel = None
 
         self._executor.cancel()

@@ -321,7 +321,6 @@ class LogsFetcherThread(QThread):
         self.requestInterruption()
         if self._eventLoop:
             self._eventLoop.quit()
-        self.wait(50)
 
     def _clearFetcher(self):
         for fetcher in self._fetchers:
@@ -373,6 +372,10 @@ class LogsFetcher(QObject):
         if self._thread:
             self._thread.disconnect(self)
             self._thread.cancel()
+            self._thread.wait(50)
+            if self._thread.isRunning():
+                self._thread.terminate()
+                logger.warning("Terminating logs fetcher thread")
             self._thread = None
 
     def isLoading(self):

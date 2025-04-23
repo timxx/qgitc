@@ -108,7 +108,8 @@ class SubmoduleExecutor(QObject):
             self._thread.requestInterruption()
             self._thread.wait(50)
             if self._thread.isRunning():
-                logger.error("submodule thread still running")
+                self._thread.terminate()
+                logger.warning("Terminating submodule thread")
             self._thread = None
 
     def isRunning(self):

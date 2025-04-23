@@ -18,7 +18,7 @@ from PySide6.QtCore import (
     QEvent,
     Signal)
 
-from .common import dataDirPath
+from .common import dataDirPath, logger
 from .coloredicontoolbutton import ColoredIconToolButton
 from .findsubmodules import FindSubmoduleThread
 from .findwidget import FindWidget
@@ -675,5 +675,8 @@ class MainWindow(StateWindow):
         if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
             self.findSubmoduleThread.disconnect(self)
             self.findSubmoduleThread.requestInterruption()
-            self.findSubmoduleThread.wait()
+            self.findSubmoduleThread.wait(500)
+            if self.findSubmoduleThread.isRunning():
+                self.findSubmoduleThread.terminate()
+                logger.warning("Terminating find submodule thread")
             self.findSubmoduleThread = None

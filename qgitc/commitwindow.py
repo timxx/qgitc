@@ -1274,8 +1274,10 @@ class CommitWindow(StateWindow):
         self._statusFetcher.cancel()
         if self._findSubmoduleThread.isRunning():
             self._findSubmoduleThread.requestInterruption()
-            # it should be fast (less than 1s)
-            self._findSubmoduleThread.wait()
+            self._findSubmoduleThread.wait(500)
+            if self._findSubmoduleThread.isRunning():
+                self._findSubmoduleThread.terminate()
+                logger.warning("Terminate find submodule thread")
 
     def closeEvent(self, event):
         self.cancel()
