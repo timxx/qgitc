@@ -294,7 +294,7 @@ class LocalLLM(ChatGPTModel):
 
     def cleanup(self):
         if self.nameFetcher and self.nameFetcher.isRunning():
-            self.nameChanged.disconnect(self)
+            self.nameFetcher.disconnect(self)
             self.nameFetcher.requestInterruption()
             self.nameFetcher.wait(500)
             if self.nameFetcher.isRunning():

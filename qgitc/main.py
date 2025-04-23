@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import (
+    Qt,
+    qInstallMessageHandler,
+    QtMsgType,
+    QMessageLogContext)
 from PySide6.QtWidgets import (
     QStyle)
 
@@ -109,8 +113,23 @@ def _setup_logging():
     handler.setFormatter(formatter)
 
 
+def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
+    if type == QtMsgType.QtWarningMsg:
+        logger.warning(msg)
+    elif type == QtMsgType.QtCriticalMsg:
+        logger.critical(msg)
+    elif type == QtMsgType.QtFatalMsg:
+        logger.fatal(msg)
+    elif type == QtMsgType.QtInfoMsg:
+        logger.info(msg)
+    else:
+        logger.debug(msg)
+
+
 def _init_gui():
     setAppUserId("appid.qgitc.xyz")
+    qInstallMessageHandler(_qt_message_handler)
+
     app = Application(sys.argv)
 
     sys.excepthook = ExceptHandler
