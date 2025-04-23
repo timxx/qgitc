@@ -3,6 +3,7 @@
 import os
 from PySide6.QtCore import QThread
 
+from .common import logger
 from .gitutils import GitProcess
 
 
@@ -65,5 +66,7 @@ class FindSubmoduleThread(QThread):
 
     def requestInterruption(self):
         if self._process:
+            logger.debug("Before kill")
             self._process.process.kill()
+            logger.debug("After kill")
         super().requestInterruption()

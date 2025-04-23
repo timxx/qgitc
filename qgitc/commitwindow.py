@@ -1284,7 +1284,9 @@ class CommitWindow(StateWindow):
                 logger.warning("Terminate find submodule thread")
 
     def closeEvent(self, event):
+        logger.debug("Before cancel")
         self.cancel()
+        logger.debug("After cancel")
         return super().closeEvent(event)
 
     def _onFilesContextMenuRequested(self, pos):
