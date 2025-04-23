@@ -713,7 +713,11 @@ class CommitWindow(StateWindow):
         hasStagedFiles = self._stagedModel.rowCount() > 0
         enabled = hasStagedFiles or self.ui.cbAmend.isChecked()
         self.ui.btnCommit.setEnabled(enabled)
-        self.ui.btnGenMessage.setEnabled(hasStagedFiles)
+
+        # do not enable generate button if it is running
+        if not self.ui.btnCancelGen.isVisible():
+            self.ui.btnGenMessage.setEnabled(hasStagedFiles)
+
         self.ui.btnCodeReview.setEnabled(hasStagedFiles)
 
     def _doCommit(self, submodule: str, userData: Tuple[str, bool, list], cancelEvent: CancelEvent):
@@ -1445,6 +1449,9 @@ class CommitWindow(StateWindow):
         self._loadLocalChanges()
 
     def _onMessageChanged(self):
+        if self.ui.btnCancelGen.isVisible():
+            return
+
         doc = self.ui.teMessage.document()
         isEmpty = doc.isEmpty() or not doc.toPlainText().strip()
         self.ui.btnRefineMsg.setEnabled(not isEmpty)
