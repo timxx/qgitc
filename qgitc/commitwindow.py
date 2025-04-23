@@ -356,6 +356,7 @@ class CommitWindow(StateWindow):
         self._commitExecutor.finished.connect(
             self._onCommitFinished)
 
+        self._infoFetcher = SubmoduleExecutor(self)
         self._repoInfo: RepoInfo = None
 
         self._setupWDMenu()
@@ -965,10 +966,6 @@ class CommitWindow(StateWindow):
         qApp.settings().setShowIgnoredFiles(checked)
         self.reloadLocalChanges()
 
-    def _onInfoFetchFinished(self):
-        sender = self.sender()
-        del sender
-
     def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
         templateFile = Git.getConfigValue("commit.template", False)
         if templateFile and os.path.exists(templateFile):
@@ -1276,6 +1273,7 @@ class CommitWindow(StateWindow):
         self._submoduleExecutor.cancel()
         self._commitExecutor.cancel()
         self._statusFetcher.cancel()
+        self._infoFetcher.cancel()
         if self._findSubmoduleThread.isRunning():
             self._findSubmoduleThread.requestInterruption()
             self._findSubmoduleThread.wait(500)
@@ -1443,9 +1441,7 @@ class CommitWindow(StateWindow):
         if not Git.REPO_DIR:
             return
 
-        infoFetcher = SubmoduleExecutor(self)
-        infoFetcher.finished.connect(self._onInfoFetchFinished)
-        infoFetcher.submit(None, self._fetchRepoInfo)
+        self._infoFetcher.submit(None, self._fetchRepoInfo)
 
         self._findSubmoduleThread.start()
         self._loadLocalChanges()
