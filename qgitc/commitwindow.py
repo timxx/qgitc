@@ -968,17 +968,36 @@ class CommitWindow(StateWindow):
 
     def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
         templateFile = Git.getConfigValue("commit.template", False)
+        if cancelEvent.isSet():
+            return
+
         if templateFile and os.path.exists(templateFile):
             with open(templateFile, "r", encoding="utf-8") as f:
                 template = f.read().rstrip()
+            if cancelEvent.isSet():
+                return
             if template:
                 qApp.postEvent(self, TemplateReadyEvent(template))
 
+        if cancelEvent.isSet():
+            return
+
         info = RepoInfo()
         info.userName = Git.userName()
+        if cancelEvent.isSet():
+            return
+
         info.userEmail = Git.userEmail()
+        if cancelEvent.isSet():
+            return
+
         info.branch = Git.activeBranch()
+        if cancelEvent.isSet():
+            return
+
         info.repoUrl = Git.repoUrl()
+        if cancelEvent.isSet():
+            return
 
         qApp.postEvent(self, RepoInfoEvent(info))
 
