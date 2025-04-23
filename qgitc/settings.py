@@ -348,6 +348,8 @@ class Settings(QSettings):
         key = os.path.normpath(os.path.normcase(repoDir))
         self.beginGroup("submodulesCache")
         cache = self.value(key, [])
+        if cache is None:
+            cache = []
         self.endGroup()
         return cache
 
