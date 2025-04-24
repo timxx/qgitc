@@ -146,10 +146,10 @@ class ColorSchemaLight(ColorSchema):
     HighlightLineBg = QColor(0xB3E0B3)
 
     # for list view
-    SelectedItemBg = QColor(0xe8e8e8)
-    SelectedItemFg = Qt.black
-    HoverItemBg = QColor(0xf2f2f2)
-    FocusItemBorder = QColor(0x295eb6)
+    SelectedItemBg = QColor(0x4DA3FF)
+    SelectedItemFg = Qt.white
+    HoverItemBg = SelNoFocus
+    FocusItemBorder = QColor(0x0066CC)
 
     Splitter = Qt.darkGray
     LineNumber = Qt.darkGray
