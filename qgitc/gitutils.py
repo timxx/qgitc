@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
+from typing import Dict, List, Union
+from PySide6.QtCore import QProcess, QEventLoop
 
 import logging
-import subprocess
 import os
 import bisect
 import re
-from typing import Dict, List, Union
 
 
 logger = logging.getLogger(__name__)
@@ -17,29 +17,54 @@ class GitProcess():
 
     GIT_BIN = None
 
-    def __init__(self, repoDir, args, text=None):
-        startupinfo = None
-        if os.name == "nt":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        self._process = subprocess.Popen(
-            [GitProcess.GIT_BIN] + args,
-            cwd=repoDir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            startupinfo=startupinfo,
-            universal_newlines=text)
+    def __init__(self, repoDir: str, args: List[str], text=None):
+        self._eventLoop = None
+        self._text = text
 
-    @property
-    def process(self):
-        return self._process
+        process = QProcess()
+        process.setWorkingDirectory(repoDir)
+        process.start(GitProcess.GIT_BIN, args)
+
+        self._process = process
 
     @property
     def returncode(self):
-        return self._process.returncode
+        return self._process.exitCode()
+
+    def isCrashed(self):
+        return self._process.exitStatus() == QProcess.CrashExit
 
     def communicate(self):
-        return self._process.communicate()
+        if self._process.state() == QProcess.Running:
+            assert (self._eventLoop is None)
+            self._eventLoop = QEventLoop()
+            self._process.finished.connect(self._eventLoop.quit)
+            self._eventLoop.exec()
+
+            # user cancelled
+            if self._eventLoop is None:
+                return None, None
+
+            self._eventLoop = None
+
+        output = self._process.readAllStandardOutput().data()
+        error = self._process.readAllStandardError().data()
+        if self._text:
+            output = output.decode("utf-8")
+            error = error.decode("utf-8")
+        return output, error
+
+    def terminate(self):
+        if not self._eventLoop:
+            return
+
+        self._eventLoop.quit()
+        self._eventLoop = None
+
+        self._process.close()
+        self._process.waitForFinished(50)
+        self._process.kill()
+        logger.warning("Git process killed")
 
 
 class Ref():
