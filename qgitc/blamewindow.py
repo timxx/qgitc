@@ -178,7 +178,7 @@ class BlameWindow(StateWindow):
     def showFindWidget(self):
         if not self._findWidget:
             self._findWidget = FindWidget(
-                self._view.viewer.viewport(), self)
+                self._view.viewer.viewport(), self._view.viewer)
             self._findWidget.find.connect(
                 self._onFindFind)
             self._findWidget.cursorChanged.connect(
