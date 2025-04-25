@@ -133,7 +133,7 @@ class Git():
         return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None, repoDir=None) -> Union[bytes, None]:
+    def checkOutput(args, text=None, repoDir=None) -> Union[bytes, str, None]:
         process = Git.run(args, text, repoDir)
         data, error = process.communicate()
         if process.returncode != 0:
@@ -722,3 +722,17 @@ class Git():
         if data:
             return data.rstrip().decode("utf-8")
         return ""
+
+    @staticmethod
+    def isShallowRepo(repoDir=None):
+        if Git.versionGE(2, 15, 0):
+            args = ["rev-parse", "--is-shallow-repository"]
+            data = Git.checkOutput(args, text=True, repoDir=repoDir)
+            if data:
+                return data.strip() == "true"
+            return False
+        else:
+            # TODO: support worktree?
+            shallowFile = os.path.join(
+                repoDir or Git.REPO_DIR, ".git", "shallow")
+            return os.path.exists(shallowFile)

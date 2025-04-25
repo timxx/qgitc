@@ -3,6 +3,7 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from qgitc.application import Application
+from qgitc.gitutils import Git
 from tests.base import TestBase
 
 
@@ -30,8 +31,11 @@ class TestBlame(TestBase):
         self.assertEqual("#!/usr/bin/python3", viewer.textLineAt(0).text())
 
         self.assertEqual(1, spyRev.count())
-        self.assertEqual(spyRev.at(0)[0].sha1,
-                         "1ea319103d40a9e3d56f7ebe75449bc49f639dcf")
+
+        isShallowRepo = Git.isShallowRepo()
+        if not isShallowRepo:
+            self.assertEqual(
+                spyRev.at(0)[0].sha1, "1ea319103d40a9e3d56f7ebe75449bc49f639dcf")
 
         pos = viewer.textLineAt(2).boundingRect().center()
         for i in range(2):
@@ -43,9 +47,10 @@ class TestBlame(TestBase):
         self.assertEqual(1, spyClicked.count())
         self.assertEqual(spyClicked.at(0)[0].lineNo(), 2)
 
-        self.assertEqual(2, spyRev.count())
-        self.assertEqual(spyRev.at(1)[0].sha1,
-                         "901fe56fdebd63bc0ef52d0ca1de07144aa6ae6f")
+        if not isShallowRepo:
+            self.assertEqual(2, spyRev.count())
+            self.assertEqual(
+                spyRev.at(1)[0].sha1, "901fe56fdebd63bc0ef52d0ca1de07144aa6ae6f")
 
     def testFind(self):
         spyFetcher = QSignalSpy(self.window._view._fetcher.fetchFinished)
