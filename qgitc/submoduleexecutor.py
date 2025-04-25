@@ -26,6 +26,9 @@ class SubmoduleThread(QThread):
         The action can be cancelled if the CancelEvent is set."""
         self._actionHandler = action
 
+    def actionHandler(self):
+        return self._actionHandler
+
     def setResultHandler(self, resultHandler: Callable):
         """ Set the result handler to process the result of the action. """
         self._resultHandler = resultHandler
@@ -109,7 +112,10 @@ class SubmoduleExecutor(QObject):
             self._thread.wait(50)
             if self._thread.isRunning():
                 self._thread.terminate()
-                logger.warning("Terminating submodule thread")
+                handler = self._thread.actionHandler()
+                handlerName = handler.__name__ if handler else "<None>"
+                logger.warning(
+                    "Terminating submodule thread (%s)", handlerName)
             self._thread = None
 
     def isRunning(self):
