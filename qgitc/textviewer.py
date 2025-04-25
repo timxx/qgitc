@@ -881,7 +881,7 @@ class TextViewer(QAbstractScrollArea):
     def resizeEvent(self, event):
         self._adjustScrollbars()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
         if event.button() != Qt.LeftButton:
             return
         if not self.hasTextLines():
@@ -896,7 +896,7 @@ class TextViewer(QAbstractScrollArea):
             self._similarWordPattern = None
             self.viewport().update()
 
-        textLine = self.textLineForPos(event.pos())
+        textLine = self.textLineForPos(event.position())
         if not textLine:
             return
 
@@ -911,10 +911,10 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.selectTo(textLine.lineNo(), len(textLine.text()))
             self._invalidateSelection()
         else:
-            offset = textLine.offsetForPos(self.mapToContents(event.pos()))
+            offset = textLine.offsetForPos(self.mapToContents(event.position()))
             self._cursor.moveTo(textLine.lineNo(), offset)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent):
         if event.source() == Qt.MouseEventNotSynthesized and \
                 self._autoScrollTimer.isActive():
             self._autoScrollTimer.stop()
@@ -930,13 +930,13 @@ class TextViewer(QAbstractScrollArea):
                 self._cursor.hasSelection():
             return
 
-        textLine = self.textLineForPos(event.pos())
+        textLine = self.textLineForPos(event.position())
         if not textLine:
             return
 
         self.textLineClicked.emit(textLine)
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
         if event.button() != Qt.LeftButton:
             return
         if not self.hasTextLines():
@@ -946,11 +946,11 @@ class TextViewer(QAbstractScrollArea):
         self._invalidateSelection()
         self._cursor.clear()
 
-        textLine = self.textLineForPos(event.pos())
+        textLine = self.textLineForPos(event.position())
         if not textLine:
             return
 
-        offset = textLine.offsetForPos(self.mapToContents(event.pos()))
+        offset = textLine.offsetForPos(self.mapToContents(event.position()))
         begin = offset
         end = offset
 
@@ -987,7 +987,7 @@ class TextViewer(QAbstractScrollArea):
             self._similarWordPattern = referWordPattern
             self.viewport().update()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent):
         if self._clickTimer.isValid():
             self._clickTimer.invalidate()
 
@@ -996,11 +996,12 @@ class TextViewer(QAbstractScrollArea):
         if not self.hasTextLines():
             return
 
-        textLine = self.textLineForPos(event.pos())
+        pos = event.position().toPoint()
+        textLine = self.textLineForPos(pos)
         if not textLine:
             return
 
-        offset = textLine.offsetForPos(self.mapToContents(event.pos()))
+        offset = textLine.offsetForPos(self.mapToContents(pos))
         if event.buttons() == Qt.LeftButton:
             self._invalidateSelection()
 
@@ -1011,12 +1012,12 @@ class TextViewer(QAbstractScrollArea):
 
             if event.source() == Qt.MouseEventNotSynthesized:
                 visibleRect = self.viewport().rect()
-                if visibleRect.contains(event.pos()):
+                if visibleRect.contains(pos):
                     self._autoScrollTimer.stop()
                 elif not self._autoScrollTimer.isActive():
                     self._autoScrollTimer.start(100, self)
         elif event.buttons() == Qt.NoButton:
-            x = event.pos().x() + self.horizontalScrollBar().value()
+            x = pos.x() + self.horizontalScrollBar().value()
             if textLine.boundingRect().right() >= x:
                 self._link = textLine.hitTest(offset)
                 if self._link:

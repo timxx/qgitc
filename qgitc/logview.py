@@ -10,7 +10,7 @@ from PySide6.QtGui import (
     QConicalGradient,
     QImage,
     QCursor,
-    QColor)
+    QMouseEvent)
 from PySide6.QtWidgets import (
     QWidget,
     QAbstractScrollArea,
@@ -1730,11 +1730,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             del graphPainter
             self.logGraph.render(graphImage)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
         if not self.data:
             return
 
-        index = self.lineForPos(event.pos())
+        index = self.lineForPos(event.position())
 
         mod = qApp.keyboardModifiers()
         # no OR combination
@@ -1744,8 +1744,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         else:
             self.setCurrentIndex(index)
 
-    def mouseMoveEvent(self, event):
-        self._updateHover(event.pos())
+    def mouseMoveEvent(self, event: QMouseEvent):
+        self._updateHover(event.position())
 
     def wheelEvent(self, event):
         super().wheelEvent(event)
