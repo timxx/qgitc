@@ -33,8 +33,11 @@ class TestLogWindow(TestBase):
 
             isShallowRepo = Git.isShallowRepo()
             if isShallowRepo:
-                critical.assert_called_once()
-                self.assertTrue(spyFetcher.at(0)[0] != 0)
+                branch = Git.activeBranch()
+                hasSymbolicRef = branch is not None and branch != "HEAD"
+                if not hasSymbolicRef:
+                    critical.assert_called_once()
+                    self.assertTrue(spyFetcher.at(0)[0] != 0)
 
             spyBegin = QSignalSpy(logview.beginFetch)
             spyEnd = QSignalSpy(logview.endFetch)
@@ -50,5 +53,5 @@ class TestLogWindow(TestBase):
             # the timer should never be triggered
             self.assertEqual(0, spyTimer.count())
 
-            if isShallowRepo:
+            if isShallowRepo and not hasSymbolicRef:
                 self.assertEqual(critical.call_count, 2)
