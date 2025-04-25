@@ -109,7 +109,11 @@ class GitView(QWidget):
         self.window().submoduleAvailable.connect(self.__onSubmoduleAvailable)
 
     def __updateBranches(self, activeBranch=None):
+        if self._delayTimer.isActive():
+            self._delayTimer.stop()
+        self.ui.cbBranch.blockSignals(True)
         self.ui.cbBranch.clear()
+        self.ui.cbBranch.blockSignals(False)
         self.ui.logView.clear()
         self.ui.diffView.clear()
         self.ui.leSha1.clear()
