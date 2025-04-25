@@ -109,7 +109,7 @@ class SubmoduleExecutor(QObject):
             logger.info("cancelling submodule thread")
             self._thread.finished.disconnect(self.onFinished)
             self._thread.requestInterruption()
-            self._thread.wait(50)
+            self._thread.wait(500)
             if self._thread.isRunning():
                 self._thread.terminate()
                 handler = self._thread.actionHandler()
