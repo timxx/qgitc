@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from PySide6.QtWidgets import QMessageBox
 from qgitc.application import Application
@@ -12,6 +13,9 @@ class TestLogWindow(TestBase):
     def setUpClass(cls):
         super().setUpClass()
         cls.window = cls.app.getWindow(Application.LogWindow)
+        # reduce logs to load to speed up tests
+        cls.window.ui.leOpts.setText("-n50")
+        QTest.keyClick(cls.window.ui.leOpts, Qt.Key_Enter)
 
     @classmethod
     def tearDownClass(cls):
