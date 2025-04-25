@@ -38,8 +38,10 @@ class FindSubmoduleThread(QThread):
         if self.isInterruptionRequested():
             if process.state() == QProcess.ProcessState.Running:
                 process.close()
-                process.kill()
-                logger.warning("Kill find submodule process")
+                process.waitForFinished(50)
+                if process.state() == QProcess.ProcessState.Running:
+                    process.kill()
+                    logger.warning("Kill find submodule process")
             return
 
         if process.exitCode() == 0:
