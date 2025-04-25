@@ -553,8 +553,9 @@ class Git():
         if isGlobal:
             args.insert(1, "--global")
 
-        data = Git.checkOutput(args, True)
-        if data is None:
+        process = Git.run(args, True)
+        data, _ = process.communicate()
+        if process.returncode != 0 or not data:
             return ""
 
         return data.rstrip("\n")
