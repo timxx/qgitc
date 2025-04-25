@@ -141,8 +141,8 @@ class Git():
                 msg = error.decode("utf-8", errors="replace")
             else:
                 msg = error
-            logger.warning("Git command failed: %s (%s)",
-                           " ".join(args), msg.rstrip())
+            logger.warning("git %s (%s)(%s)", " ".join(args),
+                           msg.rstrip(), repoDir or Git.REPO_DIR)
             return None
 
         return data
