@@ -88,3 +88,9 @@ python qgitc.py shell register
 # use --file-manager to specify reigster for
 qgitch shell register --file-manager=thunar
 ```
+
+## Icons
+
+Most of the [SVG icons](./qgitc/data/icons/) come from [Google Fonts](https://fonts.google.com/icons).
+
+Some were resized with Inkscape to match the size for QGitc.
