@@ -275,31 +275,43 @@ class LogsFetcherThread(QThread):
         lccCommit = Commit()
         lucCommit = Commit()
 
-        for task in as_completed(tasks):
-            if self.isInterruptionRequested():
-                return
+        while tasks and not self.isInterruptionRequested():
+            try:
+                for task in as_completed(tasks, 0.01):
+                    if self.isInterruptionRequested():
+                        logger.debug("Logs fetcher cancelled")
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return
 
-            code, errorData, branch, repoDir, logs, hasLCC, hasLUC = task.result()
-            self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
+                    tasks.remove(task)
+                    code, errorData, branch, repoDir, logs, hasLCC, hasLUC = task.result()
+                    self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
 
-            for log in logs:
-                handleCount += 1
-                if handleCount % 100 == 0 and self.isInterruptionRequested():
-                    return
-                # require same day at least
-                key = (log.committerDateTime.date(), log.comments, log.author)
-                if key in mergedLogs.keys():
-                    main_commit = mergedLogs[key]
-                    # don't merge commits in same repo
-                    if _isSameRepoCommit(main_commit, repoDir):
-                        mergedLogs[log.sha1] = log
-                    else:
-                        main_commit.subCommits.append(log)
-                else:
-                    mergedLogs[key] = log
+                    for log in logs:
+                        handleCount += 1
+                        if handleCount % 100 == 0 and self.isInterruptionRequested():
+                            return
+                        # require same day at least
+                        key = (log.committerDateTime.date(), log.comments, log.author)
+                        if key in mergedLogs.keys():
+                            main_commit = mergedLogs[key]
+                            # don't merge commits in same repo
+                            if _isSameRepoCommit(main_commit, repoDir):
+                                mergedLogs[log.sha1] = log
+                            else:
+                                main_commit.subCommits.append(log)
+                        else:
+                            mergedLogs[key] = log
 
-            exitCode |= code
-            self._handleError(errorData, branch, repoDir)
+                    exitCode |= code
+                    self._handleError(errorData, branch, repoDir)
+            except Exception:
+                pass
+
+        if self.isInterruptionRequested():
+            logger.debug("Logs fetcher cancelled")
+            executor.shutdown(wait=False, cancel_futures=True)
+            return
 
         logger.debug("fetch elapsed: %fs", time.time() - b)
         b = time.time()
