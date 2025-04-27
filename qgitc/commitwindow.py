@@ -790,10 +790,21 @@ class CommitWindow(StateWindow):
 
         return submoduleFiles
 
+    def _updateSubmoduleFiles(self, submoduleFiles: Dict[str, List[str]], model: QAbstractListModel):
+        for row in range(model.rowCount()):
+            index = model.index(row, 0)
+            repoDir = model.data(
+                index, StatusFileListModel.RepoDirRole)
+            if repoDir not in submoduleFiles:
+                submoduleFiles[repoDir] = []
+
     def _onUnstageClicked(self):
         submoduleFiles = self._collectSectionFiles(self.ui.lvStaged)
         if not submoduleFiles:
             return
+
+        self._updateSubmoduleFiles(submoduleFiles, self.ui.lvFiles.model())
+        self._updateSubmoduleFiles(submoduleFiles, self.ui.lvStaged.model())
 
         self._blockUI()
         self.ui.spinnerUnstaged.start()
@@ -805,6 +816,8 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
+        self._updateSubmoduleFiles(submoduleFiles, self.ui.lvFiles.model())
+
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doUnstage)
@@ -814,6 +827,9 @@ class CommitWindow(StateWindow):
         submoduleFiles = self._collectSectionFiles(self.ui.lvFiles)
         if not submoduleFiles:
             return
+
+        self._updateSubmoduleFiles(submoduleFiles, self.ui.lvFiles.model())
+        self._updateSubmoduleFiles(submoduleFiles, self.ui.lvStaged.model())
 
         self._blockUI()
         self.ui.spinnerUnstaged.start()
@@ -825,6 +841,8 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
+        self._updateSubmoduleFiles(submoduleFiles, self.ui.lvStaged.model())
+
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(submoduleFiles, self._doStage)
@@ -832,19 +850,21 @@ class CommitWindow(StateWindow):
 
     def _doUnstage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
-        repoFiles = [toSubmodulePath(submodule, file) for file in files]
-        error = Git.restoreStagedFiles(repoDir, repoFiles)
+        if files:
+            repoFiles = [toSubmodulePath(submodule, file) for file in files]
+            error = Git.restoreStagedFiles(repoDir, repoFiles)
+            if error:
+                qApp.postEvent(self, GitErrorEvent(error))
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
-        if error:
-            qApp.postEvent(self, GitErrorEvent(error))
 
     def _doStage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
-        repoFiles = [toSubmodulePath(submodule, file) for file in files]
-        error = Git.addFiles(repoDir, repoFiles)
+        if files:
+            repoFiles = [toSubmodulePath(submodule, file) for file in files]
+            error = Git.addFiles(repoDir, repoFiles)
+            if error:
+                qApp.postEvent(self, GitErrorEvent(error))
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
-        if error:
-            qApp.postEvent(self, GitErrorEvent(error))
 
     def _onNonUITaskFinished(self):
         self._blockUI(False)
