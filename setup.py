@@ -140,7 +140,7 @@ setup(name="qgitc",
                               "data/templates/*.xlsx"
                               ]},
       license="Apache",
-      python_requires='>=3.0',
+      python_requires='>=3.6',
       entry_points={
           "gui_scripts": [
               "qgitc=qgitc.main:main",
