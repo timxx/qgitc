@@ -40,6 +40,11 @@ def createRepo(dir):
         os.makedirs(dir)
 
     subprocess.check_output(["git", "init", "-bmain", dir])
+    subprocess.check_call(
+        ["git", "config", "--local", "user.name", "foo"], cwd=dir)
+    subprocess.check_call(
+        ["git", "config", "--local", "user.email", "foo@bar.com"], cwd=dir)
+
     with open(os.path.join(dir, "README.md"), "w") as f:
         f.write("# Test Submodule Repo\n")
     subprocess.check_output(["git", "add", "README.md"], cwd=dir)
