@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
+import os
+import subprocess
 from shiboken6 import delete
 from qgitc.application import Application
 
@@ -31,6 +33,30 @@ def _setup_logging():
         logger = logging.getLogger(name)
         if logger:
             logger.setLevel(logging.WARNING)
+
+
+def createRepo(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
+    subprocess.check_output(["git", "init", "-bmain", dir])
+    with open(os.path.join(dir, "README.md"), "w") as f:
+        f.write("# Test Submodule Repo\n")
+    subprocess.check_output(["git", "add", "README.md"], cwd=dir)
+    subprocess.check_output(["git", "commit", "-m", "Initial commit"], cwd=dir)
+
+    with open(os.path.join(dir, "test.py"), "w") as f:
+        f.write("#!/usr/bin/python3\n")
+        f.write("print('Hello, World!')\n")
+
+    subprocess.check_output(["git", "add", "test.py"], cwd=dir)
+    subprocess.check_output(["git", "commit", "-m", "Add test.py"], cwd=dir)
+
+
+def addSubmoduleRepo(dir, submoduleDir, subdir):
+    subprocess.check_output(["git", "-c", "protocol.file.allow=always",
+                            "submodule", "add", submoduleDir, subdir], cwd=dir, stderr=subprocess.DEVNULL)
+    subprocess.check_output(["git", "commit", "-m", "Add submodule"], cwd=dir)
 
 
 _setup_logging()
