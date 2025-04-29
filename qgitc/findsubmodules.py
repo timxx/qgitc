@@ -11,9 +11,12 @@ class FindSubmoduleThread(QThread):
     def __init__(self, repoDir, parent=None):
         super(FindSubmoduleThread, self).__init__(parent)
 
-        self._repoDir = os.path.normcase(os.path.normpath(repoDir))
+        self.setRepoDir(repoDir)
         self._submodules = []
         self._eventLoop = None
+
+    def setRepoDir(self, repoDir):
+        self._repoDir = os.path.normcase(os.path.normpath(repoDir))
 
     @property
     def submodules(self):

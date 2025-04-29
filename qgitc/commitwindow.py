@@ -1482,6 +1482,7 @@ class CommitWindow(StateWindow):
 
         self._infoFetcher.submit(None, self._fetchRepoInfo)
 
+        self._findSubmoduleThread.setRepoDir(Git.REPO_DIR)
         self._findSubmoduleThread.start()
         self._loadLocalChanges()
 
