@@ -19,6 +19,7 @@ class GitProcess():
 
     def __init__(self, repoDir, args, text=None):
         startupinfo = None
+        logger.debug(f"run {args} in {repoDir}")
         if os.name == "nt":
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-import subprocess
-from shiboken6 import delete
-from qgitc.application import Application
-
 import sys
 import unittest
+
+from shiboken6 import delete
+from qgitc.application import Application
+from qgitc.gitutils import Git
 
 
 _log_inited = False
@@ -19,7 +19,7 @@ def _setup_logging():
 
     _log_inited = True
     rootLogger = logging.getLogger()
-    rootLogger.setLevel(logging.WARNING)
+    rootLogger.setLevel(logging.DEBUG)
 
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
@@ -39,29 +39,29 @@ def createRepo(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
 
-    subprocess.check_output(["git", "init", "-bmain", dir])
-    subprocess.check_call(
-        ["git", "config", "--local", "user.name", "foo"], cwd=dir)
-    subprocess.check_call(
-        ["git", "config", "--local", "user.email", "foo@bar.com"], cwd=dir)
+    Git.checkOutput(["init", "-bmain"], repoDir=dir)
+    Git.checkOutput(["config", "--local", "user.name", "foo"], repoDir=dir)
+    Git.checkOutput(["config", "--local", "user.email",
+                    "foo@bar.com"], repoDir=dir)
 
     with open(os.path.join(dir, "README.md"), "w") as f:
         f.write("# Test Submodule Repo\n")
-    subprocess.check_output(["git", "add", "README.md"], cwd=dir)
-    subprocess.check_output(["git", "commit", "-m", "Initial commit"], cwd=dir)
+
+    Git.addFiles(repoDir=dir, files=["README.md"])
+    Git.commit("Initial commit", repoDir=dir)
 
     with open(os.path.join(dir, "test.py"), "w") as f:
         f.write("#!/usr/bin/python3\n")
         f.write("print('Hello, World!')\n")
 
-    subprocess.check_output(["git", "add", "test.py"], cwd=dir)
-    subprocess.check_output(["git", "commit", "-m", "Add test.py"], cwd=dir)
+    Git.addFiles(repoDir=dir, files=["test.py"])
+    Git.commit("Add test.py", repoDir=dir)
 
 
 def addSubmoduleRepo(dir, submoduleDir, subdir):
-    subprocess.check_output(["git", "-c", "protocol.file.allow=always",
-                            "submodule", "add", submoduleDir, subdir], cwd=dir, stderr=subprocess.DEVNULL)
-    subprocess.check_output(["git", "commit", "-m", "Add submodule"], cwd=dir)
+    Git.checkOutput(["-c", "protocol.file.allow=always",
+                    "submodule", "add", submoduleDir, subdir], repoDir=dir)
+    Git.commit("Add submodule", repoDir=dir)
 
 
 _setup_logging()
