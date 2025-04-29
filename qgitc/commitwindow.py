@@ -473,6 +473,13 @@ class CommitWindow(StateWindow):
 
         qApp.settings().setSubmodulesCache(Git.REPO_DIR, submodules)
 
+        if not caches and "." in newSubmodules:
+            # do not reload for main repo
+            newSubmodules.remove(".")
+
+        if not newSubmodules:
+            return
+
         if self._statusFetcher.isRunning():
             self._statusFetcher.addTask(newSubmodules)
         else:
