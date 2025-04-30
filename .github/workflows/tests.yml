@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements.txt coverage
           sudo apt install -y libegl1
 
       - name: Build
@@ -30,4 +30,11 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          python -m unittest discover -s tests -p "test_*.py" -v
+          python -m coverage run -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Generate Coverage Report
+        run: |
+          python -m coverage json -i
+
+      - name: Update Coverage Badge
+        uses: we-cli/coverage-badge-action@main
