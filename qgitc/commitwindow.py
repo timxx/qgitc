@@ -486,6 +486,7 @@ class CommitWindow(StateWindow):
             self._statusFetcher.fetch(newSubmodules)
 
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str, str]]):
+        logger.debug("Status available %s -> %s", repoDir, fileList)
         for status, file, oldFile in fileList:
             if status[0] != " " and status[0] not in ["?", "!"]:
                 self._stagedModel.addFile(file, repoDir, status[0], oldFile)

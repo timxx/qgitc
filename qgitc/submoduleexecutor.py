@@ -95,6 +95,7 @@ class SubmoduleThread(QThread):
 
 
 class SubmoduleExecutor(QObject):
+    started = Signal()
     finished = Signal()
 
     def __init__(self, parent=None):
@@ -112,6 +113,7 @@ class SubmoduleExecutor(QObject):
         self._thread.setActionHandler(actionHandler)
         self._thread.setResultHandler(resultHandler)
         self._thread.finished.connect(self.onFinished)
+        self._thread.started.connect(self.started)
         self._thread.start()
 
     def cancel(self):

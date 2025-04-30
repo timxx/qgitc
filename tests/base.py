@@ -19,7 +19,7 @@ def _setup_logging():
 
     _log_inited = True
     rootLogger = logging.getLogger()
-    rootLogger.setLevel(logging.DEBUG)
+    rootLogger.setLevel(logging.WARNING)
 
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
