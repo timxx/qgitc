@@ -2,6 +2,7 @@
 import os
 import tempfile
 from unittest.mock import patch
+from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from qgitc.application import Application
 from qgitc.gitutils import Git
@@ -88,7 +89,8 @@ class TestCommitWindow(TestBase):
             QTest.qWait(50)
             self.processEvents()
 
-            filesModel = self.window._filesModel
+            lvFiles = self.window.ui.lvFiles
+            filesModel = lvFiles.model()
             self.assertEqual(filesModel.rowCount(), 3)
             self.assertEqual(self.window._stagedModel.rowCount(), 0)
 
@@ -99,6 +101,62 @@ class TestCommitWindow(TestBase):
             }
             self.assertSetEqual(
                 changes, {"test.txt", subRepoFile, ".gitignore"})
+
+            self.processEvents()
+            rc = lvFiles.visualRect(filesModel.index(0, 0))
+            self.assertFalse(rc.isEmpty())
+
+            QTest.mouseClick(lvFiles.viewport(), Qt.LeftButton, pos=rc.center())
+            self.processEvents()
+
+            indexes = lvFiles.selectedIndexes()
+            self.assertEqual(len(indexes), 1)
+            self.assertEqual(indexes[0].row(), 0)
+            oldFile = filesModel.data(indexes[0])
+
+            spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
+            QTest.mouseClick(self.window.ui.tbStage, Qt.LeftButton)
+            while spyFinished.count() == 0:
+                self.processEvents()
+
+            stagedModel = self.window.ui.lvStaged.model()
+            self.assertEqual(stagedModel.rowCount(), 1)
+            self.assertEqual(oldFile, stagedModel.data(stagedModel.index(0, 0)))
+            self.assertEqual(filesModel.rowCount(), 2)
+
+            spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
+            QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
+            self.processEvents()
+            while spyFinished.count() == 0:
+                self.processEvents()
+
+            self.assertEqual(stagedModel.rowCount(), 3)
+            self.assertEqual(filesModel.rowCount(), 0)
+
+            lvStaged = self.window.ui.lvStaged
+            rc = lvStaged.visualRect(stagedModel.index(1, 0))
+            self.assertFalse(rc.isEmpty())
+
+            QTest.mouseClick(lvStaged.viewport(), Qt.LeftButton, pos=rc.center())
+            self.processEvents()
+
+            spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
+            oldFile = stagedModel.data(stagedModel.index(1, 0))
+            QTest.mouseClick(self.window.ui.tbUnstage, Qt.LeftButton)
+            while spyFinished.count() == 0:
+                self.processEvents()
+
+            self.assertEqual(stagedModel.rowCount(), 2)
+            self.assertEqual(filesModel.rowCount(), 1)
+            self.assertEqual(oldFile, filesModel.data(filesModel.index(0, 0)))
+
+            spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
+            QTest.mouseClick(self.window.ui.tbUnstageAll, Qt.LeftButton)
+            while spyFinished.count() == 0:
+                self.processEvents()
+
+            self.assertEqual(stagedModel.rowCount(), 0)
+            self.assertEqual(filesModel.rowCount(), 3)
 
             self.window.cancel()
             self.processEvents()
