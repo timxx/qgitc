@@ -52,15 +52,42 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
             i += 1
 
     def highlightInlineSpans(self, text: str, currentPos: int, c: str):
-        end = text.find(c, currentPos + 1)
-        if end == -1:
-            return len(text)
+        i = currentPos
+        # found a backtick
+        length = 0
+        pos = i
 
+        if i != 0 and text[i - 1] == '\\':
+            return currentPos
+
+        # keep moving forward in backtick sequence;
+        while pos < len(text) and text[pos] == c:
+            length += 1
+            pos += 1
+
+        seq = text[i:i+length]
+        start = i
+        i += length
+        next = text.find(seq, i)
+        if next == -1:
+            return currentPos
+
+        if next + length < len(text) and text[next + length] == c:
+            return currentPos
+
+        # get existing format if any
+        # we want to append to the existing format, not overwrite it
+        fmt = self.format(start + 1)
         inlineFmt = QTextCharFormat()
-        inlineFmt.setForeground(qApp.colorSchema().InlineCode)
-        self.setFormat(currentPos, end - currentPos + 1, inlineFmt)
 
-        return end + 1
+        # make sure we don't change font size / existing formatting
+        if fmt.fontPointSize() > 0:
+            inlineFmt.setFontPointSize(fmt.fontPointSize())
+
+        inlineFmt.setForeground(qApp.colorSchema().InlineCode)
+        self.setFormat(start, next - start + length, inlineFmt)
+
+        return next + length
 
     def reloadBugPattern(self):
         self._bugPatterns = TextViewer.reloadBugPattern()
