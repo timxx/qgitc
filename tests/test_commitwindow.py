@@ -23,12 +23,12 @@ class TestCommitWindow(TestBase):
 
     def setUp(self):
         self.oldRepoDir = Git.REPO_DIR
-        self.window.cancel()
+        self.window.cancel(True)
         self.processEvents()
 
     def tearDown(self):
         Git.REPO_DIR = self.oldRepoDir
-        self.window.cancel()
+        self.window.cancel(True)
         self.processEvents()
 
     def testRepoChanged(self):
@@ -55,7 +55,7 @@ class TestCommitWindow(TestBase):
             self.assertEqual(self.window._filesModel.rowCount(), 0)
             self.assertEqual(self.window._stagedModel.rowCount(), 0)
 
-            self.window.cancel()
+            self.window.cancel(True)
             self.processEvents()
             # fix `PermissionError`, don't known why it happens LoL
             QTest.qWait(500)
@@ -165,5 +165,5 @@ class TestCommitWindow(TestBase):
             self.assertEqual(stagedModel.rowCount(), 0)
             self.assertEqual(filesModel.rowCount(), 3)
 
-            self.window.cancel()
+            self.window.cancel(True)
             self.processEvents()
