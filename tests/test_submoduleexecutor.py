@@ -94,3 +94,5 @@ class TestSubmoduleExecutor(TestBase):
 
             # avoid crashing here
             executor._threads[0].terminate()
+            self.processEvents()
+            QTest.qWait(100)

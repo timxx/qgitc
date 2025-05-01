@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+from functools import partial
 import logging
 import os
 import sys
+import threading
 import unittest
+from unittest.mock import patch
 
 from shiboken6 import delete
+from PySide6.QtCore import QThread
 from qgitc.application import Application
 from qgitc.gitutils import Git
 
@@ -67,13 +71,34 @@ def addSubmoduleRepo(dir, submoduleDir, subdir):
 _setup_logging()
 
 
+# see https://github.com/nedbat/coveragepy/issues/686
+_original_qthread_init = QThread.__init__
+
+
+def _run_with_trace(instance):
+    if "coverage" in sys.modules:
+        sys.settrace(threading._trace_hook)
+    instance._base_run()
+
+
+def _init_with_trace(instance, *args, **kwargs):
+    _original_qthread_init(instance, *args, **kwargs)
+    instance._base_run = instance.run
+    instance.run = partial(_run_with_trace, instance)
+
+
 class TestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = Application(sys.argv, testing=True)
 
+        cls._threadPatcher = patch.object(
+            QThread, "__init__", new=_init_with_trace)
+        cls._threadPatcher.start()
+
     @classmethod
     def tearDownClass(cls):
+        cls._threadPatcher.stop()
         cls.processEvents(cls)
         cls.app.quit()
         # FIXME: `RuntimeError: Please destroy the Application singleton before creating a new Application instance`
