@@ -24,30 +24,51 @@ class TestCommitMessageEdit(TestBase):
         return cursor.blockFormat().foreground()
 
     def testBacktick(self):
-        self.edit.setPlainText("Hello, `world`")
-        cursor = self.edit.textCursor()
+        params = [
+            {"text": "Hello, `world`",
+             "normalRanges": [(0, 7)],
+             "backticks": [(7, 14)],
+             },
+            {
+                "text": "Hello, ``world``",
+                "normalRanges": [(0, 7)],
+                "backticks": [(7, 16)]
+            },
+            {
+                "text": "```Hello```",
+                "normalRanges": [],
+                "backticks": [(0, 11)]
+            },
+            {
+                "text": "H`el`l`o`",
+                "normalRanges": [(0, 1), (5, 6)],
+                "backticks": [(1, 5), (6, 9)]
+            }
+        ]
 
-        cursor.setPosition(0)
-        cursor.setPosition(7, QTextCursor.KeepAnchor)
+        for param in params:
+            with self.subTest(param=param):
+                text = param["text"]
+                self.edit.setPlainText(text)
+                cursor = self.edit.textCursor()
 
-        self.assertEqual(cursor.selectedText(), "Hello, ")
+                inlineSpanColor = self.app.colorSchema().InlineCode
 
-        inlineSpanColor = self.app.colorSchema().InlineCode
-        fg = self.getForegroundColor(cursor).color()
-        self.assertNotEqual(fg, inlineSpanColor)
+                normalRanges = param["normalRanges"]
+                for start, end in normalRanges:
+                    cursor.setPosition(start)
+                    cursor.setPosition(end, QTextCursor.KeepAnchor)
 
-        cursor.setPosition(7)
-        cursor.setPosition(14, QTextCursor.KeepAnchor)
-        self.assertEqual(cursor.selectedText(), "`world`")
+                    self.assertEqual(cursor.selectedText(), text[start:end])
 
-        fg = self.getForegroundColor(cursor).color()
-        self.assertEqual(fg, inlineSpanColor)
+                    fg = self.getForegroundColor(cursor).color()
+                    self.assertNotEqual(fg, inlineSpanColor)
 
-        self.edit.setPlainText("Hello, ``world``")
+                backticks = param["backticks"]
+                for start, end in backticks:
+                    cursor.setPosition(start)
+                    cursor.setPosition(end, QTextCursor.KeepAnchor)
+                    self.assertEqual(cursor.selectedText(), text[start:end])
 
-        cursor.setPosition(7)
-        cursor.setPosition(16, QTextCursor.KeepAnchor)
-        self.assertEqual(cursor.selectedText(), "``world``")
-
-        fg = self.getForegroundColor(cursor).color()
-        self.assertEqual(fg, inlineSpanColor)
+                    fg = self.getForegroundColor(cursor).color()
+                    self.assertEqual(fg, inlineSpanColor)
