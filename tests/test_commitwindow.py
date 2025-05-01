@@ -73,21 +73,28 @@ class TestCommitWindow(TestBase):
             with open(os.path.join(dir, subRepoFile), "a+") as f:
                 f.write("# new line\n")
 
-            spySubmodule = QSignalSpy(self.window._findSubmoduleThread.finished)
             spyStatusFinished = QSignalSpy(self.window._statusFetcher.finished)
             spyStatusStarted = QSignalSpy(self.window._statusFetcher.started)
-
-            self.processEvents()
+            spyRepoChange = QSignalSpy(self.app.repoDirChanged)
             self.app.updateRepoDir(dir)
-            while self.window._findSubmoduleThread.isRunning() or spySubmodule.count() == 0:
+            while spyRepoChange.count() == 0:
                 self.processEvents()
 
-            self.processEvents()
             while self.window._statusFetcher.isRunning() or spyStatusFinished.count() != spyStatusStarted.count():
                 self.processEvents()
 
-            QTest.qWait(50)
-            self.processEvents()
+            # the submodule thread still running
+            if self.window._findSubmoduleThread:
+                spySubmodule = QSignalSpy(self.window._findSubmoduleThread.finished)
+                # _findSubmoduleThread will `None` on finished
+                thread = self.window._findSubmoduleThread
+                while thread.isRunning() or spySubmodule.count() == 0:
+                    self.processEvents()
+
+                # and it will cause another status fetching
+                QTest.qWait(50)
+                while self.window._statusFetcher.isRunning() or spyStatusFinished.count() != spyStatusStarted.count():
+                    self.processEvents()
 
             lvFiles = self.window.ui.lvFiles
             filesModel = lvFiles.model()

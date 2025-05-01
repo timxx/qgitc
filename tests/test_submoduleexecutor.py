@@ -70,11 +70,27 @@ class TestSubmoduleExecutor(TestBase):
             executor.submit(None, self._blockAction)
             QTest.qWait(100)
             self.assertTrue(executor.isRunning())
-            executor.cancel()
+            executor.cancel(True)
 
-            # executor internal waits for 500ms
-            QTest.qWait(600)
+            QTest.qWait(1000)
             self.assertFalse(executor.isRunning())
 
             warning.assert_called_once_with(
                 "Terminating submodule thread (%s)", "_blockAction")
+
+        with patch("logging.Logger.warning") as warning:
+            executor.submit(None, self._blockAction)
+            QTest.qWait(100)
+            self.assertTrue(executor.isRunning())
+            executor.cancel()
+
+            # Actually running in background
+            self.assertFalse(executor.isRunning())
+            self.assertIsNone(executor._thread)
+
+            warning.assert_not_called()
+
+            self.assertEqual(1, len(executor._threads))
+
+            # avoid crashing here
+            executor._threads[0].terminate()
