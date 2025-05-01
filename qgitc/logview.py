@@ -1819,7 +1819,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.__onCopyCommitSummary()
 
     def queryClose(self):
-        self.fetcher.cancel()
+        self.fetcher.cancel(True)
         self._finder.cancel()
         self.cancelFindCommit()
 

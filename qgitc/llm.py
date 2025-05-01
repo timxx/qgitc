@@ -296,9 +296,7 @@ class LocalLLM(ChatGPTModel):
         if self.nameFetcher and self.nameFetcher.isRunning():
             self.nameFetcher.disconnect(self)
             self.nameFetcher.requestInterruption()
-            self.nameFetcher.wait(500)
-            if self.nameFetcher.isRunning():
+            if qApp.terminateThread(self.nameFetcher):
                 logger.warning(
                     "Name fetcher thread is still running, terminating it.")
-                self.nameFetcher.terminate()
             self.nameFetcher = None

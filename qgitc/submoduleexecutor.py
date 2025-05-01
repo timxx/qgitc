@@ -101,6 +101,7 @@ class SubmoduleExecutor(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._thread: SubmoduleThread = None
+        self._threads = []
 
     def submit(self, submodules: Union[list, dict], actionHandler: Callable, resultHandler: Callable = None):
         """ Submit a list of submodules and an action to be performed on each submodule.
@@ -113,17 +114,19 @@ class SubmoduleExecutor(QObject):
         self._thread.setActionHandler(actionHandler)
         self._thread.setResultHandler(resultHandler)
         self._thread.finished.connect(self.onFinished)
+        self._thread.finished.connect(self._onThreadFinished)
         self._thread.started.connect(self.started)
+        self._threads.append(self._thread)
         self._thread.start()
 
-    def cancel(self):
+    def cancel(self, force=False):
         if self._thread and self._thread.isRunning():
             logger.info("cancelling submodule thread")
             self._thread.finished.disconnect(self.onFinished)
+            self._thread.started.disconnect(self.started)
             self._thread.requestInterruption()
-            self._thread.wait(500)
-            if self._thread.isRunning():
-                self._thread.terminate()
+
+            if force and qApp.terminateThread(self._thread):
                 handler = self._thread.actionHandler()
                 handlerName = handler.__name__ if handler else "<None>"
                 logger.warning(
@@ -136,3 +139,7 @@ class SubmoduleExecutor(QObject):
     def onFinished(self):
         self._thread = None
         self.finished.emit()
+
+    def _onThreadFinished(self):
+        thread = self.sender()
+        self._threads.remove(thread)

@@ -14,7 +14,8 @@ from PySide6.QtCore import (
     QSize,
     QProcess,
     QFileInfo,
-    QUrl
+    QUrl,
+    QThread
 )
 from PySide6.QtGui import (
     QFont,
@@ -325,9 +326,8 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
         self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
 
-        self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
-        self._findSubmoduleThread.finished.connect(
-            self._onFindSubmoduleFinished)
+        self._findSubmoduleThread = None
+        self._threads: List[QThread] = []
 
         self._curFile: str = None
         self._curFileStatus: FileStatus = None
@@ -463,7 +463,11 @@ class CommitWindow(StateWindow):
         self._curFileStatus = None
 
     def _onFindSubmoduleFinished(self):
-        submodules = self._findSubmoduleThread.submodules
+        thread: FindSubmoduleThread = self.sender()
+        if thread == self._findSubmoduleThread:
+            self._findSubmoduleThread = None
+
+        submodules = thread.submodules
         caches = qApp.settings().submodulesCache(Git.REPO_DIR)
 
         newSubmodules = list(set(submodules) - set(caches))
@@ -1315,22 +1319,22 @@ class CommitWindow(StateWindow):
         event = CodeReviewEvent(submoduleFiles)
         qApp.postEvent(qApp, event)
 
-    def cancel(self):
-        self._aiMessage.cancel()
-        self._submoduleExecutor.cancel()
-        self._commitExecutor.cancel()
-        self._statusFetcher.cancel()
-        self._infoFetcher.cancel()
-        if self._findSubmoduleThread.isRunning():
+    def cancel(self, force=False):
+        self._aiMessage.cancel(force)
+        self._submoduleExecutor.cancel(force)
+        self._commitExecutor.cancel(force)
+        self._statusFetcher.cancel(force)
+        self._infoFetcher.cancel(force)
+        if self._findSubmoduleThread:
+            self._findSubmoduleThread.finished.disconnect(
+                self._onFindSubmoduleFinished)
             self._findSubmoduleThread.requestInterruption()
-            self._findSubmoduleThread.wait(500)
-            if self._findSubmoduleThread.isRunning():
-                self._findSubmoduleThread.terminate()
+            if force and qApp.terminateThread(self._findSubmoduleThread):
                 logger.warning("Terminate find submodule thread")
 
     def closeEvent(self, event):
         logger.debug("Before cancel")
-        self.cancel()
+        self.cancel(True)
         logger.debug("After cancel")
         return super().closeEvent(event)
 
@@ -1490,7 +1494,14 @@ class CommitWindow(StateWindow):
 
         self._infoFetcher.submit(None, self._fetchRepoInfo)
 
+        self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
+        self._findSubmoduleThread.finished.connect(
+            self._onFindSubmoduleFinished)
+        self._findSubmoduleThread.finished.connect(
+            self._onThreadFinished)
         self._findSubmoduleThread.setRepoDir(Git.REPO_DIR)
+        self._threads.append(self._findSubmoduleThread)
+
         self._findSubmoduleThread.start()
         self._loadLocalChanges()
 
@@ -1501,3 +1512,7 @@ class CommitWindow(StateWindow):
         doc = self.ui.teMessage.document()
         isEmpty = doc.isEmpty() or not doc.toPlainText().strip()
         self.ui.btnRefineMsg.setEnabled(not isEmpty)
+
+    def _onThreadFinished(self):
+        thread = self.sender()
+        self._threads.remove(thread)

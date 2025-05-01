@@ -26,8 +26,8 @@ class StatusFetcher(SubmoduleExecutor):
         logger.debug("Begin fetch submodules: %s", ",".join(
             submodules) if submodules else "None")
 
-    def cancel(self):
-        super().cancel()
+    def cancel(self, force=False):
+        super().cancel(force)
         # do not use clear, as we don't copy the list
         self._delayedTask = []
 

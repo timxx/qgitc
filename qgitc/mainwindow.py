@@ -57,6 +57,7 @@ class MainWindow(StateWindow):
 
         self.isWindowReady = False
         self.findSubmoduleThread = None
+        self._threads = []
 
         self.mergeWidget = None
 
@@ -277,6 +278,9 @@ class MainWindow(StateWindow):
             self.findSubmoduleThread = FindSubmoduleThread(topLevelDir, self)
             self.findSubmoduleThread.finished.connect(
                 self.__onFindSubmoduleFinished)
+            self.findSubmoduleThread.finished.connect(
+                self.__onThreadFinished)
+            self._threads.append(self.findSubmoduleThread)
             self.findSubmoduleThread.start()
 
             self.initSubmodulesFromCache()
@@ -535,7 +539,7 @@ class MainWindow(StateWindow):
         if self.gitViewB is not None:
             self.gitViewB.queryClose()
 
-        self.cancel()
+        self.cancel(True)
         super().closeEvent(event)
 
     def setFilterFile(self, filePath):
@@ -669,14 +673,17 @@ class MainWindow(StateWindow):
     def _onShowAiAssistant(self):
         qApp.postEvent(qApp, ShowAiAssistantEvent())
 
-    def cancel(self):
+    def cancel(self, force=False):
         self._delayTimer.stop()
 
         if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
-            self.findSubmoduleThread.disconnect(self)
+            self.findSubmoduleThread.finished.disconnect(
+                self.__onFindSubmoduleFinished)
             self.findSubmoduleThread.requestInterruption()
-            self.findSubmoduleThread.wait(500)
-            if self.findSubmoduleThread.isRunning():
-                self.findSubmoduleThread.terminate()
+            if force and qApp.terminateThread(self.findSubmoduleThread):
                 logger.warning("Terminating find submodule thread")
             self.findSubmoduleThread = None
+
+    def __onThreadFinished(self):
+        thread = self.sender()
+        self._threads.remove(thread)

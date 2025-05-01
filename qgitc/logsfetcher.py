@@ -285,14 +285,16 @@ class LogsFetcherThread(QThread):
 
                     tasks.remove(task)
                     code, errorData, branch, repoDir, logs, hasLCC, hasLUC = task.result()
-                    self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
+                    self._makeLocalCommits(
+                        lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
 
                     for log in logs:
                         handleCount += 1
                         if handleCount % 100 == 0 and self.isInterruptionRequested():
                             return
                         # require same day at least
-                        key = (log.committerDateTime.date(), log.comments, log.author)
+                        key = (log.committerDateTime.date(),
+                               log.comments, log.author)
                         if key in mergedLogs.keys():
                             main_commit = mergedLogs[key]
                             # don't merge commits in same repo
@@ -367,6 +369,7 @@ class LogsFetcher(QObject):
         self._thread = None
         self._submodules = []
         self._errorData = b''
+        self._threads: List[QThread] = []
 
     def setSubmodules(self, submodules):
         self._submodules = submodules
@@ -378,15 +381,18 @@ class LogsFetcher(QObject):
         self._thread.logsAvailable.connect(self.logsAvailable)
         self._thread.fetchFinished.connect(self._onFetchFinished)
         self._thread.localChangesAvailable.connect(self.localChangesAvailable)
+        self._thread.finished.connect(self._onThreadFinished)
+        self._threads.append(self._thread)
         self._thread.fetch(*args)
 
-    def cancel(self):
+    def cancel(self, force=False):
         if self._thread:
-            self._thread.disconnect(self)
+            self._thread.logsAvailable.disconnect(self.logsAvailable)
+            self._thread.fetchFinished.disconnect(self._onFetchFinished)
+            self._thread.localChangesAvailable.disconnect(
+                self.localChangesAvailable)
             self._thread.cancel()
-            self._thread.wait(50)
-            if self._thread.isRunning():
-                self._thread.terminate()
+            if force and qApp.terminateThread(self._thread):
                 logger.warning("Terminating logs fetcher thread")
             self._thread = None
 
@@ -399,6 +405,9 @@ class LogsFetcher(QObject):
             self._errorData = self._thread.errorData
             self._thread = None
             self.fetchFinished.emit(exitCode)
+
+    def _onThreadFinished(self):
+        self._threads.remove(self.sender())
 
     @property
     def errorData(self):

@@ -182,10 +182,9 @@ class GithubCopilotLoginDialog(QDialog):
 
     def closeEvent(self, event):
         if self._loginThread.isRunning():
+            self._loginThread.disconnect(self)
             self._loginThread.requestInterruption()
-            self._loginThread.wait(55)
-            if self._loginThread.isRunning():
-                self._loginThread.terminate()
+            if qApp.terminateThread(self._loginThread, 100):
                 logger.warning("Terminating login thread")
         return super().closeEvent(event)
 

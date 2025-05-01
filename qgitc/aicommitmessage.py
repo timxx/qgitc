@@ -98,6 +98,7 @@ class AiCommitMessage(QObject):
         self._message = ""
 
         self._aiModel: AiModelBase = None
+        self._threads = []
 
     def generate(self, submoduleFiles: Dict[str, str]):
         if len(submoduleFiles) <= 1:
@@ -141,16 +142,15 @@ class AiCommitMessage(QObject):
         self._aiModel.finished.connect(self._onAiResponseFinished)
         self._aiModel.queryAsync(params)
 
-    def cancel(self):
+    def cancel(self, force=False):
         if self._aiModel and self._aiModel.isRunning():
             logger.info("cancelling AI model")
             self._aiModel.responseAvailable.disconnect(
                 self._onAiResponseAvailable)
             self._aiModel.finished.disconnect(self._onAiResponseFinished)
             self._aiModel.requestInterruption()
-            self._aiModel.wait(50)
-            if self._aiModel.isRunning():
-                self._aiModel.terminate()
+
+            if force and qApp.terminateThread(self._aiModel):
                 logger.warning("Terminating AI model thread")
             self._aiModel = None
 
@@ -187,7 +187,8 @@ class AiCommitMessage(QObject):
 
     @staticmethod
     def _fetchLogs(repoDir: str, commitCount: int, author=None):
-        args = ["log", "--pretty=format:%B", "--no-merges", "-z", "-n", str(commitCount)]
+        args = ["log", "--pretty=format:%B",
+                "--no-merges", "-z", "-n", str(commitCount)]
         if author:
             args.append("--author={}".format(author))
 
@@ -221,6 +222,8 @@ class AiCommitMessage(QObject):
         self._aiModel = GithubCopilot(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
+        self._aiModel.finished.connect(self._onThreadFinished)
+        self._threads.append(self._aiModel)
         self._aiModel.queryAsync(params)
 
     @staticmethod
@@ -270,3 +273,7 @@ class AiCommitMessage(QObject):
 
         self.messageAvailable.emit(stripMessage)
         self._aiModel = None
+
+    def _onThreadFinished(self):
+        thread = self.sender()
+        self._threads.remove(thread)

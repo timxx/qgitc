@@ -11,7 +11,9 @@ from PySide6.QtCore import (
     QTimer,
     qVersion,
     QEvent,
-    Signal)
+    Signal,
+    QThread,
+    QElapsedTimer)
 
 from .aichatwindow import AiChatWindow
 from .colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
@@ -384,3 +386,16 @@ class Application(QApplication):
     def uiLanguage(self):
         locale = self.uiLocale()
         return locale.languageToString(locale.language())
+
+    def terminateThread(self, thread: QThread, waitTime=1000):
+        if not thread.isRunning():
+            return False
+
+        timer = QElapsedTimer()
+        timer.start()
+        while thread.isRunning() and timer.elapsed() <= waitTime:
+            self.processEvents()
+        if thread.isRunning():
+            thread.terminate()
+            return True
+        return False
