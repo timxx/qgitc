@@ -15,7 +15,9 @@ from PySide6.QtCore import (
     QProcess,
     QFileInfo,
     QUrl,
-    QThread
+    QThread,
+    QObject,
+    SIGNAL
 )
 from PySide6.QtGui import (
     QFont,
@@ -1326,8 +1328,9 @@ class CommitWindow(StateWindow):
         self._statusFetcher.cancel(force)
         self._infoFetcher.cancel(force)
         if self._findSubmoduleThread:
-            self._findSubmoduleThread.finished.disconnect(
-                self._onFindSubmoduleFinished)
+            QObject.disconnect(self._findSubmoduleThread,
+                               SIGNAL("finished"),
+                               self._onFindSubmoduleFinished)
             self._findSubmoduleThread.requestInterruption()
             if force and qApp.terminateThread(self._findSubmoduleThread):
                 logger.warning("Terminate find submodule thread")
