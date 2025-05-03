@@ -149,7 +149,8 @@ class SubmoduleExecutor(QObject):
 
     def _onThreadFinished(self):
         thread = self.sender()
-        self._threads.remove(thread)
+        if thread in self._threads:
+            self._threads.remove(thread)
 
     def _terminateThread(self, thread: SubmoduleThread):
         if qApp.terminateThread(thread):

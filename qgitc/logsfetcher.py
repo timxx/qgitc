@@ -417,7 +417,9 @@ class LogsFetcher(QObject):
             self.fetchFinished.emit(exitCode)
 
     def _onThreadFinished(self):
-        self._threads.remove(self.sender())
+        thread = self.sender()
+        if thread in self._threads:
+            self._threads.remove(thread)
 
     @property
     def errorData(self):

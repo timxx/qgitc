@@ -1528,4 +1528,5 @@ class CommitWindow(StateWindow):
 
     def _onThreadFinished(self):
         thread = self.sender()
-        self._threads.remove(thread)
+        if thread in self._threads:
+            self._threads.remove(thread)

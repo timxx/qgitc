@@ -696,4 +696,5 @@ class MainWindow(StateWindow):
 
     def __onThreadFinished(self):
         thread = self.sender()
-        self._threads.remove(thread)
+        if thread in self._threads:
+            self._threads.remove(thread)
