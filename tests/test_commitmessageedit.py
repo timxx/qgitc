@@ -208,3 +208,17 @@ class TestCommitMessageEdit(TestBase):
     def testNormalKey(self):
         QTest.keyClick(self.edit, Qt.Key_0)
         self.assertEqual("0", self.edit.toPlainText())
+
+    def testLinks(self):
+        settings = self.app.settings()
+        patterns = [("(#([0-9]+))", "https://github.com/foo/bar/issues/")]
+        settings.setBugPatterns(self.app.repoName(), patterns)
+
+        self.edit.setPlainText("Fix #1234")
+        cursor = self.edit.textCursor()
+        cursor.setPosition(4)
+        cursor.setPosition(9, QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "#1234")
+
+        fg = self.getForegroundColor(cursor).color()
+        self.assertEqual(fg, self.edit.palette().link().color())
