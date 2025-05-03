@@ -8,6 +8,7 @@ from tests.base import TestBase
 
 class TestTextViewer(TestBase):
     def setUp(self):
+        super().setUp()
         self.viewer = TextViewer()
 
     def testAppend(self):

@@ -10,26 +10,18 @@ from tests.base import TestBase, createRepo
 
 
 class TestCommitWindow(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.window = cls.app.getWindow(Application.CommitWindow)
-        cls.window.show()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.window.close()
-        super().tearDownClass()
-
     def setUp(self):
+        super().setUp()
+        self.window = self.app.getWindow(Application.CommitWindow)
+        self.window.show()
         self.oldRepoDir = Git.REPO_DIR
-        self.window.cancel(True)
         self.processEvents()
 
     def tearDown(self):
         Git.REPO_DIR = self.oldRepoDir
-        self.window.cancel(True)
+        self.window.close()
         self.processEvents()
+        super().tearDown()
 
     def testRepoChanged(self):
         with tempfile.TemporaryDirectory() as dir:
@@ -61,6 +53,8 @@ class TestCommitWindow(TestBase):
             QTest.qWait(500)
 
     def testChanges(self):
+        self.window.cancel()
+        self.processEvents()
         with tempfile.TemporaryDirectory() as dir:
             createRepo(dir)
             with open(os.path.join(dir, ".gitignore"), "w+") as f:

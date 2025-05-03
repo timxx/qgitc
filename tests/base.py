@@ -10,18 +10,11 @@ from unittest.mock import patch
 from shiboken6 import delete
 from PySide6.QtCore import QThread
 from qgitc.application import Application
+from qgitc.common import logger
 from qgitc.gitutils import Git
 
 
-_log_inited = False
-
-
 def _setup_logging():
-    global _log_inited
-    if _log_inited:
-        return
-
-    _log_inited = True
     rootLogger = logging.getLogger()
     rootLogger.setLevel(logging.WARNING)
 
@@ -76,34 +69,35 @@ _original_qthread_init = QThread.__init__
 
 
 def _run_with_trace(instance):
+    logger.info("run Thread %s", instance)
     if "coverage" in sys.modules:
         sys.settrace(threading._trace_hook)
     instance._base_run()
+    logger.info("finished QThread %s", instance)
 
 
 def _init_with_trace(instance, *args, **kwargs):
     _original_qthread_init(instance, *args, **kwargs)
     instance._base_run = instance.run
     instance.run = partial(_run_with_trace, instance)
+    logger.info("create QThread %s, parent %s", instance, instance.parent())
 
 
 class TestBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.app = Application(sys.argv, testing=True)
+    def setUp(self):
+        self.app = Application(sys.argv, testing=True)
 
-        cls._threadPatcher = patch.object(
+        self._threadPatcher = patch.object(
             QThread, "__init__", new=_init_with_trace)
-        cls._threadPatcher.start()
+        self._threadPatcher.start()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls._threadPatcher.stop()
-        cls.processEvents(cls)
-        cls.app.quit()
+    def tearDown(self):
+        self._threadPatcher.stop()
+        self.processEvents()
+        self.app.quit()
         # FIXME: `RuntimeError: Please destroy the Application singleton before creating a new Application instance`
-        delete(cls.app)
-        del cls.app
+        delete(self.app)
+        del self.app
 
     def processEvents(self):
         self.app.sendPostedEvents()

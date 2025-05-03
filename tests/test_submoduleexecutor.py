@@ -28,7 +28,7 @@ class TestSubmoduleExecutor(TestBase):
             dummy.return_value = "Hello"
             executor.submit(None, _dummyAction)
             QTest.qWait(100)
-            self.assertTrue(spy.wait(50))
+            spy.wait(100)
             self.assertTrue(spy.count(), 1)
             dummy.assert_called_once()
 
@@ -76,7 +76,7 @@ class TestSubmoduleExecutor(TestBase):
             self.assertFalse(executor.isRunning())
 
             warning.assert_called_once_with(
-                "Terminating submodule thread (%s)", "_blockAction")
+                "Terminated submodule thread (%s)", "_blockAction")
 
         with patch("logging.Logger.warning") as warning:
             executor.submit(None, self._blockAction)

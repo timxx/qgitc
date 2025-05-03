@@ -9,11 +9,13 @@ from tests.base import TestBase
 class TestCommitMessageEdit(TestBase):
 
     def setUp(self):
+        super().setUp()
         self.edit = CommitMessageEdit()
         self.edit.show()
 
     def tearDown(self):
         self.edit.close()
+        super().tearDown()
 
     def getForegroundColor(self, cursor: QTextCursor):
         block = cursor.block()

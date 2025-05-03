@@ -5,16 +5,14 @@ from tests.base import TestBase
 
 
 class TestSettings(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.settings = Settings(testing=True)
+    def setUp(self):
+        super().setUp()
+        self.settings = Settings(testing=True)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.settings.clear()
-        del cls.settings
-        super().tearDownClass()
+    def tearDown(self):
+        self.settings.clear()
+        del self.settings
+        super().tearDown()
 
     def testSubmodules(self):
         submodules = self.settings.submodulesCache(Git.REPO_DIR)

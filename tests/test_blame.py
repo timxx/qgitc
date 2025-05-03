@@ -8,16 +8,14 @@ from tests.base import TestBase
 
 
 class TestBlame(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.window = cls.app.getWindow(Application.BlameWindow)
-        cls.window.showMaximized()
+    def setUp(self):
+        super().setUp()
+        self.window = self.app.getWindow(Application.BlameWindow)
+        self.window.showMaximized()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.window.close()
-        super().tearDownClass()
+    def tearDown(self):
+        self.window.close()
+        super().tearDown()
 
     def testBlame(self):
         viewer = self.window._view.viewer
