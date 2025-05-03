@@ -34,7 +34,7 @@ jobs:
 
       - name: Generate Coverage Report
         run: |
-          python -m coverage json -i
+          python -m coverage json --include="qgitc/*,tests/*"
 
       - name: Update Coverage Badge
         uses: we-cli/coverage-badge-action@main
