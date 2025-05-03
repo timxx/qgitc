@@ -4,6 +4,7 @@ import tempfile
 from unittest.mock import patch
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
+from PySide6.QtWidgets import QDialog
 from qgitc.application import Application
 from qgitc.gitutils import Git
 from tests.base import TestBase, createRepo
@@ -78,7 +79,8 @@ class TestCommitWindow(TestBase):
 
             # the submodule thread still running
             if self.window._findSubmoduleThread:
-                spySubmodule = QSignalSpy(self.window._findSubmoduleThread.finished)
+                spySubmodule = QSignalSpy(
+                    self.window._findSubmoduleThread.finished)
                 # _findSubmoduleThread will `None` on finished
                 thread = self.window._findSubmoduleThread
                 while thread.isRunning() or spySubmodule.count() == 0:
@@ -106,7 +108,8 @@ class TestCommitWindow(TestBase):
             rc = lvFiles.visualRect(filesModel.index(0, 0))
             self.assertFalse(rc.isEmpty())
 
-            QTest.mouseClick(lvFiles.viewport(), Qt.LeftButton, pos=rc.center())
+            QTest.mouseClick(lvFiles.viewport(),
+                             Qt.LeftButton, pos=rc.center())
             self.processEvents()
 
             indexes = lvFiles.selectedIndexes()
@@ -121,7 +124,8 @@ class TestCommitWindow(TestBase):
 
             stagedModel = self.window.ui.lvStaged.model()
             self.assertEqual(stagedModel.rowCount(), 1)
-            self.assertEqual(oldFile, stagedModel.data(stagedModel.index(0, 0)))
+            self.assertEqual(oldFile, stagedModel.data(
+                stagedModel.index(0, 0)))
             self.assertEqual(filesModel.rowCount(), 2)
 
             spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
@@ -137,7 +141,8 @@ class TestCommitWindow(TestBase):
             rc = lvStaged.visualRect(stagedModel.index(1, 0))
             self.assertFalse(rc.isEmpty())
 
-            QTest.mouseClick(lvStaged.viewport(), Qt.LeftButton, pos=rc.center())
+            QTest.mouseClick(lvStaged.viewport(),
+                             Qt.LeftButton, pos=rc.center())
             self.processEvents()
 
             spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
@@ -160,3 +165,9 @@ class TestCommitWindow(TestBase):
 
             self.window.cancel(True)
             self.processEvents()
+
+    def testOptions(self):
+        with patch("qgitc.preferences.Preferences.exec") as mock:
+            mock.return_value = QDialog.Rejected
+            QTest.mouseClick(self.window.ui.tbOptions, Qt.LeftButton)
+            mock.assert_called_once()
