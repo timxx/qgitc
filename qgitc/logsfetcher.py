@@ -378,19 +378,19 @@ class LogsFetcher(QObject):
         self.cancel()
         self._errorData = b''
         self._thread = LogsFetcherThread(self._submodules, self)
-        self._thread.logsAvailable.connect(self.logsAvailable)
+        self._thread.logsAvailable.connect(self._onLogsAvailable)
         self._thread.fetchFinished.connect(self._onFetchFinished)
-        self._thread.localChangesAvailable.connect(self.localChangesAvailable)
+        self._thread.localChangesAvailable.connect(self._onLocalChangesAvailable)
         self._thread.finished.connect(self._onThreadFinished)
         self._threads.append(self._thread)
         self._thread.fetch(*args)
 
     def cancel(self, force=False):
         if self._thread:
-            self._thread.logsAvailable.disconnect(self.logsAvailable)
+            self._thread.logsAvailable.disconnect(self._onLogsAvailable)
             self._thread.fetchFinished.disconnect(self._onFetchFinished)
             self._thread.localChangesAvailable.disconnect(
-                self.localChangesAvailable)
+                self._onLocalChangesAvailable)
             self._thread.cancel()
             if force and qApp.terminateThread(self._thread):
                 self._threads.remove(self._thread)
@@ -410,11 +410,28 @@ class LogsFetcher(QObject):
         return self._thread is not None and \
             self._thread.isRunning()
 
+    def _onLogsAvailable(self, logs: List[Commit]):
+        thread = self.sender()
+        if thread == self._thread:
+            self.logsAvailable.emit(logs)
+        else:
+            logger.info("_onLogsAvailable but thread changed")
+
     def _onFetchFinished(self, exitCode):
-        if self._thread:
+        thread = self.sender()
+        if thread == self._thread:
             self._errorData = self._thread.errorData
             self._thread = None
             self.fetchFinished.emit(exitCode)
+        else:
+            logger.info("_onFetchFinished but thread changed")
+
+    def _onLocalChangesAvailable(self, lccCommit: Commit, lucCommit: Commit):
+        thread = self.sender()
+        if thread == self._thread:
+            self.localChangesAvailable.emit(lccCommit, lucCommit)
+        else:
+            logger.info("_onLocalChangesAvailable but thread changed")
 
     def _onThreadFinished(self):
         thread = self.sender()
