@@ -71,8 +71,7 @@ class TestCommitWindow(TestBase):
             spyStatusStarted = QSignalSpy(self.window._statusFetcher.started)
             spyRepoChange = QSignalSpy(self.app.repoDirChanged)
             self.app.updateRepoDir(dir)
-            while spyRepoChange.count() == 0:
-                self.processEvents()
+            self.assertEqual(1, spyRepoChange.count())
 
             while self.window._statusFetcher.isRunning() or spyStatusFinished.count() != spyStatusStarted.count():
                 self.processEvents()
