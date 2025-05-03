@@ -102,6 +102,7 @@ class TestBase(unittest.TestCase):
 
     def tearDown(self):
         self._threadPatcher.stop()
+        self.app.settings().clear()
         self.processEvents()
         self.app.quit()
         # FIXME: `RuntimeError: Please destroy the Application singleton before creating a new Application instance`
