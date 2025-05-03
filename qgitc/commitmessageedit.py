@@ -27,13 +27,9 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
             self.setFormat(0, len(text), qApp.colorSchema().Comment)
             return
 
+        inlineFmt = QTextCharFormat()
+        inlineFmt.setForeground(qApp.colorSchema().InlineCode)
         for start, length in findInlineSpans(text):
-            fmt = self.format(start + 1)
-            inlineFmt = QTextCharFormat()
-            if fmt.fontPointSize() > 0:
-                inlineFmt.setFontPointSize(fmt.fontPointSize())
-
-            inlineFmt.setForeground(qApp.colorSchema().InlineCode)
             self.setFormat(start, length, inlineFmt)
 
         builtinPatterns = TextLine.builtinPatterns()
