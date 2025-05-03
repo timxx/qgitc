@@ -37,7 +37,7 @@ class TestLogWindow(TestBase):
             while spyTimeout.count() == 0:
                 self.processEvents()
 
-            while logview.fetcher.isLoading():
+            while logview.fetcher.isLoading() or spyFetcher.count() == 0:
                 self.processEvents()
             self.assertEqual(1, spyFetcher.count())
 
