@@ -10,6 +10,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPlainTextEdit
 
+from .common import findInlineSpans
 from .textline import Link, TextLine
 from .textviewer import TextViewer
 
@@ -26,7 +27,14 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
             self.setFormat(0, len(text), qApp.colorSchema().Comment)
             return
 
-        self.highlightInlineRules(text)
+        for start, length in findInlineSpans(text):
+            fmt = self.format(start + 1)
+            inlineFmt = QTextCharFormat()
+            if fmt.fontPointSize() > 0:
+                inlineFmt.setFontPointSize(fmt.fontPointSize())
+
+            inlineFmt.setForeground(qApp.colorSchema().InlineCode)
+            self.setFormat(start, length, inlineFmt)
 
         builtinPatterns = TextLine.builtinPatterns()
         patterns = list(self._bugPatterns)
@@ -42,52 +50,6 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
 
         for link in links:
             self.setFormat(link.start, link.end - link.start, fmt)
-
-    def highlightInlineRules(self, text: str):
-        i = 0
-        while i < len(text):
-            currentChar = text[i]
-            if currentChar == '`':
-                i = self.highlightInlineSpans(text, i, currentChar)
-            i += 1
-
-    def highlightInlineSpans(self, text: str, currentPos: int, c: str):
-        i = currentPos
-        # found a backtick
-        length = 0
-        pos = i
-
-        if i != 0 and text[i - 1] == '\\':
-            return currentPos
-
-        # keep moving forward in backtick sequence;
-        while pos < len(text) and text[pos] == c:
-            length += 1
-            pos += 1
-
-        seq = text[i:i+length]
-        start = i
-        i += length
-        next = text.find(seq, i)
-        if next == -1:
-            return currentPos
-
-        if next + length < len(text) and text[next + length] == c:
-            return currentPos
-
-        # get existing format if any
-        # we want to append to the existing format, not overwrite it
-        fmt = self.format(start + 1)
-        inlineFmt = QTextCharFormat()
-
-        # make sure we don't change font size / existing formatting
-        if fmt.fontPointSize() > 0:
-            inlineFmt.setFontPointSize(fmt.fontPointSize())
-
-        inlineFmt.setForeground(qApp.colorSchema().InlineCode)
-        self.setFormat(start, next - start + length, inlineFmt)
-
-        return next + length
 
     def reloadBugPattern(self):
         self._bugPatterns = TextViewer.reloadBugPattern()

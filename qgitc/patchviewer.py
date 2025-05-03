@@ -19,7 +19,7 @@ from PySide6.QtCore import (
     QMimeData,
     QPointF)
 
-from .common import Commit, FindField, decodeFileData
+from .common import Commit, FindField, decodeFileData, findInlineSpans
 from .diffutils import *
 from .events import OpenLinkEvent
 from .findwidget import FindWidget
@@ -152,57 +152,16 @@ class SummaryTextLine(TextLine):
     def rehighlight(self):
         super().rehighlight()
 
-        ranges = []
-        text: str = self.text()
-
-        self.highlightInlineRules(text, ranges)
-        if not ranges:
-            return
-
         formats = self._layout.formats()
+        text: str = self.text()
         fmt = QTextCharFormat()
         fmt.setForeground(qApp.colorSchema().InlineCode)
-        for start, length in ranges:
+
+        for start, length in findInlineSpans(text):
             fmtRg = createFormatRange(start, length, fmt)
             formats.append(fmtRg)
 
         self._layout.setFormats(formats)
-
-    def highlightInlineRules(self, text: str, ranges: List[tuple]):
-        i = 0
-        while i < len(text):
-            currentChar = text[i]
-            if currentChar == '`':
-                i = self.highlightInlineSpans(text, i, currentChar, ranges)
-            i += 1
-
-    def highlightInlineSpans(self, text: str, currentPos: int, c: str, ranges: List[tuple]):
-        i = currentPos
-        # found a backtick
-        length = 0
-        pos = i
-
-        if i != 0 and text[i - 1] == '\\':
-            return currentPos
-
-        # keep moving forward in backtick sequence;
-        while pos < len(text) and text[pos] == c:
-            length += 1
-            pos += 1
-
-        seq = text[i:i+length]
-        start = i
-        i += length
-        next = text.find(seq, i)
-        if next == -1:
-            return currentPos
-
-        if next + length < len(text) and text[next + length] == c:
-            return currentPos
-
-        ranges.append((start, next - start + length))
-
-        return next + length
 
 
 class PatchViewer(SourceViewer):

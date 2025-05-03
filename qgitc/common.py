@@ -364,3 +364,40 @@ def makeRepoName(repoDir: str):
     if repoDir == ".":
         repoDir = "<main>"
     return repoDir
+
+def _findInlineSpan(text: str, currentPos: int, c: str):
+    i = currentPos
+    # found a backtick
+    length = 0
+    pos = i
+
+    if i != 0 and text[i - 1] == '\\':
+        return currentPos, None
+
+    # keep moving forward in backtick sequence;
+    while pos < len(text) and text[pos] == c:
+        length += 1
+        pos += 1
+
+    seq = text[i:i+length]
+    start = i
+    i += length
+    next = text.find(seq, i)
+    if next == -1:
+        return currentPos, None
+
+    if next + length < len(text) and text[next + length] == c:
+        return currentPos, None
+
+    return next + length, (start, next - start + length)
+
+
+def findInlineSpans(text: str):
+    i = 0
+    while i < len(text):
+        currentChar = text[i]
+        if currentChar == '`':
+            i, span = _findInlineSpan(text, i, currentChar)
+            if span:
+                yield span
+        i += 1
