@@ -32,7 +32,10 @@ class TestApp(TestBase):
             self.processEvents()
 
             self.assertTrue(window.isVisible())
+            spyDestroyed = QSignalSpy(window.destroyed)
             window.close()
+            self.processEvents()
+            self.assertEqual(spyDestroyed.count(), 1)
 
             self.processEvents()
 

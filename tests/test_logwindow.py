@@ -29,10 +29,16 @@ class TestLogWindow(TestBase):
         with patch("PySide6.QtWidgets.QMessageBox.critical") as critical:
             critical.return_value = QMessageBox.Ok
 
+            self.assertFalse(self.window.isWindowReady)
+            spyTimeout = QSignalSpy(self.window._delayTimer.timeout)
             self.window.show()
             QTest.qWaitForWindowExposed(self.window)
-            self.assertTrue(spyFetcher.wait(3000))
+            self.assertTrue(self.window.isWindowReady)
+            while spyTimeout.count() == 0:
+                self.processEvents()
 
+            while logview.fetcher.isLoading():
+                self.processEvents()
             self.assertEqual(1, spyFetcher.count())
 
             isShallowRepo = Git.isShallowRepo()
