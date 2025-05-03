@@ -681,8 +681,18 @@ class MainWindow(StateWindow):
                 self.__onFindSubmoduleFinished)
             self.findSubmoduleThread.requestInterruption()
             if force and qApp.terminateThread(self.findSubmoduleThread):
+                self._threads.remove(self.findSubmoduleThread)
+                self.findSubmoduleThread.finished.disconnect(self.__onThreadFinished)
                 logger.warning("Terminating find submodule thread")
             self.findSubmoduleThread = None
+
+        if not force:
+            return
+
+        for thread in self._threads:
+            thread.finished.disconnect(self.__onThreadFinished)
+            qApp.terminateThread(thread)
+        self._threads.clear()
 
     def __onThreadFinished(self):
         thread = self.sender()

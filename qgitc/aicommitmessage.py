@@ -151,8 +151,16 @@ class AiCommitMessage(QObject):
             self._aiModel.requestInterruption()
 
             if force and qApp.terminateThread(self._aiModel):
+                self._threads.remove(self._aiModel)
+                self._aiModel.finished.disconnect(self._onThreadFinished)
                 logger.warning("Terminating AI model thread")
             self._aiModel = None
+
+        if force:
+            for thread in self._threads:
+                thread.finished.disconnect(self._onThreadFinished)
+                qApp.terminateThread(thread)
+            self._threads.clear()
 
         self._executor.cancel()
 

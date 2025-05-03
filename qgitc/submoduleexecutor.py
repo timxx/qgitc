@@ -126,12 +126,19 @@ class SubmoduleExecutor(QObject):
             self._thread.started.disconnect(self.started)
             self._thread.requestInterruption()
 
-            if force and qApp.terminateThread(self._thread):
-                handler = self._thread.actionHandler()
-                handlerName = handler.__name__ if handler else "<None>"
-                logger.warning(
-                    "Terminating submodule thread (%s)", handlerName)
+            if force:
+                self._threads.remove(self._thread)
+                self._thread.finished.disconnect(self._onThreadFinished)
+                self._terminateThread(self._thread)
             self._thread = None
+
+        if not force:
+            return
+
+        for thread in self._threads:
+            thread.finished.disconnect(self._onThreadFinished)
+            self._terminateThread(thread)
+        self._threads.clear()
 
     def isRunning(self):
         return self._thread is not None and self._thread.isRunning()
@@ -143,3 +150,9 @@ class SubmoduleExecutor(QObject):
     def _onThreadFinished(self):
         thread = self.sender()
         self._threads.remove(thread)
+
+    def _terminateThread(self, thread: SubmoduleThread):
+        if qApp.terminateThread(thread):
+            handler = thread.actionHandler()
+            handlerName = handler.__name__ if handler else "<None>"
+            logger.warning("Terminated submodule thread (%s)", handlerName)

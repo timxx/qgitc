@@ -393,8 +393,18 @@ class LogsFetcher(QObject):
                 self.localChangesAvailable)
             self._thread.cancel()
             if force and qApp.terminateThread(self._thread):
+                self._threads.remove(self._thread)
+                self._thread.finished.disconnect(self._onThreadFinished)
                 logger.warning("Terminating logs fetcher thread")
             self._thread = None
+
+        if not force:
+            return
+
+        for thread in self._threads:
+            thread.finished.disconnect(self._onThreadFinished)
+            qApp.terminateThread(thread)
+        self._threads.clear()
 
     def isLoading(self):
         return self._thread is not None and \

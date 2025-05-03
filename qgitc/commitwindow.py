@@ -1333,7 +1333,17 @@ class CommitWindow(StateWindow):
                                self._onFindSubmoduleFinished)
             self._findSubmoduleThread.requestInterruption()
             if force and qApp.terminateThread(self._findSubmoduleThread):
+                self._threads.remove(self._findSubmoduleThread)
+                self._findSubmoduleThread.finished.disconnect(
+                    self._onThreadFinished)
                 logger.warning("Terminate find submodule thread")
+            self._findSubmoduleThread = None
+
+        if force:
+            for thread in self._threads:
+                thread.finished.disconnect(self._onThreadFinished)
+                qApp.terminateThread(thread)
+            self._threads.clear()
 
     def closeEvent(self, event):
         logger.debug("Before cancel")
