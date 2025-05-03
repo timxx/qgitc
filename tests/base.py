@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from shiboken6 import delete
-from PySide6.QtCore import QThread, qInstallMessageHandler, QtMsgType, QMessageLogContext
+from PySide6.QtCore import QThread, qInstallMessageHandler, QtMsgType, QMessageLogContext, QElapsedTimer
 from qgitc.application import Application
 from qgitc.common import logger
 from qgitc.gitutils import Git
@@ -111,3 +111,10 @@ class TestBase(unittest.TestCase):
     def processEvents(self):
         self.app.sendPostedEvents()
         self.app.processEvents()
+
+    def wait(self, timeout: int, condition: callable = None):
+        # QTest.qWait is not working as expected in the test
+        timer = QElapsedTimer()
+        timer.start()
+        while timer.elapsed() < timeout and (condition is None or condition()):
+            self.processEvents()

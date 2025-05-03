@@ -7,37 +7,38 @@ from qgitc.submoduleexecutor import SubmoduleExecutor
 from tests.base import TestBase
 
 
-def _dummyAction(submodule, data, cancelEvent: CancelEvent):
-    raise Exception("Should not be called")
+class Dummy:
+    def dummyAction(self, submodule, data, cancelEvent: CancelEvent):
+        return 1
 
+    def dummyAction2(self, submodule, data, cancelEvent: CancelEvent):
+        return "Hello", "World"
 
-def _dummyAction2(submodule, data, cancelEvent: CancelEvent):
-    return "Hello"
-
-
-def _dummyResult(*kargs):
-    raise Exception("Should not be called")
+    def dummyResult(self, *kargs):
+        pass
 
 
 class TestSubmoduleExecutor(TestBase):
     def testSubmit(self):
         executor = SubmoduleExecutor()
-        spy = QSignalSpy(executor.finished)
 
-        with patch("test_submoduleexecutor._dummyAction") as dummy:
-            dummy.return_value = "Hello"
-            executor.submit(None, _dummyAction)
-            QTest.qWait(100)
-            spy.wait(100)
-            self.assertTrue(spy.count(), 1)
-            dummy.assert_called_once()
+        dummy = Dummy()
+        with patch.object(Dummy, "dummyAction", wraps=dummy.dummyAction) as mock:
+            spy = QSignalSpy(executor.finished)
+            executor.submit(None, dummy.dummyAction)
+            while spy.count() == 0:
+                self.processEvents()
+            mock.assert_called_once()
+            self.assertIsNone(mock.call_args[0][0])
+            self.assertIsNone(mock.call_args[0][1])
+            self.assertIsInstance(mock.call_args[0][2], CancelEvent)
 
-        with patch("test_submoduleexecutor._dummyResult") as dummy:
-            executor.submit([None], _dummyAction2, _dummyResult)
-            QTest.qWait(100)
-            self.assertTrue(spy.wait(50))
-            self.assertTrue(spy.count(), 1)
-            dummy.assert_called_once_with("Hello")
+        with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            spy = QSignalSpy(executor.finished)
+            executor.submit([None], dummy.dummyAction2, dummy.dummyResult)
+            while spy.count() == 0:
+                self.processEvents()
+            mock.assert_called_once_with("Hello", "World")
 
     def _cancelAction(self, submodule, data, cancelEvent: CancelEvent):
         time.sleep(0.1)
@@ -47,32 +48,47 @@ class TestSubmoduleExecutor(TestBase):
 
     def testCancel(self):
         executor = SubmoduleExecutor()
-        spy = QSignalSpy(executor.finished)
 
-        with patch("test_submoduleexecutor._dummyResult") as dummy:
-            executor.submit(None, self._cancelAction, _dummyResult)
-            QTest.qWait(50)
+        dummy = Dummy()
+        with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            spy = QSignalSpy(executor.finished)
+            executor.submit(None, self._cancelAction, dummy.dummyResult)
+            self.wait(50, executor.isRunning)
             self.assertTrue(executor.isRunning())
             executor.cancel()
-            QTest.qWait(600)
             self.assertFalse(executor.isRunning())
             # the signal is disconnected
-            self.assertFalse(spy.wait(500))
-            dummy.assert_not_called()
+            self.assertFalse(spy.wait(200))
+            mock.assert_not_called()
+
+        executor.cancel(True)
+        self.assertEqual(0, len(executor._threads))
+        self.processEvents()
+
+    def testFailCancel(self):
+        executor = SubmoduleExecutor()
+
+        dummy = Dummy()
+        with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            executor.submit(None, self._cancelAction, dummy.dummyResult)
+            self.wait(150, executor.isRunning)
+            self.assertFalse(executor.isRunning())
+            executor.cancel()
+            mock.assert_called_once()
 
     def _blockAction(self, submodule, data, cancelEvent: CancelEvent):
-        time.sleep(10)
+        time.sleep(2)
 
     def testAbort(self):
         executor = SubmoduleExecutor()
 
         with patch("logging.Logger.warning") as warning:
             executor.submit(None, self._blockAction)
-            QTest.qWait(100)
+            self.wait(100)
             self.assertTrue(executor.isRunning())
             executor.cancel(True)
 
-            QTest.qWait(1000)
+            self.wait(100)
             self.assertFalse(executor.isRunning())
 
             warning.assert_called_once_with(
@@ -80,7 +96,7 @@ class TestSubmoduleExecutor(TestBase):
 
         with patch("logging.Logger.warning") as warning:
             executor.submit(None, self._blockAction)
-            QTest.qWait(100)
+            self.wait(100)
             self.assertTrue(executor.isRunning())
             executor.cancel()
 
@@ -92,7 +108,6 @@ class TestSubmoduleExecutor(TestBase):
 
             self.assertEqual(1, len(executor._threads))
 
-            # avoid crashing here
-            executor._threads[0].terminate()
-            self.processEvents()
-            QTest.qWait(100)
+        executor.cancel(True)
+        self.assertEqual(0, len(executor._threads))
+        self.processEvents()
