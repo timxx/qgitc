@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
+import os
+import tempfile
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from PySide6.QtWidgets import QMessageBox
 from qgitc.application import Application
 from qgitc.gitutils import Git
-from tests.base import TestBase
+from tests.base import TestBase, createRepo
 from unittest.mock import patch
 
 
 class TestLogWindow(TestBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.window = cls.app.getWindow(Application.LogWindow)
+    def setUp(self):
+        super().setUp()
+        self.window = self.app.getWindow(Application.LogWindow)
         # reduce logs to load to speed up tests
-        cls.window.ui.leOpts.setText("-n50")
-        QTest.keyClick(cls.window.ui.leOpts, Qt.Key_Enter)
+        self.window.ui.leOpts.setText("-n50")
+        QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.window.close()
-        super().tearDownClass()
+    def tearDown(self):
+        self.window.close()
+        self.processEvents()
+        super().tearDown()
 
     def testReloadRepo(self):
         logview = self.window.ui.gitViewA.logView
@@ -65,3 +66,51 @@ class TestLogWindow(TestBase):
 
             if isShallowRepo and not hasSymbolicRef:
                 self.assertEqual(critical.call_count, 2)
+
+    def testCompositeMode(self):
+        spyTimeout = QSignalSpy(self.window._delayTimer.timeout)
+        self.window.show()
+        QTest.qWaitForWindowExposed(self.window)
+        oldRepoDir = Git.REPO_DIR
+
+        while spyTimeout.count() == 0:
+            self.processEvents()
+
+        with tempfile.TemporaryDirectory() as dir:
+            createRepo(dir)
+            createRepo(os.path.join(dir, "subRepo"))
+
+            self.window.ui.leRepo.setText(dir)
+            while spyTimeout.count() == 1:
+                self.processEvents()
+
+            spySubmodule = QSignalSpy(self.window.submoduleAvailable)
+            while spySubmodule.count() == 0:
+                self.processEvents()
+
+            self.assertEqual(2, self.window.ui.cbSubmodule.count())
+
+            logView = self.window.ui.gitViewA.ui.logView
+            spyFetch = QSignalSpy(logView.fetcher.fetchFinished)
+            self.window.ui.acCompositeMode.trigger()
+            self.assertTrue(self.window.ui.acCompositeMode.isChecked())
+
+            while spyFetch.count() == 0:
+                self.processEvents()
+
+            self.assertFalse(self.window.ui.cbSubmodule.isEnabled())
+
+            self.assertEqual(logView.getCount(), 2)
+            commit = logView.getCommit(0)
+            self.assertTrue(commit.repoDir in [".", "subRepo"])
+            self.assertEqual(1, len(commit.subCommits))
+
+            commit = logView.getCommit(1)
+            self.assertTrue(commit.repoDir in [".", "subRepo"])
+            self.assertEqual(1, len(commit.subCommits))
+
+            self.window.cancel(True)
+            self.processEvents()
+
+        # restore
+        Git.REPO_DIR = oldRepoDir
