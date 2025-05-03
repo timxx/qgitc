@@ -8,10 +8,17 @@ import unittest
 from unittest.mock import patch
 
 from shiboken6 import delete
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QThread, qInstallMessageHandler, QtMsgType, QMessageLogContext
 from qgitc.application import Application
 from qgitc.common import logger
 from qgitc.gitutils import Git
+
+
+def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
+    if type == QtMsgType.QtWarningMsg and msg == "This plugin does not support propagateSizeHints()":
+        return
+
+    print(msg)
 
 
 def _setup_logging():
@@ -30,6 +37,8 @@ def _setup_logging():
         logger = logging.getLogger(name)
         if logger:
             logger.setLevel(logging.WARNING)
+
+    qInstallMessageHandler(_qt_message_handler)
 
 
 def createRepo(dir):
