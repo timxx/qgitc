@@ -10,7 +10,6 @@ class TestSettings(TestBase):
         self.settings = Settings(testing=True)
 
     def tearDown(self):
-        self.settings.clear()
         del self.settings
         super().tearDown()
 
