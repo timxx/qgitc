@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 from functools import partial
 import logging
 import os
@@ -58,15 +59,20 @@ def createRepo(dir, url="https://foo.com/bar/test.git"):
     with open(os.path.join(dir, "README.md"), "w") as f:
         f.write("# Test Submodule Repo\n")
 
+    date = datetime.fromtimestamp(
+        datetime.now().timestamp() - 3600).strftime("%Y-%m-%d %H:%M:%S")
+
     Git.addFiles(repoDir=dir, files=["README.md"])
-    Git.commit("Initial commit", repoDir=dir)
+    Git.commit("Initial commit", repoDir=dir, date=date)
 
     with open(os.path.join(dir, "test.py"), "w") as f:
         f.write("#!/usr/bin/python3\n")
         f.write("print('Hello, World!')\n")
 
+    date = datetime.fromtimestamp(
+        datetime.now().timestamp() - 1800).strftime("%Y-%m-%d %H:%M:%S")
     Git.addFiles(repoDir=dir, files=["test.py"])
-    Git.commit("Add test.py", repoDir=dir)
+    Git.commit("Add test.py", repoDir=dir, date=date)
 
 
 def addSubmoduleRepo(dir, submoduleDir, subdir):

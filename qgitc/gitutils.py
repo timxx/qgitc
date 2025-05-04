@@ -693,10 +693,12 @@ class Git():
         return data
 
     @staticmethod
-    def commit(message: str, amend: bool = False, repoDir: str = None):
+    def commit(message: str, amend: bool = False, repoDir: str = None, date: str = None):
         args = ["commit", "--no-edit"]
         if amend:
             args.append("--amend")
+        if date:
+            args.append("--date={}".format(date))
 
         if message:
             args.append("-m")
