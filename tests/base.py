@@ -2,8 +2,11 @@
 from functools import partial
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -11,7 +14,7 @@ from shiboken6 import delete
 from PySide6.QtCore import QThread, qInstallMessageHandler, QtMsgType, QMessageLogContext, QElapsedTimer
 from qgitc.application import Application
 from qgitc.common import logger
-from qgitc.gitutils import Git
+from qgitc.gitutils import Git, GitProcess
 
 
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
@@ -41,7 +44,7 @@ def _setup_logging():
     qInstallMessageHandler(_qt_message_handler)
 
 
-def createRepo(dir):
+def createRepo(dir, url="https://foo.com/bar/test.git"):
     if not os.path.exists(dir):
         os.makedirs(dir)
 
@@ -49,6 +52,8 @@ def createRepo(dir):
     Git.checkOutput(["config", "--local", "user.name", "foo"], repoDir=dir)
     Git.checkOutput(["config", "--local", "user.email",
                     "foo@bar.com"], repoDir=dir)
+    Git.checkOutput(["config", "--local", "remote.origin.url",
+                    url], repoDir=dir)
 
     with open(os.path.join(dir, "README.md"), "w") as f:
         f.write("# Test Submodule Repo\n")
@@ -94,6 +99,30 @@ def _init_with_trace(instance, *args, **kwargs):
 
 class TestBase(unittest.TestCase):
     def setUp(self):
+        self.gitDir = tempfile.TemporaryDirectory()
+        self.submoduleDir = None
+        self.oldDir = Git.REPO_DIR or os.getcwd()
+        os.chdir(self.gitDir.name)
+
+        # HACK: do not depend on application
+        GitProcess.GIT_BIN = shutil.which("git")
+
+        createRepo(self.gitDir.name)
+        if self.createSubmodule():
+            self.submoduleDir = tempfile.TemporaryDirectory()
+            createRepo(self.submoduleDir.name,
+                       "https://foo.com/bar/submodule.git")
+            addSubmoduleRepo(self.gitDir.name,
+                             self.submoduleDir.name, "submodule")
+        if self.createSubRepo():
+            with open(os.path.join(self.gitDir.name, ".gitignore"), "w+") as f:
+                f.write("/subRepo/\n")
+            Git.addFiles(repoDir=self.gitDir.name, files=[".gitignore"])
+            Git.commit("Add .gitignore", repoDir=self.gitDir.name)
+
+            subRepoDir = os.path.join(self.gitDir.name, "subRepo")
+            createRepo(subRepoDir, "https://foo.com/bar/subRepo.git")
+
         self.app = Application(sys.argv, testing=True)
 
         self._threadPatcher = patch.object(
@@ -109,6 +138,14 @@ class TestBase(unittest.TestCase):
         delete(self.app)
         del self.app
 
+        os.chdir(self.oldDir)
+        Git.REPO_DIR = self.oldDir
+
+        time.sleep(0.5)
+        self.gitDir.cleanup()
+        if self.submoduleDir:
+            self.submoduleDir.cleanup()
+
     def processEvents(self):
         self.app.sendPostedEvents()
         self.app.processEvents()
@@ -119,3 +156,9 @@ class TestBase(unittest.TestCase):
         timer.start()
         while timer.elapsed() < timeout and (condition is None or condition()):
             self.processEvents()
+
+    def createSubmodule(self):
+        return False
+
+    def createSubRepo(self):
+        return False

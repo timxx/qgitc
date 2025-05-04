@@ -22,37 +22,32 @@ class TestBlame(TestBase):
         spyFetcher = QSignalSpy(self.window._view._fetcher.fetchFinished)
         spyRev = QSignalSpy(viewer.revisionActivated)
 
-        file = os.path.normpath(os.path.dirname(__file__) + "/../qgitc.py")
+        file = os.path.join(self.gitDir.name, "test.py")
         self.window.blame(file, lineNo=1)
         self.assertTrue(spyFetcher.wait(3000))
-        self.assertTrue(viewer.textLineCount() > 3)
+        self.assertEqual(viewer.textLineCount(), 2)
         self.assertEqual("#!/usr/bin/python3", viewer.textLineAt(0).text())
 
         self.assertEqual(1, spyRev.count())
 
-        isShallowRepo = Git.isShallowRepo()
-        if not isShallowRepo:
-            self.assertEqual(
-                spyRev.at(0)[0].sha1, "1ea319103d40a9e3d56f7ebe75449bc49f639dcf")
+        sha1 = Git.checkOutput(
+            ["log", "-1", "--pretty=format:%H", file]).rstrip().decode()
 
-        pos = viewer.textLineAt(2).boundingRect().center()
-        for i in range(2):
+        self.assertEqual(spyRev.at(0)[0].sha1, sha1)
+
+        pos = viewer.textLineAt(1).boundingRect().center()
+        for i in range(1):
             pos.setY(pos.y() + viewer.textLineAt(i).boundingRect().height())
 
         spyClicked = QSignalSpy(viewer.textLineClicked)
         QTest.mouseClick(viewer.viewport(), Qt.LeftButton, pos=pos.toPoint())
         spyClicked.wait(100)
         self.assertEqual(1, spyClicked.count())
-        self.assertEqual(spyClicked.at(0)[0].lineNo(), 2)
-
-        if not isShallowRepo:
-            self.assertEqual(2, spyRev.count())
-            self.assertEqual(
-                spyRev.at(1)[0].sha1, "901fe56fdebd63bc0ef52d0ca1de07144aa6ae6f")
+        self.assertEqual(spyClicked.at(0)[0].lineNo(), 1)
 
     def testFind(self):
         spyFetcher = QSignalSpy(self.window._view._fetcher.fetchFinished)
-        file = os.path.normpath(os.path.dirname(__file__) + "/../LICENSE")
+        file = os.path.join(self.gitDir.name, "README.md")
         self.window.blame(file)
         self.assertTrue(spyFetcher.wait(3000))
 
@@ -64,17 +59,14 @@ class TestBlame(TestBase):
         findWidget = self.window._findWidget
         spyFind = QSignalSpy(findWidget.find)
 
-        QTest.keyClick(findWidget._leFind, 'L')
-        QTest.keyClick(findWidget._leFind, 'I')
-        QTest.keyClick(findWidget._leFind, 'C')
-        QTest.keyClick(findWidget._leFind, 'E')
-        QTest.keyClick(findWidget._leFind, 'N')
-        QTest.keyClick(findWidget._leFind, 'S')
-        QTest.keyClick(findWidget._leFind, 'E')
+        QTest.keyClick(findWidget._leFind, 'T')
+        QTest.keyClick(findWidget._leFind, 'e')
+        QTest.keyClick(findWidget._leFind, 's')
+        QTest.keyClick(findWidget._leFind, 't')
 
         # we delay 200ms in the find widget to emit the signal
         QTest.qWait(300)
         self.assertEqual(1, spyFind.count())
 
-        self.assertEqual("LICENSE", spyFind.at(0)[0])
-        self.assertTrue(len(findWidget._findResult) > 1)
+        self.assertEqual("Test", spyFind.at(0)[0])
+        self.assertEqual(len(findWidget._findResult), 1)

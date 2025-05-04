@@ -1,25 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
-import shutil
-import tempfile
-import time
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from qgitc.application import Application
-from qgitc.gitutils import Git, GitProcess
 from tests.base import TestBase, createRepo
-from unittest.mock import patch
 
 
 class TestLogWindow(TestBase):
     def setUp(self):
-        # HACK: do not depend on application
-        GitProcess.GIT_BIN = shutil.which("git")
-        self.oldDir = Git.REPO_DIR or os.getcwd()
-        self.gitDir = tempfile.TemporaryDirectory()
-        createRepo(self.gitDir.name)
-        os.chdir(self.gitDir.name)
-
         super().setUp()
         self.window = self.app.getWindow(Application.LogWindow)
         # reduce logs to load to speed up tests
@@ -30,26 +18,35 @@ class TestLogWindow(TestBase):
         self.window.close()
         self.processEvents()
         super().tearDown()
-        os.chdir(self.oldDir)
-        Git.REPO_DIR = self.oldDir
-        time.sleep(0.5)
-        self.gitDir.cleanup()
+
+    def createSubRepo(self):
+        return True
+
+    def waitForLoaded(self):
+        spySubmodule = QSignalSpy(self.window.submoduleAvailable)
+
+        self.window.show()
+        QTest.qWaitForWindowExposed(self.window)
+
+        delayTimer = self.window._delayTimer
+        while delayTimer.isActive():
+            self.processEvents()
+
+        while spySubmodule.count() == 0:
+            self.processEvents()
+
+        logview = self.window.ui.gitViewA.ui.logView
+        while logview.fetcher.isLoading():
+            self.processEvents()
+
+        self.wait(50)
 
     def testReloadRepo(self):
         self.assertFalse(self.window.isWindowReady)
-        spyTimeout = QSignalSpy(self.window._delayTimer.timeout)
-        logview = self.window.ui.gitViewA.logView
-        spyFetcher = QSignalSpy(logview.fetcher.fetchFinished)
-
-        self.window.show()
-        # wait for repo to be loaded
-        while spyTimeout.count() == 0:
-            self.processEvents()
-
+        self.waitForLoaded()
         self.assertTrue(self.window.isWindowReady)
-        while logview.fetcher.isLoading() or spyFetcher.count() == 0:
-            self.processEvents()
 
+        logview = self.window.ui.gitViewA.ui.logView
         # now reload the repo
         spyBegin = QSignalSpy(logview.beginFetch)
         spyEnd = QSignalSpy(logview.endFetch)
@@ -66,18 +63,7 @@ class TestLogWindow(TestBase):
         self.assertEqual(0, spyTimer.count())
 
     def testCompositeMode(self):
-        createRepo(os.path.join(self.gitDir.name, "subRepo"))
-
-        spyTimeout = QSignalSpy(self.window._delayTimer.timeout)
-        self.window.show()
-        QTest.qWaitForWindowExposed(self.window)
-
-        while spyTimeout.count() == 0:
-            self.processEvents()
-
-        spySubmodule = QSignalSpy(self.window.submoduleAvailable)
-        while spySubmodule.count() == 0:
-            self.processEvents()
+        self.waitForLoaded()
 
         self.assertEqual(2, self.window.ui.cbSubmodule.count())
         self.assertEqual(".", self.window.ui.cbSubmodule.itemText(0))
@@ -93,12 +79,16 @@ class TestLogWindow(TestBase):
 
         self.assertFalse(self.window.ui.cbSubmodule.isEnabled())
 
-        self.assertEqual(logView.getCount(), 2)
+        self.assertEqual(logView.getCount(), 3)
         commit = logView.getCommit(0)
+        self.assertEqual(commit.repoDir, ".")
+        self.assertEqual(0, len(commit.subCommits))
+
+        commit = logView.getCommit(1)
         self.assertTrue(commit.repoDir in [".", "subRepo"])
         self.assertEqual(1, len(commit.subCommits))
 
-        commit = logView.getCommit(1)
+        commit = logView.getCommit(2)
         self.assertTrue(commit.repoDir in [".", "subRepo"])
         self.assertEqual(1, len(commit.subCommits))
 

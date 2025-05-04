@@ -8,7 +8,7 @@ from tests.base import TestBase
 class TestApp(TestBase):
     def testRepoName(self):
         name = self.app.repoName()
-        self.assertIn(name, ["qgitc.git", "qgitc"])
+        self.assertEqual(name, "test.git")
 
     def testLocale(self):
         lang = self.app.uiLanguage()
