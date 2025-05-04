@@ -99,7 +99,7 @@ def _init_with_trace(instance, *args, **kwargs):
 
 class TestBase(unittest.TestCase):
     def setUp(self):
-        self.gitDir = tempfile.TemporaryDirectory()
+        self.gitDir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.submoduleDir = None
         self.oldDir = Git.REPO_DIR or os.getcwd()
         os.chdir(self.gitDir.name)
@@ -109,7 +109,7 @@ class TestBase(unittest.TestCase):
 
         createRepo(self.gitDir.name)
         if self.createSubmodule():
-            self.submoduleDir = tempfile.TemporaryDirectory()
+            self.submoduleDir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
             createRepo(self.submoduleDir.name,
                        "https://foo.com/bar/submodule.git")
             addSubmoduleRepo(self.gitDir.name,

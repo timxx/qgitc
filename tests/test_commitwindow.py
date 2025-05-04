@@ -51,7 +51,7 @@ class TestCommitWindow(TestBase):
     def testRepoChanged(self):
         self.waitForLoaded()
 
-        with tempfile.TemporaryDirectory() as dir:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as dir:
             createRepo(dir)
 
             with patch("qgitc.commitwindow.CommitWindow._onRepoDirChanged") as mock:
