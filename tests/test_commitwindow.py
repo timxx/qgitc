@@ -152,6 +152,8 @@ class TestCommitWindow(TestBase):
         self.processEvents()
 
     def testOptions(self):
+        self.waitForLoaded()
+
         with patch("qgitc.preferences.Preferences.exec") as mock:
             mock.return_value = QDialog.Rejected
             QTest.mouseClick(self.window.ui.tbOptions, Qt.LeftButton)
