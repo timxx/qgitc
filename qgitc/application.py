@@ -69,6 +69,7 @@ class Application(QApplication):
         iconPath = dataDirPath() + "/icons/qgitc.svg"
         self.setWindowIcon(QIcon(iconPath))
 
+        self.testing = testing
         self._settings = Settings(self, testing=testing)
         self.setupTranslator()
 

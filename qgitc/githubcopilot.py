@@ -147,7 +147,7 @@ class GithubCopilot(AiModelBase):
         return {"role": role, "content": prompt}
 
     def updateToken(self):
-        settings = Settings()
+        settings = Settings(testing=qApp.testing)
         accessToken = settings.githubCopilotAccessToken()
         if not accessToken:
             accessToken = self._requestAccessToken()
@@ -199,7 +199,7 @@ class GithubCopilot(AiModelBase):
         self._eventLoop.exec()
         self._eventLoop = None
 
-        settings = Settings()
+        settings = Settings(testing=qApp.testing)
         return settings.githubCopilotAccessToken()
 
     def event(self, evt):

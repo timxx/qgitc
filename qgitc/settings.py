@@ -79,6 +79,7 @@ class Settings(QSettings):
             "test" if testing else "",
             parent=parent)
 
+        self.setFallbacksEnabled(False)
         self._fixedFont = None
 
     @staticmethod
