@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .common import Commit
+from qgitc.common import Commit
 
 
 class CommitSource:

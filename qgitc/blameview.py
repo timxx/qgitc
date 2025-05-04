@@ -26,18 +26,18 @@ from PySide6.QtCore import (
 
 from datetime import datetime
 
-from .coloredicontoolbutton import ColoredIconToolButton
-from .datafetcher import DataFetcher
-from .sourceviewer import SourceViewer
-from .textline import LinkTextLine, Link
-from .gitutils import Git
-from .events import (
+from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.datafetcher import DataFetcher
+from qgitc.sourceviewer import SourceViewer
+from qgitc.textline import LinkTextLine, Link
+from qgitc.gitutils import Git
+from qgitc.events import (
     BlameEvent,
     ShowCommitEvent,
     OpenLinkEvent)
-from .waitingspinnerwidget import QtWaitingSpinner
-from .textviewer import TextViewer
-from .common import dataDirPath, decodeFileData, logger
+from qgitc.waitingspinnerwidget import QtWaitingSpinner
+from qgitc.textviewer import TextViewer
+from qgitc.common import dataDirPath, decodeFileData, logger
 
 import re
 

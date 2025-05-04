@@ -9,7 +9,7 @@ import os
 from typing import List
 import chardet
 
-from .gitutils import Git
+from qgitc.gitutils import Git
 
 
 html_escape_table = {

@@ -3,8 +3,8 @@
 import os
 from PySide6.QtCore import QThread, QEventLoop, QProcess
 
-from .common import logger
-from .gitutils import GitProcess
+from qgitc.common import logger
+from qgitc.gitutils import GitProcess
 
 
 class FindSubmoduleThread(QThread):

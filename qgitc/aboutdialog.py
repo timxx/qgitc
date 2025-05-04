@@ -2,9 +2,9 @@
 
 from PySide6.QtWidgets import QDialog, QApplication
 from PySide6.QtCore import QSize
-from .ui_aboutdialog import Ui_AboutDialog
-from .common import dataDirPath
-from .version import VERSION
+from qgitc.ui_aboutdialog import Ui_AboutDialog
+from qgitc.common import dataDirPath
+from qgitc.version import VERSION
 
 
 class AboutDialog(QDialog):

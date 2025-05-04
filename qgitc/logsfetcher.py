@@ -13,10 +13,10 @@ from PySide6.QtCore import (
     QObject
 )
 
-from .cancelevent import CancelEvent
-from .common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath, logger
-from .datafetcher import DataFetcher
-from .gitutils import Git
+from qgitc.cancelevent import CancelEvent
+from qgitc.common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath, logger
+from qgitc.datafetcher import DataFetcher
+from qgitc.gitutils import Git
 from sys import version_info
 
 

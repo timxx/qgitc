@@ -22,7 +22,7 @@ from PySide6.QtCore import (
 
 import re
 
-from .gitutils import Git
+from qgitc.gitutils import Git
 
 
 class BugPattern:

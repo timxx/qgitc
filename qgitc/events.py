@@ -3,7 +3,7 @@
 from typing import Dict, List, overload
 from PySide6.QtCore import QEvent, QObject
 
-from .common import Commit
+from qgitc.common import Commit
 
 
 class BlameEvent(QEvent):

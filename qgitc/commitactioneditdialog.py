@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import QSize
 
-from .commitactionwidget import CommitActionWidget
+from qgitc.commitactionwidget import CommitActionWidget
 
 
 class CommitActionEditDialog(QDialog):

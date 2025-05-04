@@ -5,9 +5,9 @@ import os
 from typing import List
 from PySide6.QtCore import QObject, Signal, SIGNAL, QProcess
 
-from .commitsource import CommitSource
-from .common import FIND_CANCELED, FIND_NOTFOUND, FIND_REGEXP, Commit, FindField, FindParameter, filterSubmoduleByPath, toSubmodulePath
-from .gitutils import Git, GitProcess
+from qgitc.commitsource import CommitSource
+from qgitc.common import FIND_CANCELED, FIND_NOTFOUND, FIND_REGEXP, Commit, FindField, FindParameter, filterSubmoduleByPath, toSubmodulePath
+from qgitc.gitutils import Git, GitProcess
 
 
 class FindWorker(QObject):

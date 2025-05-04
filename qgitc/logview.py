@@ -29,12 +29,12 @@ from PySide6.QtCore import (
     QRectF,
     QPointF)
 
-from .commitsource import CommitSource
-from .common import *
-from .gitutils import *
-from .difffinder import DiffFinder
-from .logsfetcher import LogsFetcher
-from .events import CodeReviewEvent, CopyConflictCommit
+from qgitc.commitsource import CommitSource
+from qgitc.common import *
+from qgitc.gitutils import *
+from qgitc.difffinder import DiffFinder
+from qgitc.logsfetcher import LogsFetcher
+from qgitc.events import CodeReviewEvent, CopyConflictCommit
 
 import re
 

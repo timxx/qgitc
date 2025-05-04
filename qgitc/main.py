@@ -8,12 +8,12 @@ from PySide6.QtCore import (
 from PySide6.QtWidgets import (
     QStyle)
 
-from .common import attachConsole, logger
-from .gitutils import Git
-from .excepthandler import ExceptHandler
-from .application import Application
-from .mainwindow import MainWindow
-from .shell import setup_shell_args
+from qgitc.common import attachConsole, logger
+from qgitc.gitutils import Git
+from qgitc.excepthandler import ExceptHandler
+from qgitc.application import Application
+from qgitc.mainwindow import MainWindow
+from qgitc.shell import setup_shell_args
 
 import argparse
 import logging

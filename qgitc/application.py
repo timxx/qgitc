@@ -15,13 +15,13 @@ from PySide6.QtCore import (
     QThread,
     QElapsedTimer)
 
-from .aichatwindow import AiChatWindow
-from .colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
-from .commitwindow import CommitWindow
-from .common import dataDirPath
-from .githubcopilotlogindialog import GithubCopilotLoginDialog
-from .settings import Settings
-from .events import (
+from qgitc.aichatwindow import AiChatWindow
+from qgitc.colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
+from qgitc.commitwindow import CommitWindow
+from qgitc.common import dataDirPath
+from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
+from qgitc.settings import Settings
+from qgitc.events import (
     BlameEvent,
     CodeReviewEvent,
     LocalChangesCommittedEvent,
@@ -32,15 +32,15 @@ from .events import (
     ShowCommitEvent,
     OpenLinkEvent,
     GitBinChanged)
-from .blamewindow import BlameWindow
-from .mainwindow import MainWindow
-from .gitutils import Git
-from .textline import Link
-from .versionchecker import VersionChecker
-from .newversiondialog import NewVersionDialog
+from qgitc.blamewindow import BlameWindow
+from qgitc.mainwindow import MainWindow
+from qgitc.gitutils import Git
+from qgitc.textline import Link
+from qgitc.versionchecker import VersionChecker
+from qgitc.newversiondialog import NewVersionDialog
 
 from datetime import datetime
-from .findwidget import FindWidget
+from qgitc.findwidget import FindWidget
 
 import os
 import shutil

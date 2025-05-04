@@ -22,9 +22,9 @@ from PySide6.QtGui import (
     QTextFormat
 )
 
-from .colorschema import ColorSchema
-from .diffutils import diff_begin_re
-from .languagedata import *
+from qgitc.colorschema import ColorSchema
+from qgitc.diffutils import diff_begin_re
+from qgitc.languagedata import *
 
 
 # translated from https://github.com/pbek/qmarkdowntextedit

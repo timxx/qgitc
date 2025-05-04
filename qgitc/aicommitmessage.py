@@ -3,12 +3,12 @@
 from typing import Dict, List, Tuple
 from PySide6.QtCore import QObject, Signal, QEvent
 
-from .cancelevent import CancelEvent
-from .common import fullRepoDir, logger, toSubmodulePath
-from .githubcopilot import GithubCopilot
-from .gitutils import Git
-from .llm import AiModelBase, AiParameters, AiResponse
-from .submoduleexecutor import SubmoduleExecutor
+from qgitc.cancelevent import CancelEvent
+from qgitc.common import fullRepoDir, logger, toSubmodulePath
+from qgitc.githubcopilot import GithubCopilot
+from qgitc.gitutils import Git
+from qgitc.llm import AiModelBase, AiParameters, AiResponse
+from qgitc.submoduleexecutor import SubmoduleExecutor
 
 
 SYSTEM_PROMPT = \

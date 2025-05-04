@@ -27,14 +27,14 @@ import json
 import queue as queue
 import requests
 
-from .aichatbot import AiChatbot
-from .cancelevent import CancelEvent
-from .common import commitRepoDir, fullRepoDir, toSubmodulePath, logger
-from .githubcopilot import GithubCopilot
-from .gitutils import Git
-from .llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole, LocalLLM
-from .statewindow import StateWindow
-from .submoduleexecutor import SubmoduleExecutor
+from qgitc.aichatbot import AiChatbot
+from qgitc.cancelevent import CancelEvent
+from qgitc.common import commitRepoDir, fullRepoDir, toSubmodulePath, logger
+from qgitc.githubcopilot import GithubCopilot
+from qgitc.gitutils import Git
+from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole, LocalLLM
+from qgitc.statewindow import StateWindow
+from qgitc.submoduleexecutor import SubmoduleExecutor
 
 
 class LocalLLMTokensCalculator(QThread):

@@ -7,10 +7,10 @@ from PySide6.QtCore import (
     Signal,
     QTimer)
 
-from .ui_gitview import *
-from .common import *
-from .gitutils import Git
-from .events import BlameEvent
+from qgitc.ui_gitview import *
+from qgitc.common import *
+from qgitc.gitutils import Git
+from qgitc.events import BlameEvent
 
 import re
 

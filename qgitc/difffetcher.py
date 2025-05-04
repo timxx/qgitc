@@ -3,10 +3,10 @@
 from typing import Dict, List
 from PySide6.QtCore import Signal
 
-from .common import toSubmodulePath
-from .datafetcher import DataFetcher
-from .diffutils import *
-from .gitutils import Git
+from qgitc.common import toSubmodulePath
+from qgitc.datafetcher import DataFetcher
+from qgitc.diffutils import *
+from qgitc.gitutils import Git
 
 
 class DiffFetcher(DataFetcher):

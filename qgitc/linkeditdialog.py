@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import QSize
 
-from .linkeditwidget import LinkEditWidget
+from qgitc.linkeditwidget import LinkEditWidget
 
 
 class LinkEditDialog(QDialog):

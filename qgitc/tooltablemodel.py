@@ -6,7 +6,7 @@ from PySide6.QtCore import (
     QModelIndex,
     Qt)
 
-from .mergetool import MergeTool
+from qgitc.mergetool import MergeTool
 
 
 class ToolTableModel(QAbstractTableModel):

@@ -37,23 +37,23 @@ from PySide6.QtWidgets import (
     QStyle
 )
 
-from .aicommitmessage import AiCommitMessage
-from .cancelevent import CancelEvent
-from .colorediconlabel import ColoredIconLabel
-from .coloredlabel import ColoredLabel
-from .commitactiontablemodel import ActionCondition, CommitAction
-from .common import dataDirPath, decodeFileData, fullRepoDir, toSubmodulePath, logger
-from .difffetcher import DiffFetcher
-from .diffview import DiffView, _makeTextIcon
-from .events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
-from .findsubmodules import FindSubmoduleThread
-from .gitutils import Git
-from .preferences import Preferences
-from .settings import Settings
-from .submoduleexecutor import SubmoduleExecutor
-from .statewindow import StateWindow
-from .statusfetcher import StatusFetcher
-from .ui_commitwindow import Ui_CommitWindow
+from qgitc.aicommitmessage import AiCommitMessage
+from qgitc.cancelevent import CancelEvent
+from qgitc.colorediconlabel import ColoredIconLabel
+from qgitc.coloredlabel import ColoredLabel
+from qgitc.commitactiontablemodel import ActionCondition, CommitAction
+from qgitc.common import dataDirPath, decodeFileData, fullRepoDir, toSubmodulePath, logger
+from qgitc.difffetcher import DiffFetcher
+from qgitc.diffview import DiffView, _makeTextIcon
+from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
+from qgitc.findsubmodules import FindSubmoduleThread
+from qgitc.gitutils import Git
+from qgitc.preferences import Preferences
+from qgitc.settings import Settings
+from qgitc.submoduleexecutor import SubmoduleExecutor
+from qgitc.statewindow import StateWindow
+from qgitc.statusfetcher import StatusFetcher
+from qgitc.ui_commitwindow import Ui_CommitWindow
 
 
 class FileStatus(Enum):

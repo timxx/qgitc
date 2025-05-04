@@ -5,17 +5,17 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QStyleFactory)
 
-from .commitactioneditdialog import CommitActionEditDialog
-from .common import logger
-from .colorschema import ColorSchemaMode
-from .events import GitBinChanged
-from .githubcopilotlogindialog import GithubCopilotLoginDialog
-from .ui_preferences import *
-from .comboboxitemdelegate import ComboBoxItemDelegate
-from .linkeditdialog import LinkEditDialog
-from .gitutils import Git, GitProcess
-from .tooltablemodel import ToolTableModel
-from .settings import Settings
+from qgitc.commitactioneditdialog import CommitActionEditDialog
+from qgitc.common import logger
+from qgitc.colorschema import ColorSchemaMode
+from qgitc.events import GitBinChanged
+from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
+from qgitc.ui_preferences import *
+from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
+from qgitc.linkeditdialog import LinkEditDialog
+from qgitc.gitutils import Git, GitProcess
+from qgitc.tooltablemodel import ToolTableModel
+from qgitc.settings import Settings
 
 import logging
 import os

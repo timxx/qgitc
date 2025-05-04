@@ -5,8 +5,8 @@ import os
 from typing import Callable, Union
 from PySide6.QtCore import QThread, QObject, Signal
 
-from .cancelevent import CancelEvent
-from .common import logger
+from qgitc.cancelevent import CancelEvent
+from qgitc.common import logger
 
 
 class SubmoduleThread(QThread):

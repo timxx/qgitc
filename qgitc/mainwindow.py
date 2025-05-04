@@ -18,20 +18,20 @@ from PySide6.QtCore import (
     QEvent,
     Signal)
 
-from .common import dataDirPath, logger
-from .coloredicontoolbutton import ColoredIconToolButton
-from .findsubmodules import FindSubmoduleThread
-from .findwidget import FindWidget
+from qgitc.common import dataDirPath, logger
+from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.findsubmodules import FindSubmoduleThread
+from qgitc.findwidget import FindWidget
 
-from .ui_mainwindow import Ui_MainWindow
-from .gitview import GitView
-from .preferences import Preferences
-from .gitutils import Git
-from .diffview import PatchViewer
-from .aboutdialog import AboutDialog
-from .statewindow import StateWindow
-from .logview import LogView
-from .events import RequestCommitEvent, ShowAiAssistantEvent
+from qgitc.ui_mainwindow import Ui_MainWindow
+from qgitc.gitview import GitView
+from qgitc.preferences import Preferences
+from qgitc.gitutils import Git
+from qgitc.diffview import PatchViewer
+from qgitc.aboutdialog import AboutDialog
+from qgitc.statewindow import StateWindow
+from qgitc.logview import LogView
+from qgitc.events import RequestCommitEvent, ShowAiAssistantEvent
 
 import os
 import sys
@@ -586,7 +586,7 @@ class MainWindow(StateWindow):
                 self.gitViewB.reloadBranches(branch)
             self.ui.acCompare.setChecked(True)
         elif mode == MainWindow.MergeMode:
-            from .mergewidget import MergeWidget
+            from qgitc.mergewidget import MergeWidget
             self.mergeWidget = MergeWidget()
             self.mergeWidget.requestResolve.connect(
                 self.__onRequestResolve)

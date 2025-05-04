@@ -35,12 +35,12 @@ from PySide6.QtCore import (
     QEvent,
     QSize)
 
-from .commitsource import CommitSource
-from .common import *
-from .gitutils import Git, GitProcess
-from .difffetcher import DiffFetcher
-from .diffutils import FileInfo
-from .patchviewer import PatchViewer
+from qgitc.commitsource import CommitSource
+from qgitc.common import *
+from qgitc.gitutils import Git, GitProcess
+from qgitc.difffetcher import DiffFetcher
+from qgitc.diffutils import FileInfo
+from qgitc.patchviewer import PatchViewer
 
 
 def _makeTextIcon(text, textColor, font: QFont):

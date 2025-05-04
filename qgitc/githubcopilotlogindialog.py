@@ -6,8 +6,8 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 import requests
 
-from .common import logger
-from .ui_githubcopilotlogindialog import Ui_GithubCopilotLoginDialog
+from qgitc.common import logger
+from qgitc.ui_githubcopilotlogindialog import Ui_GithubCopilotLoginDialog
 
 
 class LoginStep(Enum):

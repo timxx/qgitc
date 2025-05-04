@@ -11,11 +11,11 @@ from PySide6.QtGui import (
 from PySide6.QtCore import (
     Qt)
 
-from .blameview import BlameView
-from .gotodialog import GotoDialog
-from .findwidget import FindWidget
-from .statewindow import StateWindow
-from .textviewer import FindPart
+from qgitc.blameview import BlameView
+from qgitc.gotodialog import GotoDialog
+from qgitc.findwidget import FindWidget
+from qgitc.statewindow import StateWindow
+from qgitc.textviewer import FindPart
 
 
 __all__ = ["BlameWindow"]

@@ -19,13 +19,13 @@ from PySide6.QtCore import (
     QMimeData,
     QPointF)
 
-from .common import Commit, FindField, decodeFileData, findInlineSpans
-from .diffutils import *
-from .events import OpenLinkEvent
-from .findwidget import FindWidget
-from .sourceviewer import SourceViewer
-from .textline import Link, LinkTextLine, SourceTextLineBase, TextLine, createFormatRange
-from .textviewer import FindPart
+from qgitc.common import Commit, FindField, decodeFileData, findInlineSpans
+from qgitc.diffutils import *
+from qgitc.events import OpenLinkEvent
+from qgitc.findwidget import FindWidget
+from qgitc.sourceviewer import SourceViewer
+from qgitc.textline import Link, LinkTextLine, SourceTextLineBase, TextLine, createFormatRange
+from qgitc.textviewer import FindPart
 
 
 class DiffTextLine(SourceTextLineBase):

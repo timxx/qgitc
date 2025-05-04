@@ -6,7 +6,7 @@ from PySide6.QtCore import (
     QThread)
 import requests
 
-from .common import logger
+from qgitc.common import logger
 
 
 class AiRole(Enum):

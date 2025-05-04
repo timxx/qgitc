@@ -15,8 +15,8 @@ from PySide6.QtGui import (
     QTextBlock
 )
 from PySide6.QtWidgets import QPlainTextEdit
-from .markdownhighlighter import HighlighterState, MarkdownHighlighter
-from .llm import AiResponse, AiRole
+from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
+from qgitc.llm import AiResponse, AiRole
 
 
 class AiChatBotState:

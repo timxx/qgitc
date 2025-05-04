@@ -91,7 +91,7 @@ class BuildQt(Command):
 
         f = open(pyFile, "wb+")
         for line in lines:
-            text = pattern.sub(rb"from .\1 \2", line)
+            text = pattern.sub(rb"from qgitc.\1 \2", line)
             f.write(text)
         f.close()
 

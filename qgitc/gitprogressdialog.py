@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit
 )
 
-from .submoduleexecutor import SubmoduleExecutor
+from qgitc.submoduleexecutor import SubmoduleExecutor
 
 
 class AppendResultEvent(QEvent):

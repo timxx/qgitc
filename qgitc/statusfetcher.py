@@ -3,10 +3,10 @@
 import os
 from PySide6.QtCore import Signal
 
-from .cancelevent import CancelEvent
-from .common import fullRepoDir, logger
-from .gitutils import Git
-from .submoduleexecutor import SubmoduleExecutor
+from qgitc.cancelevent import CancelEvent
+from qgitc.common import fullRepoDir, logger
+from qgitc.gitutils import Git
+from qgitc.submoduleexecutor import SubmoduleExecutor
 
 
 class StatusFetcher(SubmoduleExecutor):

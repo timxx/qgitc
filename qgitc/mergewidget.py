@@ -34,15 +34,15 @@ from PySide6.QtCore import (
     QProcess,
     QProcessEnvironment,
     QEvent)
-from .gitutils import Git, GitProcess
-from .conflictlog import (
+from qgitc.gitutils import Git, GitProcess
+from qgitc.conflictlog import (
     ConflictLogExcel,
     ConflictLogXlsx,
     HAVE_EXCEL_API,
     HAVE_XLSX_WRITER,
     MergeInfo)
-from .events import CopyConflictCommit
-from .common import dataDirPath, logger
+from qgitc.events import CopyConflictCommit
+from qgitc.common import dataDirPath, logger
 
 from datetime import datetime
 

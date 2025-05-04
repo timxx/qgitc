@@ -10,9 +10,9 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPlainTextEdit
 
-from .common import findInlineSpans
-from .textline import Link, TextLine
-from .textviewer import TextViewer
+from qgitc.common import findInlineSpans
+from qgitc.textline import Link, TextLine
+from qgitc.textviewer import TextViewer
 
 
 class CommitMessageHighlighter(QSyntaxHighlighter):

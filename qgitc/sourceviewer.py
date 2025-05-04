@@ -8,8 +8,8 @@ from PySide6.QtGui import (
 from PySide6.QtCore import (
     QEvent)
 
-from .textline import SourceTextLineBase
-from .textviewer import TextViewer
+from qgitc.textline import SourceTextLineBase
+from qgitc.textviewer import TextViewer
 
 
 __all__ = ["SourceViewer"]

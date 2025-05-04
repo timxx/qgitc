@@ -12,8 +12,8 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QApplication)
 
-from .commitactiontablemodel import CommitAction
-from .mergetool import MergeTool
+from qgitc.commitactiontablemodel import CommitAction
+from qgitc.mergetool import MergeTool
 
 import os
 import platform

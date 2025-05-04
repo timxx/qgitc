@@ -7,8 +7,8 @@ from PySide6.QtCore import (
     QProcess,
     QProcessEnvironment)
 
-from .common import logger
-from .gitutils import Git, GitProcess
+from qgitc.common import logger
+from qgitc.gitutils import Git, GitProcess
 
 
 class DataFetcher(QObject):

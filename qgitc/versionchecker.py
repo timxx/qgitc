@@ -9,7 +9,7 @@ from PySide6.QtNetwork import (
     QNetworkRequest,
     QNetworkReply)
 
-from .version import (
+from qgitc.version import (
     VERSION_MAJOR,
     VERSION_MINOR,
     VERSION_PATCH)

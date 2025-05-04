@@ -25,11 +25,11 @@ from PySide6.QtCore import (
     QAbstractAnimation,
     QEvent)
 
-from .coloredicontoolbutton import ColoredIconToolButton
-from .textcursor import TextCursor
-from .waitingspinnerwidget import QtWaitingSpinner
-from .textviewer import FindPart, FindFlags
-from .common import dataDirPath
+from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.textcursor import TextCursor
+from qgitc.waitingspinnerwidget import QtWaitingSpinner
+from qgitc.textviewer import FindPart, FindFlags
+from qgitc.common import dataDirPath
 
 import bisect
 import re

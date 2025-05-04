@@ -13,7 +13,7 @@ else:
     import xml.etree.ElementTree as ET
     from datetime import datetime
 
-    from .common import isXfce4
+    from qgitc.common import isXfce4
 
 
 def _exePath():

@@ -7,9 +7,9 @@ from PySide6.QtWidgets import (
     QMessageBox
 )
 
-from .comboboxitemdelegate import ComboBoxItemDelegate
-from .commitactiontablemodel import CommitActionTableModel
-from .ui_commitactionwidget import Ui_CommitActionWidget
+from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
+from qgitc.commitactiontablemodel import CommitActionTableModel
+from qgitc.ui_commitactionwidget import Ui_CommitActionWidget
 
 
 class CommitActionWidget(QWidget):

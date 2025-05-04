@@ -29,11 +29,11 @@ from PySide6.QtCore import (
     QEvent,
     QBasicTimer)
 
-from .textline import (
+from qgitc.textline import (
     TextLine,
     createFormatRange,
     Link)
-from .textcursor import TextCursor
+from qgitc.textcursor import TextCursor
 
 import re
 import bisect
