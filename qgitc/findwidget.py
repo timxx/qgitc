@@ -28,7 +28,7 @@ from PySide6.QtCore import (
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.textcursor import TextCursor
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
-from qgitc.textviewer import FindPart, FindFlags
+from qgitc.findconstants import FindPart, FindFlags
 from qgitc.common import dataDirPath
 
 import bisect

@@ -29,6 +29,8 @@ from PySide6.QtCore import (
     QEvent,
     QBasicTimer)
 
+from qgitc.findconstants import FindFlags, FindPart
+from qgitc.findwidget import FindWidget
 from qgitc.textline import (
     TextLine,
     createFormatRange,
@@ -39,23 +41,7 @@ import re
 import bisect
 
 
-__all__ = ["TextViewer", "FindFlags", "FindPart"]
-
-
-class FindFlags:
-
-    Backward = 0x01
-    CaseSenitively = 0x02
-    WholeWords = 0x04
-    UseRegExp = 0x08
-
-
-class FindPart:
-
-    BeforeCurPage = 0
-    CurrentPage = 1
-    AfterCurPage = 2
-    All = 3
+__all__ = ["TextViewer"]
 
 
 class TextViewer(QAbstractScrollArea):
@@ -111,6 +97,8 @@ class TextViewer(QAbstractScrollArea):
         self.setTextMargins(4)
 
         self._autoScrollTimer = QBasicTimer(self)
+
+        self._findWidget: FindWidget = None
 
     def updateFont(self, font):
         self._font = font
@@ -201,6 +189,10 @@ class TextViewer(QAbstractScrollArea):
         if self._lines and \
                 len(self._lines) == len(self._textLines):
             self._lines = None
+
+        if self._findWidget and self._findWidget.isVisible():
+            # redo a find
+            self._onFind(self._findWidget.text, self._findWidget.flags)
 
     def clear(self):
         self._lines = None
@@ -911,7 +903,8 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.selectTo(textLine.lineNo(), len(textLine.text()))
             self._invalidateSelection()
         else:
-            offset = textLine.offsetForPos(self.mapToContents(event.position()))
+            offset = textLine.offsetForPos(
+                self.mapToContents(event.position()))
             self._cursor.moveTo(textLine.lineNo(), offset)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
@@ -1130,3 +1123,94 @@ class TextViewer(QAbstractScrollArea):
         if event.type() == QEvent.ActivationChange:
             if not self.isActiveWindow():
                 self._autoScrollTimer.stop()
+
+    def executeFind(self):
+        if not self._findWidget:
+            self._findWidget = FindWidget(self.viewport(), self)
+            self._findWidget.find.connect(self._onFind)
+            self._findWidget.cursorChanged.connect(
+                self._onFindCursorChanged)
+            self._findWidget.afterHidden.connect(
+                self._onFindHidden)
+            self.findFinished.connect(
+                self._findWidget.findFinished)
+
+        text = self.selectedText
+        if text:
+            # first line only
+            text = text.lstrip('\n')
+            index = text.find('\n')
+            if index != -1:
+                text = text[:index]
+            self._findWidget.setText(text)
+        self._findWidget.showAnimate()
+
+    def _onFind(self, text, flags):
+        self._findWidget.updateFindResult([])
+        self.highlightFindResult([])
+
+        if self.textLineCount() > 3000:
+            self.curIndexFound = False
+            if self.findAllAsync(text, flags):
+                self._findWidget.findStarted()
+        else:
+            findResult = self.findAll(text, flags)
+            if findResult:
+                self._onFindResultAvailable(findResult, FindPart.All)
+
+    def _onFindCursorChanged(self, cursor):
+        self.select(cursor)
+
+    def _onFindHidden(self):
+        self.highlightFindResult([])
+        self.cancelFind()
+
+    def _onFindResultAvailable(self, result, findPart):
+        curFindIndex = 0 if findPart == FindPart.All else -1
+
+        if findPart in [FindPart.CurrentPage, FindPart.All]:
+            textCursor = self.textCursor
+            if textCursor.isValid() and textCursor.hasSelection() \
+                    and not textCursor.hasMultiLines():
+                for i in range(0, len(result)):
+                    r = result[i]
+                    if r == textCursor:
+                        curFindIndex = i
+                        break
+            else:
+                curFindIndex = 0
+        elif not self.curIndexFound:
+            curFindIndex = 0
+
+        if curFindIndex >= 0:
+            self.curIndexFound = True
+
+        self.highlightFindResult(result, findPart)
+        if curFindIndex >= 0:
+            self.select(result[curFindIndex])
+
+        self._findWidget.updateFindResult(result, curFindIndex, findPart)
+
+    def closeFindWidget(self):
+        if self._findWidget and self._findWidget.isVisible():
+            self._findWidget.hideAnimate()
+            return True
+        return False
+
+    def canFindNext(self):
+        if not self._findWidget:
+            return False
+        return self._findWidget.isVisible() and self._findWidget.canFindNext()
+
+    def canFindPrevious(self):
+        if not self._findWidget:
+            return False
+        return self._findWidget.isVisible() and self._findWidget.canFindPrevious()
+
+    def findNext(self):
+        if self._findWidget:
+            self._findWidget.findNext()
+
+    def findPrevious(self):
+        if self._findWidget:
+            self._findWidget.findPrevious()
