@@ -18,8 +18,14 @@ from qgitc.common import logger
 from qgitc.gitutils import Git, GitProcess
 
 
+knownQtWarnings = [
+    "This plugin does not support propagateSizeHints()",
+    "This plugin does not support raise()",
+]
+
+
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
-    if type == QtMsgType.QtWarningMsg and msg == "This plugin does not support propagateSizeHints()":
+    if type == QtMsgType.QtWarningMsg and msg in knownQtWarnings:
         return
 
     print(msg)
