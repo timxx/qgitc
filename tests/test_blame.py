@@ -51,12 +51,12 @@ class TestBlame(TestBase):
         self.window.blame(file)
         self.assertTrue(spyFetcher.wait(3000))
 
-        self.assertIsNone(self.window._findWidget)
+        self.assertIsNone(self.window.findWidget)
         QTest.keyClick(self.window, Qt.Key_F, Qt.ControlModifier)
         QTest.qWait(300)
-        self.assertIsNotNone(self.window._findWidget)
+        self.assertIsNotNone(self.window.findWidget)
 
-        findWidget = self.window._findWidget
+        findWidget = self.window.findWidget
         spyFind = QSignalSpy(findWidget.find)
 
         QTest.keyClick(findWidget._leFind, 'T')

@@ -13,7 +13,6 @@ from PySide6.QtCore import (
 
 from qgitc.blameview import BlameView
 from qgitc.gotodialog import GotoDialog
-from qgitc.findwidget import FindWidget
 from qgitc.statewindow import StateWindow
 from qgitc.textviewer import FindPart
 
@@ -38,16 +37,10 @@ class BlameWindow(StateWindow):
         self.setCentralWidget(centralWidget)
         self._setupMenuBar()
 
-        self._findWidget = None
-        self._curIndexFound = False
-
         self._view.blameFileAboutToChange.connect(
             self._onBlameFileAboutToChange)
         self._view.blameFileChanged.connect(
             self._onBlameFileChanged)
-
-        self._view.viewer.findResultAvailable.connect(
-            self._onFindResultAvailable)
 
     def _setupMenuBar(self):
         self._setupFileMenu()
@@ -56,8 +49,8 @@ class BlameWindow(StateWindow):
     def _setupFileMenu(self):
         fileMenu = self.menuBar().addMenu(self.tr("&File"))
         acClose = fileMenu.addAction(self.tr("Close &Window"),
-                           self.close,
-                           QKeySequence("Ctrl+W"))
+                                     self.close,
+                                     QKeySequence("Ctrl+W"))
         acClose.setIcon(QIcon.fromTheme("window-close"))
 
     def _setupEditMenu(self):
@@ -117,116 +110,52 @@ class BlameWindow(StateWindow):
         else:
             self._view.viewer.selectAll()
 
-    def _onFindFind(self, text, flags):
-        viewer = self._view.viewer
-
-        self._findWidget.updateFindResult([])
-        viewer.highlightFindResult([])
-
-        if viewer.textLineCount() > 3000:
-            self._curIndexFound = False
-            if viewer.findAllAsync(text, flags):
-                self._findWidget.findStarted()
-        else:
-            findResult = viewer.findAll(text, flags)
-            if findResult:
-                self._onFindResultAvailable(findResult, FindPart.All)
-
-    def _onFindCursorChanged(self, cursor):
-        self._view.viewer.select(cursor)
-
-    def _onFindHidden(self):
-        self._view.viewer.highlightFindResult([])
-        self._view.viewer.cancelFind()
-
     def _onBlameFileAboutToChange(self, file):
-        if self._findWidget and self._findWidget.isVisible():
-            self._findWidget.updateFindResult([])
+        if self.findWidget and self.findWidget.isVisible():
+            self.findWidget.updateFindResult([])
 
     def _onBlameFileChanged(self, file):
-        if self._findWidget and self._findWidget.isVisible():
+        findWidget = self.findWidget
+        if findWidget and findWidget.isVisible():
             # redo a find
-            self._onFindFind(self._findWidget.text, self._findWidget.flags)
-
-    def _onFindResultAvailable(self, result, findPart):
-        curFindIndex = 0 if findPart == FindPart.All else -1
-        viewer = self._view.viewer
-
-        if findPart in [FindPart.CurrentPage, FindPart.All]:
-            textCursor = viewer.textCursor
-            if textCursor.isValid() and textCursor.hasSelection() \
-                    and not textCursor.hasMultiLines():
-                for i in range(0, len(result)):
-                    r = result[i]
-                    if r == textCursor:
-                        curFindIndex = i
-                        break
-            else:
-                curFindIndex = 0
-        elif not self._curIndexFound:
-            curFindIndex = 0
-
-        if curFindIndex >= 0:
-            self._curIndexFound = True
-
-        viewer.highlightFindResult(result, findPart)
-        if curFindIndex >= 0:
-            viewer.select(result[curFindIndex])
-
-        self._findWidget.updateFindResult(result, curFindIndex, findPart)
+            findWidget.setText(findWidget.text)
 
     def showFindWidget(self):
-        if not self._findWidget:
-            self._findWidget = FindWidget(
-                self._view.viewer.viewport(), self._view.viewer)
-            self._findWidget.find.connect(
-                self._onFindFind)
-            self._findWidget.cursorChanged.connect(
-                self._onFindCursorChanged)
-            self._findWidget.afterHidden.connect(
-                self._onFindHidden)
-            self._view.viewer.findFinished.connect(
-                self._findWidget.findFinished)
-
-        text = self._view.viewer.selectedText
-        if text:
-            text = text.lstrip('\n')
-            index = text.find('\n')
-            if index != -1:
-                text = text[:index]
-            self._findWidget.setText(text)
-
-        self._findWidget.showAnimate()
+        self._view.viewer.executeFind()
 
     def blame(self, file, rev=None, lineNo=0, repoDir=None):
         self._view.blame(file, rev, lineNo, repoDir)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
-            if self._findWidget and self._findWidget.isVisible():
-                self._findWidget.hideAnimate()
+            if self.findWidget and self.findWidget.isVisible():
+                self.findWidget.hideAnimate()
                 return
 
         super().keyPressEvent(event)
 
     def findNext(self):
-        if self._findWidget:
-            self._findWidget.findNext()
+        if self.findWidget:
+            self.findWidget.findNext()
 
     def findPrevious(self):
-        if self._findWidget:
-            self._findWidget.findPrevious()
+        if self.findWidget:
+            self.findWidget.findPrevious()
 
     def _onEditMenuAboutToShow(self):
-        enabled = self._findWidget is not None and self._findWidget.isVisible()
+        enabled = self.findWidget is not None and self.findWidget.isVisible()
         if not enabled:
             self.acFindNext.setEnabled(False)
             self.acFindPrev.setEnabled(False)
             return
 
-        self.acFindNext.setEnabled(self._findWidget.canFindNext())
-        self.acFindPrev.setEnabled(self._findWidget.canFindPrevious())
+        self.acFindNext.setEnabled(self.findWidget.canFindNext())
+        self.acFindPrev.setEnabled(self.findWidget.canFindPrevious())
 
     def closeEvent(self, event):
         self._view.queryClose()
         super().closeEvent(event)
+
+    @property
+    def findWidget(self):
+        return self._view.viewer.findWidget

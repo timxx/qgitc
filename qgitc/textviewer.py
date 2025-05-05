@@ -1214,3 +1214,7 @@ class TextViewer(QAbstractScrollArea):
     def findPrevious(self):
         if self._findWidget:
             self._findWidget.findPrevious()
+
+    @property
+    def findWidget(self):
+        return self._findWidget
