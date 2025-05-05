@@ -504,15 +504,19 @@ class TextViewer(QAbstractScrollArea):
         self._acCopy = menu.addAction(
             self.tr("&Copy"),
             self.copy,
-            QKeySequence("Ctrl+C"))
+            QKeySequence(QKeySequence.Copy))
         self._acCopy.setIcon(QIcon.fromTheme("edit-copy"))
-        menu.addSeparator()
         self._acSelectAll = menu.addAction(
             self.tr("Select &All"),
             self.selectAll,
-            QKeySequence("Ctrl+A"))
+            QKeySequence(QKeySequence.SelectAll))
         self._acSelectAll.setIcon(QIcon.fromTheme("edit-select-all"))
-
+        menu.addSeparator()
+        acFind = menu.addAction(
+            self.tr("&Find"),
+            self.executeFind,
+            QKeySequence(QKeySequence.Find))
+        acFind.setIcon(QIcon.fromTheme("edit-find"))
         return menu
 
     @property
@@ -1058,6 +1062,8 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.selectPreviousLine()
             self.ensureSelectionVisible()
             self.viewport().update()
+        elif event.matches(QKeySequence.StandardKey.Find):
+            self.executeFind()
         else:
             super().keyPressEvent(event)
 
