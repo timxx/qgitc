@@ -17,7 +17,7 @@ class GitProcess():
 
     GIT_BIN = None
 
-    def __init__(self, repoDir, args, text=None):
+    def __init__(self, repoDir, args, text=None, env=None):
         startupinfo = None
         logger.debug(f"run {args} in {repoDir}")
         if os.name == "nt":
@@ -29,7 +29,8 @@ class GitProcess():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             startupinfo=startupinfo,
-            universal_newlines=text)
+            universal_newlines=text,
+            env=env)
 
     @property
     def process(self):
@@ -697,13 +698,16 @@ class Git():
         args = ["commit", "--no-edit"]
         if amend:
             args.append("--amend")
+        env = None
         if date:
             args.append("--date={}".format(date))
+            env = os.environ.copy()
+            env["GIT_COMMITTER_DATE"] = date
 
         if message:
             args.append("-m")
             args.append(message)
-        process = GitProcess(repoDir or Git.REPO_DIR, args)
+        process = GitProcess(repoDir or Git.REPO_DIR, args, env=env)
         out, error = process.communicate()
         if out is not None:
             out = out.decode("utf-8")
