@@ -131,14 +131,6 @@ class StatusFileListModel(QAbstractListModel):
             file, repoDir, statusCode, oldFile))
         self.endInsertRows()
 
-    def tryAddFile(self, file: str, repoDir: str, statusCode: str):
-        for fileInfo in self._fileList:
-            if fileInfo.file == file and fileInfo.repoDir == repoDir:
-                return False
-
-        self.addFile(file, repoDir, statusCode)
-        return True
-
     def removeFile(self, file: str, repoDir: str):
         if not self._fileList:
             return None
