@@ -10,6 +10,9 @@ class TestAboutDialog(TestBase):
         super().setUp()
         self.dialog = AboutDialog()
 
+    def doCreateRepo(self):
+        pass
+
     def testRun(self):
         QTimer.singleShot(0, self.dialog.reject)
         ret = self.dialog.exec()

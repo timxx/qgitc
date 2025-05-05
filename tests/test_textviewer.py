@@ -11,6 +11,9 @@ class TestTextViewer(TestBase):
         super().setUp()
         self.viewer = TextViewer()
 
+    def doCreateRepo(self):
+        pass
+
     def testAppend(self):
         self.viewer.appendLine("First line")
         self.assertEqual(self.viewer.textLineCount(), 1)

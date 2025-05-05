@@ -19,6 +19,9 @@ class Dummy:
 
 
 class TestSubmoduleExecutor(TestBase):
+    def doCreateRepo(self):
+        pass
+
     def testSubmit(self):
         executor = SubmoduleExecutor()
 

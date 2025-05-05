@@ -111,29 +111,10 @@ def _init_with_trace(instance, *args, **kwargs):
 
 class TestBase(unittest.TestCase):
     def setUp(self):
-        self.gitDir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.submoduleDir = None
         self.oldDir = Git.REPO_DIR or os.getcwd()
-        os.chdir(self.gitDir.name)
-
-        # HACK: do not depend on application
-        GitProcess.GIT_BIN = shutil.which("git")
-
-        createRepo(self.gitDir.name)
-        if self.createSubmodule():
-            self.submoduleDir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-            createRepo(self.submoduleDir.name,
-                       "https://foo.com/bar/submodule.git")
-            addSubmoduleRepo(self.gitDir.name,
-                             self.submoduleDir.name, "submodule")
-        if self.createSubRepo():
-            with open(os.path.join(self.gitDir.name, ".gitignore"), "w+") as f:
-                f.write("/subRepo/\n")
-            Git.addFiles(repoDir=self.gitDir.name, files=[".gitignore"])
-            Git.commit("Add .gitignore", repoDir=self.gitDir.name)
-
-            subRepoDir = os.path.join(self.gitDir.name, "subRepo")
-            createRepo(subRepoDir, "https://foo.com/bar/subRepo.git")
+        self.gitDir = None
+        self.submoduleDir = None
+        self.doCreateRepo()
 
         self.app = Application(sys.argv, testing=True)
         # clear settings to avoid test interference
@@ -155,10 +136,11 @@ class TestBase(unittest.TestCase):
         os.chdir(self.oldDir)
         Git.REPO_DIR = self.oldDir
 
-        time.sleep(0.5)
-        self.gitDir.cleanup()
-        if self.submoduleDir:
-            self.submoduleDir.cleanup()
+        if self.gitDir:
+            time.sleep(0.1)
+            self.gitDir.cleanup()
+            if self.submoduleDir:
+                self.submoduleDir.cleanup()
 
     def processEvents(self):
         self.app.sendPostedEvents()
@@ -176,3 +158,28 @@ class TestBase(unittest.TestCase):
 
     def createSubRepo(self):
         return False
+
+    def doCreateRepo(self):
+        self.gitDir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.submoduleDir = None
+        os.chdir(self.gitDir.name)
+
+        # HACK: do not depend on application
+        GitProcess.GIT_BIN = shutil.which("git")
+
+        createRepo(self.gitDir.name)
+        if self.createSubmodule():
+            self.submoduleDir = tempfile.TemporaryDirectory(
+                ignore_cleanup_errors=True)
+            createRepo(self.submoduleDir.name,
+                       "https://foo.com/bar/submodule.git")
+            addSubmoduleRepo(self.gitDir.name,
+                             self.submoduleDir.name, "submodule")
+        if self.createSubRepo():
+            with open(os.path.join(self.gitDir.name, ".gitignore"), "w+") as f:
+                f.write("/subRepo/\n")
+            Git.addFiles(repoDir=self.gitDir.name, files=[".gitignore"])
+            Git.commit("Add .gitignore", repoDir=self.gitDir.name)
+
+            subRepoDir = os.path.join(self.gitDir.name, "subRepo")
+            createRepo(subRepoDir, "https://foo.com/bar/subRepo.git")

@@ -13,6 +13,9 @@ class TestSettings(TestBase):
         del self.settings
         super().tearDown()
 
+    def doCreateRepo(self):
+        pass
+
     def testSubmodules(self):
         submodules = self.settings.submodulesCache(Git.REPO_DIR)
         self.assertTrue(isinstance(submodules, list))

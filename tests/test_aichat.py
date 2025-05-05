@@ -18,6 +18,9 @@ class TestAiChat(TestBase):
         self.window.close()
         super().tearDown()
 
+    def doCreateRepo(self):
+        pass
+
     def testBots(self):
         self.assertEqual(2, self.chatWidget.cbBots.count())
         self.assertTrue(self.chatWidget.cbBots.itemData(0).isLocal())

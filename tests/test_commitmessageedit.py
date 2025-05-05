@@ -17,6 +17,9 @@ class TestCommitMessageEdit(TestBase):
         self.edit.close()
         super().tearDown()
 
+    def doCreateRepo(self):
+        pass
+
     def getForegroundColor(self, cursor: QTextCursor):
         block = cursor.block()
         for fr in block.layout().formats():
