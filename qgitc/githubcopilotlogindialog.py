@@ -78,10 +78,11 @@ class LoginThread(QThread):
 
     def _getAccessCode(self):
         i = 0
+        isMocked = qApp.testing and requests.post.__module__.startswith("tests")
         while not self.accessToken and not self.isInterruptionRequested():
             self.msleep(50)
             i += 1
-            if i % 100 != 0:
+            if i % 100 != 0 and not isMocked:
                 continue
 
             response = requests.post(

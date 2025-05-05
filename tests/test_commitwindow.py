@@ -2,25 +2,13 @@
 import os
 import tempfile
 from unittest.mock import patch
-from PySide6.QtCore import Qt, QTimer, QCoreApplication
+from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from PySide6.QtWidgets import QDialog
 from qgitc.application import Application
-from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog, LoginStep
 from qgitc.gitutils import Git
 from tests.base import TestBase, createRepo
-
-
-GithubCopilotLoginDialogExec = GithubCopilotLoginDialog.exec
-
-
-def _loginExecAutoReject(dialog: GithubCopilotLoginDialog, *args, **kwargs):
-    def _handleExec():
-        while dialog._loginThread.step != LoginStep.AccessCode:
-            QCoreApplication.processEvents()
-        dialog.close()
-    QTimer.singleShot(0, _handleExec)
-    GithubCopilotLoginDialogExec(dialog)
+from tests.mockgithubcopilot import MockGithubCopilotStep, MockGithubCopilot
 
 
 class TestCommitWindow(TestBase):
@@ -177,33 +165,47 @@ class TestCommitWindow(TestBase):
             self.processEvents()
 
         self.assertTrue(self.window.ui.btnGenMessage.isEnabled())
-
-        patch_exec = patch.object(
-            GithubCopilotLoginDialog, "exec", new=_loginExecAutoReject)
-        patch_exec.start()
-        patch_open = patch("PySide6.QtGui.QDesktopServices.openUrl")
-        mock_open = patch_open.start()
-        patch_access = patch(
-            "qgitc.githubcopilotlogindialog.LoginThread._getAccessCode")
-        mock_access = patch_access.start()
-
-        spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
-        QTest.mouseClick(self.window.ui.btnGenMessage, Qt.LeftButton)
-        self.processEvents()
-        self.assertTrue(self.window.ui.btnCancelGen.isVisible())
-        self.assertFalse(self.window.ui.btnGenMessage.isVisible())
+        # no message by default
         self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
 
-        while spyFinished.count() == 0:
+        with MockGithubCopilot(self) as mock:
+            spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
+            QTest.mouseClick(self.window.ui.btnGenMessage, Qt.LeftButton)
             self.processEvents()
-        self.assertEqual(spyFinished.at(0)[0], "")
+            self.assertTrue(self.window.ui.btnCancelGen.isVisible())
+            self.assertFalse(self.window.ui.btnGenMessage.isVisible())
+            self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
+            self.assertTrue(self.window.ui.btnRefineMsg.isVisible())
 
-        mock_access.assert_called_once()
-        mock_open.assert_called_once()
+            while spyFinished.count() == 0:
+                self.processEvents()
+            self.assertEqual(spyFinished.at(0)[0], "This is a mock response")
+            self.assertEqual(
+                self.window.ui.teMessage.toPlainText(), "This is a mock response")
+            self.assertTrue(self.window.ui.btnRefineMsg.isEnabled())
 
-        patch_access.stop()
-        patch_open.stop()
-        patch_exec.stop()
+            mock.assertEverythingOK()
+
+        self.processEvents()
+
+        # clear the token for the next test
+        self.app.settings().setGithubCopilotAccessToken("")
+        self.app.settings().setGithubCopilotToken("")
+
+        with MockGithubCopilot(self, MockGithubCopilotStep.LoginAccessDenied) as mock:
+            spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
+            QTest.mouseClick(self.window.ui.btnRefineMsg, Qt.LeftButton)
+            self.processEvents()
+            self.assertTrue(self.window.ui.btnCancelGen.isVisible())
+            self.assertTrue(self.window.ui.btnGenMessage.isVisible())
+            self.assertFalse(self.window.ui.btnGenMessage.isEnabled())
+            self.assertFalse(self.window.ui.btnRefineMsg.isVisible())
+
+            while spyFinished.count() == 0:
+                self.processEvents()
+            self.assertEqual(spyFinished.at(0)[0], "")
+
+            mock.assertEverythingOK()
 
         self.wait(50)
         self.window.cancel(True)

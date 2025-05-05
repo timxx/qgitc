@@ -136,6 +136,8 @@ class TestBase(unittest.TestCase):
             createRepo(subRepoDir, "https://foo.com/bar/subRepo.git")
 
         self.app = Application(sys.argv, testing=True)
+        # clear settings to avoid test interference
+        self.app.settings().remove("")
 
         self._threadPatcher = patch.object(
             QThread, "__init__", new=_init_with_trace)
