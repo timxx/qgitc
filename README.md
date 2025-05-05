@@ -87,7 +87,7 @@ python qgitc.py shell register
 # if your file manager isn't the default one comes with desktop
 # say your desktop is Ubuntu, but use thunar as default one
 # use --file-manager to specify reigster for
-qgitch shell register --file-manager=thunar
+qgitc shell register --file-manager=thunar
 ```
 
 ## Icons
