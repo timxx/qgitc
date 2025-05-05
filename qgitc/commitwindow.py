@@ -1530,3 +1530,12 @@ class CommitWindow(StateWindow):
         thread = self.sender()
         if thread in self._threads:
             self._threads.remove(thread)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            findWidget = self.ui.viewer.findWidget
+            if findWidget and findWidget.isVisible():
+                findWidget.hideAnimate()
+                return
+
+        super().keyPressEvent(event)
