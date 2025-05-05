@@ -448,7 +448,6 @@ class CommitWindow(StateWindow):
         self._repoBranch.clear()
         self._branchMessage.clear()
         self._branchWidget.setVisible(False)
-        self._branchLabel.setText("")
 
     def clearModels(self):
         self._filesModel.clear()
@@ -954,6 +953,7 @@ class CommitWindow(StateWindow):
         return super().event(evt)
 
     def reloadLocalChanges(self):
+        self._statusFetcher.cancel()
         self.clear()
         self._loadLocalChanges()
 
@@ -1493,6 +1493,7 @@ class CommitWindow(StateWindow):
 
     def _onRepoDirChanged(self):
         self.clear()
+        self._branchLabel.clear()
         self.cancel()
         if not Git.REPO_DIR:
             return

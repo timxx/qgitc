@@ -34,6 +34,12 @@ class TestCommitWindow(TestBase):
         while self.window._statusFetcher.isRunning():
             self.processEvents()
 
+        while self.window._infoFetcher.isRunning():
+            self.processEvents()
+
+        while self.window._submoduleExecutor.isRunning():
+            self.processEvents()
+
         self.wait(50)
 
     def testRepoChanged(self):
@@ -159,10 +165,8 @@ class TestCommitWindow(TestBase):
 
         Git.addFiles(repoDir=self.gitDir.name, files=["test.py"])
 
-        spyStatus = QSignalSpy(self.window._statusFetcher.finished)
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
-        while self.window._statusFetcher.isRunning() or spyStatus.count() == 0:
-            self.processEvents()
+        self.waitForLoaded()
 
         self.assertTrue(self.window.ui.btnGenMessage.isEnabled())
         # no message by default
@@ -233,8 +237,13 @@ class TestCommitWindow(TestBase):
         with open(os.path.join(self.gitDir.name, subRepoFile), "a+") as f:
             f.write("# new line\n")
 
+        branch = self.window._branchLabel.text()
+        self.assertTrue(len(branch) > 0)
+
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
         self.waitForLoaded()
+
+        self.assertEqual(branch, self.window._branchLabel.text())
 
         spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
         QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
@@ -269,3 +278,5 @@ class TestCommitWindow(TestBase):
             self.assertIn("create mode 100644 test.txt", result)
             self.assertIn("test commit", result)
             self.assertIn("1 file changed, 1 insertion", result)
+
+            self.assertEqual(branch, self.window._branchLabel.text())
