@@ -209,3 +209,63 @@ class TestCommitWindow(TestBase):
 
         self.wait(50)
         self.window.cancel(True)
+
+    def testCommit(self):
+        self.waitForLoaded()
+
+        # no files staged by default
+        self.assertEqual(self.window._stagedModel.rowCount(), 0)
+        self.assertFalse(self.window.ui.btnCommit.isEnabled())
+        self.assertFalse(self.window.ui.cbAmend.isChecked())
+
+        QTest.mouseClick(self.window.ui.cbAmend, Qt.LeftButton)
+        self.processEvents()
+        self.assertTrue(self.window.ui.btnCommit.isEnabled())
+        self.assertTrue(self.window.ui.cbAmend.isChecked())
+
+        QTest.mouseClick(self.window.ui.cbAmend, Qt.LeftButton)
+        self.assertFalse(self.window.ui.cbAmend.isChecked())
+
+        with open(os.path.join(self.gitDir.name, "test.txt"), "w+") as f:
+            f.write("test")
+
+        subRepoFile = os.path.join("subRepo", "test.py")
+        with open(os.path.join(self.gitDir.name, subRepoFile), "a+") as f:
+            f.write("# new line\n")
+
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
+        QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
+        while spyFinished.count() == 0:
+            self.processEvents()
+
+        self.assertEqual(self.window._stagedModel.rowCount(), 2)
+        self.assertTrue(self.window.ui.btnCommit.isEnabled())
+
+        # no message by default
+        with patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:
+            QTest.mouseClick(self.window.ui.btnCommit, Qt.LeftButton)
+            self.processEvents()
+            mock_critical.assert_called_once()
+
+        self.window.ui.teMessage.insertPlainText("# comment line\ntest commit")
+
+        with patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:
+            spyFinished = QSignalSpy(self.window._commitExecutor.finished)
+            spyReload = QSignalSpy(self.window._statusFetcher.finished)
+            QTest.mouseClick(self.window.ui.btnCommit, Qt.LeftButton)
+            while spyFinished.count() == 0:
+                self.processEvents()
+            while spyReload.count() == 0:
+                self.processEvents()
+            mock_critical.assert_not_called()
+            self.assertEqual(
+                self.window.ui.stackedWidget.currentWidget(), self.window.ui.pageProgress)
+            self.assertEqual(self.window._stagedModel.rowCount(), 0)
+
+            result = self.window.ui.teOutput.toPlainText()
+            self.assertIn("create mode 100644 test.txt", result)
+            self.assertIn("test commit", result)
+            self.assertIn("1 file changed, 1 insertion", result)
