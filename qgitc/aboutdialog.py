@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QDialog, QApplication
 from PySide6.QtCore import QSize
 from qgitc.ui_aboutdialog import Ui_AboutDialog
 from qgitc.common import dataDirPath
-from qgitc.version import VERSION
+from qgitc.version import version
 
 
 class AboutDialog(QDialog):
@@ -15,7 +15,7 @@ class AboutDialog(QDialog):
         self.ui = Ui_AboutDialog()
         self.ui.setupUi(self)
 
-        icon = qApp.windowIcon()
+        icon = QApplication.instance().windowIcon()
         self.ui.appIcon.setPixmap(icon.pixmap(64, 64))
 
         self.ui.tbAbout.setOpenExternalLinks(True)
@@ -26,7 +26,7 @@ class AboutDialog(QDialog):
         self.resize(QSize(465, 470))
 
     def __initTabs(self):
-        about = "<center><h3>QGitc " + VERSION + "</h3></center>"
+        about = "<center><h3>QGitc " + version + "</h3></center>"
         about += "<center>"
         about += self.tr("A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.")
         about += "</center>"
