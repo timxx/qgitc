@@ -285,6 +285,7 @@ class AiChatWidget(QWidget):
         if self._tokenCalculator:
             self._tokenCalculator.calc_async(None, None)
             self._tokenCalculator.requestInterruption()
+            qApp.terminateThread(self._tokenCalculator)
             self._tokenCalculator = None
 
         for i in range(self.cbBots.count()):

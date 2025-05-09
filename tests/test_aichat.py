@@ -5,6 +5,7 @@ from PySide6.QtTest import QTest, QSignalSpy
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.application import Application
 from tests.base import TestBase
+from tests.mocklocalllm import MockLocalLLM
 
 
 class TestAiChat(TestBase):
@@ -37,22 +38,35 @@ class TestAiChat(TestBase):
 
         self.chatWidget.usrInput.edit.setPlainText("Hello")
 
-        spy = QSignalSpy(model.serviceUnavailable)
-        QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)
-        self.assertEqual(2, chatbot.blockCount())
+        with MockLocalLLM(False) as mock:
+            spy = QSignalSpy(model.serviceUnavailable)
+            QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)
+            self.assertEqual(2, chatbot.blockCount())
 
-        self.assertFalse(self.chatWidget.btnSend.isEnabled())
-        self.assertFalse(self.chatWidget.btnClear.isEnabled())
+            self.assertFalse(self.chatWidget.btnSend.isEnabled())
+            self.assertFalse(self.chatWidget.btnClear.isEnabled())
 
-        self.wait(10000, lambda: spy.count() == 0)
-        self.wait(50)
+            self.wait(10000, lambda: spy.count() == 0)
+            self.wait(50)
 
-        self.assertEqual(4, chatbot.blockCount())
+            self.assertEqual(4, chatbot.blockCount())
 
-        self.assertTrue(self.chatWidget.btnClear.isEnabled())
-        QTest.mouseClick(self.chatWidget.btnClear, Qt.LeftButton)
-        self.processEvents()
+            self.assertTrue(self.chatWidget.btnClear.isEnabled())
+            QTest.mouseClick(self.chatWidget.btnClear, Qt.LeftButton)
+            self.processEvents()
 
-        self.assertEqual(1, chatbot.blockCount())
+            self.assertEqual(1, chatbot.blockCount())
 
-        self.wait(100)
+            self.wait(100)
+
+        with MockLocalLLM(True) as mock:
+            spy = QSignalSpy(model.responseAvailable)
+            QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)
+            self.assertEqual(2, chatbot.blockCount())
+
+            self.wait(10000, lambda: model.isRunning())
+            self.wait(50)
+
+            self.assertEqual(4, chatbot.blockCount())
+            self.assertEqual("This is a mock response",
+                             chatbot.document().lastBlock().text())
