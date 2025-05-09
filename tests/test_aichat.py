@@ -47,6 +47,8 @@ class TestAiChat(TestBase):
         while spy.count() == 0:
             self.processEvents()
 
+        self.wait(50)
+
         self.assertEqual(4, chatbot.blockCount())
 
         self.assertTrue(self.chatWidget.btnClear.isEnabled())
