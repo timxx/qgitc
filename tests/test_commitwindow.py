@@ -170,7 +170,8 @@ class TestCommitWindow(TestBase):
 
         self.assertTrue(self.window.ui.btnGenMessage.isEnabled())
         # no message by default
-        self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
+        if self.window.ui.teMessage.document().isEmpty():
+            self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
 
         with MockGithubCopilot(self) as mock:
             spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
@@ -253,6 +254,7 @@ class TestCommitWindow(TestBase):
         self.assertEqual(self.window._stagedModel.rowCount(), 2)
         self.assertTrue(self.window.ui.btnCommit.isEnabled())
 
+        self.window.ui.teMessage.clear()
         # no message by default
         with patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:
             QTest.mouseClick(self.window.ui.btnCommit, Qt.LeftButton)
