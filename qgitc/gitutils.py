@@ -18,17 +18,16 @@ class GitProcess():
     GIT_BIN = None
 
     def __init__(self, repoDir, args, text=None, env=None):
-        startupinfo = None
+        creationflags = 0
         logger.debug(f"run {args} in {repoDir}")
         if os.name == "nt":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            creationflags = subprocess.CREATE_NO_WINDOW
         self._process = subprocess.Popen(
             [GitProcess.GIT_BIN] + args,
             cwd=repoDir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            startupinfo=startupinfo,
+            creationflags=creationflags,
             universal_newlines=text,
             env=env)
 

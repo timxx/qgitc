@@ -1144,10 +1144,9 @@ class CommitWindow(StateWindow):
 
         repoDir = fullRepoDir(submodule)
 
-        startupinfo = None
+        creationflags = 0
         if os.name == "nt":
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            creationflags = subprocess.CREATE_NO_WINDOW
 
         def _quote(path):
             if " " in path:
@@ -1164,7 +1163,7 @@ class CommitWindow(StateWindow):
                 cwd=repoDir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                startupinfo=startupinfo,
+                creationflags=creationflags,
                 shell=True)
 
             out, error = process.communicate()

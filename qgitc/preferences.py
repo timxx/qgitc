@@ -208,12 +208,11 @@ class Preferences(QDialog):
 
     def isGitUsable(self, git):
         try:
-            startupinfo = None
+            creationflags = 0
             if os.name == "nt":
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                creationflags = subprocess.CREATE_NO_WINDOW
             subprocess.check_call([git, "--version"], stderr=subprocess.DEVNULL,
-                                  stdout=subprocess.DEVNULL, startupinfo=startupinfo)
+                                  stdout=subprocess.DEVNULL, creationflags=creationflags)
             return True
         except Exception:
             return False
