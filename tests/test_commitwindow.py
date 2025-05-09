@@ -29,16 +29,10 @@ class TestCommitWindow(TestBase):
     def waitForLoaded(self):
         thread = self.window._findSubmoduleThread
         if thread:
-            while thread.isRunning():
-                self.processEvents()
-        while self.window._statusFetcher.isRunning():
-            self.processEvents()
-
-        while self.window._infoFetcher.isRunning():
-            self.processEvents()
-
-        while self.window._submoduleExecutor.isRunning():
-            self.processEvents()
+            self.wait(10000, thread.isRunning)
+        self.wait(10000, self.window._statusFetcher.isRunning)
+        self.wait(10000, self.window._infoFetcher.isRunning)
+        self.wait(10000, self.window._submoduleExecutor.isRunning)
 
         self.wait(50)
 
@@ -100,8 +94,7 @@ class TestCommitWindow(TestBase):
 
         spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
         QTest.mouseClick(self.window.ui.tbStage, Qt.LeftButton)
-        while spyFinished.count() == 0:
-            self.processEvents()
+        self.wait(10000, lambda: spyFinished.count() == 0)
 
         stagedModel = self.window.ui.lvStaged.model()
         self.assertEqual(stagedModel.rowCount(), 1)
@@ -111,8 +104,7 @@ class TestCommitWindow(TestBase):
         spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
         QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
         self.processEvents()
-        while spyFinished.count() == 0:
-            self.processEvents()
+        self.wait(10000, lambda: spyFinished.count() == 0)
 
         self.assertEqual(stagedModel.rowCount(), 2)
         self.assertEqual(filesModel.rowCount(), 0)
@@ -127,8 +119,7 @@ class TestCommitWindow(TestBase):
         spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
         oldFile = stagedModel.data(stagedModel.index(1, 0))
         QTest.mouseClick(self.window.ui.tbUnstage, Qt.LeftButton)
-        while spyFinished.count() == 0:
-            self.processEvents()
+        self.wait(10000, lambda: spyFinished.count() == 0)
 
         self.assertEqual(stagedModel.rowCount(), 1)
         self.assertEqual(filesModel.rowCount(), 1)
@@ -136,8 +127,7 @@ class TestCommitWindow(TestBase):
 
         spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
         QTest.mouseClick(self.window.ui.tbUnstageAll, Qt.LeftButton)
-        while spyFinished.count() == 0:
-            self.processEvents()
+        self.wait(10000, lambda: spyFinished.count() == 0)
 
         self.assertEqual(stagedModel.rowCount(), 0)
         self.assertEqual(filesModel.rowCount(), 2)
@@ -182,8 +172,7 @@ class TestCommitWindow(TestBase):
             self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
             self.assertTrue(self.window.ui.btnRefineMsg.isVisible())
 
-            while spyFinished.count() == 0:
-                self.processEvents()
+            self.wait(10000, lambda: spyFinished.count() == 0)
             self.assertEqual(spyFinished.at(0)[0], "This is a mock response")
             self.assertEqual(
                 self.window.ui.teMessage.toPlainText(), "This is a mock response")
@@ -206,8 +195,7 @@ class TestCommitWindow(TestBase):
             self.assertFalse(self.window.ui.btnGenMessage.isEnabled())
             self.assertFalse(self.window.ui.btnRefineMsg.isVisible())
 
-            while spyFinished.count() == 0:
-                self.processEvents()
+            self.wait(10000, lambda: spyFinished.count() == 0)
             self.assertEqual(spyFinished.at(0)[0], "")
 
             mock.assertEverythingOK()
@@ -248,8 +236,7 @@ class TestCommitWindow(TestBase):
 
         spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
         QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
-        while spyFinished.count() == 0:
-            self.processEvents()
+        self.wait(10000, lambda: spyFinished.count() == 0)
 
         self.assertEqual(self.window._stagedModel.rowCount(), 2)
         self.assertTrue(self.window.ui.btnCommit.isEnabled())
@@ -267,10 +254,8 @@ class TestCommitWindow(TestBase):
             spyFinished = QSignalSpy(self.window._commitExecutor.finished)
             spyReload = QSignalSpy(self.window._statusFetcher.finished)
             QTest.mouseClick(self.window.ui.btnCommit, Qt.LeftButton)
-            while spyFinished.count() == 0:
-                self.processEvents()
-            while spyReload.count() == 0:
-                self.processEvents()
+            self.wait(10000, lambda: spyFinished.count() == 0)
+            self.wait(10000, lambda: spyReload.count() == 0)
             mock_critical.assert_not_called()
             self.assertEqual(
                 self.window.ui.stackedWidget.currentWidget(), self.window.ui.pageProgress)

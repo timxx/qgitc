@@ -29,16 +29,11 @@ class TestLogWindow(TestBase):
         QTest.qWaitForWindowExposed(self.window)
 
         delayTimer = self.window._delayTimer
-        while delayTimer.isActive():
-            self.processEvents()
-
-        while spySubmodule.count() == 0:
-            self.processEvents()
+        self.wait(10000, delayTimer.isActive)
+        self.wait(10000, lambda: spySubmodule.count() == 0)
 
         logview = self.window.ui.gitViewA.ui.logView
-        while logview.fetcher.isLoading():
-            self.processEvents()
-
+        self.wait(10000, logview.fetcher.isLoading)
         self.wait(50)
 
     def testReloadRepo(self):
@@ -74,8 +69,7 @@ class TestLogWindow(TestBase):
         self.window.ui.acCompositeMode.trigger()
         self.assertTrue(self.window.ui.acCompositeMode.isChecked())
 
-        while spyFetch.count() == 0:
-            self.processEvents()
+        self.wait(10000, lambda: spyFetch.count() == 0)
 
         self.assertFalse(self.window.ui.cbSubmodule.isEnabled())
 

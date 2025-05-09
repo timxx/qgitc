@@ -29,8 +29,7 @@ class TestSubmoduleExecutor(TestBase):
         with patch.object(Dummy, "dummyAction", wraps=dummy.dummyAction) as mock:
             spy = QSignalSpy(executor.finished)
             executor.submit(None, dummy.dummyAction)
-            while spy.count() == 0:
-                self.processEvents()
+            self.wait(10000, lambda: spy.count() == 0)
             mock.assert_called_once()
             self.assertIsNone(mock.call_args[0][0])
             self.assertIsNone(mock.call_args[0][1])
@@ -39,8 +38,7 @@ class TestSubmoduleExecutor(TestBase):
         with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
             spy = QSignalSpy(executor.finished)
             executor.submit([None], dummy.dummyAction2, dummy.dummyResult)
-            while spy.count() == 0:
-                self.processEvents()
+            self.wait(10000, lambda: spy.count() == 0)
             mock.assert_called_once_with("Hello", "World")
 
     def _cancelAction(self, submodule, data, cancelEvent: CancelEvent):

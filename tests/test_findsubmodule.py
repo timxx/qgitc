@@ -13,9 +13,7 @@ class TestFindSubmodule(TestBase):
     def testSingleRepo(self):
         thread = FindSubmoduleThread(Git.REPO_DIR)
         thread.start()
-        while not thread.isFinished():
-            # QTest.qWait(1) will slow down the test, don't know why LoL
-            QCoreApplication.processEvents()
+        self.wait(10000, lambda: not thread.isFinished())
 
         self.assertTrue(thread.isFinished())
         self.assertEqual(thread.submodules, [])
@@ -36,8 +34,7 @@ class TestFindSubmodule(TestBase):
             with patch("os.walk") as mock_walk:
                 thread = FindSubmoduleThread(mainRepo)
                 thread.start()
-                while not thread.isFinished():
-                    QCoreApplication.processEvents()
+                self.wait(10000, lambda: not thread.isFinished())
 
                 self.assertTrue(thread.isFinished())
                 self.assertSetEqual(set(thread.submodules), {
@@ -53,8 +50,7 @@ class TestFindSubmodule(TestBase):
 
             thread = FindSubmoduleThread(dir)
             thread.start()
-            while not thread.isFinished():
-                QCoreApplication.processEvents()
+            self.wait(10000, lambda: not thread.isFinished())
 
             self.assertTrue(thread.isFinished())
             subrepo2 = os.path.join("dir1", "dir2", "dir3", "subrepo2")
