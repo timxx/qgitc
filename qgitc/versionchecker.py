@@ -9,7 +9,10 @@ from PySide6.QtNetwork import (
     QNetworkRequest,
     QNetworkReply)
 
-from qgitc.version import version_tuple
+from qgitc.version import (
+    VERSION_MAJOR,
+    VERSION_MINOR,
+    VERSION_PATCH)
 
 
 class VersionChecker(QObject):
@@ -52,16 +55,16 @@ class VersionChecker(QObject):
                 return
 
             newVersion = False
-            if v[0] < version_tuple[0]:
+            if v[0] < VERSION_MAJOR:
                 pass
-            elif v[0] > version_tuple[0]:
+            elif v[0] > VERSION_MAJOR:
                 newVersion = True
             else:
-                if v[1] < version_tuple[1]:
+                if v[1] < VERSION_MINOR:
                     pass
-                elif v[1] > version_tuple[1]:
+                elif v[1] > VERSION_MINOR:
                     newVersion = True
-                elif v[2] > version_tuple[2]:
+                elif v[2] > VERSION_PATCH:
                     newVersion = True
 
             if newVersion:

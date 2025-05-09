@@ -10,6 +10,8 @@ from distutils.errors import DistutilsExecError
 from glob import glob
 from subprocess import call
 
+from qgitc.version import VERSION
+
 
 ENV_PATH = None
 
@@ -122,12 +124,7 @@ with open("README.md", "r") as f:
 
 
 setup(name="qgitc",
-      setup_requires=['setuptools_scm'],
-      use_scm_version={
-          "root": ".",
-          "relative_to": __file__,
-          "write_to": "qgitc/version.py",
-      },
+      version=VERSION,
       author="Weitian Leung",
       author_email="weitianleung@gmail.com",
       description='A cross-platform Git GUI tool',

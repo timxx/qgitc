@@ -94,4 +94,3 @@ ENV/
 .idea
 *.qm
 qgitc/ui_*.py
-qgitc/version.py
