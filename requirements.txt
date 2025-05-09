@@ -4,7 +4,7 @@ requests
 psutil; sys_platform == 'win32'
 
 # for building the package
-setuptools
+setuptools>=77
 wheel
 
 # for uploading the package
