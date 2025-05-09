@@ -1827,6 +1827,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         self.clear()
+        self._branchDir = Git.branchDir(self.curBranch)
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
     def __onSubmoduleAvailable(self, isCache):

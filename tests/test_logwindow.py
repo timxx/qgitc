@@ -3,6 +3,7 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest, QSignalSpy
 from qgitc.application import Application
+from qgitc.gitutils import Git
 from tests.base import TestBase, createRepo
 
 
@@ -88,3 +89,41 @@ class TestLogWindow(TestBase):
 
         self.window.cancel(True)
         self.processEvents()
+
+    def testLocalChanges(self):
+        self.waitForLoaded()
+
+        with open(os.path.join(self.gitDir.name, "test.txt"), "w+") as f:
+            f.write("test")
+
+        Git.addFiles(repoDir=self.gitDir.name, files=["test.txt"])
+
+        subRepoFile = os.path.join("subRepo", "test.py")
+        with open(os.path.join(self.gitDir.name, subRepoFile), "a+") as f:
+            f.write("# new line\n")
+
+        logView = self.window.ui.gitViewA.ui.logView
+
+        self.window.ui.leOpts.clear()
+        QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)
+        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(50)
+
+        self.assertEqual(4, logView.getCount())
+        self.assertEqual(Git.LCC_SHA1, logView.getCommit(0).sha1)
+
+        self.assertEqual(2, self.window.ui.cbSubmodule.count())
+        self.window.ui.cbSubmodule.setCurrentIndex(1)
+        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(50)
+
+        self.assertEqual(3, logView.getCount())
+        self.assertEqual(Git.LUC_SHA1, logView.getCommit(0).sha1)
+
+        self.window.ui.acCompositeMode.trigger()
+        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(50)
+
+        self.assertEqual(5, logView.getCount())
+        self.assertEqual(Git.LUC_SHA1, logView.getCommit(0).sha1)
+        self.assertEqual(Git.LCC_SHA1, logView.getCommit(1).sha1)

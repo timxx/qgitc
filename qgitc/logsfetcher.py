@@ -422,6 +422,9 @@ class LogsFetcher(QObject):
 
     def _onFetchFinished(self, exitCode):
         thread = self.sender()
+        if not thread:
+            return
+
         if thread == self._thread:
             self._errorData = self._thread.errorData
             self._thread = None
