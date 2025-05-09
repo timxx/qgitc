@@ -366,23 +366,14 @@ class Git():
         return process.returncode == 0
 
     @staticmethod
-    def hasLocalChanges(branch, cached=False, repoDir=None):
-        # A remote branch should never have local changes
-        if branch.startswith("remotes/"):
-            return False
-
-        dir = Git.branchDir(branch, repoDir)
-        # only branch checked out can have local changes
-        if not dir:
-            return False
-
+    def hasLocalChanges(cached=False, repoDir=None):
         args = ["diff", "--quiet", "-s"]
         if cached:
             args.append("--cached")
         if Git.versionGE(1, 7, 2):
             args.append("--ignore-submodules=dirty")
 
-        process = GitProcess(dir, args)
+        process = GitProcess(repoDir, args)
         process.communicate()
 
         return process.returncode == 1

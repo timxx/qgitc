@@ -447,6 +447,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.filterPath = None
         self.menu = None
+        self._branchDir = None
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -539,17 +540,18 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         return settings.commitColorB().name()
 
-    def showLogs(self, branch, args=None):
+    def showLogs(self, branch, branchDir, args=None):
         self.curBranch = branch
         self.args = args
         self._finder.reset()
+        self._branchDir = branchDir
 
         submodules = []
         if qApp.settings().isCompositeMode():
             submodules = self.window().submodules()
         self.fetcher.setSubmodules(submodules)
 
-        self.fetcher.fetch(branch, args)
+        self.fetcher.fetch(branch, args, branchDir=self._branchDir)
         self.beginFetch.emit()
 
     def clear(self):
@@ -663,11 +665,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if visible:
             self.acCopyToLog.setEnabled(isCommitted and w.isResolving())
 
-        enabled = isCommitted
-        if enabled:
-            branchDir = Git.branchDir(self.curBranch)
-            enabled = not not branchDir
-
+        enabled = isCommitted and not not self._branchDir
         self.acRevert.setEnabled(enabled)
 
         # to avoid bad reset on each repo
@@ -870,7 +868,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # FIXME: fetch the new one only?
         self.clear()
-        self.showLogs(self.curBranch, self.args)
+        self.showLogs(self.curBranch, self._branchDir, self.args)
 
     def __resetToCurCommit(self, method):
         if self.curIdx == -1:
@@ -1829,7 +1827,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         self.clear()
-        self.showLogs(self.curBranch, self.args)
+        self.showLogs(self.curBranch, self._branchDir, self.args)
 
     def __onSubmoduleAvailable(self, isCache):
         # ignore cache, we will reload in later
@@ -1841,4 +1839,4 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def reloadLogs(self):
         self.clear()
-        self.showLogs(self.curBranch, self.args)
+        self.showLogs(self.curBranch, self._branchDir, self.args)

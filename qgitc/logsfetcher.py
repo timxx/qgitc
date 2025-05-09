@@ -127,13 +127,14 @@ class LogsFetcherThread(QThread):
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
-    def __init__(self, submodules, parent=None):
+    def __init__(self, submodules, branchDir, parent=None):
         super().__init__(parent)
         self._errors = {}  # error: repo
         self._errorData = b''
         self._fetchers = []
         self._submodules = submodules.copy()
         self._eventLoop = None
+        self._branchDir = branchDir
 
     def fetch(self, *args):
         self._args = args
@@ -152,12 +153,16 @@ class LogsFetcherThread(QThread):
         # del profile
 
     @staticmethod
-    def _fetchLocalChanges(branch: str, repoDir: str, submodule: str = None):
-        repoPath = repoDir
+    def _fetchLocalChanges(branchDir: str, submodule: str = None):
+        if not branchDir:
+            return False, False
+
+        repoPath = branchDir
         if submodule and submodule != '.':
-            repoPath = os.path.join(repoDir, submodule)
-        hasLCC = Git.hasLocalChanges(branch, True, repoPath)
-        hasLUC = Git.hasLocalChanges(branch, repoDir=repoPath)
+            repoPath = os.path.join(branchDir, submodule)
+
+        hasLCC = Git.hasLocalChanges(True, repoPath)
+        hasLUC = Git.hasLocalChanges(repoDir=repoPath)
 
         return hasLCC, hasLUC
 
@@ -186,9 +191,8 @@ class LogsFetcherThread(QThread):
     def _fetchNormal(self):
         self._eventLoop = QEventLoop()
 
-        branch = self._args[0]
         if not self._args[1]:
-            hasLCC, hasLUC = self._fetchLocalChanges(branch, Git.REPO_DIR)
+            hasLCC, hasLUC = self._fetchLocalChanges(self._branchDir)
             if hasLCC or hasLUC:
                 lccCommit = Commit()
                 lucCommit = Commit()
@@ -232,10 +236,9 @@ class LogsFetcherThread(QThread):
                 fetcher.cancel()
                 return
 
-            branch = self._args[0]
             if not self._args[1]:
                 hasLCC, hasLUC = self._fetchLocalChanges(
-                    branch, repoDir, submodule)
+                    self._branchDir, submodule)
             else:
                 hasLCC, hasLUC = False, False
 
@@ -374,10 +377,10 @@ class LogsFetcher(QObject):
     def setSubmodules(self, submodules):
         self._submodules = submodules
 
-    def fetch(self, *args):
+    def fetch(self, *args, branchDir=None):
         self.cancel()
         self._errorData = b''
-        self._thread = LogsFetcherThread(self._submodules, self)
+        self._thread = LogsFetcherThread(self._submodules, branchDir, self)
         self._thread.logsAvailable.connect(self._onLogsAvailable)
         self._thread.fetchFinished.connect(self._onFetchFinished)
         self._thread.localChangesAvailable.connect(self._onLocalChangesAvailable)

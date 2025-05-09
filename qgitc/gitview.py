@@ -177,6 +177,7 @@ class GitView(QWidget):
 
         self.ui.logView.showLogs(
             branch,
+            branchDir,
             self.logArgs)
 
     def __onDelayBranchChanged(self, index):
