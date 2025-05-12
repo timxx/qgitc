@@ -35,7 +35,7 @@ jobs:
 
       - name: Package
         run: |
-          python -m build -w
+          python -m build -w -n
 
       - name: Upload
         if: ${{ github.ref_type == 'tag' }}
