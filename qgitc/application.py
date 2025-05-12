@@ -274,7 +274,7 @@ class Application(QApplication):
                 diff = datetime.now() - dt
                 haveToCheck = diff.days >= days
 
-            if haveToCheck:
+            if haveToCheck and not self.testing:
                 self._checker = VersionChecker(self)
                 self._checker.newVersionAvailable.connect(
                     self._onNewVersionAvailable)
