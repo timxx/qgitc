@@ -2,7 +2,7 @@ import os
 import re
 import shutil
 
-from setuptools import (setup, find_packages)
+from setuptools import (setup)
 from distutils.core import Command
 from distutils.command.build import build
 from distutils.spawn import spawn
@@ -121,50 +121,11 @@ with open("README.md", "r") as f:
             "https://raw.githubusercontent.com/timxx/qgitc/refs/heads/master/screenshots/\\1", line)
 
 
-setup(name="qgitc",
-      setup_requires=['setuptools_scm'],
-      use_scm_version={
-          "root": ".",
-          "relative_to": __file__,
-          "write_to": "qgitc/version.py",
-      },
-      author="Weitian Leung",
-      author_email="weitianleung@gmail.com",
-      description='A cross-platform Git GUI tool',
-      long_description_content_type="text/markdown",
-      long_description=long_description,
-      keywords="git conflict viewer blame ai llm log commit code review",
-      url="https://github.com/timxx/qgitc",
-      packages=find_packages(exclude=["tests"]),
-      package_data={"qgitc": ["data/icons/*.ico",
-                              "data/icons/*.svg",
-                              "data/licenses/Apache-2.0.html",
-                              "data/translations/*.qm",
-                              "data/templates/*.xlsx"
-                              ]},
-      license="Apache",
-      python_requires='>=3.6',
-      entry_points={
-          "gui_scripts": [
-              "qgitc=qgitc.main:main",
-              "imgdiff=mergetool.imgdiff:main"
-          ]
-      },
-      install_requires=[
-          "PySide6-Essentials>=6.3.0; sys_platform != 'linux'",
-          "PySide6>=6.2.0; sys_platform == 'linux'",
-          "chardet", "requests",
-          "psutil; sys_platform == 'win32'"
-      ],
-      classifiers=[
-          "Operating System :: POSIX",
-          "Operating System :: POSIX :: BSD",
-          "Operating System :: POSIX :: Linux",
-          "Operating System :: Microsoft :: Windows",
-          "Programming Language :: Python :: 3",
-      ],
-      cmdclass=dict(build=CustomBuild,
-                    build_qt=BuildQt,
-                    update_ts=UpdateTs
-                    )
-      )
+setup(
+    long_description_content_type="text/markdown",
+    long_description=long_description,
+    cmdclass=dict(build=CustomBuild,
+                  build_qt=BuildQt,
+                  update_ts=UpdateTs
+                  )
+)
