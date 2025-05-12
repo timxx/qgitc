@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt twine
+          python -m pip install -r requirements.txt twine build
 
       - name: Set SCM version
         run: |
@@ -35,7 +35,7 @@ jobs:
 
       - name: Package
         run: |
-          python setup.py bdist_wheel
+          python -m build -w
 
       - name: Upload
         if: ${{ github.ref_type == 'tag' }}
