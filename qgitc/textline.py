@@ -92,25 +92,24 @@ class TextLine():
             matches = pattern.finditer(text)
             for m in matches:
                 shouldAdd = True
-                toRemove = []
-                for i in range(len(links)):
+                for i in reversed(range(len(links))):
                     start = links[i].start
                     end = links[i].end
-                    # the old one is longer than the new one
-                    if start <= m.start() and m.end() <= end:
-                        shouldAdd = False
-                        break
 
                     # the new one is longer than the old one
                     if m.start() <= start and end <= m.end():
-                        toRemove.append(i)
+                        del links[i]
+                        continue
+
+                    # the old one is longer than the new one or overlap
+                    if (start <= m.start() and m.end() <= end) or \
+                        (start < m.end() and m.start() < end) or \
+                            (m.start() < end and start < m.end()):
+                        shouldAdd = False
+                        break
 
                 if not shouldAdd:
                     continue
-
-                toRemove.reverse()
-                for i in toRemove:
-                    del links[i]
 
                 link = Link(m.start(), m.end(), linkType)
                 if url:

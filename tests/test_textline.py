@@ -39,3 +39,19 @@ class TestTextLine(unittest.TestCase):
         self.assertEqual(links[3].start, 34)
         self.assertEqual(links[3].end, 43)
         self.assertEqual(links[3].data, "565815a67")
+
+    def testLinkOverlap(self):
+        text = "foo:12345 67890"
+        patterns = [
+            (Link.BugId, re.compile(
+                r"(foo[:：]([0-9]{5,}))"), "https://foo.com/bug/"),
+            (Link.BugId, re.compile(r"([0-9]{5,} [0-9]{5,})"), None),
+        ]
+
+        links = TextLine.findLinks(text, patterns)
+        self.assertEqual(1, len(links))
+
+        self.assertEqual(links[0].type, Link.BugId)
+        self.assertEqual(links[0].start, 0)
+        self.assertEqual(links[0].end, 9)
+        self.assertEqual(links[0].data, "https://foo.com/bug/12345")
