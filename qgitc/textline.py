@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import bisect
 import re
+from typing import List, Tuple
 
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import (
@@ -83,38 +83,34 @@ class TextLine():
             self._links.extend(links)
 
     @staticmethod
-    def findLinks(text, patterns):
-        links = []
+    def findLinks(text: str, patterns: List[Tuple[int, re.Pattern, str]]):
+        links: List[Link] = []
         if not text or not patterns:
             return links
 
-        def _drop_link(start, end):
-            for i in range(len(links)):
-                link = links[i]
-                if link.start == start and link.end == end:
-                    del links[i]
-                    break
-
-        foundLinks = []
         for linkType, pattern, url, in patterns:
             matches = pattern.finditer(text)
             for m in matches:
-                found = False
-                i = bisect.bisect_left(foundLinks, (m.start(), m.end()))
-                for x in range(i, len(foundLinks)):
-                    start, end = foundLinks[x]
-                    if (start <= m.start() and m.start() <= end) \
-                            or (start <= m.end() and m.end() <= end):
-                        # full contains the previous one
-                        if (m.start() < start and m.end() >= end) or (m.start() == start and m.end() > end):
-                            del foundLinks[x]
-                            _drop_link(start, end)
-                        else:
-                            found = True
+                shouldAdd = True
+                toRemove = []
+                for i in range(len(links)):
+                    start = links[i].start
+                    end = links[i].end
+                    # the old one is longer than the new one
+                    if start <= m.start() and m.end() <= end:
+                        shouldAdd = False
                         break
-                # not allow links in the same range
-                if found:
+
+                    # the new one is longer than the old one
+                    if m.start() <= start and end <= m.end():
+                        toRemove.append(i)
+
+                if not shouldAdd:
                     continue
+
+                toRemove.reverse()
+                for i in toRemove:
+                    del links[i]
 
                 link = Link(m.start(), m.end(), linkType)
                 if url:
@@ -128,7 +124,6 @@ class TextLine():
                     link.setData(m.group(m.lastindex))
 
                 links.append(link)
-                bisect.insort(foundLinks, (m.start(), m.end()))
 
         return links
 
