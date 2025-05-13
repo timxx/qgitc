@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict, List, Tuple
-from PySide6.QtCore import QObject, Signal, QEvent
+
+from PySide6.QtCore import QEvent, QObject, Signal
 
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, logger, toSubmodulePath
@@ -9,7 +10,6 @@ from qgitc.githubcopilot import GithubCopilot
 from qgitc.gitutils import Git
 from qgitc.llm import AiModelBase, AiParameters, AiResponse
 from qgitc.submoduleexecutor import SubmoduleExecutor
-
 
 SYSTEM_PROMPT = \
     """You are an AI programming assistant, helping a software developer to come with the best git commit message for their code changes.

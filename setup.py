@@ -1,15 +1,14 @@
 import os
 import re
 import shutil
-
-from setuptools import (setup)
-from distutils.core import Command
 from distutils.command.build import build
-from distutils.spawn import spawn
+from distutils.core import Command
 from distutils.errors import DistutilsExecError
+from distutils.spawn import spawn
 from glob import glob
 from subprocess import call
 
+from setuptools import setup
 
 ENV_PATH = None
 

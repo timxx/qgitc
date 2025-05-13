@@ -1,21 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QDialog)
-
-from PySide6.QtGui import (
-    QKeySequence,
-    QIcon)
-from PySide6.QtCore import (
-    Qt)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QKeySequence
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QWidget
 
 from qgitc.blameview import BlameView
 from qgitc.gotodialog import GotoDialog
 from qgitc.statewindow import StateWindow
 from qgitc.textviewer import FindPart
-
 
 __all__ = ["BlameWindow"]
 

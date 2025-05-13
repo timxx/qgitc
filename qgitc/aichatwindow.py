@@ -1,38 +1,40 @@
-from typing import List, Union
-from PySide6.QtWidgets import (
-    QWidget,
-    QHBoxLayout,
-    QPlainTextEdit,
-    QSizePolicy,
-    QVBoxLayout,
-    QStackedWidget,
-    QGridLayout,
-    QLabel,
-    QSpinBox,
-    QDoubleSpinBox,
-    QSpacerItem,
-    QComboBox,
-    QPushButton,
-    QStatusBar,
-    QScrollBar)
-
-from PySide6.QtCore import (
-    QThread,
-    Signal,
-    QSize,
-    Qt,
-    QEvent)
-
 import json
 import queue as queue
+from typing import List, Union
+
 import requests
+from PySide6.QtCore import QEvent, QSize, Qt, QThread, Signal
+from PySide6.QtWidgets import (
+    QComboBox,
+    QDoubleSpinBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QPushButton,
+    QScrollBar,
+    QSizePolicy,
+    QSpacerItem,
+    QSpinBox,
+    QStackedWidget,
+    QStatusBar,
+    QVBoxLayout,
+    QWidget,
+)
 
 from qgitc.aichatbot import AiChatbot
 from qgitc.cancelevent import CancelEvent
-from qgitc.common import commitRepoDir, fullRepoDir, toSubmodulePath, logger
+from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
 from qgitc.githubcopilot import GithubCopilot
 from qgitc.gitutils import Git
-from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole, LocalLLM
+from qgitc.llm import (
+    AiChatMode,
+    AiModelBase,
+    AiParameters,
+    AiResponse,
+    AiRole,
+    LocalLLM,
+)
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
 

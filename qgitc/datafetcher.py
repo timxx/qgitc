@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import (
-    QObject,
-    Signal,
-    SIGNAL,
-    QProcess,
-    QProcessEnvironment)
+from PySide6.QtCore import SIGNAL, QObject, QProcess, QProcessEnvironment, Signal
 
 from qgitc.common import logger
 from qgitc.gitutils import Git, GitProcess

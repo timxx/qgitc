@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import (
-    QCoreApplication,
-    QThread)
-
 import traceback
 
+from PySide6.QtCore import QCoreApplication, QThread
+from PySide6.QtWidgets import QMessageBox
 
 logger = logging.getLogger(__name__)
 

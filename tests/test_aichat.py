@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from PySide6.QtCore import Qt
-from PySide6.QtTest import QTest, QSignalSpy
+from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.application import Application

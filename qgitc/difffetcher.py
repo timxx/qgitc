@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict, List
+
 from PySide6.QtCore import Signal
 
 from qgitc.common import toSubmodulePath

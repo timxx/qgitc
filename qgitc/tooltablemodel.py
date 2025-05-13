@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import (
-    QAbstractTableModel,
-    Signal,
-    QModelIndex,
-    Qt)
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 
 from qgitc.mergetool import MergeTool
 

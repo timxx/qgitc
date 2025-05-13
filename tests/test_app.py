@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtTest import QTest, QSignalSpy
+from PySide6.QtTest import QSignalSpy, QTest
+
 from qgitc.application import Application
 from qgitc.gitutils import Git
 from tests.base import TestBase

@@ -1,45 +1,44 @@
 # -*- coding: utf-8 -*-
 
+import bisect
+import re
+
+from PySide6.QtCore import (
+    QBasicTimer,
+    QElapsedTimer,
+    QEvent,
+    QMimeData,
+    QPoint,
+    QPointF,
+    QRect,
+    QRectF,
+    Qt,
+    QTimer,
+    Signal,
+)
+from PySide6.QtGui import (
+    QBrush,
+    QCursor,
+    QFontMetrics,
+    QIcon,
+    QKeySequence,
+    QMouseEvent,
+    QPainter,
+    QTextCharFormat,
+    QTextOption,
+)
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
+    QAbstractSlider,
     QApplication,
     QMenu,
     QScrollBar,
-    QAbstractSlider)
-from PySide6.QtGui import (
-    QPainter,
-    QFontMetrics,
-    QTextCharFormat,
-    QTextOption,
-    QBrush,
-    QKeySequence,
-    QIcon,
-    QCursor,
-    QMouseEvent)
-from PySide6.QtCore import (
-    Qt,
-    QRect,
-    QRectF,
-    QPoint,
-    QPointF,
-    Signal,
-    QElapsedTimer,
-    QTimer,
-    QMimeData,
-    QEvent,
-    QBasicTimer)
+)
 
 from qgitc.findconstants import FindFlags, FindPart
 from qgitc.findwidget import FindWidget
-from qgitc.textline import (
-    TextLine,
-    createFormatRange,
-    Link)
 from qgitc.textcursor import TextCursor
-
-import re
-import bisect
-
+from qgitc.textline import Link, TextLine, createFormatRange
 
 __all__ = ["TextViewer"]
 

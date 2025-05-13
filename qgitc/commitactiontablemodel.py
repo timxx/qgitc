@@ -2,11 +2,8 @@
 
 from enum import Enum
 from typing import List
-from PySide6.QtCore import (
-    QAbstractTableModel,
-    Signal,
-    QModelIndex,
-    Qt)
+
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 
 
 class ActionCondition(Enum):

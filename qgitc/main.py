@@ -1,25 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import (
-    Qt,
-    qInstallMessageHandler,
-    QtMsgType,
-    QMessageLogContext)
-from PySide6.QtWidgets import (
-    QStyle)
-
-from qgitc.common import attachConsole, logger
-from qgitc.gitutils import Git
-from qgitc.excepthandler import ExceptHandler
-from qgitc.application import Application
-from qgitc.mainwindow import MainWindow
-from qgitc.shell import setup_shell_args
-
 import argparse
 import logging
 import logging.handlers
 import os
 import sys
+
+from PySide6.QtCore import QMessageLogContext, Qt, QtMsgType, qInstallMessageHandler
+from PySide6.QtWidgets import QStyle
+
+from qgitc.application import Application
+from qgitc.common import attachConsole, logger
+from qgitc.excepthandler import ExceptHandler
+from qgitc.gitutils import Git
+from qgitc.mainwindow import MainWindow
+from qgitc.shell import setup_shell_args
 
 
 def setAppUserId(appId):

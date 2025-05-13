@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import typing
-from PySide6.QtWidgets import (
-    QToolButton, QStylePainter, QStyleOptionToolButton, QStyle)
-from PySide6.QtGui import (QPainter, QIcon, QPen)
-from PySide6.QtCore import (Qt, QSize, QRect, QPoint)
+
+from PySide6.QtCore import QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QIcon, QPainter, QPen
+from PySide6.QtWidgets import QStyle, QStyleOptionToolButton, QStylePainter, QToolButton
 
 
 class ColoredIconToolButton(QToolButton):

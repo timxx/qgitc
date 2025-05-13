@@ -1,15 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
-    QVBoxLayout,
-    QLabel,
-    QLineEdit)
-
-from PySide6.QtGui import (
-    QIntValidator)
-
+from PySide6.QtGui import QIntValidator
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QLineEdit, QVBoxLayout
 
 __all__ = ["GotoDialog"]
 

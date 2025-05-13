@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
-import sys
 import os
+import sys
 
 if sys.platform == "win32":
-    from winreg import (
-        CreateKeyEx,
-        SetValueEx,
-        DeleteKeyEx,
-        HKEY_CURRENT_USER,
-        REG_SZ)
+    from winreg import HKEY_CURRENT_USER, REG_SZ, CreateKeyEx, DeleteKeyEx, SetValueEx
 else:
     import xml.etree.ElementTree as ET
     from datetime import datetime

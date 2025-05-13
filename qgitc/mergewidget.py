@@ -1,53 +1,56 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import (
-    QStandardItemModel,
-    QKeySequence,
-    QPixmap,
-    QPainter,
-    QFont,
-    QIcon,
-    QStandardItem)
-from PySide6.QtWidgets import (
-    QWidget,
-    QListView,
-    QAbstractItemView,
-    QLineEdit,
-    QLabel,
-    QHBoxLayout,
-    QVBoxLayout,
-    QCheckBox,
-    QSpacerItem,
-    QPushButton,
-    QMenu,
-    QSizePolicy,
-    QMessageBox,
-    QFileDialog)
-from PySide6.QtCore import (
-    Qt,
-    Signal,
-    QSortFilterProxyModel,
-    QStandardPaths,
-    QDir,
-    QSize,
-    QTimer,
-    QProcess,
-    QProcessEnvironment,
-    QEvent)
-from qgitc.gitutils import Git, GitProcess
-from qgitc.conflictlog import (
-    ConflictLogExcel,
-    ConflictLogXlsx,
-    HAVE_EXCEL_API,
-    HAVE_XLSX_WRITER,
-    MergeInfo)
-from qgitc.events import CopyConflictCommit
-from qgitc.common import dataDirPath, logger
-
+import shutil
 from datetime import datetime
 
-import shutil
+from PySide6.QtCore import (
+    QDir,
+    QEvent,
+    QProcess,
+    QProcessEnvironment,
+    QSize,
+    QSortFilterProxyModel,
+    QStandardPaths,
+    Qt,
+    QTimer,
+    Signal,
+)
+from PySide6.QtGui import (
+    QFont,
+    QIcon,
+    QKeySequence,
+    QPainter,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+)
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QSpacerItem,
+    QVBoxLayout,
+    QWidget,
+)
 
+from qgitc.common import dataDirPath, logger
+from qgitc.conflictlog import (
+    HAVE_EXCEL_API,
+    HAVE_XLSX_WRITER,
+    ConflictLogExcel,
+    ConflictLogXlsx,
+    MergeInfo,
+)
+from qgitc.events import CopyConflictCommit
+from qgitc.gitutils import Git, GitProcess
 
 STATE_CONFLICT = 0
 STATE_RESOLVED = 1

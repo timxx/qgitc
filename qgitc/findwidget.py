@@ -1,38 +1,37 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import (
-    QIcon,
-    QPainter,
-    QPalette)
-from PySide6.QtWidgets import (
-    QWidget,
-    QGraphicsDropShadowEffect,
-    QLineEdit,
-    QToolButton,
-    QLabel,
-    QHBoxLayout,
-    QStyle,
-    QWidgetAction,
-    QToolTip)
+import bisect
+import re
+
 from PySide6.QtCore import (
-    Signal,
-    QTimer,
-    QSize,
-    Qt,
+    QAbstractAnimation,
+    QEvent,
     QPoint,
     QPropertyAnimation,
     QRect,
-    QAbstractAnimation,
-    QEvent)
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
+)
+from PySide6.QtGui import QIcon, QPainter, QPalette
+from PySide6.QtWidgets import (
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QStyle,
+    QToolButton,
+    QToolTip,
+    QWidget,
+    QWidgetAction,
+)
 
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.common import dataDirPath
+from qgitc.findconstants import FindFlags, FindPart
 from qgitc.textcursor import TextCursor
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
-from qgitc.findconstants import FindPart, FindFlags
-from qgitc.common import dataDirPath
-
-import bisect
-import re
 
 
 class FindWidget(QWidget):

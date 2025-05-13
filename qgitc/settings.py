@@ -1,23 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os
+import platform
 from typing import List
-from PySide6.QtCore import (
-    QSettings,
-    Signal)
-from PySide6.QtGui import (
-    QFont,
-    QFontInfo,
-    QColor)
-from PySide6.QtWidgets import (
-    QApplication)
+
+from PySide6.QtCore import QSettings, Signal
+from PySide6.QtGui import QColor, QFont, QFontInfo
+from PySide6.QtWidgets import QApplication
 
 from qgitc.commitactiontablemodel import CommitAction
 from qgitc.mergetool import MergeTool
-
-import os
-import platform
-
 
 is_win = (os.name == "nt")
 

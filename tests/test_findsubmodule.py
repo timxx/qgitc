@@ -2,10 +2,12 @@
 import os
 import tempfile
 from unittest.mock import patch
+
 from PySide6.QtCore import QCoreApplication
+
 from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.gitutils import Git
-from tests.base import TestBase, createRepo, addSubmoduleRepo
+from tests.base import TestBase, addSubmoduleRepo, createRepo
 
 
 class TestFindSubmodule(TestBase):

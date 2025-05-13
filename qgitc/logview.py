@@ -1,43 +1,37 @@
 # -*- coding: utf-8 -*-
 
+import re
 from typing import List
+
+from PySide6.QtCore import QMimeData, QPointF, QRect, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import (
-    QPalette,
-    QPainter,
-    QFontMetrics,
-    QPen,
-    QPainterPath,
     QConicalGradient,
-    QImage,
     QCursor,
-    QMouseEvent)
+    QFontMetrics,
+    QImage,
+    QMouseEvent,
+    QPainter,
+    QPainterPath,
+    QPalette,
+    QPen,
+)
 from PySide6.QtWidgets import (
-    QWidget,
     QAbstractScrollArea,
-    QFrame,
-    QMenu,
     QApplication,
     QFileDialog,
+    QFrame,
+    QMenu,
     QMessageBox,
-    QScrollBar)
-from PySide6.QtCore import (
-    Qt,
-    Signal,
-    QSize,
-    QMimeData,
-    QRect,
-    QRectF,
-    QPointF)
+    QScrollBar,
+    QWidget,
+)
 
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
-from qgitc.gitutils import *
 from qgitc.difffinder import DiffFinder
-from qgitc.logsfetcher import LogsFetcher
 from qgitc.events import CodeReviewEvent, CopyConflictCommit
-
-import re
-
+from qgitc.gitutils import *
+from qgitc.logsfetcher import LogsFetcher
 
 HALF_LINE_PERCENT = 0.76
 

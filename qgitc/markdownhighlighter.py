@@ -1,31 +1,31 @@
 # -*- coding: utf-8 -*-
 
-from enum import Enum, Flag, IntEnum
 import string
+from enum import Enum, Flag, IntEnum
 from typing import Dict, List
+
 from PySide6.QtCore import (
+    QFlag,
     QRegularExpression,
+    QRegularExpressionMatch,
+    Qt,
     QTimer,
     Signal,
-    Qt,
-    QFlag,
-    QRegularExpressionMatch
 )
 from PySide6.QtGui import (
-    QSyntaxHighlighter,
-    QTextCharFormat,
     QColor,
     QFont,
-    QTextDocument,
     QFontDatabase,
+    QSyntaxHighlighter,
     QTextBlock,
-    QTextFormat
+    QTextCharFormat,
+    QTextDocument,
+    QTextFormat,
 )
 
 from qgitc.colorschema import ColorSchema
 from qgitc.diffutils import diff_begin_re
 from qgitc.languagedata import *
-
 
 # translated from https://github.com/pbek/qmarkdowntextedit
 

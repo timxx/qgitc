@@ -1,49 +1,50 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtGui import QIcon, QDesktopServices, QPalette
+import os
+import shutil
+from datetime import datetime
+
 from PySide6.QtCore import (
-    Qt,
-    QTranslator,
+    QElapsedTimer,
+    QEvent,
     QLibraryInfo,
     QLocale,
-    QUrl,
-    QTimer,
-    qVersion,
-    QEvent,
-    Signal,
+    Qt,
     QThread,
-    QElapsedTimer)
+    QTimer,
+    QTranslator,
+    QUrl,
+    Signal,
+    qVersion,
+)
+from PySide6.QtGui import QDesktopServices, QIcon, QPalette
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from qgitc.aichatwindow import AiChatWindow
+from qgitc.blamewindow import BlameWindow
 from qgitc.colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
 from qgitc.commitwindow import CommitWindow
 from qgitc.common import dataDirPath
-from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
-from qgitc.settings import Settings
 from qgitc.events import (
     BlameEvent,
     CodeReviewEvent,
+    GitBinChanged,
     LocalChangesCommittedEvent,
     LoginFinished,
+    OpenLinkEvent,
     RequestCommitEvent,
     RequestLoginGithubCopilot,
     ShowAiAssistantEvent,
     ShowCommitEvent,
-    OpenLinkEvent,
-    GitBinChanged)
-from qgitc.blamewindow import BlameWindow
-from qgitc.mainwindow import MainWindow
+)
+from qgitc.findwidget import FindWidget
+from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.gitutils import Git
+from qgitc.mainwindow import MainWindow
+from qgitc.newversiondialog import NewVersionDialog
+from qgitc.settings import Settings
 from qgitc.textline import Link
 from qgitc.versionchecker import VersionChecker
-from qgitc.newversiondialog import NewVersionDialog
-
-from datetime import datetime
-from qgitc.findwidget import FindWidget
-
-import os
-import shutil
 
 
 def qtVersion():

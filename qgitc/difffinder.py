@@ -3,10 +3,20 @@
 import bisect
 import os
 from typing import List
-from PySide6.QtCore import QObject, Signal, SIGNAL, QProcess
+
+from PySide6.QtCore import SIGNAL, QObject, QProcess, Signal
 
 from qgitc.commitsource import CommitSource
-from qgitc.common import FIND_CANCELED, FIND_NOTFOUND, FIND_REGEXP, Commit, FindField, FindParameter, filterSubmoduleByPath, toSubmodulePath
+from qgitc.common import (
+    FIND_CANCELED,
+    FIND_NOTFOUND,
+    FIND_REGEXP,
+    Commit,
+    FindField,
+    FindParameter,
+    filterSubmoduleByPath,
+    toSubmodulePath,
+)
 from qgitc.gitutils import Git, GitProcess
 
 

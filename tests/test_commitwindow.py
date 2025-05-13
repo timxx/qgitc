@@ -2,13 +2,15 @@
 import os
 import tempfile
 from unittest.mock import patch
+
 from PySide6.QtCore import Qt
-from PySide6.QtTest import QTest, QSignalSpy
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QDialog
+
 from qgitc.application import Application
 from qgitc.gitutils import Git
 from tests.base import TestBase, createRepo
-from tests.mockgithubcopilot import MockGithubCopilotStep, MockGithubCopilot
+from tests.mockgithubcopilot import MockGithubCopilot, MockGithubCopilotStep
 
 
 class TestCommitWindow(TestBase):

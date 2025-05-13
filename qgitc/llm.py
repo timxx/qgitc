@@ -1,10 +1,9 @@
-from enum import Enum
 import json
+from enum import Enum
 from threading import Lock
-from PySide6.QtCore import (
-    Signal,
-    QThread)
+
 import requests
+from PySide6.QtCore import QThread, Signal
 
 from qgitc.common import logger
 

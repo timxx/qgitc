@@ -1,34 +1,28 @@
 #!/usr/bin/env python
 
-from PySide6.QtCore import (
-    QSize,
-    Qt,
-    Signal)
-from PySide6.QtGui import (
-    QPixmap,
-    QImage,
-    QKeySequence,
-    QActionGroup)
-from PySide6.QtWidgets import (
-    QFileDialog,
-    QDialog,
-    QApplication,
-    QGridLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QCheckBox,
-    QVBoxLayout,
-    QDialogButtonBox,
-    QWidget,
-    QHBoxLayout,
-    QScrollArea,
-    QMainWindow,
-    QMessageBox)
-
-import sys
 import argparse
 import shutil
+import sys
+
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QActionGroup, QImage, QKeySequence, QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 def selectImage(parent):

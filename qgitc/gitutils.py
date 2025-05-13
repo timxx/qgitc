@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from collections import defaultdict
-
-import logging
-import subprocess
-import os
 import bisect
+import logging
+import os
 import re
+import subprocess
+from collections import defaultdict
 from typing import Dict, List, Union
-
 
 logger = logging.getLogger(__name__)
 

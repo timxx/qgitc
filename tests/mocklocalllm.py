@@ -2,11 +2,10 @@
 
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtCore import QCoreApplication
 import requests
+from PySide6.QtCore import QCoreApplication
 
 from qgitc.settings import Settings
-
 
 MOCK_SUCCESS = True
 LOCAL_LLM_URL = ""

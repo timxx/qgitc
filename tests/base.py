@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
-from functools import partial
 import logging
 import os
 import shutil
@@ -9,14 +7,22 @@ import tempfile
 import threading
 import time
 import unittest
+from datetime import datetime
+from functools import partial
 from unittest.mock import patch
 
+from PySide6.QtCore import (
+    QElapsedTimer,
+    QMessageLogContext,
+    QThread,
+    QtMsgType,
+    qInstallMessageHandler,
+)
 from shiboken6 import delete
-from PySide6.QtCore import QThread, qInstallMessageHandler, QtMsgType, QMessageLogContext, QElapsedTimer
+
 from qgitc.application import Application
 from qgitc.common import logger
 from qgitc.gitutils import Git, GitProcess
-
 
 knownQtWarnings = [
     "This plugin does not support propagateSizeHints()",

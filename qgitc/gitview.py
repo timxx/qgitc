@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QCompleter,
-    QWidget)
-from PySide6.QtCore import (
-    Signal,
-    QTimer)
-
-from qgitc.ui_gitview import *
-from qgitc.common import *
-from qgitc.gitutils import Git
-from qgitc.events import BlameEvent
-
 import re
+
+from PySide6.QtCore import QTimer, Signal
+from PySide6.QtWidgets import QCompleter, QWidget
+
+from qgitc.common import *
+from qgitc.events import BlameEvent
+from qgitc.gitutils import Git
+from qgitc.ui_gitview import *
 
 
 class GitView(QWidget):

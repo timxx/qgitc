@@ -10,3 +10,5 @@ wheel
 
 # for uploading the package
 # twine
+
+isort

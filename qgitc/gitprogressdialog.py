@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from typing import Callable, List
-from PySide6.QtCore import Qt, QEvent, Signal
-from PySide6.QtGui import (
-    QTextCharFormat,
-    QTextCursor
-)
+
+from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtGui import QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QDialog,
-    QVBoxLayout,
-    QProgressBar,
     QDialogButtonBox,
+    QPlainTextEdit,
+    QProgressBar,
     QSizePolicy,
-    QPlainTextEdit
+    QVBoxLayout,
 )
 
 from qgitc.submoduleexecutor import SubmoduleExecutor

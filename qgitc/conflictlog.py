@@ -2,7 +2,6 @@
 
 import sys
 
-
 __all__ = ["ConflictLogBase", "ConflictLogXlsx",
            "ConflictLogExcel"]
 
@@ -12,8 +11,7 @@ HAVE_XLSX_WRITER = False
 
 if sys.platform == "win32":
     try:
-        from win32com.client import gencache
-        from win32com.client import DispatchWithEvents
+        from win32com.client import DispatchWithEvents, gencache
         HAVE_EXCEL_API = True
     except ImportError:
         pass

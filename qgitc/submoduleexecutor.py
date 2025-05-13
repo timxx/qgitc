@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Union
-from PySide6.QtCore import QThread, QObject, Signal
+
+from PySide6.QtCore import QObject, QThread, Signal
 
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import logger

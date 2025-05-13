@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QMessageBox,
-    QCheckBox)
+from PySide6.QtWidgets import QCheckBox, QMessageBox
 
 
 class NewVersionDialog(QMessageBox):

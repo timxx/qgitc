@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import (
-    QEvent,
-    QPointF,
-    QRectF,
-    Qt
-)
+from PySide6.QtCore import QEvent, QPointF, QRectF, Qt
 from PySide6.QtGui import (
-    QTextCursor,
-    QTextCharFormat,
     QFont,
-    QTextDocument,
     QPainter,
-    QTextBlock
+    QTextBlock,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocument,
 )
 from PySide6.QtWidgets import QPlainTextEdit
-from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
+
 from qgitc.llm import AiResponse, AiRole
+from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
 
 
 class AiChatBotState:

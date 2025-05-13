@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import time
 from unittest.mock import patch
+
 from PySide6.QtTest import QSignalSpy, QTest
+
 from qgitc.cancelevent import CancelEvent
 from qgitc.submoduleexecutor import SubmoduleExecutor
 from tests.base import TestBase

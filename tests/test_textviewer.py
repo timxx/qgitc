@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from PySide6.QtCore import Qt
-from PySide6.QtTest import QTest, QSignalSpy
+from PySide6.QtTest import QSignalSpy, QTest
+
 from qgitc.textline import SourceTextLineBase, TextLine
 from qgitc.textviewer import TextViewer
 from tests.base import TestBase

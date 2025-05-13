@@ -1,23 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import (
-    Qt,
-    QStringListModel
-)
-from PySide6.QtGui import (
-    QFont,
-    QFontDatabase
-)
+from PySide6.QtCore import QStringListModel, Qt
+from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
+    QAbstractItemView,
+    QComboBox,
+    QFontDialog,
     QHBoxLayout,
-    QPushButton,
     QLabel,
     QListView,
-    QAbstractItemView,
-    QFontDialog,
-    QComboBox
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 

@@ -1,29 +1,29 @@
 # -*- coding: utf-8 -*-
 
-from typing import List
-from PySide6.QtCore import QRectF
+from PySide6.QtCore import QMimeData, QPointF, QRectF, QUrl, Signal
 from PySide6.QtGui import (
-    QDesktopServices,
-    QTextCharFormat,
-    QBrush,
     QAction,
-    QPainter,
+    QBrush,
+    QDesktopServices,
     QFont,
     QFontMetricsF,
-    QPen)
-from PySide6.QtWidgets import (
-    QApplication)
-from PySide6.QtCore import (
-    Signal,
-    QUrl,
-    QMimeData,
-    QPointF)
+    QPainter,
+    QPen,
+    QTextCharFormat,
+)
+from PySide6.QtWidgets import QApplication
 
 from qgitc.common import Commit, FindField, decodeFileData, findInlineSpans
 from qgitc.diffutils import *
 from qgitc.events import OpenLinkEvent
 from qgitc.sourceviewer import SourceViewer
-from qgitc.textline import Link, LinkTextLine, SourceTextLineBase, TextLine, createFormatRange
+from qgitc.textline import (
+    Link,
+    LinkTextLine,
+    SourceTextLineBase,
+    TextLine,
+    createFormatRange,
+)
 
 
 class DiffTextLine(SourceTextLineBase):

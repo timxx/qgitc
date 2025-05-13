@@ -1,45 +1,48 @@
 # -*- coding: utf-8 -*-
 
+from PySide6.QtCore import (
+    SIGNAL,
+    QAbstractListModel,
+    QEvent,
+    QFileInfo,
+    QModelIndex,
+    QObject,
+    QProcess,
+    QSize,
+    QSortFilterProxyModel,
+    Qt,
+    QUrl,
+    Signal,
+)
 from PySide6.QtGui import (
     QDesktopServices,
-    QKeySequence,
     QFont,
     QFontMetricsF,
     QIcon,
+    QKeySequence,
+    QPainter,
     QPixmap,
-    QPainter)
+)
 from PySide6.QtWidgets import (
-    QWidget,
-    QListView,
-    QMenu,
-    QSplitter,
     QAbstractItemView,
-    QVBoxLayout,
-    QLineEdit,
+    QApplication,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QListView,
+    QMenu,
+    QMessageBox,
+    QSplitter,
     QStyle,
-    QApplication,
-    QMessageBox)
-from PySide6.QtCore import (
-    QAbstractListModel,
-    QModelIndex,
-    Qt,
-    Signal,
-    SIGNAL,
-    QSortFilterProxyModel,
-    QFileInfo,
-    QUrl,
-    QObject,
-    QProcess,
-    QEvent,
-    QSize)
+    QVBoxLayout,
+    QWidget,
+)
 
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
-from qgitc.gitutils import Git, GitProcess
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffutils import FileInfo
+from qgitc.gitutils import Git, GitProcess
 from qgitc.patchviewer import PatchViewer
 
 

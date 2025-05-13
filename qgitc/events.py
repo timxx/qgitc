@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict, List, overload
+
 from PySide6.QtCore import QEvent, QObject
 
 from qgitc.common import Commit

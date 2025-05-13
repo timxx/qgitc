@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+
 from PySide6.QtCore import Signal
 
 from qgitc.cancelevent import CancelEvent

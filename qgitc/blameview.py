@@ -1,46 +1,32 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLabel,
-    QSplitter,
-    QSpacerItem,
-    QSizePolicy,
-    QMenu,
-    QFrame,
-    QMessageBox)
-from PySide6.QtGui import (
-    QPainter,
-    QFontMetrics,
-    QIcon,
-    QPen)
-from PySide6.QtCore import (
-    Qt,
-    Signal,
-    QRect,
-    QRectF,
-    QPointF,
-    QSize)
-
+import re
 from datetime import datetime
 
+from PySide6.QtCore import QPointF, QRect, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPen
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QMessageBox,
+    QSizePolicy,
+    QSpacerItem,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
+
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
-from qgitc.datafetcher import DataFetcher
-from qgitc.sourceviewer import SourceViewer
-from qgitc.textline import LinkTextLine, Link
-from qgitc.gitutils import Git
-from qgitc.events import (
-    BlameEvent,
-    ShowCommitEvent,
-    OpenLinkEvent)
-from qgitc.waitingspinnerwidget import QtWaitingSpinner
-from qgitc.textviewer import TextViewer
 from qgitc.common import dataDirPath, decodeFileData, logger
-
-import re
-
+from qgitc.datafetcher import DataFetcher
+from qgitc.events import BlameEvent, OpenLinkEvent, ShowCommitEvent
+from qgitc.gitutils import Git
+from qgitc.sourceviewer import SourceViewer
+from qgitc.textline import Link, LinkTextLine
+from qgitc.textviewer import TextViewer
+from qgitc.waitingspinnerwidget import QtWaitingSpinner
 
 __all__ = ["BlameView"]
 

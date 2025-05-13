@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import QDialog, QApplication
 from PySide6.QtCore import QSize
-from qgitc.ui_aboutdialog import Ui_AboutDialog
+from PySide6.QtWidgets import QApplication, QDialog
+
 from qgitc.common import dataDirPath
+from qgitc.ui_aboutdialog import Ui_AboutDialog
 from qgitc.version import version
 
 

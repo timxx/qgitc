@@ -1,24 +1,26 @@
 # -*- coding: utf-8 -*-
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime, timedelta
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date, datetime, timedelta
+from sys import version_info
 from typing import List
-from PySide6.QtCore import (
-    Signal,
-    SIGNAL,
-    QThread,
-    QEventLoop,
-    QObject
-)
+
+from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QThread, Signal
 
 from qgitc.cancelevent import CancelEvent
-from qgitc.common import Commit, MyProfile, MyLineProfile, extractFilePaths, filterSubmoduleByPath, toSubmodulePath, logger
+from qgitc.common import (
+    Commit,
+    MyLineProfile,
+    MyProfile,
+    extractFilePaths,
+    filterSubmoduleByPath,
+    logger,
+    toSubmodulePath,
+)
 from qgitc.datafetcher import DataFetcher
 from qgitc.gitutils import Git
-from sys import version_info
-
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 

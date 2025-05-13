@@ -1,26 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import re
+
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSize, Qt
 from PySide6.QtWidgets import (
-    QWidget,
     QGridLayout,
+    QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
-    QVBoxLayout,
-    QTableView,
-    QHeaderView,
-    QHBoxLayout,
+    QMessageBox,
     QPushButton,
-    QSpacerItem,
     QSizePolicy,
-    QMessageBox)
-
-from PySide6.QtCore import (
-    QAbstractTableModel,
-    QModelIndex,
-    Qt,
-    QSize)
-
-import re
+    QSpacerItem,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
+)
 
 from qgitc.gitutils import Git
 

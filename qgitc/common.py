@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import cProfile
-from datetime import datetime
-import logging
-import pstats
 import io
+import logging
 import os
+import pstats
+from datetime import datetime
 from typing import List
+
 import chardet
 
 from qgitc.gitutils import Git
-
 
 html_escape_table = {
     "&": "&amp;",
@@ -225,8 +225,9 @@ def attachConsole():
         return
 
     import ctypes
-    import psutil
     import sys
+
+    import psutil
 
     STD_OUTPUT_HANDLE = -11
     std_out_handle = ctypes.windll.kernel32.GetStdHandle(STD_OUTPUT_HANDLE)

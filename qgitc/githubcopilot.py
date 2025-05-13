@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QEventLoop, QLocale
-
-import requests
 import json
 import time
 
+import requests
+from PySide6.QtCore import QEventLoop, QLocale
+
 from qgitc.common import logger
-from qgitc.events import RequestLoginGithubCopilot, LoginFinished
+from qgitc.events import LoginFinished, RequestLoginGithubCopilot
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
 from qgitc.settings import Settings
-
 
 CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions. Please focus only on the modified sections of the code. If you notice any serious issues in the old code that could impact functionality or performance, feel free to mention them. Otherwise, concentrate on providing feedback and suggestions for the changes made.
 

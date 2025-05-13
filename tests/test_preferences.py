@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QDialogButtonBox, QDialog
+from PySide6.QtWidgets import QDialog, QDialogButtonBox
+
 from qgitc.preferences import Preferences
 from tests.base import TestBase
 

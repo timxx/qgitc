@@ -1,16 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QApplication)
-from PySide6.QtGui import (
-    QFontMetrics,
-    QTextOption)
-from PySide6.QtCore import (
-    QEvent)
+from PySide6.QtCore import QEvent
+from PySide6.QtGui import QFontMetrics, QTextOption
+from PySide6.QtWidgets import QApplication
 
 from qgitc.textline import SourceTextLineBase
 from qgitc.textviewer import TextViewer
-
 
 __all__ = ["SourceViewer"]
 

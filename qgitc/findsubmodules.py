@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PySide6.QtCore import QThread, QEventLoop, QProcess
+
+from PySide6.QtCore import QEventLoop, QProcess, QThread
 
 from qgitc.common import logger
 from qgitc.gitutils import GitProcess

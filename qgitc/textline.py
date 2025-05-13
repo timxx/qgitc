@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import (
-    QTextCharFormat,
-    QTextLayout,
-    QTextOption,
-    QFontMetrics,
-    QPalette)
-from PySide6.QtCore import (
-    Qt,
-    QRectF)
-
 import bisect
 import re
 
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import (
+    QFontMetrics,
+    QPalette,
+    QTextCharFormat,
+    QTextLayout,
+    QTextOption,
+)
 
 __all__ = ["createFormatRange", "Link", "TextLine",
            "SourceTextLineBase", "LinkTextLine"]

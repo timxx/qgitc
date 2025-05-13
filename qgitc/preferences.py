@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QMessageBox,
-    QFileDialog,
-    QStyleFactory)
-
-from qgitc.commitactioneditdialog import CommitActionEditDialog
-from qgitc.common import logger
-from qgitc.colorschema import ColorSchemaMode
-from qgitc.events import GitBinChanged
-from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
-from qgitc.ui_preferences import *
-from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
-from qgitc.linkeditdialog import LinkEditDialog
-from qgitc.gitutils import Git, GitProcess
-from qgitc.tooltablemodel import ToolTableModel
-from qgitc.settings import Settings
-
 import logging
 import os
 import subprocess
 import sys
+
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QStyleFactory
+
+from qgitc.colorschema import ColorSchemaMode
+from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
+from qgitc.commitactioneditdialog import CommitActionEditDialog
+from qgitc.common import logger
+from qgitc.events import GitBinChanged
+from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
+from qgitc.gitutils import Git, GitProcess
+from qgitc.linkeditdialog import LinkEditDialog
+from qgitc.settings import Settings
+from qgitc.tooltablemodel import ToolTableModel
+from qgitc.ui_preferences import *
 
 
 class Preferences(QDialog):

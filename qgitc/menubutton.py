@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtWidgets import (
-    QToolButton,
-    QStylePainter,
-    QStyleOptionToolButton,
-    QStyle
-)
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import QStyle, QStyleOptionToolButton, QStylePainter, QToolButton
 
 
 class MenuButton(QToolButton):

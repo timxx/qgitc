@@ -2,6 +2,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QTextCursor
 from PySide6.QtTest import QTest
+
 from qgitc.commitmessageedit import CommitMessageEdit
 from tests.base import TestBase
 

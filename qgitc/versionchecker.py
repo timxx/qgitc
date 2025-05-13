@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import (
-    QObject,
-    Signal,
-    QJsonDocument)
-from PySide6.QtNetwork import (
-    QNetworkAccessManager,
-    QNetworkRequest,
-    QNetworkReply)
+from PySide6.QtCore import QJsonDocument, QObject, Signal
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 from qgitc.version import version_tuple
 

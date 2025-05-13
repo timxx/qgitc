@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from typing import List
+
 from PySide6.QtCore import Qt
-from PySide6.QtGui import (
-    QTextCursor,
-    QSyntaxHighlighter,
-    QTextCharFormat,
-    QPalette
-)
+from PySide6.QtGui import QPalette, QSyntaxHighlighter, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import QPlainTextEdit
 
 from qgitc.common import findInlineSpans

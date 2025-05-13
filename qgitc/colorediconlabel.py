@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import Qt, QSize, QPoint, QRect, QEvent
-from PySide6.QtGui import QIcon, QPainter, QPixmap, QBrush
+from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
+from PySide6.QtGui import QBrush, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QLabel
 
 

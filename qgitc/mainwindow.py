@@ -1,41 +1,26 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QComboBox,
-    QCompleter,
-    QLineEdit,
-    QMessageBox,
-    QFileDialog)
+import os
+import shlex
+import sys
 
-from PySide6.QtGui import (
-    QActionGroup,
-    QIcon)
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QActionGroup, QIcon
+from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
-from PySide6.QtCore import (
-    QSize,
-    QTimer,
-    Qt,
-    QEvent,
-    Signal)
-
-from qgitc.common import dataDirPath, logger
+from qgitc.aboutdialog import AboutDialog
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.common import dataDirPath, logger
+from qgitc.diffview import PatchViewer
+from qgitc.events import RequestCommitEvent, ShowAiAssistantEvent
 from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.findwidget import FindWidget
-
-from qgitc.ui_mainwindow import Ui_MainWindow
-from qgitc.gitview import GitView
-from qgitc.preferences import Preferences
 from qgitc.gitutils import Git
-from qgitc.diffview import PatchViewer
-from qgitc.aboutdialog import AboutDialog
-from qgitc.statewindow import StateWindow
+from qgitc.gitview import GitView
 from qgitc.logview import LogView
-from qgitc.events import RequestCommitEvent, ShowAiAssistantEvent
-
-import os
-import sys
-import shlex
+from qgitc.preferences import Preferences
+from qgitc.statewindow import StateWindow
+from qgitc.ui_mainwindow import Ui_MainWindow
 
 
 class MainWindow(StateWindow):

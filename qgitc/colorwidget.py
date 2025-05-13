@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import (
-    QColor,
-    QPainter)
-from PySide6.QtWidgets import (
-    QPushButton,
-    QColorDialog,
-    QDialog)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPainter
+from PySide6.QtWidgets import QColorDialog, QDialog, QPushButton
 
 
 class ColorWidget(QPushButton):

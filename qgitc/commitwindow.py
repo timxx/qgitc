@@ -1,40 +1,35 @@
 # -*- coding: utf-8 -*-
 
-from enum import Enum
 import os
 import subprocess
+from enum import Enum
 from typing import Callable, Dict, List, Tuple
+
 from PySide6.QtCore import (
-    QTimer,
+    SIGNAL,
     QAbstractListModel,
-    Qt,
-    QModelIndex,
-    QSortFilterProxyModel,
     QEvent,
-    QSize,
-    QProcess,
     QFileInfo,
-    QUrl,
-    QThread,
+    QModelIndex,
     QObject,
-    SIGNAL
+    QProcess,
+    QSize,
+    QSortFilterProxyModel,
+    Qt,
+    QThread,
+    QTimer,
+    QUrl,
 )
-from PySide6.QtGui import (
-    QFont,
-    QIcon,
-    QTextCursor,
-    QTextCharFormat,
-    QDesktopServices
-)
+from PySide6.QtGui import QDesktopServices, QFont, QIcon, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QMessageBox,
-    QListView,
-    QMenu,
-    QWidget,
     QHBoxLayout,
     QLabel,
-    QStyle
+    QListView,
+    QMenu,
+    QMessageBox,
+    QStyle,
+    QWidget,
 )
 
 from qgitc.aicommitmessage import AiCommitMessage
@@ -42,7 +37,13 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
-from qgitc.common import dataDirPath, decodeFileData, fullRepoDir, toSubmodulePath, logger
+from qgitc.common import (
+    dataDirPath,
+    decodeFileData,
+    fullRepoDir,
+    logger,
+    toSubmodulePath,
+)
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView, _makeTextIcon
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
@@ -50,9 +51,9 @@ from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.gitutils import Git
 from qgitc.preferences import Preferences
 from qgitc.settings import Settings
-from qgitc.submoduleexecutor import SubmoduleExecutor
 from qgitc.statewindow import StateWindow
 from qgitc.statusfetcher import StatusFetcher
+from qgitc.submoduleexecutor import SubmoduleExecutor
 from qgitc.ui_commitwindow import Ui_CommitWindow
 
 

@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtWidgets import (
-    QWidget,
-    QHeaderView,
-    QTableView,
-    QMessageBox
-)
+from PySide6.QtWidgets import QHeaderView, QMessageBox, QTableView, QWidget
 
 from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
 from qgitc.commitactiontablemodel import CommitActionTableModel

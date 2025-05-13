@@ -7,5 +7,11 @@
         "./tests",
         "-p",
         "test_*.py"
-    ]
+    ],
+    "[python]": {
+        "editor.formatOnType": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+        }
+    }
 }
