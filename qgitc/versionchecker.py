@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from packaging import version
 from PySide6.QtCore import QJsonDocument, QObject, Signal
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-from qgitc.version import version_tuple
+from qgitc.common import logger
+from qgitc.version import __version__
 
 
 class VersionChecker(QObject):
@@ -26,7 +28,7 @@ class VersionChecker(QObject):
         reply.finished.connect(self._onFinished)
 
     def _onFinished(self):
-        reply = self.sender()
+        reply: QNetworkReply = self.sender()
         reply.deleteLater()
 
         try:
@@ -37,29 +39,12 @@ class VersionChecker(QObject):
             if not data:
                 return
 
-            version = self._getVersion(data)
-            if not version:
-                return
-
-            v = [int(s) for s in version.split(".")]
-            if len(v) != 3:
-                return
-
-            newVersion = False
-            if v[0] < version_tuple[0]:
-                pass
-            elif v[0] > version_tuple[0]:
-                newVersion = True
-            else:
-                if v[1] < version_tuple[1]:
-                    pass
-                elif v[1] > version_tuple[1]:
-                    newVersion = True
-                elif v[2] > version_tuple[2]:
-                    newVersion = True
-
-            if newVersion:
-                self.newVersionAvailable.emit(version)
+            latestVersion = version.parse(self._getVersion(data))
+            curVersion = version.parse(__version__)
+            if curVersion < latestVersion:
+                self.newVersionAvailable.emit(latestVersion.public)
+        except Exception as e:
+            logger.exception("Error checking for new version: %s", e)
         finally:
             self.finished.emit()
 
