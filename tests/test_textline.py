@@ -161,3 +161,17 @@ class TestFormatRange(TestBase):
 
         self.assertEqual(formats[2].start, 29)
         self.assertEqual(formats[2].length, 1)
+
+    def testLinkRange(self):
+        patterns = [
+            (Link.BugId, re.compile(r"([0-9]{5,})"), None),
+        ]
+
+        textLine = TextLine("😛 123456 hello", self.app.font())
+        textLine.setCustomLinkPatterns(patterns)
+        textLine.ensureLayout()
+        links: List[QTextLayout.FormatRange] = textLine.createLinksFormats()
+
+        self.assertEqual(1, len(links))
+        self.assertEqual(links[0].start, 3)
+        self.assertEqual(links[0].length, 6)

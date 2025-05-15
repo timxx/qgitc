@@ -155,7 +155,9 @@ class TextLine():
 
         formats = []
         for link in self._links:
-            rg = createFormatRange(link.start, link.end - link.start, fmt)
+            start = self.mapToUtf16(link.start)
+            end = self.mapToUtf16(link.end)
+            rg = createFormatRange(start, end - start, fmt)
             formats.append(rg)
 
         return formats
