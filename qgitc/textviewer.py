@@ -2,6 +2,7 @@
 
 import bisect
 import re
+from typing import List
 
 from PySide6.QtCore import (
     QBasicTimer,
@@ -69,7 +70,7 @@ class TextViewer(QAbstractScrollArea):
 
         self._maxWidth = 0
         self._highlightLines = []
-        self._highlightFind = []
+        self._highlightFind: List[TextCursor] = []
 
         self._cursor = TextCursor(self)
         self._clickTimer = QElapsedTimer()
@@ -646,8 +647,10 @@ class TextViewer(QAbstractScrollArea):
         for i in range(low, len(self._highlightFind)):
             r = self._highlightFind[i]
             if r.beginLine() == lineIndex:
-                rg = createFormatRange(
-                    r.beginPos(), r.endPos() - r.beginPos(), fmt)
+                startLine = self.textLineAt(r.beginLine())
+                start = startLine.mapToUtf16(r.beginPos())
+                end = startLine.mapToUtf16(r.endPos())
+                rg = createFormatRange(start, end - start, fmt)
                 result.append(rg)
             elif r.beginLine() > lineIndex or r.beginLine() > endLine:
                 break
