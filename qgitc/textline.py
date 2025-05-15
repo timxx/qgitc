@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import bisect
 import re
 from typing import List, Tuple
 
@@ -12,6 +13,8 @@ from PySide6.QtGui import (
     QTextLayout,
     QTextOption,
 )
+
+from qgitc.common import logger
 
 __all__ = ["createFormatRange", "Link", "TextLine",
            "SourceTextLineBase", "LinkTextLine"]
@@ -72,6 +75,7 @@ class TextLine():
         self._defOption.setWrapMode(QTextOption.NoWrap)
 
         self._utf16Len = None
+        self._indices = None
 
     def _relayout(self):
         self._layout.beginLayout()
@@ -163,7 +167,46 @@ class TextLine():
         """ For createFormatRange """
         if self._utf16Len is None:
             self._utf16Len = len(self._text.encode('utf-16-le')) // 2
+
         return self._utf16Len
+
+    def _buildIndices(self):
+        if self.utf16Length() == len(self._text) or self._indices:
+            return
+
+        self._indices = [0]
+        for c in self._text:
+            if ord(c) > 0xFFFF:
+                self._indices.append(self._indices[-1] + 2)
+            else:
+                self._indices.append(self._indices[-1] + 1)
+
+    def mapToUtf16(self, index: int):
+        """ Map the python str index to utf16 index """
+        if index == 0:
+            return 0
+
+        self._buildIndices()
+        if not self._indices:
+            return index
+
+        if index >= len(self._indices):
+            logger.warning("index out of range %s > %s", index, len(self._indices))
+            return self._indices[-1]
+
+        return self._indices[index]
+
+    def mapFromUtf16(self, index: int):
+        """ Map the utf16 index to python str index """
+        if index == 0:
+            return 0
+
+        self._buildIndices()
+        if not self._indices:
+            return index
+
+        i = bisect.bisect_right(self._indices, index)
+        return i - 1
 
     def layout(self):
         self.ensureLayout()
@@ -230,11 +273,13 @@ class TextLine():
             return 0
         self.ensureLayout()
         line = self._layout.lineAt(0)
-        return line.xToCursor(pos.x())
+        offset = line.xToCursor(pos.x())
+        return self.mapFromUtf16(offset)
 
     def offsetToX(self, offset):
         self.ensureLayout()
         line = self._layout.lineAt(0)
+        offset = self.mapToUtf16(offset)
         x, _ = line.cursorToX(offset)
         return x
 

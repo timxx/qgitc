@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPointF, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.textline import SourceTextLineBase, TextLine
@@ -49,6 +49,40 @@ class TestTextViewer(TestBase):
 
         self.assertTrue(cursor.hasSelection())
         self.assertEqual(cursor.selectedText(), "Line1")
+
+    def testDoubleClickOnEmoji(self):
+        self.viewer.appendLine("Hello 🤩 world")
+        self.assertEqual(self.viewer.textLineCount(), 1)
+
+        textLine = self.viewer.textLineAt(0)
+        br = textLine.boundingRect()
+
+        x1 = textLine.offsetToX(6)
+        x2 = textLine.offsetToX(7)
+
+        pos = QPointF(x1 + (x2 - x1) / 3, br.top() + br.height() / 2)
+        QTest.mouseDClick(self.viewer.viewport(),
+                         Qt.LeftButton, pos=pos.toPoint())
+
+        cursor = self.viewer.textCursor
+        self.assertTrue(cursor.hasSelection())
+        self.assertEqual(cursor.selectedText(), "🤩")
+
+        self.assertEqual(cursor.beginLine(), 0)
+        self.assertEqual(cursor.endLine(), 0)
+        self.assertEqual(cursor.beginPos(), 6)
+        self.assertEqual(cursor.endPos(), 7)
+
+        x = textLine.offsetToX(9)
+        pos = QPointF(x, br.top() + br.height() / 2)
+        QTest.mouseDClick(self.viewer.viewport(),
+                          Qt.LeftButton, pos=pos.toPoint())
+
+        self.assertTrue(cursor.hasSelection())
+        self.assertEqual(cursor.selectedText(), "world")
+
+        self.assertEqual(cursor.beginPos(), 8)
+        self.assertEqual(cursor.endPos(), 13)
 
     def testMouseMove(self):
         self.viewer.appendLine("Hello world")

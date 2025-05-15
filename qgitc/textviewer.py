@@ -602,6 +602,9 @@ class TextViewer(QAbstractScrollArea):
         if self._cursor.endLine() == lineIndex:
             end = self._cursor.endPos()
 
+        start = textLine.mapToUtf16(start)
+        end = textLine.mapToUtf16(end)
+
         # select the new line if multiple lines selected
         if lineIndex < self._cursor.endLine():
             end += 1

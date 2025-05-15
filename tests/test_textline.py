@@ -92,6 +92,39 @@ class TestTextLine(unittest.TestCase):
         self.assertEqual(textLine.utf16Length(), 6)
         self.assertEqual(len(textLine.text()), 3)
 
+    def testIndex(self):
+        textLine = TextLine("hello你好", None)
+        for i in range(5):
+            self.assertEqual(textLine.mapToUtf16(i), i)
+            self.assertEqual(textLine.mapFromUtf16(i), i)
+
+        textLine = TextLine("🤗", None)
+        self.assertEqual(textLine.mapToUtf16(0), 0)
+        self.assertEqual(textLine.mapToUtf16(1), 2)
+        self.assertEqual(textLine.mapFromUtf16(0), 0)
+        self.assertEqual(textLine.mapFromUtf16(2), 1)
+
+        textLine = TextLine("😏he🤗llo🥵", None)
+        self.assertEqual(textLine.mapToUtf16(0), 0)
+        self.assertEqual(textLine.mapToUtf16(1), 2)
+        self.assertEqual(textLine.mapToUtf16(2), 3)
+        self.assertEqual(textLine.mapToUtf16(3), 4)
+        self.assertEqual(textLine.mapToUtf16(4), 6)
+        self.assertEqual(textLine.mapToUtf16(5), 7)
+        self.assertEqual(textLine.mapToUtf16(6), 8)
+        self.assertEqual(textLine.mapToUtf16(7), 9)
+        self.assertEqual(textLine.mapToUtf16(8), 11)
+
+        self.assertEqual(textLine.mapFromUtf16(0), 0)
+        self.assertEqual(textLine.mapFromUtf16(2), 1)
+        self.assertEqual(textLine.mapFromUtf16(3), 2)
+        self.assertEqual(textLine.mapFromUtf16(4), 3)
+        self.assertEqual(textLine.mapFromUtf16(6), 4)
+        self.assertEqual(textLine.mapFromUtf16(7), 5)
+        self.assertEqual(textLine.mapFromUtf16(8), 6)
+        self.assertEqual(textLine.mapFromUtf16(9), 7)
+        self.assertEqual(textLine.mapFromUtf16(11), 8)
+
 
 class TestFormatRange(TestBase):
 
