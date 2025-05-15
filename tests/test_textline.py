@@ -55,3 +55,24 @@ class TestTextLine(unittest.TestCase):
         self.assertEqual(links[0].start, 0)
         self.assertEqual(links[0].end, 9)
         self.assertEqual(links[0].data, "https://foo.com/bug/12345")
+
+    def testTextLength(self):
+        textLine = TextLine("hello", None)
+        self.assertEqual(textLine.utf16Length(), 5)
+        self.assertEqual(len(textLine.text()), 5)
+
+        textLine = TextLine("hello 你好", None)
+        self.assertEqual(textLine.utf16Length(), 8)
+        self.assertEqual(len(textLine.text()), 8)
+
+        textLine = TextLine("hello 😀", None)
+        self.assertEqual(textLine.utf16Length(), 8)
+        self.assertEqual(len(textLine.text()), 7)
+
+        textLine = TextLine("你好😀", None)
+        self.assertEqual(textLine.utf16Length(), 4)
+        self.assertEqual(len(textLine.text()), 3)
+
+        textLine = TextLine("😀 你好", None)
+        self.assertEqual(textLine.utf16Length(), 5)
+        self.assertEqual(len(textLine.text()), 4)

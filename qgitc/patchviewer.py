@@ -64,7 +64,7 @@ class DiffTextLine(SourceTextLineBase):
             tcFormat.setForeground(qApp.colorSchema().Newline)
 
         if tcFormat.isValid():
-            formats.append(createFormatRange(0, len(text), tcFormat))
+            formats.append(createFormatRange(0, self.utf16Length(), tcFormat))
 
         if formats:
             self._layout.setFormats(formats)
@@ -91,7 +91,7 @@ class InfoTextLine(TextLine):
     def rehighlight(self):
         fmt = QTextCharFormat()
         fmt.setFontWeight(QFont.Bold)
-        fmtRg = createFormatRange(0, len(self.text()), fmt)
+        fmtRg = createFormatRange(0, self.utf16Length(), fmt)
 
         formats = []
         formats.append(fmtRg)
@@ -244,7 +244,7 @@ class PatchViewer(SourceViewer):
         elif isinstance(textLine, InfoTextLine):
             fmt = QTextCharFormat()
             fmt.setForeground(QBrush(qApp.colorSchema().InfoFg))
-            formats.append(createFormatRange(0, len(textLine.text()), fmt))
+            formats.append(createFormatRange(0, textLine.utf16Length(), fmt))
         else:
             fmt = self._createCommentsFormats(textLine)
             if fmt:

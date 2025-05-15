@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import (
+    QFont,
     QFontMetrics,
     QPalette,
     QTextCharFormat,
@@ -53,7 +54,7 @@ class Link():
 
 class TextLine():
 
-    def __init__(self, text, font, option=None):
+    def __init__(self, text: str, font: QFont, option: QTextOption = None):
         self._text = text
         self._layout = None
         self._links = []
@@ -69,6 +70,8 @@ class TextLine():
         if not self._defOption:
             self._defOption = QTextOption()
         self._defOption.setWrapMode(QTextOption.NoWrap)
+
+        self._utf16Len = None
 
     def _relayout(self):
         self._layout.beginLayout()
@@ -150,6 +153,12 @@ class TextLine():
 
     def text(self):
         return self._text
+
+    def utf16Length(self):
+        """ For createFormatRange """
+        if self._utf16Len is None:
+            self._utf16Len = len(self._text.encode('utf-16-le')) // 2
+        return self._utf16Len
 
     def layout(self):
         self.ensureLayout()
@@ -318,14 +327,15 @@ class SourceTextLineBase(TextLine):
             painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, cr_char)
             painter.restore()
 
-    def _applyWhitespaces(self, text, formats):
+    def _applyWhitespaces(self, text: str, formats: List[QTextLayout.FormatRange]):
         tcFormat = QTextCharFormat()
         tcFormat.setForeground(qApp.colorSchema().Whitespace)
 
         offset = 0
         length = len(text)
         while offset < length:
-            if text[offset].isspace():
+            c = text[offset]
+            if c.isspace():
                 start = offset
                 offset += 1
                 while offset < length and text[offset].isspace():
@@ -333,7 +343,10 @@ class SourceTextLineBase(TextLine):
                 rg = createFormatRange(start, offset - start, tcFormat)
                 formats.append(rg)
             else:
-                offset += 1
+                if ord(c) > 0xFFFF:
+                    offset += 2
+                else:
+                    offset += 1
 
     def _showWhitespaces(self):
         flags = self._defOption.flags()
