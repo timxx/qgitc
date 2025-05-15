@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 import re
 import unittest
+from typing import List
 
-from qgitc.textline import Link, TextLine
+from PySide6.QtGui import QTextLayout
+
+from qgitc.textline import Link, SourceTextLineBase, TextLine
+from tests.base import TestBase
 
 
 class TestTextLine(unittest.TestCase):
@@ -83,3 +87,44 @@ class TestTextLine(unittest.TestCase):
         textLine = TextLine("😀 你好", None)
         self.assertEqual(textLine.utf16Length(), 5)
         self.assertEqual(len(textLine.text()), 4)
+
+        textLine = TextLine("🤗😏🥵", None)
+        self.assertEqual(textLine.utf16Length(), 6)
+        self.assertEqual(len(textLine.text()), 3)
+
+
+class TestFormatRange(TestBase):
+
+    def doCreateRepo(self):
+        pass
+
+    def testApplyWhitespace(self):
+        textLine = SourceTextLineBase("hello", None, None)
+        formats: List[QTextLayout.FormatRange] = []
+        textLine._applyWhitespaces(textLine.text(), formats)
+        self.assertEqual(len(formats), 0)
+
+        textLine = SourceTextLineBase("hello 你  好", None, None)
+        formats.clear()
+        textLine._applyWhitespaces(textLine.text(), formats)
+        self.assertEqual(len(formats), 2)
+        self.assertEqual(formats[0].start, 5)
+        self.assertEqual(formats[0].length, 1)
+
+        self.assertEqual(formats[1].start, 7)
+        self.assertEqual(formats[1].length, 2)
+
+        textLine = SourceTextLineBase(
+            'textLine = TextLine("🤗😏🥵", None)', None, None)
+        formats.clear()
+        textLine._applyWhitespaces(textLine.text(), formats)
+        self.assertEqual(len(formats), 3)
+
+        self.assertEqual(formats[0].start, 8)
+        self.assertEqual(formats[0].length, 1)
+
+        self.assertEqual(formats[1].start, 10)
+        self.assertEqual(formats[1].length, 1)
+
+        self.assertEqual(formats[2].start, 29)
+        self.assertEqual(formats[2].length, 1)

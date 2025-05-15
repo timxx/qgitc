@@ -337,14 +337,17 @@ class SourceTextLineBase(TextLine):
         tcFormat.setForeground(qApp.colorSchema().Whitespace)
 
         offset = 0
+        i = 0
         length = len(text)
-        while offset < length:
-            c = text[offset]
+        while i < length:
+            c = text[i]
             if c.isspace():
                 start = offset
                 offset += 1
-                while offset < length and text[offset].isspace():
+                i += 1
+                while i < length and text[i].isspace():
                     offset += 1
+                    i += 1
                 rg = createFormatRange(start, offset - start, tcFormat)
                 formats.append(rg)
             else:
@@ -352,6 +355,7 @@ class SourceTextLineBase(TextLine):
                     offset += 2
                 else:
                     offset += 1
+                i += 1
 
     def _showWhitespaces(self):
         flags = self._defOption.flags()
