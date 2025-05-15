@@ -12,6 +12,7 @@ from PySide6.QtCore import (
     QPointF,
     QRect,
     QRectF,
+    QRegularExpression,
     Qt,
     QTimer,
     Signal,
@@ -649,7 +650,7 @@ class TextViewer(QAbstractScrollArea):
 
         return result
 
-    def _similarWordRange(self, textLine):
+    def _similarWordRange(self, textLine: TextLine):
         if not self._similarWordPattern:
             return None
 
@@ -657,10 +658,12 @@ class TextViewer(QAbstractScrollArea):
         fmt = QTextCharFormat()
         fmt.setBackground(qApp.colorSchema().SimilarWord)
 
-        matches = self._similarWordPattern.finditer(textLine.text())
-        for m in matches:
-            result.append(createFormatRange(
-                m.start(), m.end() - m.start(), fmt))
+        matches = self._similarWordPattern.globalMatch(textLine.text())
+        while matches.hasNext():
+            m = matches.next()
+            start = m.capturedStart()
+            end = m.capturedEnd()
+            result.append(createFormatRange(start, end - start, fmt))
 
         return result
 
@@ -977,8 +980,8 @@ class TextViewer(QAbstractScrollArea):
 
             word = word.strip()
             if word:
-                referWordPattern = re.compile(r"\b{}\b".format(
-                    word)) if isWord else re.compile(r"{}".format(re.escape(word)))
+                referWordPattern = QRegularExpression(r"\b{}\b".format(
+                    word)) if isWord else QRegularExpression(r"{}".format(re.escape(word)))
         if self._similarWordPattern != referWordPattern:
             self._similarWordPattern = referWordPattern
             self.viewport().update()
