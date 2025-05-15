@@ -99,6 +99,11 @@ class TextLine():
                     start = links[i].start
                     end = links[i].end
 
+                    # prefer the first one if the range is the same
+                    if m.start() == start and m.end() == end:
+                        shouldAdd = False
+                        break
+
                     # the new one is longer than the old one
                     if m.start() <= start and end <= m.end():
                         del links[i]
