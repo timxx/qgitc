@@ -292,31 +292,33 @@ class PatchViewer(SourceViewer):
     def setParentCount(self, n):
         self._parentCount = n
 
-    def _highlightFormatRange(self, text):
+    def _highlightFormatRange(self, textLine: TextLine):
         formats = []
         if self.highlightPattern:
-            matchs = self.highlightPattern.finditer(text)
+            matchs = self.highlightPattern.finditer(textLine.text())
             fmt = QTextCharFormat()
             fmt.setBackground(QBrush(qApp.colorSchema().HighlightWordBg))
             for m in matchs:
-                rg = createFormatRange(m.start(), m.end() - m.start(), fmt)
+                start = textLine.mapToUtf16(m.start())
+                end = textLine.mapToUtf16(m.end())
+                rg = createFormatRange(start, end - start, fmt)
                 formats.append(rg)
         return formats
 
     def _createCommentsFormats(self, textLine):
         if self.highlightField == FindField.Comments or \
                 self.highlightField == FindField.All:
-            return self._highlightFormatRange(textLine.text())
+            return self._highlightFormatRange(textLine)
 
         return None
 
     def _createDiffFormats(self, textLine):
         if self.highlightField == FindField.All:
-            return self._highlightFormatRange(textLine.text())
+            return self._highlightFormatRange(textLine)
         elif FindField.isDiff(self.highlightField):
             text = textLine.text().lstrip()
             if text.startswith('+') or text.startswith('-'):
-                return self._highlightFormatRange(textLine.text())
+                return self._highlightFormatRange(textLine)
 
         return None
 
