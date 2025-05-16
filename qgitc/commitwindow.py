@@ -945,7 +945,7 @@ class CommitWindow(StateWindow):
         cursor.setCharFormat(QTextCharFormat())
         self.ui.teOutput.setTextCursor(cursor)
 
-    def _updateBlockOutput(self, repoName: str, line: str, isError: bool = False, action: str = None):
+    def _updateBlockOutput(self, repoName: str, content: str, isError: bool = False, action: str = None):
         cursor = self.ui.teOutput.textCursor()
         blockKey = f"{repoName}.{action}" if action else repoName
         pos = self._outputBlocks.get(blockKey)
@@ -958,13 +958,16 @@ class CommitWindow(StateWindow):
             self._addBlock(blockKey, title)
             pos = self._outputBlocks[blockKey]
 
+        if not content:
+            return
+
         cursor.setPosition(pos)
         cursor.movePosition(QTextCursor.EndOfBlock)
         format = QTextCharFormat()
         if isError:
             format.setForeground(qApp.colorSchema().ErrorText)
-        cursor.insertText(line if line.endswith("\n")
-                          else (line + "\n"), format)
+        cursor.insertText(content if content.endswith("\n")
+                          else (content + "\n"), format)
         cursor.setCharFormat(QTextCharFormat())
         self._outputBlocks[blockKey] = cursor.position()
         self.ui.teOutput.setTextCursor(cursor)
@@ -974,16 +977,19 @@ class CommitWindow(StateWindow):
         if updateProgress:
             self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
 
-        if out or error:
-            if not submodule or submodule == ".":
-                repoName = "<main>"
-            else:
-                repoName = submodule
+        if not submodule or submodule == ".":
+            repoName = "<main>"
+        else:
+            repoName = submodule
 
-            if out:
-                self._updateBlockOutput(repoName, out, False, action)
-            if error:
-                self._updateBlockOutput(repoName, error, True, action)
+        if out:
+            self._updateBlockOutput(repoName, out, False, action)
+        if error:
+            self._updateBlockOutput(repoName, error, True, action)
+
+        if not out and not error:
+            # add title only
+            self._updateBlockOutput(repoName, "", False, action)
 
     def reloadLocalChanges(self):
         self._statusFetcher.cancel()
@@ -1190,6 +1196,9 @@ class CommitWindow(StateWindow):
         if action.args:
             args += " " + action.args
 
+        # Update status as soon as we start the action
+        self._updateCommitProgress(submodule, None, None, False, args)
+
         try:
             process = subprocess.Popen(
                 args,
@@ -1203,14 +1212,15 @@ class CommitWindow(StateWindow):
                 if cancelEvent.isSet():
                     return
                 text, _ = decodeFileData(line)
-                self._updateCommitProgress(submodule, text, None, False, args)
+                if text:
+                    self._updateCommitProgress(submodule, text, None, False, args)
 
             for line in process.stderr:
                 if cancelEvent.isSet():
                     return
-
                 text, _ = decodeFileData(line)
-                self._updateCommitProgress(submodule, text, None, False, args)
+                if text:
+                    self._updateCommitProgress(submodule, None, text, False, args)
 
         except Exception as e:
             self._updateCommitProgress(submodule, None, str(e), False, args)
