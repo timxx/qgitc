@@ -49,9 +49,8 @@ A cross-platform Git GUI tool designed to simplify commit history exploration, b
 
 ## Requirements
 
-- PySide6
+- `pip install -r requirements.txt`
 - git (command line)
-- chardet
 - pywin32
   - Optional for Windows if you want record the conflict log easily
 - pywpsrpc

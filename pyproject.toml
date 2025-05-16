@@ -41,6 +41,7 @@ dependencies = [
     "chardet",
     "requests",
     "psutil; sys_platform == 'win32'",
+    "packaging",
 ]
 
 [project.gui-scripts]
