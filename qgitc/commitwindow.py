@@ -951,7 +951,7 @@ class CommitWindow(StateWindow):
         pos = self._outputBlocks.get(blockKey)
         if pos is None:
             if action:
-                title = self.tr("Action: ") + action + f"({repoName})"
+                title = self.tr("Action: ") + action + f" ({repoName})"
             else:
                 title = self.tr("Repo: ") + repoName
 

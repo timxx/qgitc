@@ -23,12 +23,12 @@
         <translation type="vanished">Git文件冲突、日志查看器</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="32"/>
+        <location filename="../../aboutdialog.py" line="33"/>
         <source>A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.</source>
         <translation>跨平台 Git 图形界面工具，旨在简化提交历史记录探索、代码责任追溯、提交更改和冲突解决。利用人工智能生成提交信息并执行代码审查。</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="35"/>
+        <location filename="../../aboutdialog.py" line="36"/>
         <source>Visit project host</source>
         <translation>访问项目主页</translation>
     </message>
@@ -51,72 +51,72 @@
 <context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwindow.py" line="160"/>
+        <location filename="../../aichatwindow.py" line="162"/>
         <source>Enter the query prompt here</source>
         <translation>请在此输入请求提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="171"/>
+        <location filename="../../aichatwindow.py" line="173"/>
         <source>User</source>
         <translation>用户</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="181"/>
+        <location filename="../../aichatwindow.py" line="183"/>
         <source>Max Tokens</source>
         <translation>最大Token数</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="188"/>
+        <location filename="../../aichatwindow.py" line="190"/>
         <source>Max tokens to generate</source>
         <translation>生成的最大Token数量</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="191"/>
+        <location filename="../../aichatwindow.py" line="193"/>
         <source>Temperature</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="275"/>
+        <location filename="../../aichatwindow.py" line="277"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="276"/>
+        <location filename="../../aichatwindow.py" line="278"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="277"/>
+        <location filename="../../aichatwindow.py" line="279"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="278"/>
+        <location filename="../../aichatwindow.py" line="280"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="279"/>
+        <location filename="../../aichatwindow.py" line="281"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="280"/>
+        <location filename="../../aichatwindow.py" line="282"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="238"/>
+        <location filename="../../aichatwindow.py" line="240"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="240"/>
+        <location filename="../../aichatwindow.py" line="242"/>
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="330"/>
+        <location filename="../../aichatwindow.py" line="333"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -128,7 +128,7 @@
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="490"/>
+        <location filename="../../aichatwindow.py" line="493"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -136,22 +136,22 @@
 <context>
     <name>AiChatbot</name>
     <message>
-        <location filename="../../aichatbot.py" line="101"/>
+        <location filename="../../aichatbot.py" line="97"/>
         <source>Service Unavailable</source>
         <translation>服务不可用</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="123"/>
+        <location filename="../../aichatbot.py" line="119"/>
         <source>User:</source>
         <translation>用户：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="126"/>
+        <location filename="../../aichatbot.py" line="122"/>
         <source>Assistant:</source>
         <translation>助手：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="128"/>
+        <location filename="../../aichatbot.py" line="124"/>
         <source>System:</source>
         <translation>系统：</translation>
     </message>
@@ -159,7 +159,7 @@
 <context>
     <name>Application</name>
     <message>
-        <location filename="../../application.py" line="321"/>
+        <location filename="../../application.py" line="322"/>
         <source>No git found, please check your settings.</source>
         <translation>未找到git，请检查您的设置项。</translation>
     </message>
@@ -167,12 +167,12 @@
 <context>
     <name>BlameSourceViewer</name>
     <message>
-        <location filename="../../blameview.py" line="462"/>
+        <location filename="../../blameview.py" line="448"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="465"/>
+        <location filename="../../blameview.py" line="451"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -180,52 +180,52 @@
 <context>
     <name>BlameWindow</name>
     <message>
-        <location filename="../../blamewindow.py" line="27"/>
+        <location filename="../../blamewindow.py" line="19"/>
         <source>QGitc Blame</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="50"/>
+        <location filename="../../blamewindow.py" line="42"/>
         <source>&amp;File</source>
         <translation>文件(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="57"/>
+        <location filename="../../blamewindow.py" line="49"/>
         <source>&amp;Edit</source>
         <translation>编辑(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="58"/>
+        <location filename="../../blamewindow.py" line="50"/>
         <source>&amp;Go To Line...</source>
         <translation>跳转到行(&amp;G)...</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="62"/>
+        <location filename="../../blamewindow.py" line="54"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="68"/>
+        <location filename="../../blamewindow.py" line="60"/>
         <source>Find &amp;Next</source>
         <translation>查找下一个(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="72"/>
+        <location filename="../../blamewindow.py" line="64"/>
         <source>Find &amp;Previous</source>
         <translation>查找上一个(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="77"/>
+        <location filename="../../blamewindow.py" line="69"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="82"/>
+        <location filename="../../blamewindow.py" line="74"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../blamewindow.py" line="51"/>
+        <location filename="../../blamewindow.py" line="43"/>
         <source>Close &amp;Window</source>
         <translation>关闭窗口(&amp;W)</translation>
     </message>
@@ -233,17 +233,17 @@
 <context>
     <name>BugPatternModel</name>
     <message>
-        <location filename="../../linkeditwidget.py" line="54"/>
+        <location filename="../../linkeditwidget.py" line="50"/>
         <source>Bug Pattern</source>
         <translation>Bug模式</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="57"/>
+        <location filename="../../linkeditwidget.py" line="53"/>
         <source>Bug Url</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="99"/>
+        <location filename="../../linkeditwidget.py" line="95"/>
         <source>Invalid regular expression: </source>
         <translation>无效的正则表达式：</translation>
     </message>
@@ -251,7 +251,7 @@
 <context>
     <name>CommitActionEditDialog</name>
     <message>
-        <location filename="../../commitactioneditdialog.py" line="18"/>
+        <location filename="../../commitactioneditdialog.py" line="14"/>
         <source>Edit Commit Actions</source>
         <translation>编辑提交动作</translation>
     </message>
@@ -259,47 +259,47 @@
 <context>
     <name>CommitActionTableModel</name>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="42"/>
+        <location filename="../../commitactiontablemodel.py" line="39"/>
         <source>Main Repo Only</source>
         <translation>仅主库</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="43"/>
+        <location filename="../../commitactiontablemodel.py" line="40"/>
         <source>Each Repo</source>
         <translation>每个仓库</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="47"/>
+        <location filename="../../commitactiontablemodel.py" line="44"/>
         <source>All Committed</source>
         <translation>全部提交后</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="48"/>
+        <location filename="../../commitactiontablemodel.py" line="45"/>
         <source>Enabled</source>
         <translation>启用</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="52"/>
+        <location filename="../../commitactiontablemodel.py" line="49"/>
         <source>Disabled</source>
         <translation>禁用</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="66"/>
+        <location filename="../../commitactiontablemodel.py" line="63"/>
         <source>Command</source>
         <translation>命令</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="68"/>
+        <location filename="../../commitactiontablemodel.py" line="65"/>
         <source>Arguments</source>
         <translation>参数</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="70"/>
+        <location filename="../../commitactiontablemodel.py" line="67"/>
         <source>Condition</source>
         <translation>条件</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="73"/>
+        <location filename="../../commitactiontablemodel.py" line="70"/>
         <source>Status</source>
         <translation>状态</translation>
     </message>
@@ -307,12 +307,12 @@
 <context>
     <name>CommitActionWidget</name>
     <message>
-        <location filename="../../commitactionwidget.py" line="67"/>
+        <location filename="../../commitactionwidget.py" line="62"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../commitactionwidget.py" line="73"/>
+        <location filename="../../commitactionwidget.py" line="68"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
@@ -330,22 +330,22 @@
 <context>
     <name>CommitPanel</name>
     <message>
-        <location filename="../../blameview.py" line="605"/>
+        <location filename="../../blameview.py" line="591"/>
         <source>Commit: </source>
         <translation>记录： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="609"/>
+        <location filename="../../blameview.py" line="595"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="614"/>
+        <location filename="../../blameview.py" line="600"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="620"/>
+        <location filename="../../blameview.py" line="606"/>
         <source>Previous: </source>
         <translation>前一条记录： </translation>
     </message>
@@ -353,156 +353,161 @@
 <context>
     <name>CommitWindow</name>
     <message>
-        <location filename="../../commitwindow.py" line="256"/>
+        <location filename="../../commitwindow.py" line="257"/>
         <location filename="../../commitwindow.ui" line="14"/>
         <source>QGitc Commit</source>
         <translation>QGitc提交</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="282"/>
+        <location filename="../../commitwindow.py" line="283"/>
         <source>There are no unstaged changes</source>
         <translation>所有改动已被暂存或工作区无修改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="297"/>
+        <location filename="../../commitwindow.py" line="298"/>
         <source>There are no staged changes</source>
         <translation>没有已暂存的更改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="314"/>
+        <location filename="../../commitwindow.py" line="315"/>
         <source>Unstage all</source>
         <translation>取消全部暂存</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="323"/>
+        <location filename="../../commitwindow.py" line="324"/>
         <source>Stage all</source>
         <translation>暂存全部</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="328"/>
+        <location filename="../../commitwindow.py" line="329"/>
         <source>Refresh</source>
         <translation>刷新</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="345"/>
+        <location filename="../../commitwindow.py" line="346"/>
         <source>Enter commit message here...</source>
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="516"/>
+        <location filename="../../commitwindow.py" line="519"/>
         <source>Inconsistent branches</source>
         <translation>分支不一致</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="520"/>
+        <location filename="../../commitwindow.py" line="523"/>
         <source>You have different branches in submodules:</source>
         <translation>各仓库的分支不完全一致：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="624"/>
+        <location filename="../../commitwindow.py" line="627"/>
         <source>Confirm commit</source>
         <translation>确认提交</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="626"/>
+        <location filename="../../commitwindow.py" line="629"/>
         <source>You did not edit the message template. Do you want to use the template as commit message?</source>
         <translation>您尚未编辑消息模板。是否要使用该模板作为提交消息？</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="684"/>
+        <location filename="../../commitwindow.py" line="687"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="688"/>
+        <location filename="../../commitwindow.py" line="691"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="690"/>
+        <location filename="../../commitwindow.py" line="693"/>
         <source>Invalid commit message</source>
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="900"/>
+        <location filename="../../commitwindow.py" line="897"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="932"/>
+        <location filename="../../commitwindow.py" line="954"/>
+        <source>Action: </source>
+        <translation>动作：</translation>
+    </message>
+    <message>
+        <location filename="../../commitwindow.py" line="956"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="971"/>
+        <location filename="../../commitwindow.py" line="1002"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="981"/>
+        <location filename="../../commitwindow.py" line="1012"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1043"/>
+        <location filename="../../commitwindow.py" line="1074"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1052"/>
+        <location filename="../../commitwindow.py" line="1083"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1132"/>
+        <location filename="../../commitwindow.py" line="1164"/>
         <location filename="../../commitwindow.ui" line="592"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1133"/>
+        <location filename="../../commitwindow.py" line="1165"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1135"/>
+        <location filename="../../commitwindow.py" line="1167"/>
         <location filename="../../commitwindow.ui" line="553"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1137"/>
+        <location filename="../../commitwindow.py" line="1169"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1245"/>
+        <location filename="../../commitwindow.py" line="1285"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1368"/>
+        <location filename="../../commitwindow.py" line="1408"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1370"/>
-        <location filename="../../commitwindow.py" line="1377"/>
+        <location filename="../../commitwindow.py" line="1410"/>
+        <location filename="../../commitwindow.py" line="1417"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1380"/>
+        <location filename="../../commitwindow.py" line="1420"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1383"/>
+        <location filename="../../commitwindow.py" line="1423"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1423"/>
+        <location filename="../../commitwindow.py" line="1463"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
@@ -598,54 +603,54 @@
 <context>
     <name>DiffView</name>
     <message>
-        <location filename="../../diffview.py" line="172"/>
+        <location filename="../../diffview.py" line="175"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="176"/>
+        <location filename="../../diffview.py" line="179"/>
         <source>&amp;Copy path</source>
         <translation>复制路径(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="190"/>
+        <location filename="../../diffview.py" line="193"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="194"/>
+        <location filename="../../diffview.py" line="197"/>
         <source>&amp;Log this file</source>
         <translation>查看此文件记录(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="203"/>
-        <location filename="../../diffview.py" line="494"/>
+        <location filename="../../diffview.py" line="206"/>
+        <location filename="../../diffview.py" line="497"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="492"/>
+        <location filename="../../diffview.py" line="495"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="561"/>
-        <location filename="../../diffview.py" line="569"/>
+        <location filename="../../diffview.py" line="564"/>
+        <location filename="../../diffview.py" line="572"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="565"/>
+        <location filename="../../diffview.py" line="568"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="569"/>
+        <location filename="../../diffview.py" line="572"/>
         <source>You</source>
         <translation>你</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="573"/>
+        <location filename="../../diffview.py" line="576"/>
         <source>Parent: </source>
         <translation></translation>
     </message>
@@ -654,22 +659,22 @@
         <translation type="vanished">子提交：</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="621"/>
+        <location filename="../../diffview.py" line="624"/>
         <source>Comments</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="585"/>
+        <location filename="../../diffview.py" line="588"/>
         <source>Child: </source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="544"/>
+        <location filename="../../diffview.py" line="547"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="547"/>
+        <location filename="../../diffview.py" line="550"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
@@ -678,37 +683,37 @@
         <translation type="obsolete">复制成Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="196"/>
+        <location filename="../../diffview.py" line="199"/>
         <source>&amp;Blame this file</source>
         <translation>Blame此文件(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="198"/>
+        <location filename="../../diffview.py" line="201"/>
         <source>Blame parent commit</source>
         <translation>Blame父记录</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="445"/>
+        <location filename="../../diffview.py" line="448"/>
         <source>The external diff tool crashed!</source>
         <translation>外部diff工具崩溃了！</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="177"/>
+        <location filename="../../diffview.py" line="180"/>
         <source>As &amp;seen</source>
         <translation>相对路径(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="179"/>
+        <location filename="../../diffview.py" line="182"/>
         <source>As &amp;absolute</source>
         <translation>绝对路径(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="181"/>
+        <location filename="../../diffview.py" line="184"/>
         <source>As &amp;Windows</source>
         <translation>Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="185"/>
+        <location filename="../../diffview.py" line="188"/>
         <source>As W&amp;indows absolute</source>
         <translation>Windows绝对路径(&amp;I)</translation>
     </message>
@@ -716,33 +721,33 @@
 <context>
     <name>FindWidget</name>
     <message>
-        <location filename="../../findwidget.py" line="128"/>
+        <location filename="../../findwidget.py" line="127"/>
         <source>Use Regular Expression</source>
         <translation>使用正则表达式</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="131"/>
+        <location filename="../../findwidget.py" line="130"/>
         <source>Match Whole Word</source>
         <translation>全字匹配</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="134"/>
+        <location filename="../../findwidget.py" line="133"/>
         <source>Match Case</source>
         <translation>匹配大小写</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="224"/>
-        <location filename="../../findwidget.py" line="246"/>
+        <location filename="../../findwidget.py" line="223"/>
+        <location filename="../../findwidget.py" line="245"/>
         <source>No results</source>
         <translation>无查找结果</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="232"/>
+        <location filename="../../findwidget.py" line="231"/>
         <source>Invalid regular expression: </source>
         <translation>无效的正则表达式：</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="243"/>
+        <location filename="../../findwidget.py" line="242"/>
         <source>Finding...</source>
         <translation>正在查找...</translation>
     </message>
@@ -750,22 +755,22 @@
 <context>
     <name>FontChooserWidget</name>
     <message>
-        <location filename="../../fontchooserwidget.py" line="32"/>
+        <location filename="../../fontchooserwidget.py" line="26"/>
         <source>Fonts:</source>
         <translation>字体：</translation>
     </message>
     <message>
-        <location filename="../../fontchooserwidget.py" line="49"/>
+        <location filename="../../fontchooserwidget.py" line="43"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../fontchooserwidget.py" line="53"/>
+        <location filename="../../fontchooserwidget.py" line="47"/>
         <source>&amp;Remove</source>
         <translation>删除(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../fontchooserwidget.py" line="61"/>
+        <location filename="../../fontchooserwidget.py" line="55"/>
         <source>Font Size:</source>
         <translation>字号：</translation>
     </message>
@@ -773,7 +778,7 @@
 <context>
     <name>GitProgressDialog</name>
     <message>
-        <location filename="../../gitprogressdialog.py" line="49"/>
+        <location filename="../../gitprogressdialog.py" line="47"/>
         <source>Git Progress</source>
         <translation>Git进度</translation>
     </message>
@@ -841,22 +846,22 @@
         <translation>查找下一条</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="126"/>
+        <location filename="../../gitview.py" line="122"/>
         <source>Can&apos;t get branch</source>
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="263"/>
+        <location filename="../../gitview.py" line="260"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="294"/>
+        <location filename="../../gitview.py" line="291"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="297"/>
+        <location filename="../../gitview.py" line="294"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -882,17 +887,17 @@
 <context>
     <name>GithubCopilotLoginDialog</name>
     <message>
-        <location filename="../../githubcopilotlogindialog.py" line="133"/>
+        <location filename="../../githubcopilotlogindialog.py" line="135"/>
         <source>Login failed: {}</source>
         <translation>登录失败：{}</translation>
     </message>
     <message>
-        <location filename="../../githubcopilotlogindialog.py" line="164"/>
+        <location filename="../../githubcopilotlogindialog.py" line="166"/>
         <source>Please open the following URL in your browser and enter the code to authenticate...</source>
         <translation>请在浏览器中打开以下网址并输入代码进行身份验证...</translation>
     </message>
     <message>
-        <location filename="../../githubcopilotlogindialog.py" line="172"/>
+        <location filename="../../githubcopilotlogindialog.py" line="174"/>
         <source>Login successful</source>
         <translation>登录成功</translation>
     </message>
@@ -920,17 +925,17 @@
 <context>
     <name>GotoDialog</name>
     <message>
-        <location filename="../../gotodialog.py" line="22"/>
+        <location filename="../../gotodialog.py" line="14"/>
         <source>Go To Line</source>
         <translation>跳转到行</translation>
     </message>
     <message>
-        <location filename="../../gotodialog.py" line="25"/>
+        <location filename="../../gotodialog.py" line="17"/>
         <source>Line number:</source>
         <translation>行呈：</translation>
     </message>
     <message>
-        <location filename="../../gotodialog.py" line="51"/>
+        <location filename="../../gotodialog.py" line="43"/>
         <source>Line number (%d - %d):</source>
         <translation>行号（%d - %d）：</translation>
     </message>
@@ -938,7 +943,7 @@
 <context>
     <name>LinkEditDialog</name>
     <message>
-        <location filename="../../linkeditdialog.py" line="18"/>
+        <location filename="../../linkeditdialog.py" line="14"/>
         <source>Edit Links</source>
         <translation>编辑链接</translation>
     </message>
@@ -946,42 +951,42 @@
 <context>
     <name>LinkEditWidget</name>
     <message>
-        <location filename="../../linkeditwidget.py" line="173"/>
+        <location filename="../../linkeditwidget.py" line="169"/>
         <source>Co&amp;mmit Url:</source>
         <translation>记录URL(&amp;M)：</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="194"/>
+        <location filename="../../linkeditwidget.py" line="190"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="195"/>
+        <location filename="../../linkeditwidget.py" line="191"/>
         <source>&amp;Remove</source>
         <translation>删除(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="196"/>
+        <location filename="../../linkeditwidget.py" line="192"/>
         <source>Auto &amp;Detect</source>
         <translation>自动识别(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="236"/>
+        <location filename="../../linkeditwidget.py" line="232"/>
         <source>Please select one row at least to remove.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="242"/>
+        <location filename="../../linkeditwidget.py" line="238"/>
         <source>You have selected more than one row, do you really want remove all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="258"/>
+        <location filename="../../linkeditwidget.py" line="254"/>
         <source>Unable to detect current repo&apos;s name</source>
         <translation>无法识别当前仓库</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="289"/>
+        <location filename="../../linkeditwidget.py" line="285"/>
         <source>Unsupported repository</source>
         <translation>暂不支持自动识别此仓库</translation>
     </message>
@@ -989,92 +994,92 @@
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="487"/>
+        <location filename="../../logview.py" line="482"/>
         <source>&amp;Copy commit summary</source>
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="497"/>
+        <location filename="../../logview.py" line="492"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="499"/>
+        <location filename="../../logview.py" line="494"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="501"/>
+        <location filename="../../logview.py" line="496"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="969"/>
+        <location filename="../../logview.py" line="961"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="993"/>
+        <location filename="../../logview.py" line="985"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="506"/>
+        <location filename="../../logview.py" line="501"/>
         <source>Generate &amp;patch</source>
         <translation>生成&amp;patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="509"/>
+        <location filename="../../logview.py" line="504"/>
         <source>Generate &amp;diff</source>
         <translation>生成&amp;diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="514"/>
+        <location filename="../../logview.py" line="509"/>
         <source>Re&amp;vert this commit</source>
         <translation>回滚此记录(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="516"/>
+        <location filename="../../logview.py" line="511"/>
         <source>Re&amp;set to here</source>
         <translation>重置HEAD为此记录(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="518"/>
+        <location filename="../../logview.py" line="513"/>
         <source>&amp;Soft</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="521"/>
+        <location filename="../../logview.py" line="516"/>
         <source>&amp;Mixed</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="524"/>
+        <location filename="../../logview.py" line="519"/>
         <source>&amp;Hard</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="529"/>
+        <location filename="../../logview.py" line="524"/>
         <source>&amp;Code Review</source>
         <translation>代码审查(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="804"/>
+        <location filename="../../logview.py" line="796"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="830"/>
+        <location filename="../../logview.py" line="822"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="490"/>
+        <location filename="../../logview.py" line="485"/>
         <source>Copy &amp;abbrev commit</source>
         <translation>复制短SHA-1(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="493"/>
+        <location filename="../../logview.py" line="488"/>
         <source>Copy to conflict &amp;log</source>
         <translation>复制到冲突记录(&amp;L)</translation>
     </message>
@@ -1082,12 +1087,12 @@
 <context>
     <name>LoginThread</name>
     <message>
-        <location filename="../../githubcopilotlogindialog.py" line="77"/>
+        <location filename="../../githubcopilotlogindialog.py" line="78"/>
         <source>Failed to get verification URL</source>
         <translation>获取验证网址失败</translation>
     </message>
     <message>
-        <location filename="../../githubcopilotlogindialog.py" line="108"/>
+        <location filename="../../githubcopilotlogindialog.py" line="110"/>
         <source>Access denied</source>
         <translation>拒绝访问</translation>
     </message>
@@ -1260,37 +1265,37 @@
         <translation>提交(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="88"/>
+        <location filename="../../mainwindow.py" line="73"/>
         <source>Show AI Assistant</source>
         <translation>显示AI助手</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="232"/>
+        <location filename="../../mainwindow.py" line="217"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="241"/>
+        <location filename="../../mainwindow.py" line="226"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="257"/>
+        <location filename="../../mainwindow.py" line="242"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="571"/>
+        <location filename="../../mainwindow.py" line="556"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="572"/>
+        <location filename="../../mainwindow.py" line="557"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="560"/>
+        <location filename="../../mainwindow.py" line="545"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -1411,62 +1416,62 @@
 <context>
     <name>MergeWidget</name>
     <message>
-        <location filename="../../mergewidget.py" line="68"/>
+        <location filename="../../mergewidget.py" line="71"/>
         <source>Conflict List</source>
         <translation>冲突列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="112"/>
+        <location filename="../../mergewidget.py" line="115"/>
         <source>Click to refresh the list</source>
         <translation>点击以刷新列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="113"/>
+        <location filename="../../mergewidget.py" line="116"/>
         <source>Continuous resolve</source>
         <translation>持续解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="114"/>
+        <location filename="../../mergewidget.py" line="117"/>
         <source>Resolve</source>
         <translation>解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="172"/>
+        <location filename="../../mergewidget.py" line="175"/>
         <source>&amp;Resolve</source>
         <translation>解决冲突(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="180"/>
+        <location filename="../../mergewidget.py" line="183"/>
         <source>Use &amp;ours</source>
         <translation>使用我们的(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="183"/>
+        <location filename="../../mergewidget.py" line="186"/>
         <source>Use &amp;theirs</source>
         <translation>使用他们的(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="243"/>
+        <location filename="../../mergewidget.py" line="246"/>
         <source>You are resolving this file, please close it first.</source>
         <translation>您正在处理此文件的冲突，请先关闭它。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="261"/>
+        <location filename="../../mergewidget.py" line="264"/>
         <source>You can&apos;t refresh before close the merge window.</source>
         <translation>您不能在合并窗口打开时刷新列表。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="371"/>
+        <location filename="../../mergewidget.py" line="374"/>
         <source>Use &amp;created</source>
         <translation>使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="372"/>
+        <location filename="../../mergewidget.py" line="375"/>
         <source>Use &amp;modified</source>
         <translation>使用修改的(&amp;)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="374"/>
+        <location filename="../../mergewidget.py" line="377"/>
         <source>&amp;Deleted file</source>
         <translation>删除文件(&amp;D)</translation>
     </message>
@@ -1475,22 +1480,22 @@
         <translation type="obsolete">终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="394"/>
+        <location filename="../../mergewidget.py" line="397"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="395"/>
+        <location filename="../../mergewidget.py" line="398"/>
         <source>Use &amp;remote</source>
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="443"/>
+        <location filename="../../mergewidget.py" line="446"/>
         <source>All resolved!</source>
         <translation>冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="476"/>
+        <location filename="../../mergewidget.py" line="479"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
@@ -1499,72 +1504,72 @@
         <translation type="obsolete">未知合并工具，请检查配置是否正确。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="546"/>
+        <location filename="../../mergewidget.py" line="549"/>
         <source>This file is already resolved.</source>
         <translation>此文件冲突已处理完。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="551"/>
+        <location filename="../../mergewidget.py" line="554"/>
         <source>Please resolve current conflicts before start a new one.</source>
         <translation>请先处理完当前文件冲突再处理新文件的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="471"/>
+        <location filename="../../mergewidget.py" line="474"/>
         <source>All filter conflicts are resolved, please clear the filter to resolve the rest.</source>
         <translation>已解决掉过滤的全部冲突，请清除过滤以解决其它的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="175"/>
+        <location filename="../../mergewidget.py" line="178"/>
         <source>&amp;Undo merge</source>
         <translation>重置冲突(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="187"/>
+        <location filename="../../mergewidget.py" line="190"/>
         <source>&amp;Copy Path</source>
         <translation>复制路径(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="190"/>
+        <location filename="../../mergewidget.py" line="193"/>
         <source>Copy &amp;Windows Path</source>
         <translation>复制成Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="490"/>
+        <location filename="../../mergewidget.py" line="493"/>
         <source>No conflict files to resolve!</source>
         <translation>无冲突文件可解决！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="124"/>
+        <location filename="../../mergewidget.py" line="127"/>
         <source>Log conflicts to</source>
         <translation>记录冲突到</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="126"/>
+        <location filename="../../mergewidget.py" line="129"/>
         <source>Choose</source>
         <translation>选择</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="277"/>
+        <location filename="../../mergewidget.py" line="280"/>
         <source>Choose file</source>
         <translation>选择文件</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="142"/>
+        <location filename="../../mergewidget.py" line="145"/>
         <source>No pywin32/pywpsrpc or openpyxl found, feature disabled.</source>
         <translation>未安装pywin32/pywpsrpc或者openpyxl，此功能无法启用。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="309"/>
+        <location filename="../../mergewidget.py" line="312"/>
         <source>Local Branch</source>
         <translation>本地分支</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="322"/>
+        <location filename="../../mergewidget.py" line="325"/>
         <source>Remote Branch</source>
         <translation>远程分支</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="193"/>
+        <location filename="../../mergewidget.py" line="196"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
@@ -1572,17 +1577,17 @@
 <context>
     <name>NewVersionDialog</name>
     <message>
-        <location filename="../../newversiondialog.py" line="16"/>
+        <location filename="../../newversiondialog.py" line="14"/>
         <source>New version available</source>
         <translation>发现新版本</translation>
     </message>
     <message>
-        <location filename="../../newversiondialog.py" line="18"/>
+        <location filename="../../newversiondialog.py" line="16"/>
         <source>A new version ({0}) was available.</source>
         <translation>发现新版本：{0}。</translation>
     </message>
     <message>
-        <location filename="../../newversiondialog.py" line="19"/>
+        <location filename="../../newversiondialog.py" line="17"/>
         <source>Run `{0}` for getting the latest version.</source>
         <translation>在终端执行`{0}`以更新到最新版本。</translation>
     </message>
@@ -1593,7 +1598,7 @@ Run `{1}` for getting the latest version.</source>
 运行`{1}`更新到最新版本。</translation>
     </message>
     <message>
-        <location filename="../../newversiondialog.py" line="23"/>
+        <location filename="../../newversiondialog.py" line="21"/>
         <source>Ignore this version</source>
         <translation>忽略此版本</translation>
     </message>
@@ -1686,7 +1691,7 @@ Run `{1}` for getting the latest version.</source>
         <translation>行末</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="74"/>
+        <location filename="../../preferences.py" line="71"/>
         <location filename="../../preferences.ui" line="272"/>
         <source>All</source>
         <translation>全部</translation>
@@ -1738,7 +1743,7 @@ Run `{1}` for getting the latest version.</source>
         <translation>分支&amp;A：</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="430"/>
+        <location filename="../../preferences.py" line="426"/>
         <location filename="../../preferences.ui" line="424"/>
         <source>Links</source>
         <translation>链接</translation>
@@ -1789,96 +1794,96 @@ Run `{1}` for getting the latest version.</source>
         <translation>删除(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="75"/>
+        <location filename="../../preferences.py" line="72"/>
         <source>1 Year</source>
         <translation>1年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="76"/>
+        <location filename="../../preferences.py" line="73"/>
         <source>2 Years</source>
         <translation>2年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="77"/>
+        <location filename="../../preferences.py" line="74"/>
         <source>3 Years</source>
         <translation>3年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="78"/>
+        <location filename="../../preferences.py" line="75"/>
         <source>5 Years</source>
         <translation>5年</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="301"/>
+        <location filename="../../preferences.py" line="297"/>
         <source>Critical</source>
         <translation>严重</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="302"/>
+        <location filename="../../preferences.py" line="298"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="303"/>
+        <location filename="../../preferences.py" line="299"/>
         <source>Warning</source>
         <translation>警告</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="304"/>
+        <location filename="../../preferences.py" line="300"/>
         <source>Info</source>
         <translation>信息</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="305"/>
+        <location filename="../../preferences.py" line="301"/>
         <source>Debug</source>
         <translation>调试</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="310"/>
+        <location filename="../../preferences.py" line="306"/>
         <source>Auto</source>
         <translation>自动</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="311"/>
+        <location filename="../../preferences.py" line="307"/>
         <source>Light</source>
         <translation>浅色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="312"/>
+        <location filename="../../preferences.py" line="308"/>
         <source>Dark</source>
         <translation>深色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="493"/>
-        <location filename="../../preferences.py" line="545"/>
-        <location filename="../../preferences.py" line="552"/>
+        <location filename="../../preferences.py" line="489"/>
+        <location filename="../../preferences.py" line="541"/>
+        <location filename="../../preferences.py" line="548"/>
         <source>Logout</source>
         <translation>注销</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="494"/>
-        <location filename="../../preferences.py" line="547"/>
+        <location filename="../../preferences.py" line="490"/>
+        <location filename="../../preferences.py" line="543"/>
         <source>Login</source>
         <translation>登录</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="525"/>
+        <location filename="../../preferences.py" line="521"/>
         <location filename="../../preferences.ui" line="1080"/>
         <source>Commit Actions</source>
         <translation>提交动作</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="562"/>
+        <location filename="../../preferences.py" line="558"/>
         <source>System Default</source>
         <translation>系统默认</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="563"/>
+        <location filename="../../preferences.py" line="559"/>
         <source>English</source>
         <translation>英语</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="564"/>
+        <location filename="../../preferences.py" line="560"/>
         <source>Simplified Chinese</source>
         <translation>简体中文</translation>
     </message>
@@ -1887,17 +1892,17 @@ Run `{1}` for getting the latest version.</source>
         <translation type="vanished">提交动作(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="118"/>
+        <location filename="../../preferences.py" line="115"/>
         <source>Please select one row at least to delete.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="124"/>
+        <location filename="../../preferences.py" line="121"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="138"/>
+        <location filename="../../preferences.py" line="135"/>
         <source>The suffix you specify is already exists.</source>
         <translation>此后缀已经添加过了。</translation>
     </message>
@@ -2132,17 +2137,17 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="vanished">删除</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="158"/>
+        <location filename="../../preferences.py" line="155"/>
         <source>Unable to find the path of imgdiff!</source>
         <translation>未找到imgdiff！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="183"/>
+        <location filename="../../preferences.py" line="180"/>
         <source>The diff tool name can&apos;t be empty!</source>
         <translation>diff工具名称不能为空！</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="191"/>
+        <location filename="../../preferences.py" line="188"/>
         <source>The merge tool name can&apos;t be empty!</source>
         <translation>merge工具名称不能为空！</translation>
     </message>
@@ -2157,12 +2162,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>浏览(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="200"/>
+        <location filename="../../preferences.py" line="197"/>
         <source>The git path you specified is invalid.</source>
         <translation>无效的git路径。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="227"/>
+        <location filename="../../preferences.py" line="223"/>
         <source>Choose Git</source>
         <translation>选择Git</translation>
     </message>
@@ -2170,12 +2175,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>RevisionPanel</name>
     <message>
-        <location filename="../../blameview.py" line="400"/>
+        <location filename="../../blameview.py" line="386"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="403"/>
+        <location filename="../../blameview.py" line="389"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -2183,7 +2188,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>StatusFileListModel</name>
     <message>
-        <location filename="../../commitwindow.py" line="121"/>
+        <location filename="../../commitwindow.py" line="129"/>
         <source>Renamed from: </source>
         <translation>重命名自：</translation>
     </message>
@@ -2191,17 +2196,17 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>TextViewer</name>
     <message>
-        <location filename="../../textviewer.py" line="505"/>
+        <location filename="../../textviewer.py" line="507"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="510"/>
+        <location filename="../../textviewer.py" line="512"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="516"/>
+        <location filename="../../textviewer.py" line="518"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
@@ -2213,37 +2218,37 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation type="obsolete">启用</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="54"/>
+        <location filename="../../tooltablemodel.py" line="50"/>
         <source>Suffix</source>
         <translation>后缀</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="57"/>
+        <location filename="../../tooltablemodel.py" line="53"/>
         <source>Tool</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="23"/>
+        <location filename="../../tooltablemodel.py" line="19"/>
         <source>Disabled</source>
         <translation>禁用</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="24"/>
+        <location filename="../../tooltablemodel.py" line="20"/>
         <source>Diff</source>
         <translation>Diff</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="25"/>
+        <location filename="../../tooltablemodel.py" line="21"/>
         <source>Merge</source>
         <translation>合并</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="28"/>
+        <location filename="../../tooltablemodel.py" line="24"/>
         <source>Both</source>
         <translation>Diff和合并</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="52"/>
+        <location filename="../../tooltablemodel.py" line="48"/>
         <source>Scenes</source>
         <translation>场景</translation>
     </message>
