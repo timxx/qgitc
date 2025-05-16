@@ -20,7 +20,14 @@ from PySide6.QtCore import (
     QTimer,
     QUrl,
 )
-from PySide6.QtGui import QDesktopServices, QFont, QIcon, QTextCharFormat, QTextCursor
+from PySide6.QtGui import (
+    QDesktopServices,
+    QFont,
+    QIcon,
+    QTextBlockFormat,
+    QTextCharFormat,
+    QTextCursor,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -211,12 +218,13 @@ class TemplateReadyEvent(QEvent):
 class UpdateCommitProgressEvent(QEvent):
     Type = QEvent.User + 5
 
-    def __init__(self, submodule: str, out: str, error: str, updateProgress: bool = True):
+    def __init__(self, submodule: str, out: str, error: str, updateProgress: bool = True, action: str = None):
         super().__init__(QEvent.Type(UpdateCommitProgressEvent.Type))
         self.submodule = submodule
         self.out = out
         self.error = error
         self.updateProgress = updateProgress
+        self.action = action
 
 
 class FileRestoreEvent(QEvent):
@@ -424,6 +432,8 @@ class CommitWindow(StateWindow):
 
         self._setupContextMenu()
 
+        self._outputBlocks: Dict[str, int] = {}
+
         qApp.repoDirChanged.connect(
             self._onRepoDirChanged)
 
@@ -449,6 +459,7 @@ class CommitWindow(StateWindow):
         self._repoBranch.clear()
         self._branchMessage.clear()
         self._branchWidget.setVisible(False)
+        self._outputBlocks.clear()
 
     def clearModels(self):
         self._filesModel.clear()
@@ -746,13 +757,7 @@ class CommitWindow(StateWindow):
         for action in actions:
             if cancelEvent.isSet():
                 return
-            o, e = CommitWindow._runCommitAction(submodule, action)
-            if o:
-                out = out + "\n" + o if out else o
-            if e:
-                error = error + "\n" + e if error else e
-
-        self._updateCommitProgress(submodule, out, error)
+            self._runCommitAction(submodule, action, cancelEvent)
 
     def _collectSectionFiles(self, view: QListView, filter: Callable = None):
         indexes = view.selectionModel().selectedRows()
@@ -913,45 +918,72 @@ class CommitWindow(StateWindow):
             return True
 
         if evt.type() == UpdateCommitProgressEvent.Type:
-            if evt.updateProgress:
-                self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
-
-            if evt.out or evt.error:
-                if not evt.submodule or evt.submodule == ".":
-                    repoName = "<main>"
-                else:
-                    repoName = evt.submodule
-                repoText = self.tr("Repo: ") + repoName
-                format = QTextCharFormat()
-                format.setBackground(qApp.colorSchema().RepoTagBg)
-                format.setForeground(qApp.colorSchema().RepoTagFg)
-
-                cursor = self.ui.teOutput.textCursor()
-                cursor.movePosition(QTextCursor.End)
-                cursor.insertText(repoText, format)
-                cursor.setCharFormat(QTextCharFormat())
-                self.ui.teOutput.setTextCursor(cursor)
-
-            if evt.out:
-                self.ui.teOutput.appendPlainText(evt.out + "\n")
-            if evt.error:
-                cursor.movePosition(QTextCursor.End)
-
-                format = QTextCharFormat()
-                format.setForeground(qApp.colorSchema().ErrorText)
-                error = "\n" + evt.error if not evt.out else evt.error
-                error += "\n"
-                cursor.insertText(error, format)
-                cursor.setCharFormat(QTextCharFormat())
-                self.ui.teOutput.setTextCursor(cursor)
-            self.ui.teOutput.moveCursor(QTextCursor.End)
-            self.ui.teOutput.ensureCursorVisible()
+            self._handleUpdateCommitProgress(
+                evt.submodule, evt.out, evt.error, evt.updateProgress, evt.action)
             return True
 
         if evt.type() == FileRestoreEvent.Type:
             self._handleFileRestoreEvent(evt.submodule, evt.files, evt.error)
 
         return super().event(evt)
+
+    def _addBlock(self, key: str, title: str):
+        cursor = self.ui.teOutput.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        cursor.insertBlock()
+
+        blockFmt = QTextBlockFormat()
+        blockFmt.topMargin = 8
+
+        charFmt = QTextCharFormat()
+        charFmt.setBackground(qApp.colorSchema().RepoTagBg)
+        charFmt.setForeground(qApp.colorSchema().RepoTagFg)
+
+        cursor.setBlockFormat(blockFmt)
+        cursor.insertText(f"{title}\n", charFmt)
+        self._outputBlocks[key] = cursor.position()
+        cursor.setCharFormat(QTextCharFormat())
+        self.ui.teOutput.setTextCursor(cursor)
+
+    def _updateBlockOutput(self, repoName: str, line: str, isError: bool = False, action: str = None):
+        cursor = self.ui.teOutput.textCursor()
+        blockKey = f"{repoName}.{action}" if action else repoName
+        pos = self._outputBlocks.get(blockKey)
+        if pos is None:
+            if action:
+                title = self.tr("Action: ") + action + f"({repoName})"
+            else:
+                title = self.tr("Repo: ") + repoName
+
+            self._addBlock(blockKey, title)
+            pos = self._outputBlocks[blockKey]
+
+        cursor.setPosition(pos)
+        cursor.movePosition(QTextCursor.EndOfBlock)
+        format = QTextCharFormat()
+        if isError:
+            format.setForeground(qApp.colorSchema().ErrorText)
+        cursor.insertText(line if line.endswith("\n")
+                          else (line + "\n"), format)
+        cursor.setCharFormat(QTextCharFormat())
+        self._outputBlocks[blockKey] = cursor.position()
+        self.ui.teOutput.setTextCursor(cursor)
+        self.ui.teOutput.ensureCursorVisible()
+
+    def _handleUpdateCommitProgress(self, submodule: str, out: str, error: str, updateProgress: bool = True, action: str = None):
+        if updateProgress:
+            self.ui.progressBar.setValue(self.ui.progressBar.value() + 1)
+
+        if out or error:
+            if not submodule or submodule == ".":
+                repoName = "<main>"
+            else:
+                repoName = submodule
+
+            if out:
+                self._updateBlockOutput(repoName, out, False, action)
+            if error:
+                self._updateBlockOutput(repoName, error, True, action)
 
     def reloadLocalChanges(self):
         self._statusFetcher.cancel()
@@ -1113,13 +1145,14 @@ class CommitWindow(StateWindow):
             self._commitExecutor.submit(submodules, self._runCommittedAction)
             return
 
+        self._outputBlocks.clear()
         self.reloadLocalChanges()
         self._updateCommitStatus(False)
         qApp.postEvent(qApp, LocalChangesCommittedEvent())
 
-    def _updateCommitProgress(self, submodule, out: str, error: str, updateProgress=True):
+    def _updateCommitProgress(self, submodule, out: str, error: str, updateProgress=True, action: str = None):
         qApp.postEvent(self, UpdateCommitProgressEvent(
-            submodule, out, error, updateProgress))
+            submodule, out, error, updateProgress, action))
 
     def _updateCommitStatus(self, isRunning: bool):
         text = self.tr("&Abort") if isRunning else self.tr("&Back")
@@ -1136,12 +1169,11 @@ class CommitWindow(StateWindow):
         else:
             self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
 
-    @staticmethod
-    def _runCommitAction(submodule: str, action: CommitAction):
+    def _runCommitAction(self, submodule: str, action: CommitAction, cancelEvent: CancelEvent):
         if action.condition == ActionCondition.MainRepoOnly:
             # not main repo, ignore it
             if not (not submodule or submodule == "."):
-                return None, None
+                return
 
         repoDir = fullRepoDir(submodule)
 
@@ -1167,23 +1199,29 @@ class CommitWindow(StateWindow):
                 creationflags=creationflags,
                 shell=True)
 
-            out, error = process.communicate()
-            if out is not None:
-                out, _ = decodeFileData(out)
-            if error is not None:
-                error, _ = decodeFileData(error)
-        except Exception as e:
-            out = None
-            error = str(e)
+            for line in process.stdout:
+                if cancelEvent.isSet():
+                    return
+                text, _ = decodeFileData(line)
+                self._updateCommitProgress(submodule, text, None, False, args)
 
-        return out, error
+            for line in process.stderr:
+                if cancelEvent.isSet():
+                    return
+
+                text, _ = decodeFileData(line)
+                self._updateCommitProgress(submodule, text, None, False, args)
+
+        except Exception as e:
+            self._updateCommitProgress(submodule, None, str(e), False, args)
+
+        self._updateCommitProgress(submodule, None, None, True, args)
 
     def _runCommittedAction(self, submodule: str, actions: List[CommitAction], cancelEvent: CancelEvent):
         for action in actions:
             if cancelEvent and cancelEvent.isSet():
                 return
-            out, error = CommitWindow._runCommitAction(submodule, action)
-            self._updateCommitProgress(submodule, out, error)
+            self._runCommitAction(submodule, action, cancelEvent)
 
     def _onFilterFilesChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvFiles.model()
