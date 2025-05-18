@@ -14,7 +14,7 @@ from PySide6.QtCore import (
     QTimer,
     Signal,
 )
-from PySide6.QtGui import QIcon, QPainter, QPalette
+from PySide6.QtGui import QIcon, QKeySequence, QPainter, QPalette
 from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QHBoxLayout,
@@ -77,7 +77,9 @@ class FindWidget(QWidget):
             return button
 
         self._tbPrev = _newColoredButton("arrow-up.svg")
+        self._tbPrev.setShortcut(QKeySequence.FindPrevious)
         self._tbNext = _newColoredButton("arrow-down.svg")
+        self._tbNext.setShortcut(QKeySequence.FindNext)
         self._tbClose = _newColoredButton("close.svg")
         self._lbStatus = QLabel(self)
         self._spinner = QtWaitingSpinner(self)
