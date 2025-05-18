@@ -12,8 +12,6 @@ from setuptools import setup
 
 ENV_PATH = None
 
-FOR_PYSIDE2 = os.environ.get(
-    "USE_PYSIDE2", "0").lower() in ("1", "true", "yes")
 
 # find_executable doesn't support `~`
 if "PATH" in os.environ:
@@ -26,9 +24,7 @@ if "PATH" in os.environ:
 
 
 def _find_qt_tool(toolSuffix: str):
-    tool = "pyside2-" if FOR_PYSIDE2 else "pyside6-"
-    tool += toolSuffix
-    tool = shutil.which(tool, path=ENV_PATH)
+    tool = shutil.which(f"pyside6-{toolSuffix}", path=ENV_PATH)
     if not tool:
         tool = shutil.which(toolSuffix, path=ENV_PATH)
     return tool
