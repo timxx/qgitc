@@ -25,10 +25,10 @@ class SourceViewer(TextViewer):
 
     def __init__(self, parent=None):
         self._margin = 0
-        super().__init__(parent)
-
-        self._panel = None
         self._blockEventFilter = False
+        self._panel = None
+
+        super().__init__(parent)
 
         self.verticalScrollBar().valueChanged.connect(
             self._onVScrollBarValueChanged)

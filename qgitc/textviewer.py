@@ -101,6 +101,9 @@ class TextViewer(QAbstractScrollArea):
 
         self._findWidget: FindWidget = None
 
+        self.horizontalScrollBar().setSingleStep(20)
+        self.verticalScrollBar().setSingleStep(1)
+
     def updateFont(self, font):
         self._font = font
         fm = QFontMetrics(self._font)
