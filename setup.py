@@ -12,6 +12,9 @@ from setuptools import setup
 
 ENV_PATH = None
 
+FOR_PYSIDE2 = os.environ.get(
+    "USE_PYSIDE2", "0").lower() in ("1", "true", "yes")
+
 # find_executable doesn't support `~`
 if "PATH" in os.environ:
     paths = os.environ["PATH"].split(os.pathsep)
@@ -20,6 +23,15 @@ if "PATH" in os.environ:
         ENV_PATH += (os.pathsep + p) if ENV_PATH else p
         if p.startswith("~"):
             ENV_PATH += os.pathsep + os.path.expanduser(p)
+
+
+def _find_qt_tool(toolSuffix: str):
+    tool = "pyside2-" if FOR_PYSIDE2 else "pyside6-"
+    tool += toolSuffix
+    tool = shutil.which(tool, path=ENV_PATH)
+    if not tool:
+        tool = shutil.which(toolSuffix, path=ENV_PATH)
+    return tool
 
 
 class CustomBuild(build):
@@ -46,7 +58,7 @@ class BuildQt(Command):
             getattr(self, "compile_" + m)()
 
     def compile_ui(self):
-        uic_bin = shutil.which("pyside6-uic", path=ENV_PATH)
+        uic_bin = _find_qt_tool("uic")
         if not uic_bin:
             raise DistutilsExecError("Missing uic")
 
@@ -73,7 +85,7 @@ class BuildQt(Command):
             self._fix_import(pyFile, pattern)
 
     def compile_ts(self):
-        lrelease = shutil.which("pyside6-lrelease", path=ENV_PATH)
+        lrelease = _find_qt_tool("lrelease")
         if not lrelease:
             print("Missing lrelease, no translation will be built.")
             return
@@ -104,9 +116,9 @@ class UpdateTs(Command):
         pass
 
     def run(self):
-        lupdate = shutil.which("pyside6-lupdate", path=ENV_PATH)
+        lupdate = _find_qt_tool("lupdate")
         if not lupdate:
-            raise DistutilsExecError("Missing pyside6-lupdate")
+            raise DistutilsExecError("Missing lupdate")
 
         call([lupdate, "-extensions", "py,ui", "qgitc",
              "-ts", "qgitc/data/translations/zh_CN.ts"])
