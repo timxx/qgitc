@@ -9,6 +9,7 @@ from PySide6.QtCore import (
     SIGNAL,
     QAbstractListModel,
     QEvent,
+    QEventLoop,
     QFileInfo,
     QModelIndex,
     QObject,
@@ -39,6 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qgitc.actionrunner import ActionRunner
 from qgitc.aicommitmessage import AiCommitMessage
 from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
@@ -1183,10 +1185,6 @@ class CommitWindow(StateWindow):
 
         repoDir = fullRepoDir(submodule)
 
-        creationflags = 0
-        if os.name == "nt":
-            creationflags = subprocess.CREATE_NO_WINDOW
-
         def _quote(path):
             if " " in path:
                 return '"' + path + '"'
@@ -1199,31 +1197,15 @@ class CommitWindow(StateWindow):
         # Update status as soon as we start the action
         self._updateCommitProgress(submodule, None, None, False, args)
 
-        try:
-            process = subprocess.Popen(
-                args,
-                cwd=repoDir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                creationflags=creationflags,
-                shell=True)
-
-            for line in process.stdout:
-                if cancelEvent.isSet():
-                    return
-                text, _ = decodeFileData(line)
-                if text:
-                    self._updateCommitProgress(submodule, text, None, False, args)
-
-            for line in process.stderr:
-                if cancelEvent.isSet():
-                    return
-                text, _ = decodeFileData(line)
-                if text:
-                    self._updateCommitProgress(submodule, None, text, False, args)
-
-        except Exception as e:
-            self._updateCommitProgress(submodule, None, str(e), False, args)
+        eventLoop = QEventLoop()
+        runner = ActionRunner()
+        runner.stdoutAvailable.connect(
+            lambda data: self._updateCommitProgress(submodule, data.decode("utf-8"), None, False, args))
+        runner.stderrAvailable.connect(
+            lambda data: self._updateCommitProgress(submodule, None, data.decode("utf-8"), False, args))
+        runner.finished.connect(eventLoop.quit)
+        runner.run(args, repoDir)
+        eventLoop.exec()
 
         self._updateCommitProgress(submodule, None, None, True, args)
 
