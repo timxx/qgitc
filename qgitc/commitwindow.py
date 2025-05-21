@@ -1199,10 +1199,21 @@ class CommitWindow(StateWindow):
 
         eventLoop = QEventLoop()
         runner = ActionRunner()
-        runner.stdoutAvailable.connect(
-            lambda data: self._updateCommitProgress(submodule, data.decode("utf-8"), None, False, args))
-        runner.stderrAvailable.connect(
-            lambda data: self._updateCommitProgress(submodule, None, data.decode("utf-8"), False, args))
+
+        def _update(data: bytes, isError: bool):
+            if cancelEvent.isSet():
+                runner.cancel()
+                return
+
+            if isError:
+                self._updateCommitProgress(
+                    submodule, None, data.decode("utf-8"), False, args)
+            else:
+                self._updateCommitProgress(
+                    submodule, data.decode("utf-8"), None, False, args)
+
+        runner.stdoutAvailable.connect(lambda data: _update(data, False))
+        runner.stderrAvailable.connect(lambda data: _update(data, True))
         runner.finished.connect(eventLoop.quit)
         runner.run(args, repoDir)
         eventLoop.exec()
