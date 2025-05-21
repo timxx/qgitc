@@ -1174,6 +1174,8 @@ class CommitWindow(StateWindow):
         if self._commitExecutor.isRunning():
             self._commitExecutor.cancel()
             self._committedActions.clear()
+            self._updateCommitStatus(False)
+            self.ui.lbStatus.setText(self.tr("Commit aborted"))
         else:
             self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
 
