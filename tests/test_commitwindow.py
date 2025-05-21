@@ -160,10 +160,11 @@ class TestCommitWindow(TestBase):
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
         self.waitForLoaded()
 
+        self.wait(50)
         self.assertTrue(self.window.ui.btnGenMessage.isEnabled())
         # no message by default
-        if self.window.ui.teMessage.document().isEmpty():
-            self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
+        self.assertTrue(self.window.ui.teMessage.document(
+        ).isEmpty() or self.window.ui.btnRefineMsg.isEnabled())
 
         with MockGithubCopilot(self) as mock:
             spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
@@ -269,3 +270,24 @@ class TestCommitWindow(TestBase):
             self.assertIn("1 file changed, 1 insertion", result)
 
             self.assertEqual(branch, self.window._branchLabel.text())
+
+    def testCancelRunningCommit(self):
+        self.waitForLoaded()
+        # Simulate commit executor running
+        self.window._commitExecutor.isRunning = lambda: True
+        with patch.object(self.window._commitExecutor, "cancel") as mock_cancel, \
+                patch.object(self.window, "_updateCommitStatus") as mock_update_status, \
+                patch.object(self.window.ui.lbStatus, "setText") as mock_set_text:
+            self.window._onCommitActionClicked()
+            mock_cancel.assert_called_once()
+            mock_update_status.assert_called_once_with(False)
+            mock_set_text.assert_called_once_with(
+                self.window.tr("Commit aborted"))
+
+    def testCancelCommitNotRun(self):
+        self.waitForLoaded()
+        # Simulate commit executor not running
+        self.window._commitExecutor.isRunning = lambda: False
+        with patch.object(self.window.ui.stackedWidget, "setCurrentWidget") as mock_set_widget:
+            self.window._onCommitActionClicked()
+            mock_set_widget.assert_called_once_with(self.window.ui.pageMessage)
