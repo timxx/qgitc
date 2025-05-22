@@ -336,6 +336,49 @@ js_builtin = {
 js_other = {}
 
 
+java_keywords = {
+    'a': ["abstract", "assert"],
+    'b': ["break"],
+    'c': ["case", "catch", "const", "continue"],
+    'd': ["default", "do"],
+    'e': ["else", "exports", "extends"],
+    'f': ["final", "finally", "for"],
+    'g': ["goto"],
+    'i': ["if", "implements", "import", "instanceof", "interface"],
+    'l': ["long"],
+    'm': ["module"],
+    'n': ["native", "new", "null"],
+    'o': ["open", "opens"],
+    'p': ["package", "private", "protected", "provides", "public"],
+    'r': ["requires", "return"],
+    's': ["static", "strictfp", "super", "switch", "synchronized"],
+    't': ["this", "throw", "throws", "to", "transient", "transitive", "try"],
+    'u': ["uses"],
+    'v': ["var", "volatile"],
+    'w': ["while", "with"],
+    'y': ["yield"]
+}
+
+java_types = {
+    'b': ["boolean", "byte"],
+    'c': ["char", "class"],
+    'd': ["double"],
+    'e': ["enum"],
+    'f': ["float"],
+    'i': ["int"],
+    's': ["short"],
+    'v': ["void"],
+}
+
+java_literals = {
+    'f': ["false"],
+    't': ["true"]
+}
+
+java_builtin = {}
+java_other = {}
+
+
 def loadCppData():
     return cpp_types, cpp_keywords, cpp_builtin, cpp_literals, cpp_other
 
@@ -365,7 +408,7 @@ def loadRustData():
 
 
 def loadJavaData():
-    return {}, {}, {}, {}, {}
+    return java_types, java_keywords, java_builtin, java_literals, java_other
 
 
 def loadCSharpData():
