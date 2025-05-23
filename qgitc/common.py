@@ -5,6 +5,7 @@ import io
 import logging
 import os
 import pstats
+import re
 from datetime import datetime
 from typing import List
 
@@ -26,6 +27,9 @@ str_strip = str.strip
 
 
 logger = logging.getLogger("qgitc")
+
+
+sha1_re = re.compile("(?<![a-zA-Z0-9_])[a-f0-9]{4,40}(?![a-zA-Z0-9_])")
 
 
 class Commit():
@@ -286,6 +290,19 @@ def _isArgNeedValue(arg: str):
     return arg in known_args
 
 
+def isRevisionRange(arg: str):
+    if arg.startswith("origin") or arg.startswith("HEAD"):
+        return True
+    if ".." in arg or "^" in arg or "~" in arg:
+        return True
+    if arg.startswith("refs/"):
+        return True
+    m = sha1_re.match(arg)
+    if m:
+        return True
+    return False
+
+
 def extractFilePaths(args: List[str]):
     paths = []
     if not args:
@@ -298,7 +315,12 @@ def extractFilePaths(args: List[str]):
             break
         paths.insert(0, arg)
 
-    return paths
+    new_paths = []
+    for path in paths:
+        if not isRevisionRange(path):
+            new_paths.append(path)
+
+    return new_paths
 
 
 def _selectSubmodule(submodules: List[str], path: str):

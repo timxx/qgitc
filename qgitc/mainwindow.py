@@ -534,6 +534,10 @@ class MainWindow(StateWindow):
             self.ui.leOpts.setText(filePath)
         self.__onOptsReturnPressed()
 
+    def setFilterOptions(self, options: str):
+        self.ui.leOpts.setText(options)
+        self.__onOptsReturnPressed()
+
     def getFilterArgs(self):
         text = self.ui.leOpts.text().strip()
         args = shlex.split(text, posix=sys.platform != "win32")

@@ -43,6 +43,10 @@ def _setup_argument(prog):
         "-c", "--compare-mode", action="store_true",
         help="Compare mode, show two branches for comparing")
     log_parser.add_argument(
+        "-r", "--rev",
+        metavar="<rev>",
+        help="Show changes for <rev>.")
+    log_parser.add_argument(
         "file", metavar="<file>", nargs="?",
         help="The file to filter.")
     log_parser.set_defaults(func=_do_log)
@@ -164,6 +168,10 @@ def _do_log(args):
         if args.compare_mode:
             window.setMode(MainWindow.CompareMode)
 
+        filterOpts = ""
+        if args.rev:
+            filterOpts = args.rev
+
         if args.file:
             filterFile = args.file
             if not os.path.isabs(filterFile):
@@ -177,7 +185,11 @@ def _do_log(args):
                 if normPath.find(repoDir) != -1:
                     filterFile = filterFile[len(repoDir) + 1:]
 
-            window.setFilterFile(filterFile)
+            if filterOpts:
+                filterOpts += " -- " + filterFile
+            else:
+                filterOpts = "-- " + filterFile
+        window.setFilterOptions(filterOpts)
 
     if window.restoreState():
         window.show()

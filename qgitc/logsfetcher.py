@@ -16,6 +16,7 @@ from qgitc.common import (
     MyProfile,
     extractFilePaths,
     filterSubmoduleByPath,
+    isRevisionRange,
     logger,
     toSubmodulePath,
 )
@@ -68,7 +69,7 @@ class LogsFetcherImpl(DataFetcher):
         logArgs = args[1]
         self._branch = branch.encode("utf-8") if branch else None
 
-        if branch and branch.startswith("(HEAD detached"):
+        if branch and (branch.startswith("(HEAD detached") or self.hasRevisionRange(logArgs)):
             branch = None
 
         git_args = ["log", "-z", "--topo-order",
@@ -119,6 +120,15 @@ class LogsFetcherImpl(DataFetcher):
             return False
         for arg in args:
             if arg.startswith("--since"):
+                return True
+        return False
+
+    @staticmethod
+    def hasRevisionRange(args: List[str]):
+        if not args:
+            return False
+        for arg in args:
+            if isRevisionRange(arg):
                 return True
         return False
 
