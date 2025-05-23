@@ -69,7 +69,8 @@ class LogsFetcherImpl(DataFetcher):
         logArgs = args[1]
         self._branch = branch.encode("utf-8") if branch else None
 
-        if branch and (branch.startswith("(HEAD detached") or self.hasRevisionRange(logArgs)):
+        hasRevisionRange = self.hasRevisionRange(logArgs)
+        if branch and (branch.startswith("(HEAD detached") or hasRevisionRange):
             branch = None
 
         git_args = ["log", "-z", "--topo-order",
@@ -80,7 +81,7 @@ class LogsFetcherImpl(DataFetcher):
         needBoundary = True
         paths = None
         # reduce commits to analyze
-        if self.repoDir and not self.hasSinceArg(logArgs):
+        if self.repoDir and not self.hasSinceArg(logArgs) and not hasRevisionRange:
             paths = extractFilePaths(logArgs) if logArgs else None
             if not paths:
                 days = qApp.settings().maxCompositeCommitsSince()
