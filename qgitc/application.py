@@ -14,13 +14,13 @@ from PySide6.QtCore import (
     QTimer,
     QTranslator,
     QUrl,
-    Signal,
     qVersion,
 )
 from PySide6.QtGui import QDesktopServices, QIcon, QPalette
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from qgitc.aichatwindow import AiChatWindow
+from qgitc.applicationbase import ApplicationBase
 from qgitc.blamewindow import BlameWindow
 from qgitc.colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
 from qgitc.commitwindow import CommitWindow
@@ -52,12 +52,10 @@ def qtVersion():
     return tuple(map(int, qVersion().split('.')))
 
 
-class Application(QApplication):
-
-    repoDirChanged = Signal()
+class Application(ApplicationBase):
 
     def __init__(self, argv, testing=False):
-        super(Application, self).__init__(argv)
+        super().__init__(argv)
 
         self.setAttribute(Qt.AA_DontShowIconsInMenus, False)
         self.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
