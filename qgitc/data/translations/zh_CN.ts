@@ -159,7 +159,7 @@
 <context>
     <name>Application</name>
     <message>
-        <location filename="../../application.py" line="322"/>
+        <location filename="../../application.py" line="318"/>
         <source>No git found, please check your settings.</source>
         <translation>未找到git，请检查您的设置项。</translation>
     </message>
@@ -167,12 +167,12 @@
 <context>
     <name>BlameSourceViewer</name>
     <message>
-        <location filename="../../blameview.py" line="448"/>
+        <location filename="../../blameview.py" line="464"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="451"/>
+        <location filename="../../blameview.py" line="467"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -328,26 +328,45 @@
     </message>
 </context>
 <context>
-    <name>CommitPanel</name>
+    <name>CommitDetailPanel</name>
     <message>
-        <location filename="../../blameview.py" line="591"/>
+        <location filename="../../blameview.py" line="606"/>
         <source>Commit: </source>
         <translation>记录： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="595"/>
+        <location filename="../../blameview.py" line="610"/>
         <source>Author: </source>
         <translation>作者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="600"/>
+        <location filename="../../blameview.py" line="614"/>
         <source>Committer: </source>
         <translation>提交者： </translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="606"/>
+        <location filename="../../blameview.py" line="619"/>
         <source>Previous: </source>
         <translation>前一条记录： </translation>
+    </message>
+</context>
+<context>
+    <name>CommitPanel</name>
+    <message>
+        <source>Commit: </source>
+        <translation type="vanished">记录： </translation>
+    </message>
+    <message>
+        <source>Author: </source>
+        <translation type="vanished">作者： </translation>
+    </message>
+    <message>
+        <source>Committer: </source>
+        <translation type="vanished">提交者： </translation>
+    </message>
+    <message>
+        <source>Previous: </source>
+        <translation type="vanished">前一条记录： </translation>
     </message>
 </context>
 <context>
@@ -999,92 +1018,92 @@
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="482"/>
+        <location filename="../../logview.py" line="484"/>
         <source>&amp;Copy commit summary</source>
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="492"/>
+        <location filename="../../logview.py" line="494"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="494"/>
+        <location filename="../../logview.py" line="496"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="496"/>
+        <location filename="../../logview.py" line="498"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="961"/>
+        <location filename="../../logview.py" line="968"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="985"/>
+        <location filename="../../logview.py" line="992"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="501"/>
+        <location filename="../../logview.py" line="503"/>
         <source>Generate &amp;patch</source>
         <translation>生成&amp;patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="504"/>
+        <location filename="../../logview.py" line="506"/>
         <source>Generate &amp;diff</source>
         <translation>生成&amp;diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="509"/>
+        <location filename="../../logview.py" line="511"/>
         <source>Re&amp;vert this commit</source>
         <translation>回滚此记录(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="511"/>
+        <location filename="../../logview.py" line="513"/>
         <source>Re&amp;set to here</source>
         <translation>重置HEAD为此记录(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="513"/>
+        <location filename="../../logview.py" line="515"/>
         <source>&amp;Soft</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="516"/>
+        <location filename="../../logview.py" line="518"/>
         <source>&amp;Mixed</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="519"/>
+        <location filename="../../logview.py" line="521"/>
         <source>&amp;Hard</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="524"/>
+        <location filename="../../logview.py" line="526"/>
         <source>&amp;Code Review</source>
         <translation>代码审查(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="796"/>
+        <location filename="../../logview.py" line="801"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="822"/>
+        <location filename="../../logview.py" line="827"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="485"/>
+        <location filename="../../logview.py" line="487"/>
         <source>Copy &amp;abbrev commit</source>
         <translation>复制短SHA-1(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="488"/>
+        <location filename="../../logview.py" line="490"/>
         <source>Copy to conflict &amp;log</source>
         <translation>复制到冲突记录(&amp;L)</translation>
     </message>
@@ -1290,17 +1309,17 @@
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="556"/>
+        <location filename="../../mainwindow.py" line="560"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="557"/>
+        <location filename="../../mainwindow.py" line="561"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="545"/>
+        <location filename="../../mainwindow.py" line="549"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -2180,12 +2199,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>RevisionPanel</name>
     <message>
-        <location filename="../../blameview.py" line="386"/>
+        <location filename="../../blameview.py" line="402"/>
         <source>Show commit log</source>
         <translation>显示提交记录</translation>
     </message>
     <message>
-        <location filename="../../blameview.py" line="389"/>
+        <location filename="../../blameview.py" line="405"/>
         <source>Blame previous commit</source>
         <translation>追踪前一条记录</translation>
     </message>
@@ -2201,17 +2220,17 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>TextViewer</name>
     <message>
-        <location filename="../../textviewer.py" line="510"/>
+        <location filename="../../textviewer.py" line="534"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="515"/>
+        <location filename="../../textviewer.py" line="539"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../textviewer.py" line="521"/>
+        <location filename="../../textviewer.py" line="545"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
