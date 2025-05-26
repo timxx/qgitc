@@ -19,10 +19,6 @@
         <translation>许可证(&amp;L)</translation>
     </message>
     <message>
-        <source>Git file conflicts and logs viewer</source>
-        <translation type="vanished">Git文件冲突、日志查看器</translation>
-    </message>
-    <message>
         <location filename="../../aboutdialog.py" line="33"/>
         <source>A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.</source>
         <translation>跨平台 Git 图形界面工具，旨在简化提交历史记录探索、代码责任追溯、提交更改和冲突解决。利用人工智能生成提交信息并执行代码审查。</translation>
@@ -31,21 +27,6 @@
         <location filename="../../aboutdialog.py" line="36"/>
         <source>Visit project host</source>
         <translation>访问项目主页</translation>
-    </message>
-</context>
-<context>
-    <name>AiChatBotHighlighter</name>
-    <message>
-        <source>User:</source>
-        <translation type="vanished">用户：</translation>
-    </message>
-    <message>
-        <source>Assistant:</source>
-        <translation type="vanished">助手：</translation>
-    </message>
-    <message>
-        <source>System:</source>
-        <translation type="vanished">系统：</translation>
     </message>
 </context>
 <context>
@@ -119,10 +100,6 @@
         <location filename="../../aichatwindow.py" line="333"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
-    </message>
-    <message>
-        <source>Service Unavailable</source>
-        <translation type="vanished">服务不可用</translation>
     </message>
 </context>
 <context>
@@ -351,25 +328,6 @@
     </message>
 </context>
 <context>
-    <name>CommitPanel</name>
-    <message>
-        <source>Commit: </source>
-        <translation type="vanished">记录： </translation>
-    </message>
-    <message>
-        <source>Author: </source>
-        <translation type="vanished">作者： </translation>
-    </message>
-    <message>
-        <source>Committer: </source>
-        <translation type="vanished">提交者： </translation>
-    </message>
-    <message>
-        <source>Previous: </source>
-        <translation type="vanished">前一条记录： </translation>
-    </message>
-</context>
-<context>
     <name>CommitWindow</name>
     <message>
         <location filename="../../commitwindow.py" line="259"/>
@@ -510,28 +468,28 @@
         <translation>运行外部Diff工具错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1403"/>
+        <location filename="../../commitwindow.py" line="1406"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1405"/>
-        <location filename="../../commitwindow.py" line="1412"/>
+        <location filename="../../commitwindow.py" line="1408"/>
+        <location filename="../../commitwindow.py" line="1415"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1415"/>
+        <location filename="../../commitwindow.py" line="1418"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1418"/>
+        <location filename="../../commitwindow.py" line="1421"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1458"/>
+        <location filename="../../commitwindow.py" line="1461"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
@@ -584,14 +542,6 @@
         <location filename="../../commitwindow.ui" line="399"/>
         <source>Show Log Window</source>
         <translation>显示日志窗口</translation>
-    </message>
-    <message>
-        <source>Show log window</source>
-        <translation type="vanished">显示日志窗口</translation>
-    </message>
-    <message>
-        <source>Show commit window</source>
-        <translation type="vanished">显示日志窗口</translation>
     </message>
     <message>
         <location filename="../../commitwindow.ui" line="428"/>
@@ -679,10 +629,6 @@
         <translation></translation>
     </message>
     <message>
-        <source>Sub Commit: </source>
-        <translation type="vanished">子提交：</translation>
-    </message>
-    <message>
         <location filename="../../diffview.py" line="624"/>
         <source>Comments</source>
         <translation></translation>
@@ -701,10 +647,6 @@
         <location filename="../../diffview.py" line="550"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
-    </message>
-    <message>
-        <source>Copy &amp;Windows path</source>
-        <translation type="obsolete">复制成Windows路径(&amp;W)</translation>
     </message>
     <message>
         <location filename="../../diffview.py" line="199"/>
@@ -893,14 +835,6 @@
         <location filename="../../gitview.ui" line="127"/>
         <source>adding/removing string</source>
         <translation>字符串增删</translation>
-    </message>
-    <message>
-        <source>Local changes checked in to index but not committed</source>
-        <translation type="obsolete">已检入到索引但未提交的本地改动</translation>
-    </message>
-    <message>
-        <source>Local uncommitted changes, not checked in to index</source>
-        <translation type="obsolete">本地未提交的改动，未检入索引</translation>
     </message>
     <message>
         <location filename="../../gitview.ui" line="14"/>
@@ -1129,25 +1063,9 @@
         <translation>仓库：</translation>
     </message>
     <message>
-        <source>File Path</source>
-        <translation type="obsolete">路径</translation>
-    </message>
-    <message>
-        <source>Commit Pattern</source>
-        <translation type="obsolete">记录模式</translation>
-    </message>
-    <message>
         <location filename="../../mainwindow.ui" line="71"/>
         <source>&amp;Browse...</source>
         <translation>浏览(&amp;B)...</translation>
-    </message>
-    <message>
-        <source>Type keyword here and press Enter to filter</source>
-        <translation type="obsolete">输入关键字，按回车来过滤</translation>
-    </message>
-    <message>
-        <source>&amp;Choose...</source>
-        <translation type="obsolete">选择(&amp;C)...</translation>
     </message>
     <message>
         <location filename="../../mainwindow.ui" line="129"/>
@@ -1178,10 +1096,6 @@
         <location filename="../../mainwindow.ui" line="170"/>
         <source>&amp;Edit</source>
         <translation>编辑(&amp;E)</translation>
-    </message>
-    <message>
-        <source>&amp;Quit</source>
-        <translation type="obsolete">退出(&amp;Q)</translation>
     </message>
     <message>
         <location filename="../../mainwindow.ui" line="225"/>
@@ -1322,14 +1236,6 @@
         <location filename="../../mainwindow.py" line="549"/>
         <source>Branch</source>
         <translation>分支</translation>
-    </message>
-    <message>
-        <source>Author</source>
-        <translation type="obsolete">作者</translation>
-    </message>
-    <message>
-        <source>Committer</source>
-        <translation type="obsolete">提交者</translation>
     </message>
     <message>
         <location filename="../../mainwindow.ui" line="322"/>
@@ -1500,10 +1406,6 @@
         <translation>删除文件(&amp;D)</translation>
     </message>
     <message>
-        <source>&amp;Abort</source>
-        <translation type="obsolete">终止(&amp;A)</translation>
-    </message>
-    <message>
         <location filename="../../mergewidget.py" line="397"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
@@ -1522,10 +1424,6 @@
         <location filename="../../mergewidget.py" line="479"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
-    </message>
-    <message>
-        <source>Unknown merge tool, please check your configuration.</source>
-        <translation type="obsolete">未知合并工具，请检查配置是否正确。</translation>
     </message>
     <message>
         <location filename="../../mergewidget.py" line="549"/>
@@ -1616,12 +1514,6 @@
         <translation>在终端执行`{0}`以更新到最新版本。</translation>
     </message>
     <message>
-        <source>A new version ({0}) was available.
-Run `{1}` for getting the latest version.</source>
-        <translation type="vanished">发现新的版本：({0})
-运行`{1}`更新到最新版本。</translation>
-    </message>
-    <message>
         <location filename="../../newversiondialog.py" line="21"/>
         <source>Ignore this version</source>
         <translation>忽略此版本</translation>
@@ -1638,22 +1530,6 @@ Run `{1}` for getting the latest version.</source>
         <location filename="../../patchviewer.py" line="266"/>
         <source>&amp;Open commit in browser</source>
         <translation>在浏览器查看此记录(&amp;O)</translation>
-    </message>
-    <message>
-        <source>&amp;Copy</source>
-        <translation type="obsolete">复制(&amp;C)</translation>
-    </message>
-    <message>
-        <source>Copy &amp;All</source>
-        <translation type="obsolete">复制全部(&amp;A)</translation>
-    </message>
-    <message>
-        <source>&amp;Select All</source>
-        <translation type="obsolete">全选(&amp;S)</translation>
-    </message>
-    <message>
-        <source>Copy &amp;Link</source>
-        <translation type="obsolete">复制链接(&amp;L)</translation>
     </message>
 </context>
 <context>
@@ -1731,22 +1607,6 @@ Run `{1}` for getting the latest version.</source>
         <translation>日志视图</translation>
     </message>
     <message>
-        <source>&amp;Family:</source>
-        <translation type="vanished">字体(&amp;F)：</translation>
-    </message>
-    <message>
-        <source>&amp;Size:</source>
-        <translation type="vanished">字号(&amp;S)：</translation>
-    </message>
-    <message>
-        <source>S&amp;ize:</source>
-        <translation type="vanished">字号(&amp;I)：</translation>
-    </message>
-    <message>
-        <source>F&amp;amily:</source>
-        <translation type="vanished">字体(&amp;a)：</translation>
-    </message>
-    <message>
         <location filename="../../preferences.ui" line="363"/>
         <source>Co&amp;mmit</source>
         <translation>记录(&amp;M)</translation>
@@ -1773,10 +1633,6 @@ Run `{1}` for getting the latest version.</source>
         <translation>链接</translation>
     </message>
     <message>
-        <source>Max Commits</source>
-        <translation type="obsolete">最大记录：</translation>
-    </message>
-    <message>
         <location filename="../../preferences.ui" line="913"/>
         <source>&amp;LLM</source>
         <translation>大语言模型(&amp;L)</translation>
@@ -1785,22 +1641,6 @@ Run `{1}` for getting the latest version.</source>
         <location filename="../../preferences.ui" line="934"/>
         <source>Server:</source>
         <translation>服务器：</translation>
-    </message>
-    <message>
-        <source>C&amp;ommit URL:</source>
-        <translation type="obsolete">记录URL(&amp;O)：</translation>
-    </message>
-    <message>
-        <source>B&amp;UG URL:</source>
-        <translation type="obsolete">B&amp;UG URL：</translation>
-    </message>
-    <message>
-        <source>BUG &amp;Pattern:</source>
-        <translation type="obsolete">BUG模式(&amp;P)：</translation>
-    </message>
-    <message>
-        <source>&amp;Merge</source>
-        <translation type="obsolete">合并(&amp;M)</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="522"/>
@@ -1910,10 +1750,6 @@ Run `{1}` for getting the latest version.</source>
         <location filename="../../preferences.py" line="560"/>
         <source>Simplified Chinese</source>
         <translation>简体中文</translation>
-    </message>
-    <message>
-        <source>Commit &amp;Actions</source>
-        <translation type="vanished">提交动作(&amp;A)</translation>
     </message>
     <message>
         <location filename="../../preferences.py" line="115"/>
@@ -2103,14 +1939,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>使用全局配置(&amp;G)</translation>
     </message>
     <message>
-        <source>Local LLM Server:</source>
-        <translation type="vanished">本地大语言模型服务：</translation>
-    </message>
-    <message>
-        <source>Github Copilot:</source>
-        <translation type="vanished">Github Copilot：</translation>
-    </message>
-    <message>
         <location filename="../../preferences.ui" line="1033"/>
         <source>&amp;Commit Message</source>
         <translation>提交信息(&amp;C)</translation>
@@ -2119,14 +1947,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <location filename="../../preferences.ui" line="1039"/>
         <source>Commit &amp;Message</source>
         <translation>提交信息(&amp;M)</translation>
-    </message>
-    <message>
-        <source>Commit &amp;Action</source>
-        <translation type="vanished">提交动作(&amp;A)</translation>
-    </message>
-    <message>
-        <source>&amp;Message</source>
-        <translation type="vanished">提交信息(&amp;M)</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="1045"/>
@@ -2147,18 +1967,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <location filename="../../preferences.ui" line="1068"/>
         <source>Each pair separate by space, such as `() []`</source>
         <translation>每个对以空格分开，比如`() []`</translation>
-    </message>
-    <message>
-        <source>Action</source>
-        <translation type="vanished">提交动作</translation>
-    </message>
-    <message>
-        <source>Add</source>
-        <translation type="vanished">添加</translation>
-    </message>
-    <message>
-        <source>Delete</source>
-        <translation type="vanished">删除</translation>
     </message>
     <message>
         <location filename="../../preferences.py" line="155"/>
@@ -2238,10 +2046,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>ToolTableModel</name>
     <message>
-        <source>Enabled</source>
-        <translation type="obsolete">启用</translation>
-    </message>
-    <message>
         <location filename="../../tooltablemodel.py" line="50"/>
         <source>Suffix</source>
         <translation>后缀</translation>
@@ -2275,13 +2079,6 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <location filename="../../tooltablemodel.py" line="48"/>
         <source>Scenes</source>
         <translation>场景</translation>
-    </message>
-</context>
-<context>
-    <name>app</name>
-    <message>
-        <source>Not in merge state, now quit!</source>
-        <translation type="obsolete">此分支不在合并状态，程序将退出！</translation>
     </message>
 </context>
 </TS>

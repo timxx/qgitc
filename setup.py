@@ -103,10 +103,12 @@ class BuildQt(Command):
 
 class UpdateTs(Command):
     description = "Update *.ts files"
-    user_options = []
+    user_options = [
+        ("no-obsolete", None, "Drop all obsolete and vanished strings")
+    ]
 
     def initialize_options(self):
-        pass
+        self.no_obsolete = False
 
     def finalize_options(self):
         pass
@@ -116,8 +118,10 @@ class UpdateTs(Command):
         if not lupdate:
             raise DistutilsExecError("Missing lupdate")
 
-        call([lupdate, "-extensions", "py,ui", "qgitc",
-             "-ts", "qgitc/data/translations/zh_CN.ts"])
+        cmd = [lupdate, "-extensions", "py,ui", "qgitc", "-ts", "qgitc/data/translations/zh_CN.ts"]
+        if self.no_obsolete:
+            cmd.append("-no-obsolete")
+        call(cmd)
 
 
 with open("README.md", "r") as f:
