@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime
+from typing import List
 
 from PySide6.QtCore import QPointF, QRect, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPen
@@ -23,6 +24,7 @@ from qgitc.common import dataDirPath, decodeFileData, logger
 from qgitc.datafetcher import DataFetcher
 from qgitc.events import BlameEvent, OpenLinkEvent, ShowCommitEvent
 from qgitc.gitutils import Git
+from qgitc.logview import LogView
 from qgitc.sourceviewer import SourceViewer
 from qgitc.textline import Link, LinkTextLine
 from qgitc.textviewer import TextViewer
@@ -82,7 +84,7 @@ class BlameFetcher(DataFetcher):
         super().__init__(parent)
         self._curLine = BlameLine()
 
-    def parse(self, data):
+    def parse(self, data: bytes):
         results = []
         # TODO: support utf16 32 split...
         lines = data.rstrip(self.separator).split(self.separator)
@@ -160,7 +162,7 @@ class RevisionPanel(TextViewer):
 
     def __init__(self, viewer):
         self._viewer = viewer
-        self._revs = []
+        self._revs: List[BlameLine] = []
 
         super().__init__(viewer)
 
@@ -204,7 +206,7 @@ class RevisionPanel(TextViewer):
         width += self._digitWidth * 6 + self.textMargins()
         self.resize(width, self._viewer.height())
 
-    def appendRevisions(self, revs):
+    def appendRevisions(self, revs: List[BlameLine]):
         texts = []
         for rev in revs:
             text = rev.sha1[:ABBREV_N]
@@ -249,6 +251,18 @@ class RevisionPanel(TextViewer):
     def setActiveRevByLineNumber(self, lineNo):
         if lineNo >= 0 and lineNo < len(self._revs):
             self._updateActiveRev(lineNo)
+
+    def setActiveRevBySha1(self, sha1: str):
+        for i, rev in enumerate(self._revs):
+            if rev.sha1 == sha1:
+                self._updateActiveRev(i)
+                self._viewer.ensureLineVisible(i)
+                return
+
+        # no rev found
+        self._viewer.highlightLines([])
+        self._activeRev = None
+        self.update()
 
     def _onTextLineClicked(self, textLine):
         self._updateActiveRev(textLine.lineNo())
@@ -575,7 +589,7 @@ class BlameSourceViewer(SourceViewer):
             painter.drawRect(lineRect.adjusted(1, 0, 0, 0))
 
 
-class CommitPanel(TextViewer):
+class CommitDetailPanel(TextViewer):
 
     def __init__(self, viewer: BlameSourceViewer, parent=None):
         super().__init__(parent)
@@ -585,7 +599,7 @@ class CommitPanel(TextViewer):
         settings = qApp.settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
-    def showRevision(self, rev):
+    def showRevision(self, rev: BlameLine):
         super().clear()
 
         text = self.tr("Commit: ") + rev.sha1
@@ -632,6 +646,49 @@ class CommitPanel(TextViewer):
         super()._reloadTextLine(textLine)
         textLine.setFont(self._font)
 
+
+class CommitPanel(QSplitter):
+
+    linkActivated = Signal(Link)
+
+    def __init__(self, viewer: BlameSourceViewer, parent=None):
+        super().__init__(Qt.Horizontal, parent)
+
+        self._viewer = viewer
+        self.logView = LogView(self)
+        self.logView.setFrameStyle(QFrame.Shape.StyledPanel)
+
+        self.detailPanel = CommitDetailPanel(viewer, self)
+
+        self.addWidget(self.logView)
+        self.addWidget(self.detailPanel)
+
+        self.logView.currentIndexChanged.connect(
+            self._onCommitChanged)
+
+        self.detailPanel.linkActivated.connect(
+            self.linkActivated)
+
+    def clear(self):
+        self.logView.clear()
+        self.detailPanel.clear()
+
+    def showRevision(self, rev: BlameLine):
+        self.detailPanel.showRevision(rev)
+
+    def showLogs(self, repoDir: str, file: str, rev: str = None):
+        self.logView.clear()
+        args = [file]
+        if rev:
+            args.insert(0, rev)
+        self.logView.showLogs(branch=None, branchDir=repoDir, args=args)
+
+    def _onCommitChanged(self, index: int):
+        if index == -1:
+            return
+
+        commit = self.logView.getCommit(index)
+        self._viewer.panel.setActiveRevBySha1(commit.sha1)
 
 class HeaderWidget(QWidget):
 
@@ -824,7 +881,7 @@ class BlameView(QWidget):
         else:
             qApp.postEvent(qApp, OpenLinkEvent(link))
 
-    def _onFetchDataAvailable(self, lines):
+    def _onFetchDataAvailable(self, lines: List[BlameLine]):
         self._viewer.appendBlameLines(lines)
 
     def _onFetchFinished(self, exitCode):
@@ -861,6 +918,8 @@ class BlameView(QWidget):
         self._viewer.beginReading()
         self._fetcher.cwd = repoDir or Git.REPO_DIR
         self._fetcher.fetch(file, rev)
+
+        self._commitPanel.showLogs(self._fetcher.cwd, file, rev)
 
         self._file = file
         self._rev = rev

@@ -435,6 +435,30 @@ class TextViewer(QAbstractScrollArea):
         elif x < offset:
             hbar.setValue(x)
 
+    def ensureLineVisible(self, lineNo: int, centralOnView=True):
+        if lineNo < 0 or lineNo >= self.textLineCount():
+            return
+
+        # central the lineNo in view
+        if centralOnView:
+            halfOfPage = self._linesPerPage() // 2
+            if lineNo > halfOfPage:
+                lineNo -= halfOfPage
+
+        needUpdate = False
+        vScrollBar = self.verticalScrollBar()
+        if vScrollBar.value() != lineNo:
+            vScrollBar.setValue(lineNo)
+            needUpdate = True
+
+        hbar = self.horizontalScrollBar()
+        if hbar.value() != 0:
+            hbar.setValue(0)
+            needUpdate = True
+
+        if needUpdate:
+            self.viewport().update()
+
     def findAll(self, text, flags=0):
         if not text or not self.hasTextLines():
             return []

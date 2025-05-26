@@ -91,14 +91,17 @@ class BlameWindow(StateWindow):
         viewer.gotoLine(gotoDialog.lineNo - 1)
 
     def _onCopy(self):
-        if qApp.focusWidget() == self._view.commitPanel:
-            self._view.commitPanel.copy()
+        fw = qApp.focusWidget()
+        if fw == self._view.commitPanel.detailPanel:
+            fw.copy()
+        elif fw == self._view.commitPanel.logView:
+            fw.copy()
         else:
             self._view.viewer.copy()
 
     def _onSelectAll(self):
-        if qApp.focusWidget() == self._view.commitPanel:
-            self._view.commitPanel.selectAll()
+        if qApp.focusWidget() == self._view.commitPanel.detailPanel:
+            self._view.commitPanel.detailPanel.selectAll()
         else:
             self._view.viewer.selectAll()
 
