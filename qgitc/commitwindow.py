@@ -1284,7 +1284,9 @@ class CommitWindow(StateWindow):
     def _onGenMessageClicked(self):
         exts = qApp.settings().aiExcludedFileExtensions()
         submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
-        assert (submoduleFiles)
+        if not submoduleFiles:
+            return
+
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self.ui.btnRefineMsg.setEnabled(False)
@@ -1351,7 +1353,8 @@ class CommitWindow(StateWindow):
     def _onCodeReviewClicked(self):
         exts = qApp.settings().aiExcludedFileExtensions()
         submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
-        assert (submoduleFiles)
+        if not submoduleFiles:
+            return
 
         event = CodeReviewEvent(submoduleFiles)
         qApp.postEvent(qApp, event)
