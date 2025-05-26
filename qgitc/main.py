@@ -15,6 +15,7 @@ from qgitc.excepthandler import ExceptHandler
 from qgitc.gitutils import Git
 from qgitc.mainwindow import MainWindow
 from qgitc.shell import setup_shell_args
+from qgitc.windowtype import WindowType
 
 
 def setAppUserId(appId):
@@ -158,7 +159,7 @@ def _do_log(args):
     app = _init_gui()
 
     merge_mode = args.cmd == "mergetool"
-    window = app.getWindow(Application.LogWindow)
+    window = app.getWindow(WindowType.LogWindow)
     if merge_mode:
         window.setMode(MainWindow.MergeMode)
     _move_center(window)
@@ -202,7 +203,7 @@ def _do_log(args):
 def _do_blame(args):
     app = _init_gui()
 
-    window = app.getWindow(Application.BlameWindow)
+    window = app.getWindow(WindowType.BlameWindow)
     _move_center(window)
 
     if window.restoreState():
@@ -221,7 +222,7 @@ def _do_blame(args):
 def _do_commit(args):
     app = _init_gui()
 
-    window = app.getWindow(Application.CommitWindow)
+    window = app.getWindow(WindowType.CommitWindow)
     _move_center(window)
 
     if window.restoreState():
@@ -235,7 +236,7 @@ def _do_commit(args):
 def _do_chat(args):
     app = _init_gui()
 
-    window = app.getWindow(Application.AiAssistant)
+    window = app.getWindow(WindowType.AiAssistant)
     _move_center(window)
 
     if window.restoreState():

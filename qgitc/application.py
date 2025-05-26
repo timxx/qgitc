@@ -45,6 +45,7 @@ from qgitc.newversiondialog import NewVersionDialog
 from qgitc.settings import Settings
 from qgitc.textline import Link
 from qgitc.versionchecker import VersionChecker
+from qgitc.windowtype import WindowType
 
 
 def qtVersion():
@@ -52,11 +53,6 @@ def qtVersion():
 
 
 class Application(QApplication):
-
-    LogWindow = 1
-    BlameWindow = 2
-    AiAssistant = 3
-    CommitWindow = 4
 
     repoDirChanged = Signal()
 
@@ -123,28 +119,28 @@ class Application(QApplication):
         else:
             translator = None
 
-    def getWindow(self, type):
+    def getWindow(self, type, ensureCreated=True):
         window = None
-        if type == Application.LogWindow:
-            if not self._logWindow:
+        if type == WindowType.LogWindow:
+            if not self._logWindow and ensureCreated:
                 self._logWindow = MainWindow()
                 self._logWindow.destroyed.connect(
                     self._onLogWindowDestroyed)
             window = self._logWindow
-        elif type == Application.BlameWindow:
-            if not self._blameWindow:
+        elif type == WindowType.BlameWindow:
+            if not self._blameWindow and ensureCreated:
                 self._blameWindow = BlameWindow()
                 self._blameWindow.destroyed.connect(
                     self._onBlameWindowDestroyed)
             window = self._blameWindow
-        elif type == Application.AiAssistant:
-            if not self._aiChatWindow:
+        elif type == WindowType.AiAssistant:
+            if not self._aiChatWindow and ensureCreated:
                 self._aiChatWindow = AiChatWindow()
                 self._aiChatWindow.destroyed.connect(
                     self._onAiChatWindowDestroyed)
             window = self._aiChatWindow
-        elif type == Application.CommitWindow:
-            if not self._commitWindow:
+        elif type == WindowType.CommitWindow:
+            if not self._commitWindow and ensureCreated:
                 self._commitWindow = CommitWindow()
                 self._commitWindow.destroyed.connect(
                     self._onCommitWindowDestroyed)
@@ -168,14 +164,14 @@ class Application(QApplication):
     def event(self, event):
         type = event.type()
         if type == BlameEvent.Type:
-            window = self.getWindow(Application.BlameWindow)
+            window = self.getWindow(WindowType.BlameWindow)
             window.blame(event.filePath, event.rev,
                          event.lineNo, event.repoDir)
             self._ensureVisible(window)
             return True
 
         if type == ShowCommitEvent.Type:
-            window = self.getWindow(Application.LogWindow)
+            window = self.getWindow(WindowType.LogWindow)
             window.showCommit(event.sha1)
             self._ensureVisible(window)
             return True
@@ -199,7 +195,7 @@ class Application(QApplication):
             return True
 
         if type == CodeReviewEvent.Type:
-            window = self.getWindow(Application.AiAssistant)
+            window = self.getWindow(WindowType.AiAssistant)
             self._ensureVisible(window)
             if event.submodules is not None:
                 window.codeReviewForStagedFiles(event.submodules)
@@ -208,13 +204,13 @@ class Application(QApplication):
             return True
 
         if type == ShowAiAssistantEvent.Type:
-            window = self.getWindow(Application.AiAssistant)
+            window = self.getWindow(WindowType.AiAssistant)
             self._ensureVisible(window)
             return True
 
         if type == RequestCommitEvent.Type:
             needRefresh = self._commitWindow is not None
-            window = self.getWindow(Application.CommitWindow)
+            window = self.getWindow(WindowType.CommitWindow)
             if needRefresh:
                 window.reloadLocalChanges()
             self._ensureVisible(window)

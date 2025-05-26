@@ -4,15 +4,15 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
-from qgitc.application import Application
 from qgitc.gitutils import Git
+from qgitc.windowtype import WindowType
 from tests.base import TestBase, createRepo
 
 
 class TestLogWindow(TestBase):
     def setUp(self):
         super().setUp()
-        self.window = self.app.getWindow(Application.LogWindow)
+        self.window = self.app.getWindow(WindowType.LogWindow)
         # reduce logs to load to speed up tests
         self.window.ui.leOpts.setText("-n50")
         QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)

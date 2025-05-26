@@ -7,8 +7,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QDialog
 
-from qgitc.application import Application
 from qgitc.gitutils import Git
+from qgitc.windowtype import WindowType
 from tests.base import TestBase, createRepo
 from tests.mockgithubcopilot import MockGithubCopilot, MockGithubCopilotStep
 
@@ -16,7 +16,7 @@ from tests.mockgithubcopilot import MockGithubCopilot, MockGithubCopilotStep
 class TestCommitWindow(TestBase):
     def setUp(self):
         super().setUp()
-        self.window = self.app.getWindow(Application.CommitWindow)
+        self.window = self.app.getWindow(WindowType.CommitWindow)
         self.window.show()
         self.processEvents()
 

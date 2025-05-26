@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.aichatwindow import AiChatWidget
-from qgitc.application import Application
+from qgitc.windowtype import WindowType
 from tests.base import TestBase
 from tests.mocklocalllm import MockLocalLLM
 
@@ -11,7 +11,7 @@ from tests.mocklocalllm import MockLocalLLM
 class TestAiChat(TestBase):
     def setUp(self):
         super().setUp()
-        self.window = self.app.getWindow(Application.AiAssistant)
+        self.window = self.app.getWindow(WindowType.AiAssistant)
         self.chatWidget: AiChatWidget = self.window.centralWidget()
         self.window.show()
 

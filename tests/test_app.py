@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from PySide6.QtTest import QSignalSpy, QTest
 
-from qgitc.application import Application
 from qgitc.gitutils import Git
+from qgitc.windowtype import WindowType
 from tests.base import TestBase
 
 
@@ -17,10 +17,10 @@ class TestApp(TestBase):
 
     def testWindows(self):
         winTypes = [
-            Application.LogWindow,
-            Application.BlameWindow,
-            Application.AiAssistant,
-            Application.CommitWindow,
+            WindowType.LogWindow,
+            WindowType.BlameWindow,
+            WindowType.AiAssistant,
+            WindowType.CommitWindow,
         ]
 
         for winType in winTypes:
