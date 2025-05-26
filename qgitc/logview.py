@@ -32,6 +32,7 @@ from qgitc.difffinder import DiffFinder
 from qgitc.events import CodeReviewEvent, CopyConflictCommit
 from qgitc.gitutils import *
 from qgitc.logsfetcher import LogsFetcher
+from qgitc.windowtype import WindowType
 
 HALF_LINE_PERCENT = 0.76
 
@@ -464,8 +465,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         qApp.settings().compositeModeChanged.connect(
             self.__onCompositeModeChanged)
 
-        self.window().submoduleAvailable.connect(
-            self.__onSubmoduleAvailable)
+        logWindow = self.logWindow()
+        if logWindow:
+            logWindow.submoduleAvailable.connect(self.__onSubmoduleAvailable)
 
         self._finder.resultAvailable.connect(
             self.__onFindResultAvailable)
@@ -542,7 +544,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         submodules = []
         if qApp.settings().isCompositeMode():
-            submodules = self.window().submodules()
+            submodules = self.submodules()
         self.fetcher.setSubmodules(submodules)
 
         self.fetcher.fetch(branch, args, branchDir=self._branchDir)
@@ -653,7 +655,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.acGenPatch.setEnabled(isCommitted)
         self.acCopyAbbrevCommit.setEnabled(isCommitted)
 
-        w = self.window().mergeWidget
+        logWindow = self.logWindow()
+        w = logWindow.mergeWidget if logWindow else None
         visible = w is not None
         self.acCopyToLog.setVisible(visible)
         if visible:
@@ -665,7 +668,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         # to avoid bad reset on each repo
         if enabled and qApp.settings().isCompositeMode():
             # disable only if have submodules
-            enabled = not self.window().submodules()
+            enabled = not self.submodules()
         self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
@@ -759,7 +762,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         commit["branchA"] = self.branchA
-        qApp.postEvent(self.window().mergeWidget, CopyConflictCommit(commit))
+        logWindow = self.logWindow()
+        mergeWidget = logWindow.mergeWidget if logWindow else None
+        qApp.postEvent(mergeWidget, CopyConflictCommit(commit))
 
     def __onMarkCommit(self):
         assert self.curIdx >= 0
@@ -895,7 +900,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        event = CodeReviewEvent(commit, self.window().getFilterArgs())
+        logWindow = self.logWindow()
+        args = logWindow.getFilterArgs() if logWindow else []
+        event = CodeReviewEvent(commit, args)
         qApp.postEvent(qApp, event)
 
     def __onFindResultAvailable(self):
@@ -1816,7 +1823,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.cancelFindCommit()
 
     def __onCompositeModeChanged(self):
-        submodules = self.window().submodules()
+        submodules = self.submodules()
         if not submodules:
             return
 
@@ -1835,3 +1842,10 @@ class LogView(QAbstractScrollArea, CommitSource):
     def reloadLogs(self):
         self.clear()
         self.showLogs(self.curBranch, self._branchDir, self.args)
+
+    def logWindow(self):
+        return qApp.getWindow(WindowType.LogWindow, False)
+    
+    def submodules(self):
+        window = self.logWindow()
+        return window.submodules() if window else []
