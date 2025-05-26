@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
-from qgitc.common import dataDirPath, decodeFileData, logger
+from qgitc.common import Commit, dataDirPath, decodeFileData, logger
 from qgitc.datafetcher import DataFetcher
 from qgitc.events import BlameEvent, OpenLinkEvent, ShowCommitEvent
 from qgitc.gitutils import Git
@@ -257,12 +257,14 @@ class RevisionPanel(TextViewer):
             if rev.sha1 == sha1:
                 self._updateActiveRev(i)
                 self._viewer.ensureLineVisible(i)
-                return
+                return i
 
         # no rev found
         self._viewer.highlightLines([])
         self._activeRev = None
         self.update()
+
+        return -1
 
     def _onTextLineClicked(self, textLine):
         self._updateActiveRev(textLine.lineNo())
@@ -593,50 +595,38 @@ class CommitDetailPanel(TextViewer):
 
     def __init__(self, viewer: BlameSourceViewer, parent=None):
         super().__init__(parent)
-        self._bodyCache = {}
         self._viewer = viewer
 
         settings = qApp.settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
-    def showRevision(self, rev: BlameLine):
+    def showCommit(self, commit: Commit, previous: str = None):
         super().clear()
 
-        text = self.tr("Commit: ") + rev.sha1
+        text = self.tr("Commit: ") + commit.sha1
         textLine = LinkTextLine(text, self._font, Link.Sha1)
         self.appendTextLine(textLine)
 
-        text = self.tr("Author: ") + rev.author + " " + \
-            rev.authorMail + " " + rev.authorTime
+        text = self.tr("Author: ") + commit.author + " " + commit.authorDate
         textLine = LinkTextLine(text, self._font, Link.Email)
         self.appendTextLine(textLine)
 
-        text = self.tr("Committer: ") + rev.committer + " " + \
-            rev.committerMail + " " + rev.committerTime
+        text = self.tr("Committer: ") + commit.committer + " " + commit.committerDate
         textLine = LinkTextLine(text, self._font, Link.Email)
         self.appendTextLine(textLine)
 
-        if rev.previous:
-            text = self.tr("Previous: ") + rev.previous
+        if previous:
+            text = self.tr("Previous: ") + previous
             textLine = LinkTextLine(text, self._font, Link.Sha1)
             self.appendTextLine(textLine)
 
-        if rev.sha1 in self._bodyCache:
-            text = self._bodyCache[rev.sha1]
-        else:
-            args = ["show", "-s", "--pretty=format:%B", rev.sha1]
-            data = Git.checkOutput(args, repoDir=self._viewer.repoDir)
-            text = _decode(data) if data else None
-            self._bodyCache[rev.sha1] = text
-        if text:
+        if commit.comments:
             self.appendLine("")
-            text = text.rstrip('\n')
-            for line in text.split('\n'):
+            for line in commit.comments.splitlines():
                 self.appendLine(line)
 
     def clear(self):
         super().clear()
-        self._bodyCache.clear()
 
     def reloadSettings(self):
         super().reloadSettings()
@@ -674,21 +664,33 @@ class CommitPanel(QSplitter):
         self.detailPanel.clear()
 
     def showRevision(self, rev: BlameLine):
-        self.detailPanel.showRevision(rev)
+        self.logView.blockSignals(True)
+        if self.logView.switchToCommit(rev.sha1):
+            # the log is fetching, update later in _onCommitChanged
+            index = self.logView.currentIndex()
+            if index != -1:
+                commit = self.logView.getCommit(index)
+                self.detailPanel.showCommit(commit, rev.previous)
+        else:
+            self.detailPanel.clear()
+        self.logView.blockSignals(False)
 
     def showLogs(self, repoDir: str, file: str, rev: str = None):
         self.logView.clear()
-        args = [file]
+        args = ["--follow", "--", file]
         if rev:
             args.insert(0, rev)
         self.logView.showLogs(branch=None, branchDir=repoDir, args=args)
 
     def _onCommitChanged(self, index: int):
+        self.detailPanel.clear()
         if index == -1:
             return
 
         commit = self.logView.getCommit(index)
-        self._viewer.panel.setActiveRevBySha1(commit.sha1)
+        i = self._viewer.panel.setActiveRevBySha1(commit.sha1)
+        previous = self._viewer.panel.revisions[i].previous if i >= 0 else None
+        self.detailPanel.showCommit(commit, previous)
 
 class HeaderWidget(QWidget):
 
