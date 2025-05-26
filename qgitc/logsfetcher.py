@@ -307,6 +307,8 @@ class LogsFetcherThread(QThread):
                     for log in logs:
                         handleCount += 1
                         if handleCount % 100 == 0 and self.isInterruptionRequested():
+                            logger.debug("Logs fetcher cancelled")
+                            executor.shutdown(wait=False, cancel_futures=True)
                             return
                         # require same day at least
                         key = (log.committerDateTime.date(),
