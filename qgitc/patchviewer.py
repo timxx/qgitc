@@ -136,13 +136,14 @@ class Sha1TextLine(LinkTextLine):
 
 class SummaryTextLine(TextLine):
 
-    def __init__(self, text, font, option=None):
+    def __init__(self, text, font, option=None, indent=4):
         super().__init__(text, font, option)
+        self._indent = indent
 
     def _relayout(self):
         self._layout.beginLayout()
         line = self._layout.createLine()
-        width = QFontMetricsF(self._font).averageCharWidth() * 4
+        width = QFontMetricsF(self._font).averageCharWidth() * self._indent
         line.setPosition(QPointF(width, 0))
         self._layout.endLayout()
 

@@ -26,6 +26,7 @@ from qgitc.datafetcher import DataFetcher
 from qgitc.events import BlameEvent, OpenLinkEvent, ShowCommitEvent
 from qgitc.gitutils import Git
 from qgitc.logview import LogView
+from qgitc.patchviewer import SummaryTextLine
 from qgitc.sourceviewer import SourceViewer
 from qgitc.textline import Link, LinkTextLine
 from qgitc.textviewer import TextViewer
@@ -625,7 +626,8 @@ class CommitDetailPanel(TextViewer):
         if commit.comments:
             self.appendLine("")
             for line in commit.comments.splitlines():
-                self.appendLine(line)
+                textLine = SummaryTextLine(line, self._font, self._option, 0)
+                self.appendTextLine(textLine)
 
     def clear(self):
         super().clear()
