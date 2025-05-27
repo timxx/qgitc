@@ -11,8 +11,8 @@ from PySide6.QtGui import (
     QPen,
     QTextCharFormat,
 )
-from PySide6.QtWidgets import QApplication
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, FindField, decodeFileData, findInlineSpans
 from qgitc.diffutils import *
 from qgitc.events import OpenLinkEvent
@@ -43,25 +43,32 @@ class DiffTextLine(SourceTextLineBase):
             if len(text) >= 2 and text[1] == "+":
                 tcFormat.setFontWeight(QFont.Bold)
             else:
-                tcFormat.setForeground(qApp.colorSchema().Adding)
+                tcFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().Adding)
         elif text[0] == "-":
-            tcFormat.setForeground(qApp.colorSchema().Deletion)
+            tcFormat.setForeground(
+                ApplicationBase.instance().colorSchema().Deletion)
         elif text[0] == " " and len(text) >= 2:
             # TODO: only if in submodule changes
             if text.startswith("  > "):
-                tcFormat.setForeground(qApp.colorSchema().Submodule)
+                tcFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().Submodule)
             elif text.startswith("  < "):
-                tcFormat.setForeground(qApp.colorSchema().Submodule2)
+                tcFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().Submodule2)
             elif self._parentCount > 1 and len(text) >= self._parentCount:
                 index = self._parentCount - 1
                 if text[index] == "+":
                     tcFormat.setFontWeight(QFont.Bold)
-                    tcFormat.setForeground(qApp.colorSchema().Adding)
+                    tcFormat.setForeground(
+                        ApplicationBase.instance().colorSchema().Adding)
                 elif text[index] == "-":
                     tcFormat.setFontWeight(QFont.Bold)
-                    tcFormat.setForeground(qApp.colorSchema().Deletion)
+                    tcFormat.setForeground(
+                        ApplicationBase.instance().colorSchema().Deletion)
         elif diff_begin_re.search(text) or text.startswith(r"\ No newline "):
-            tcFormat.setForeground(qApp.colorSchema().Newline)
+            tcFormat.setForeground(
+                ApplicationBase.instance().colorSchema().Newline)
 
         if tcFormat.isValid():
             formats.append(createFormatRange(0, self.utf16Length(), tcFormat))
@@ -153,7 +160,7 @@ class SummaryTextLine(TextLine):
         formats = self._layout.formats()
         text: str = self.text()
         fmt = QTextCharFormat()
-        fmt.setForeground(qApp.colorSchema().InlineCode)
+        fmt.setForeground(ApplicationBase.instance().colorSchema().InlineCode)
 
         for start, length in findInlineSpans(text):
             fmtRg = createFormatRange(start, length, fmt)
@@ -221,14 +228,15 @@ class PatchViewer(SourceViewer):
 
     def drawLineBackground(self, painter: QPainter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
-            painter.fillRect(lineRect, qApp.colorSchema().InfoBg)
+            painter.fillRect(
+                lineRect, ApplicationBase.instance().colorSchema().InfoBg)
 
     def canDrawLineBorder(self, textLine):
         return isinstance(textLine, InfoTextLine)
 
     def drawLinesBorder(self, painter: QPainter, rect: QRectF):
         oldPen = painter.pen()
-        pen = QPen(qApp.colorSchema().InfoBorder)
+        pen = QPen(ApplicationBase.instance().colorSchema().InfoBorder)
         pen.setCosmetic(True)
         painter.setPen(pen)
         painter.drawRect(rect.adjusted(0.5, 0, -0.5, -0.5))
@@ -243,7 +251,8 @@ class PatchViewer(SourceViewer):
                 formats.extend(fmt)
         elif isinstance(textLine, InfoTextLine):
             fmt = QTextCharFormat()
-            fmt.setForeground(QBrush(qApp.colorSchema().InfoFg))
+            fmt.setForeground(
+                QBrush(ApplicationBase.instance().colorSchema().InfoFg))
             formats.append(createFormatRange(0, textLine.utf16Length(), fmt))
         else:
             fmt = self._createCommentsFormats(textLine)
@@ -297,7 +306,8 @@ class PatchViewer(SourceViewer):
         if self.highlightPattern:
             matchs = self.highlightPattern.finditer(textLine.text())
             fmt = QTextCharFormat()
-            fmt.setBackground(QBrush(qApp.colorSchema().HighlightWordBg))
+            fmt.setBackground(
+                QBrush(ApplicationBase.instance().colorSchema().HighlightWordBg))
             for m in matchs:
                 start = textLine.mapToUtf16(m.start())
                 end = textLine.mapToUtf16(m.end())
@@ -338,8 +348,8 @@ class PatchViewer(SourceViewer):
                 break
 
     def _onOpenCommit(self):
-        sett = qApp.settings()
-        repoName = qApp.repoName()
+        sett = ApplicationBase.instance().settings()
+        repoName = ApplicationBase.instance().repoName()
         url = sett.commitUrl(repoName)
         if not url and sett.fallbackGlobalLinks(repoName):
             url = sett.commitUrl(None)
@@ -362,7 +372,8 @@ class PatchViewer(SourceViewer):
                 data = data[0]
             self.requestCommit.emit(data, isNear, goNext)
         else:
-            qApp.postEvent(qApp, OpenLinkEvent(link))
+            ApplicationBase.instance().postEvent(
+                ApplicationBase.instance(), OpenLinkEvent(link))
 
     def currentFileRow(self):
         row = self.verticalScrollBar().value()
@@ -390,7 +401,7 @@ class PatchViewer(SourceViewer):
             else:
                 newText += line + '\n'
 
-        clipboard = QApplication.clipboard()
+        clipboard = ApplicationBase.instance().clipboard()
         mimeData = QMimeData()
         mimeData.setText(newText)
         clipboard.setMimeData(mimeData)

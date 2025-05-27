@@ -42,6 +42,7 @@ from PySide6.QtWidgets import (
 
 from qgitc.actionrunner import ActionRunner
 from qgitc.aicommitmessage import AiCommitMessage
+from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
@@ -162,22 +163,22 @@ class StatusFileListModel(QAbstractListModel):
     def _statusIcon(self, statusCode):
         icon = self._icons.get(statusCode)
         if not icon:
-            font: QFont = qApp.font()
+            font: QFont = ApplicationBase.instance().font()
             font.setBold(True)
             if statusCode == "A":
-                color = qApp.colorSchema().Adding
+                color = ApplicationBase.instance().colorSchema().Adding
             elif statusCode == "M":
-                color = qApp.colorSchema().Modified
+                color = ApplicationBase.instance().colorSchema().Modified
             elif statusCode == "D":
-                color = qApp.colorSchema().Deletion
+                color = ApplicationBase.instance().colorSchema().Deletion
             elif statusCode == "R":
-                color = qApp.colorSchema().Renamed
+                color = ApplicationBase.instance().colorSchema().Renamed
             elif statusCode == "?":
-                color = qApp.colorSchema().Untracked
+                color = ApplicationBase.instance().colorSchema().Untracked
             elif statusCode == "!":
-                color = qApp.colorSchema().Ignored
+                color = ApplicationBase.instance().colorSchema().Ignored
             else:
-                color = qApp.palette().windowText().color()
+                color = ApplicationBase.instance().palette().windowText().color()
             icon = _makeTextIcon(statusCode, color, font)
             self._icons[statusCode] = icon
         return icon
@@ -374,9 +375,9 @@ class CommitWindow(StateWindow):
             self._onCommitActionClicked)
 
         self.ui.cbRunAction.setChecked(
-            qApp.settings().runCommitActions())
+            ApplicationBase.instance().settings().runCommitActions())
         self.ui.cbRunAction.toggled.connect(
-            lambda checked: qApp.settings().setRunCommitActions(checked))
+            lambda checked: ApplicationBase.instance().settings().setRunCommitActions(checked))
 
         self.ui.leFilterFiles.textChanged.connect(
             self._onFilterFilesChanged)
@@ -386,7 +387,7 @@ class CommitWindow(StateWindow):
         self.ui.cbAmend.toggled.connect(
             self._onAmendToggled)
 
-        if not qApp.style().styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
+        if not ApplicationBase.instance().style().styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
             self.ui.lvFiles.activated.connect(
                 self._onFilesDoubleClicked)
             self.ui.lvStaged.activated.connect(
@@ -436,7 +437,7 @@ class CommitWindow(StateWindow):
 
         self._outputBlocks: Dict[str, int] = {}
 
-        qApp.repoDirChanged.connect(
+        ApplicationBase.instance().repoDirChanged.connect(
             self._onRepoDirChanged)
 
         if Git.REPO_DIR:
@@ -449,7 +450,7 @@ class CommitWindow(StateWindow):
         spinner.setNumberOfLines(14)
 
     def _loadLocalChanges(self):
-        submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
+        submodules = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
         self._statusFetcher.fetch(submodules)
         self.ui.tbRefresh.setEnabled(False)
         self.ui.tbWDChanges.setEnabled(False)
@@ -475,14 +476,14 @@ class CommitWindow(StateWindow):
             self._findSubmoduleThread = None
 
         submodules = thread.submodules
-        caches = qApp.settings().submodulesCache(Git.REPO_DIR)
+        caches = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
 
         newSubmodules = list(set(submodules) - set(caches))
         # no new submodules, no need to fetch
         if not newSubmodules:
             return
 
-        qApp.settings().setSubmodulesCache(Git.REPO_DIR, submodules)
+        ApplicationBase.instance().settings().setSubmodulesCache(Git.REPO_DIR, submodules)
 
         if not caches and "." in newSubmodules:
             # do not reload for main repo
@@ -613,7 +614,7 @@ class CommitWindow(StateWindow):
 
     def _repoName(self):
         if not self._repoInfo or not self._repoInfo.repoUrl:
-            return qApp.repoName()
+            return ApplicationBase.instance().repoName()
 
         repoUrl = self._repoInfo.repoUrl
         index = repoUrl.rfind('/')
@@ -645,7 +646,7 @@ class CommitWindow(StateWindow):
             actions = []
             self._committedActions = []
 
-            settings: Settings = qApp.settings()
+            settings: Settings = ApplicationBase.instance().settings()
             self._collectCommitActions(
                 settings.commitActions(self._repoName()),
                 actions,
@@ -712,7 +713,7 @@ class CommitWindow(StateWindow):
         return True
 
     def _filterMessage(self, message: str):
-        ignoreCommentLine = qApp.settings().ignoreCommentLine()
+        ignoreCommentLine = ApplicationBase.instance().settings().ignoreCommentLine()
         if not ignoreCommentLine:
             return message
 
@@ -867,7 +868,7 @@ class CommitWindow(StateWindow):
             repoFiles = [toSubmodulePath(submodule, file) for file in files]
             error = Git.restoreStagedFiles(repoDir, repoFiles)
             if error:
-                qApp.postEvent(self, GitErrorEvent(error))
+                ApplicationBase.instance().postEvent(self, GitErrorEvent(error))
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
 
     def _doStage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
@@ -876,7 +877,7 @@ class CommitWindow(StateWindow):
             repoFiles = [toSubmodulePath(submodule, file) for file in files]
             error = Git.addFiles(repoDir, repoFiles)
             if error:
-                qApp.postEvent(self, GitErrorEvent(error))
+                ApplicationBase.instance().postEvent(self, GitErrorEvent(error))
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
 
     def _onNonUITaskFinished(self):
@@ -938,8 +939,10 @@ class CommitWindow(StateWindow):
         blockFmt.topMargin = 8
 
         charFmt = QTextCharFormat()
-        charFmt.setBackground(qApp.colorSchema().RepoTagBg)
-        charFmt.setForeground(qApp.colorSchema().RepoTagFg)
+        charFmt.setBackground(
+            ApplicationBase.instance().colorSchema().RepoTagBg)
+        charFmt.setForeground(
+            ApplicationBase.instance().colorSchema().RepoTagFg)
 
         cursor.setBlockFormat(blockFmt)
         cursor.insertText(f"{title}\n", charFmt)
@@ -967,7 +970,8 @@ class CommitWindow(StateWindow):
         cursor.movePosition(QTextCursor.EndOfBlock)
         format = QTextCharFormat()
         if isError:
-            format.setForeground(qApp.colorSchema().ErrorText)
+            format.setForeground(
+                ApplicationBase.instance().colorSchema().ErrorText)
         cursor.insertText(content if content.endswith("\n")
                           else (content + "\n"), format)
         cursor.setCharFormat(QTextCharFormat())
@@ -1005,7 +1009,7 @@ class CommitWindow(StateWindow):
             self._onShowUntrackedFiles)
         self._acShowUntrackedFiles.setCheckable(True)
 
-        settings = qApp.settings()
+        settings = ApplicationBase.instance().settings()
         checked = settings.showUntrackedFiles()
         self._acShowUntrackedFiles.setChecked(checked)
         self._statusFetcher.setShowUntrackedFiles(checked)
@@ -1024,13 +1028,13 @@ class CommitWindow(StateWindow):
     def _onShowUntrackedFiles(self):
         checked = self._acShowUntrackedFiles.isChecked()
         self._statusFetcher.setShowUntrackedFiles(checked)
-        qApp.settings().setShowUntrackedFiles(checked)
+        ApplicationBase.instance().settings().setShowUntrackedFiles(checked)
         self.reloadLocalChanges()
 
     def _onShowIgnoredFiles(self):
         checked = self._acShowIgnoredFiles.isChecked()
         self._statusFetcher.setShowIgnoredFiles(checked)
-        qApp.settings().setShowIgnoredFiles(checked)
+        ApplicationBase.instance().settings().setShowIgnoredFiles(checked)
         self.reloadLocalChanges()
 
     def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
@@ -1044,7 +1048,7 @@ class CommitWindow(StateWindow):
             if cancelEvent.isSet():
                 return
             if template:
-                qApp.postEvent(self, TemplateReadyEvent(template))
+                ApplicationBase.instance().postEvent(self, TemplateReadyEvent(template))
 
         if cancelEvent.isSet():
             return
@@ -1066,7 +1070,7 @@ class CommitWindow(StateWindow):
         if cancelEvent.isSet():
             return
 
-        qApp.postEvent(self, RepoInfoEvent(info))
+        ApplicationBase.instance().postEvent(self, RepoInfoEvent(info))
 
     def _setupStatusBar(self):
         widget = QWidget(self)
@@ -1109,7 +1113,7 @@ class CommitWindow(StateWindow):
         if not super().restoreState():
             return False
 
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         state = sett.getSplitterState("cw.splitterMain")
         if state:
             self.ui.splitterMain.restoreState(state)
@@ -1128,7 +1132,7 @@ class CommitWindow(StateWindow):
         if not super().saveState():
             return False
 
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
 
         sett.saveSplitterState(
             "cw.splitterLeft", self.ui.splitterLeft.saveState())
@@ -1140,7 +1144,7 @@ class CommitWindow(StateWindow):
         return True
 
     def _onOptionsClicked(self):
-        preferences = Preferences(qApp.settings(), self)
+        preferences = Preferences(ApplicationBase.instance().settings(), self)
         preferences.ui.tabWidget.setCurrentWidget(
             preferences.ui.tabCommitMessage)
         preferences.exec()
@@ -1156,10 +1160,11 @@ class CommitWindow(StateWindow):
         self._outputBlocks.clear()
         self.reloadLocalChanges()
         self._updateCommitStatus(False)
-        qApp.postEvent(qApp, LocalChangesCommittedEvent())
+        ApplicationBase.instance().postEvent(
+            ApplicationBase.instance(), LocalChangesCommittedEvent())
 
     def _updateCommitProgress(self, submodule, out: str, error: str, updateProgress=True, action: str = None):
-        qApp.postEvent(self, UpdateCommitProgressEvent(
+        ApplicationBase.instance().postEvent(self, UpdateCommitProgressEvent(
             submodule, out, error, updateProgress, action))
 
     def _updateCommitStatus(self, isRunning: bool):
@@ -1282,7 +1287,7 @@ class CommitWindow(StateWindow):
                 QMessageBox.Ok)
 
     def _onGenMessageClicked(self):
-        exts = qApp.settings().aiExcludedFileExtensions()
+        exts = ApplicationBase.instance().settings().aiExcludedFileExtensions()
         submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
         if not submoduleFiles:
             return
@@ -1348,16 +1353,17 @@ class CommitWindow(StateWindow):
         self._restoreAiMessageButtons()
 
     def _onShowCommitClicked(self):
-        qApp.postEvent(qApp, ShowCommitEvent(None))
+        ApplicationBase.instance().postEvent(
+            ApplicationBase.instance(), ShowCommitEvent(None))
 
     def _onCodeReviewClicked(self):
-        exts = qApp.settings().aiExcludedFileExtensions()
+        exts = ApplicationBase.instance().settings().aiExcludedFileExtensions()
         submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
         if not submoduleFiles:
             return
 
         event = CodeReviewEvent(submoduleFiles)
-        qApp.postEvent(qApp, event)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def cancel(self, force=False):
         self._aiMessage.cancel(force)
@@ -1370,7 +1376,7 @@ class CommitWindow(StateWindow):
                                SIGNAL("finished"),
                                self._onFindSubmoduleFinished)
             self._findSubmoduleThread.requestInterruption()
-            if force and qApp.terminateThread(self._findSubmoduleThread):
+            if force and ApplicationBase.instance().terminateThread(self._findSubmoduleThread):
                 self._threads.remove(self._findSubmoduleThread)
                 self._findSubmoduleThread.finished.disconnect(
                     self._onThreadFinished)
@@ -1380,7 +1386,7 @@ class CommitWindow(StateWindow):
         if force:
             for thread in self._threads:
                 thread.finished.disconnect(self._onThreadFinished)
-                qApp.terminateThread(thread)
+                ApplicationBase.instance().terminateThread(thread)
             self._threads.clear()
 
     def closeEvent(self, event):
@@ -1452,7 +1458,8 @@ class CommitWindow(StateWindow):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.restoreFiles(repoDir, repoFiles, isStaged)
-        qApp.postEvent(self, FileRestoreEvent(submodule, files, error))
+        ApplicationBase.instance().postEvent(
+            self, FileRestoreEvent(submodule, files, error))
 
     def _handleFileRestoreEvent(self, submodule: str, files: List[str], error: str):
         if error:
@@ -1511,7 +1518,7 @@ class CommitWindow(StateWindow):
         message = Git.commitMessage("HEAD", repoDir)
         if cancelEvent.isSet():
             return
-        qApp.postEvent(self, TemplateReadyEvent(message, True))
+        ApplicationBase.instance().postEvent(self, TemplateReadyEvent(message, True))
 
     def _onExternalDiff(self):
         listView: QListView = self._acRestoreFiles.data()

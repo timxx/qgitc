@@ -14,6 +14,7 @@ from PySide6.QtGui import (
     QTextOption,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 
 __all__ = ["createFormatRange", "Link", "TextLine",
@@ -151,7 +152,8 @@ class TextLine():
 
         fmt = QTextCharFormat()
         fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
-        fmt.setForeground(qApp.palette().color(QPalette.Link))
+        fmt.setForeground(
+            ApplicationBase.instance().palette().color(QPalette.Link))
 
         formats = []
         for link in self._links:
@@ -375,13 +377,14 @@ class SourceTextLineBase(TextLine):
 
             painter.save()
             painter.setFont(self._font)
-            painter.setPen(qApp.colorSchema().Whitespace)
+            painter.setPen(ApplicationBase.instance().colorSchema().Whitespace)
             painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, cr_char)
             painter.restore()
 
     def _applyWhitespaces(self, text: str, formats: List[QTextLayout.FormatRange]):
         tcFormat = QTextCharFormat()
-        tcFormat.setForeground(qApp.colorSchema().Whitespace)
+        tcFormat.setForeground(
+            ApplicationBase.instance().colorSchema().Whitespace)
 
         offset = 0
         i = 0

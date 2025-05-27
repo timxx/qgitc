@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffetcher import DiffFetcher
@@ -67,15 +68,20 @@ class FileListModel(QAbstractListModel):
         super().__init__(parent)
         self._fileList: List[(str, FileInfo)] = []
 
-        font: QFont = qApp.font()
+        font: QFont = ApplicationBase.instance().font()
         font.setBold(True)
         self._icons = [
             None,  # normal
-            _makeTextIcon("A", qApp.colorSchema().Adding, font),
-            _makeTextIcon("M", qApp.colorSchema().Modified, font),
-            _makeTextIcon("D", qApp.colorSchema().Deletion, font),
-            _makeTextIcon("R", qApp.colorSchema().Renamed, font),
-            _makeTextIcon("R", qApp.colorSchema().RenamedModified, font),
+            _makeTextIcon(
+                "A", ApplicationBase.instance().colorSchema().Adding, font),
+            _makeTextIcon(
+                "M", ApplicationBase.instance().colorSchema().Modified, font),
+            _makeTextIcon(
+                "D", ApplicationBase.instance().colorSchema().Deletion, font),
+            _makeTextIcon(
+                "R", ApplicationBase.instance().colorSchema().Renamed, font),
+            _makeTextIcon("R", ApplicationBase.instance(
+            ).colorSchema().RenamedModified, font),
         ]
 
     def rowCount(self, parent=QModelIndex()):
@@ -242,7 +248,7 @@ class DiffView(QWidget):
 
         self.fileListView.selectionModel().currentRowChanged.connect(
             self.__onFileListViewCurrentRowChanged)
-        style = qApp.style()
+        style = ApplicationBase.instance().style()
         # single click to activate is so terrible
         if not style.styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
             self.fileListView.activated.connect(
@@ -255,7 +261,7 @@ class DiffView(QWidget):
         self.viewer.requestCommit.connect(self.requestCommit)
         self.viewer.requestBlame.connect(self.requestBlame)
 
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         sett.ignoreWhitespaceChanged.connect(
             self.__onIgnoreWhitespaceChanged)
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
@@ -571,7 +577,7 @@ class DiffView(QWidget):
         else:
             self.viewer.addAuthorLine(self.tr("Author: ") + self.tr("You"))
 
-        if qApp.settings().showParentChild():
+        if ApplicationBase.instance().settings().showParentChild():
             for parent in commit.parents:
                 content = self.tr("Parent: ") + parent
                 repoDir = commit.repoDir
@@ -607,7 +613,7 @@ class DiffView(QWidget):
 
     @staticmethod
     def diffToolForFile(filePath):
-        tools = qApp.settings().mergeToolList()
+        tools = ApplicationBase.instance().settings().mergeToolList()
         # ignored case even on Unix platform
         lowercase_file = filePath.lower()
         for tool in tools:
@@ -615,7 +621,7 @@ class DiffView(QWidget):
                 if lowercase_file.endswith(tool.suffix.lower()):
                     return tool.command
 
-        return qApp.settings().diffToolName()
+        return ApplicationBase.instance().settings().diffToolName()
 
     def showCommit(self, commit: Commit):
         self.clear()

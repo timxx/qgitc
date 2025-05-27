@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import Commit, dataDirPath, decodeFileData, logger
 from qgitc.datafetcher import DataFetcher
@@ -181,7 +182,7 @@ class RevisionPanel(TextViewer):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setFrameShape(QFrame.NoFrame)
 
-        settings = qApp.settings()
+        settings = ApplicationBase.instance().settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
     def toTextLine(self, text):
@@ -191,7 +192,7 @@ class RevisionPanel(TextViewer):
         return textLine
 
     def reloadSettings(self):
-        self.updateFont(qApp.settings().diffViewFont())
+        self.updateFont(ApplicationBase.instance().settings().diffViewFont())
 
         fm = QFontMetrics(self._font)
         self._sha1Width = fm.horizontalAdvance('a') * ABBREV_N
@@ -294,7 +295,8 @@ class RevisionPanel(TextViewer):
             fr = QRectF(br)
             fr.moveTop(fr.top() + y)
             fr.moveLeft(x)
-            painter.fillRect(fr, qApp.colorSchema().HighlightLineBg)
+            painter.fillRect(
+                fr, ApplicationBase.instance().colorSchema().HighlightLineBg)
 
     def _reloadTextLine(self, textLine):
         textLine.setFont(self._font)
@@ -322,7 +324,7 @@ class RevisionPanel(TextViewer):
 
         rev = self._revs[self._hoveredLine]
         event = ShowCommitEvent(rev.sha1)
-        qApp.postEvent(qApp, event)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def _onMenuBlamePrevCommit(self):
         if self._hoveredLine == -1:
@@ -335,7 +337,7 @@ class RevisionPanel(TextViewer):
         file = self.getFileBySHA1(rev.previous)
         event = BlameEvent(file, rev.previous,
                            rev.oldLineNo, self._viewer.repoDir)
-        qApp.postEvent(qApp, event)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
@@ -348,7 +350,7 @@ class RevisionPanel(TextViewer):
         width = self.width()
         margin = self.textMargins()
 
-        colorSchema = qApp.colorSchema()
+        colorSchema = ApplicationBase.instance().colorSchema()
 
         textLineCount = self.textLineCount()
         digitCount = max(3, len(str(textLineCount)))
@@ -497,7 +499,7 @@ class BlameSourceViewer(SourceViewer):
 
         rev = self._panel.revisions[self._curIndexForMenu]
         event = ShowCommitEvent(rev.sha1)
-        qApp.postEvent(qApp, event)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def _onMenuBlamePrevCommit(self):
         if self._curIndexForMenu == -1:
@@ -509,7 +511,7 @@ class BlameSourceViewer(SourceViewer):
 
         file = self._panel.getFileBySHA1(rev.previous)
         event = BlameEvent(file, rev.previous, rev.oldLineNo, self.repoDir)
-        qApp.postEvent(qApp, event)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def _lineRect(self, lineNo):
         firstLine = self.firstVisibleLine()
@@ -597,7 +599,7 @@ class CommitDetailPanel(TextViewer):
         super().__init__(parent)
         self._viewer = viewer
 
-        settings = qApp.settings()
+        settings = ApplicationBase.instance().settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
     def showCommit(self, commit: Commit, previous: str = None):
@@ -630,7 +632,7 @@ class CommitDetailPanel(TextViewer):
 
     def reloadSettings(self):
         super().reloadSettings()
-        self.updateFont(qApp.settings().diffViewFont())
+        self.updateFont(ApplicationBase.instance().settings().diffViewFont())
 
     def _reloadTextLine(self, textLine):
         super()._reloadTextLine(textLine)
@@ -881,7 +883,7 @@ class BlameView(QWidget):
                 file = self._findFileBySHA1(link.data)
                 self.blame(file, link.data, repoDir=self._viewer.repoDir)
         else:
-            qApp.postEvent(qApp, OpenLinkEvent(link))
+            ApplicationBase.instance().postEvent(ApplicationBase.instance(), OpenLinkEvent(link))
 
     def _onFetchDataAvailable(self, lines: List[BlameLine]):
         self._viewer.appendBlameLines(lines)

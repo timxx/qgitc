@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 
 from PySide6.QtCore import QEvent, QObject, Signal
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, logger, toSubmodulePath
 from qgitc.githubcopilot import GithubCopilot
@@ -150,7 +151,7 @@ class AiCommitMessage(QObject):
             self._aiModel.finished.disconnect(self._onAiResponseFinished)
             self._aiModel.requestInterruption()
 
-            if force and qApp.terminateThread(self._aiModel):
+            if force and ApplicationBase.instance().terminateThread(self._aiModel):
                 self._threads.remove(self._aiModel)
                 self._aiModel.finished.disconnect(self._onThreadFinished)
                 logger.warning("Terminating AI model thread")
@@ -159,7 +160,7 @@ class AiCommitMessage(QObject):
         if force:
             for thread in self._threads:
                 thread.finished.disconnect(self._onThreadFinished)
-                qApp.terminateThread(thread)
+                ApplicationBase.instance().terminateThread(thread)
             self._threads.clear()
 
         self._executor.cancel()
@@ -191,7 +192,8 @@ class AiCommitMessage(QObject):
         if cancelEvent.isSet():
             return
 
-        qApp.postEvent(self, CommitInfoEvent(diff, userLogs, repoLogs))
+        ApplicationBase.instance().postEvent(
+            self, CommitInfoEvent(diff, userLogs, repoLogs))
 
     @staticmethod
     def _fetchLogs(repoDir: str, commitCount: int, author=None):

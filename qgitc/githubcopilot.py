@@ -6,6 +6,7 @@ import time
 import requests
 from PySide6.QtCore import QEventLoop, QLocale
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
@@ -25,7 +26,7 @@ class GithubCopilot(AiModelBase):
 
     def __init__(self, parent=None):
         super().__init__(None, parent)
-        self._token = qApp.settings().githubCopilotToken()
+        self._token = ApplicationBase.instance().settings().githubCopilotToken()
 
         self._eventLoop = None
 
@@ -56,7 +57,7 @@ class GithubCopilot(AiModelBase):
         elif params.chat_mode == AiChatMode.CodeReview:
             prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
-                language=qApp.uiLanguage())
+                language=ApplicationBase.instance().uiLanguage())
         self.add_history(self._makeMessage("user", prompt))
         payload["messages"] = self._history
 
@@ -146,7 +147,7 @@ class GithubCopilot(AiModelBase):
         return {"role": role, "content": prompt}
 
     def updateToken(self):
-        settings = Settings(testing=qApp.testing)
+        settings = Settings(testing=ApplicationBase.instance().testing)
         accessToken = settings.githubCopilotAccessToken()
         if not accessToken:
             accessToken = self._requestAccessToken()
@@ -192,13 +193,14 @@ class GithubCopilot(AiModelBase):
         if self._eventLoop:
             return None
 
-        qApp.postEvent(qApp, RequestLoginGithubCopilot(self))
+        ApplicationBase.instance().postEvent(
+            ApplicationBase.instance(), RequestLoginGithubCopilot(self))
 
         self._eventLoop = QEventLoop()
         self._eventLoop.exec()
         self._eventLoop = None
 
-        settings = Settings(testing=qApp.testing)
+        settings = Settings(testing=ApplicationBase.instance().testing)
         return settings.githubCopilotAccessToken()
 
     def event(self, evt):

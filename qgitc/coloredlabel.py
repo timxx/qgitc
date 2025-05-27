@@ -3,6 +3,8 @@
 from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import QLabel
 
+from qgitc.applicationbase import ApplicationBase
+
 
 class ColoredLabel(QLabel):
 
@@ -14,7 +16,8 @@ class ColoredLabel(QLabel):
     def _updatePalette(self):
         palette = self.palette()
         role = self.foregroundRole()
-        color = getattr(qApp.colorSchema(), self._colorSchema)
+        color = getattr(ApplicationBase.instance(
+        ).colorSchema(), self._colorSchema)
         palette.setColor(role, color)
         self.setPalette(palette)
 

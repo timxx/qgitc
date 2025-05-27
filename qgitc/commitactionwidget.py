@@ -2,6 +2,7 @@
 
 from PySide6.QtWidgets import QHeaderView, QMessageBox, QTableView, QWidget
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
 from qgitc.commitactiontablemodel import CommitActionTableModel
 from qgitc.ui_commitactionwidget import Ui_CommitActionWidget
@@ -58,14 +59,14 @@ class CommitActionWidget(QWidget):
         indexes = tableView.selectionModel().selectedRows()
         if not indexes:
             QMessageBox.information(self,
-                                    qApp.applicationName(),
+                                    ApplicationBase.instance().applicationName(),
                                     self.tr("Please select one row at least to delete."))
             return
 
         if len(indexes) > 1:
             text = self.tr(
                 "You have selected more than one record, do you really want delete all of them?")
-            r = QMessageBox.question(self, qApp.applicationName(),
+            r = QMessageBox.question(self, ApplicationBase.instance().applicationName(),
                                      text,
                                      QMessageBox.Yes,
                                      QMessageBox.No)

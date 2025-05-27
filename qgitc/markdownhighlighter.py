@@ -23,6 +23,7 @@ from PySide6.QtGui import (
     QTextFormat,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchema
 from qgitc.diffutils import diff_begin_re
 from qgitc.languagedata import *
@@ -512,7 +513,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def initTextFormats():
         formats = {}
 
-        schema: ColorSchema = qApp.colorSchema()
+        schema: ColorSchema = ApplicationBase.instance().colorSchema()
 
         # Set character formats for headlines
         charFormat = QTextCharFormat()
@@ -558,7 +559,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set character format for links
         charFormat = QTextCharFormat()
-        charFormat.setForeground(qApp.palette().link().color())
+        charFormat.setForeground(
+            ApplicationBase.instance().palette().link().color())
         charFormat.setFontUnderline(True)
         formats[HighlighterState.Link] = charFormat
 
@@ -2654,15 +2656,20 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if len(text) >= 2 and text[1] == "+":
                 tcFormat.setFontWeight(QFont.Bold)
             else:
-                tcFormat.setForeground(qApp.colorSchema().Adding)
+                tcFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().Adding)
         elif text[0] == "-":
-            tcFormat.setForeground(qApp.colorSchema().Deletion)
+            tcFormat.setForeground(
+                ApplicationBase.instance().colorSchema().Deletion)
         elif text[0] == " " and len(text) >= 2:
             if text.startswith("  > "):
-                tcFormat.setForeground(qApp.colorSchema().Submodule)
+                tcFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().Submodule)
             elif text.startswith("  < "):
-                tcFormat.setForeground(qApp.colorSchema().Submodule2)
+                tcFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().Submodule2)
         elif diff_begin_re.search(text) or text.startswith(r"\ No newline "):
-            tcFormat.setForeground(qApp.colorSchema().Newline)
+            tcFormat.setForeground(
+                ApplicationBase.instance().colorSchema().Newline)
 
         self.setFormat(0, len(text), tcFormat)

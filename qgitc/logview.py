@@ -17,7 +17,6 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
-    QApplication,
     QFileDialog,
     QFrame,
     QMenu,
@@ -26,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffinder import DiffFinder
@@ -73,7 +73,7 @@ class Marker():
 
         painter.save()
 
-        painter.setPen(qApp.colorSchema().Mark)
+        painter.setPen(ApplicationBase.instance().colorSchema().Mark)
         br = painter.drawText(rect, Qt.AlignVCenter, Marker.CHAR_MARK)
         rect.adjust(br.width(), 0, 0, 0)
 
@@ -460,9 +460,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.updateSettings()
 
-        qApp.settings().logViewFontChanged.connect(
+        ApplicationBase.instance().settings().logViewFontChanged.connect(
             self.updateSettings)
-        qApp.settings().compositeModeChanged.connect(
+        ApplicationBase.instance().settings().compositeModeChanged.connect(
             self.__onCompositeModeChanged)
 
         logWindow = self.logWindow()
@@ -530,7 +530,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     @property
     def color(self):
-        settings = qApp.settings()
+        settings = ApplicationBase.instance().settings()
         if self.branchA:
             return settings.commitColorA().name()
 
@@ -543,7 +543,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._branchDir = branchDir
 
         submodules = []
-        if qApp.settings().isCompositeMode():
+        if ApplicationBase.instance().settings().isCompositeMode():
             submodules = self.submodules()
         self.fetcher.setSubmodules(submodules)
 
@@ -666,7 +666,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.acRevert.setEnabled(enabled)
 
         # to avoid bad reset on each repo
-        if enabled and qApp.settings().isCompositeMode():
+        if enabled and ApplicationBase.instance().settings().isCompositeMode():
             # disable only if have submodules
             enabled = not self.submodules()
         self.resetMenu.setEnabled(enabled)
@@ -679,7 +679,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.menu.exec(globalPos)
 
     def updateSettings(self):
-        settings = QApplication.instance().settings()
+        settings = ApplicationBase.instance().settings()
         self.font = settings.logViewFont()
 
         self.lineHeight = QFontMetrics(self.font).height() + self.lineSpace
@@ -702,7 +702,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commit:
             return
 
-        clipboard = QApplication.clipboard()
+        clipboard = ApplicationBase.instance().clipboard()
 
         htmlText = '<html>\n'
         htmlText += '<head>\n'
@@ -746,7 +746,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         abbrev = Git.abbrevCommit(commit.sha1)
         mimeData.setText(abbrev)
 
-        clipboard = QApplication.clipboard()
+        clipboard = ApplicationBase.instance().clipboard()
         clipboard.setMimeData(mimeData)
 
     def copyToLog(self):
@@ -764,7 +764,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         commit["branchA"] = self.branchA
         logWindow = self.logWindow()
         mergeWidget = logWindow.mergeWidget if logWindow else None
-        qApp.postEvent(mergeWidget, CopyConflictCommit(commit))
+        ApplicationBase.instance().postEvent(mergeWidget, CopyConflictCommit(commit))
 
     def __onMarkCommit(self):
         assert self.curIdx >= 0
@@ -903,7 +903,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         logWindow = self.logWindow()
         args = logWindow.getFilterArgs() if logWindow else []
         event = CodeReviewEvent(commit, args)
-        qApp.postEvent(qApp, event)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def __onFindResultAvailable(self):
         if self.needUpdateFindResult:
@@ -1023,9 +1023,10 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.firstFreeLane = 0
 
     def __sha1Url(self, sha1):
-        sha1Url = qApp.settings().commitUrl(qApp.repoName())
+        sha1Url = ApplicationBase.instance().settings().commitUrl(
+            ApplicationBase.instance().repoName())
         if not sha1Url:
-            sha1Url = qApp.settings().commitUrl(None)
+            sha1Url = ApplicationBase.instance().settings().commitUrl(None)
 
         if not sha1Url:
             return sha1
@@ -1035,8 +1036,8 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __filterBug(self, subject):
         text = htmlEscape(subject)
 
-        sett = qApp.settings()
-        repoName = qApp.repoName()
+        sett = ApplicationBase.instance().settings()
+        repoName = ApplicationBase.instance().repoName()
 
         def _toRe(pattern):
             if not pattern:
@@ -1115,7 +1116,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         br = painter.boundingRect(rect, flags, text)
         br.adjust(0, -1, 4, 1)
 
-        pen = QPen(qApp.colorSchema().TagBorder)
+        pen = QPen(ApplicationBase.instance().colorSchema().TagBorder)
         pen.setCosmetic(True)
         painter.setPen(pen)
 
@@ -1152,7 +1153,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         path.closeSubpath()
 
         painter.fillPath(path, color)
-        painter.strokePath(path, QPen(qApp.colorSchema().TagBorder))
+        painter.strokePath(path, QPen(
+            ApplicationBase.instance().colorSchema().TagBorder))
 
         painter.setPen(textColor)
         painter.drawText(br, flags, text)
@@ -1175,7 +1177,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 activeLane = i
                 break
 
-        colorSchema = qApp.colorSchema()
+        colorSchema = ApplicationBase.instance().colorSchema()
         totalColor = len(colorSchema.GraphColors)
         if commit.sha1 == Git.LUC_SHA1:
             activeColor = colorSchema.LucColor
@@ -1245,7 +1247,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         ###########
         # BL(m, h+r), BR(m+r, h+r)
 
-        borderColor = qApp.colorSchema().GraphBorder
+        borderColor = ApplicationBase.instance().colorSchema().GraphBorder
         painter.save()
         lanePen = QPen(borderColor, 2)
 
@@ -1383,8 +1385,10 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         for ref in refs:
             # tag
-            bgColor = qApp.colorSchema().TagColorsBg[ref.type]
-            fgColor = qApp.colorSchema().TagColorsFg[ref.type]
+            bgColor = ApplicationBase.instance(
+            ).colorSchema().TagColorsBg[ref.type]
+            fgColor = ApplicationBase.instance(
+            ).colorSchema().TagColorsFg[ref.type]
 
             br = painter.boundingRect(
                 rc, Qt.AlignLeft | Qt.AlignVCenter, ref.name)
@@ -1620,14 +1624,14 @@ class LogView(QAbstractScrollArea, CommitSource):
             graphPainter = QPainter(graphImage)
             graphPainter.setRenderHints(QPainter.Antialiasing)
 
-        isFullMessage = qApp.settings().isFullCommitMessage()
+        isFullMessage = ApplicationBase.instance().settings().isFullCommitMessage()
 
         def makeMessage(commit):
             if isFullMessage:
                 return commit.comments.replace('\n', ' ')
             return commit.comments.split('\n')[0]
 
-        colorSchema = qApp.colorSchema()
+        colorSchema = ApplicationBase.instance().colorSchema()
 
         painter.setFont(self.font)
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
@@ -1735,7 +1739,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         index = self.lineForPos(event.position())
 
-        mod = qApp.keyboardModifiers()
+        mod = ApplicationBase.instance().keyboardModifiers()
         # no OR combination
         if mod == Qt.ShiftModifier:
             self.marker.mark(self.curIdx, index)
@@ -1836,7 +1840,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if isCache:
             return
 
-        if qApp.settings().isCompositeMode():
+        if ApplicationBase.instance().settings().isCompositeMode():
             self.__onCompositeModeChanged()
 
     def reloadLogs(self):
@@ -1844,7 +1848,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
     def logWindow(self):
-        return qApp.getWindow(WindowType.LogWindow, False)
+        return ApplicationBase.instance().getWindow(WindowType.LogWindow, False)
     
     def submodules(self):
         window = self.logWindow()

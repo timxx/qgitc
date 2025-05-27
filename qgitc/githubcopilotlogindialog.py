@@ -7,6 +7,7 @@ from PySide6.QtCore import QThread, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.ui_githubcopilotlogindialog import Ui_GithubCopilotLoginDialog
 
@@ -79,7 +80,8 @@ class LoginThread(QThread):
 
     def _getAccessCode(self):
         i = 0
-        isMocked = qApp.testing and requests.post.__module__.startswith("tests")
+        isMocked = ApplicationBase.instance(
+        ).testing and requests.post.__module__.startswith("tests")
         while not self.accessToken and not self.isInterruptionRequested():
             self.msleep(50)
             i += 1
@@ -155,7 +157,7 @@ class GithubCopilotLoginDialog(QDialog):
         self.ui.lbUrl.setText(url)
         self.ui.lbUserCode.setText(self._loginThread.userCode)
 
-        clipboard = qApp.clipboard()
+        clipboard = ApplicationBase.instance().clipboard()
         clipboard.setText(self._loginThread.userCode)
 
         QDesktopServices.openUrl(
@@ -172,7 +174,7 @@ class GithubCopilotLoginDialog(QDialog):
             return
 
         self.ui.lbStatus.setText(self.tr("Login successful"))
-        qApp.settings().setGithubCopilotAccessToken(
+        ApplicationBase.instance().settings().setGithubCopilotAccessToken(
             self._loginThread.accessToken)
 
         self.ui.progressBar.setRange(0, 1)
@@ -186,7 +188,7 @@ class GithubCopilotLoginDialog(QDialog):
         if self._loginThread.isRunning():
             self._loginThread.disconnect(self)
             self._loginThread.requestInterruption()
-            if qApp.terminateThread(self._loginThread, 100):
+            if ApplicationBase.instance().terminateThread(self._loginThread, 100):
                 logger.warning("Terminating login thread")
         return super().closeEvent(event)
 

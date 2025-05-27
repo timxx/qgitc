@@ -9,6 +9,7 @@ from PySide6.QtGui import QActionGroup, QIcon
 from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
 from qgitc.aboutdialog import AboutDialog
+from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath, logger
 from qgitc.diffview import PatchViewer
@@ -138,10 +139,10 @@ class MainWindow(StateWindow):
             self.__onAboutTriggered)
 
         self.ui.acAboutQt.triggered.connect(
-            qApp.aboutQt)
+            ApplicationBase.instance().aboutQt)
 
         # settings
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
 
         sett.ignoreWhitespaceChanged.connect(
             self.__onIgnoreWhitespaceChanged)
@@ -150,7 +151,7 @@ class MainWindow(StateWindow):
             self.ui.acVisualizeWhitespace.setChecked)
 
         # application
-        qApp.focusChanged.connect(self.__updateEditMenu)
+        ApplicationBase.instance().focusChanged.connect(self.__updateEditMenu)
 
         self.ui.cbSubmodule.currentIndexChanged.connect(
             self.__onSubmoduleChanged)
@@ -172,7 +173,7 @@ class MainWindow(StateWindow):
         self.ui.menu_Merge.menuAction().setVisible(False)
 
     def __updateEditMenu(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
 
         self.ui.acCopy.setEnabled(False)
         self.ui.acSelectAll.setEnabled(False)
@@ -245,13 +246,13 @@ class MainWindow(StateWindow):
             # let gitview clear the old branches
             repoDir = None
             # clear
-            qApp.updateRepoDir(None)
+            ApplicationBase.instance().updateRepoDir(None)
             self._repoTopDir = None
             if Git.REF_MAP:
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            qApp.updateRepoDir(topLevelDir)
+            ApplicationBase.instance().updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
@@ -285,7 +286,7 @@ class MainWindow(StateWindow):
                 self.gitViewB.currentBranch())
 
     def __onAcPreferencesTriggered(self):
-        settings = qApp.instance().settings()
+        settings = ApplicationBase.instance().settings()
         preferences = Preferences(settings, self)
         preferences.exec()
 
@@ -299,19 +300,19 @@ class MainWindow(StateWindow):
         actions[index].setChecked(True)
 
     def __onAcIgnoreNoneTriggered(self, checked):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         sett.setIgnoreWhitespace(0)
 
     def __onAcIgnoreEOLTriggered(self, checked):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         sett.setIgnoreWhitespace(1)
 
     def __onAcIgnoreAllTriggered(self, checked):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         sett.setIgnoreWhitespace(2)
 
     def __onAcVisualizeWhitespaceTriggered(self, checked):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         sett.setShowWhitespace(checked)
 
     def __onAcCompareTriggered(self, checked):
@@ -321,7 +322,7 @@ class MainWindow(StateWindow):
             self.setMode(MainWindow.LogMode)
 
     def __onAcFullCommitMsgTriggered(self, checked):
-        qApp.settings().setFullCommitMessage(checked)
+        ApplicationBase.instance().settings().setFullCommitMessage(checked)
         self.ui.gitViewA.logView.updateView()
         if self.gitViewB:
             self.gitViewB.logView.updateView()
@@ -329,14 +330,14 @@ class MainWindow(StateWindow):
     def __onAcCompositeModeTriggered(self, checked):
         if checked:
             # use top level repo dir
-            qApp.updateRepoDir(self._repoTopDir)
+            ApplicationBase.instance().updateRepoDir(self._repoTopDir)
         elif self.ui.cbSubmodule.count() > 0 and self.ui.cbSubmodule.currentIndex() > 0:
             newRepo = os.path.join(
                 self._repoTopDir, self.ui.cbSubmodule.currentText())
-            qApp.updateRepoDir(newRepo)
+            ApplicationBase.instance().updateRepoDir(newRepo)
 
         self.ui.cbSubmodule.setEnabled(not checked)
-        qApp.settings().setCompositeMode(checked)
+        ApplicationBase.instance().settings().setCompositeMode(checked)
 
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
@@ -344,17 +345,17 @@ class MainWindow(StateWindow):
         self.filterOpts(opts, self.gitViewB)
 
     def __onCopyTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         assert fw
         fw.copy()
 
     def __onCopyPlainTextTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         assert fw
         fw.copyPlainText()
 
     def __onCopyLogTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         assert fw
         fw.copyToLog()
 
@@ -365,24 +366,24 @@ class MainWindow(StateWindow):
         self.gitViewB.logView.copyToLog()
 
     def __onSelectAllTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         assert fw
         fw.selectAll()
 
     def __onFindTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         assert fw and isinstance(fw, PatchViewer)
         fw.executeFind()
 
     def __onFindNextTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         if isinstance(fw, QLineEdit) and isinstance(fw.parentWidget(), FindWidget):
             fw.parentWidget().findNext()
         else:
             fw.findNext()
 
     def __onFindPreviousTriggered(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         if isinstance(fw, QLineEdit) and isinstance(fw.parentWidget(), FindWidget):
             fw.parentWidget().findPrevious()
         else:
@@ -403,7 +404,7 @@ class MainWindow(StateWindow):
         if os.path.normcase(os.path.normpath(newRepo)) == os.path.normcase(os.path.normpath(Git.REPO_DIR)):
             return
 
-        qApp.updateRepoDir(newRepo)
+        ApplicationBase.instance().updateRepoDir(newRepo)
         self.ui.gitViewA.reloadBranches(
             self.ui.gitViewA.currentBranch())
         if self.gitViewB:
@@ -439,7 +440,7 @@ class MainWindow(StateWindow):
         if not isCacheValid and submodules:
             self.submoduleAvailable.emit(False)
 
-        qApp.settings().setSubmodulesCache(Git.REPO_DIR, submodules)
+        ApplicationBase.instance().settings().setSubmodulesCache(Git.REPO_DIR, submodules)
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()
@@ -449,7 +450,7 @@ class MainWindow(StateWindow):
         self._delayTimer.start(500)
 
     def saveState(self):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         if not sett.rememberWindowState():
             return False
 
@@ -462,7 +463,7 @@ class MainWindow(StateWindow):
         return True
 
     def restoreState(self):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         if not sett.rememberWindowState():
             return False
 
@@ -501,8 +502,8 @@ class MainWindow(StateWindow):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             if self.closeFindWidget():
-                if qApp.lastFocusWidget():
-                    qApp.lastFocusWidget().setFocus()
+                if ApplicationBase.instance().lastFocusWidget():
+                    ApplicationBase.instance().lastFocusWidget().setFocus()
                 return
 
         super().keyPressEvent(event)
@@ -633,14 +634,14 @@ class MainWindow(StateWindow):
         return submodules
 
     def initSubmodulesFromCache(self):
-        submodules = qApp.settings().submodulesCache(Git.REPO_DIR)
+        submodules = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
         if not submodules:
             return
 
         # first, check if cache is valid
         for submodule in submodules:
             if not os.path.exists(os.path.join(Git.REPO_DIR, submodule)):
-                qApp.settings().setSubmodulesCache(Git.REPO_DIR, [])
+                ApplicationBase.instance().settings().setSubmodulesCache(Git.REPO_DIR, [])
                 return
 
         for submodule in submodules:
@@ -652,7 +653,8 @@ class MainWindow(StateWindow):
 
     def __onCommitTriggered(self):
         # we can't import application here, because it will cause circular import
-        qApp.postEvent(qApp, RequestCommitEvent())
+        ApplicationBase.instance().postEvent(
+            ApplicationBase.instance(), RequestCommitEvent())
 
     def reloadLocalChanges(self):
         self.ui.gitViewA.ui.logView.reloadLogs()
@@ -660,7 +662,8 @@ class MainWindow(StateWindow):
             self.gitViewB.ui.logView.reloadLogs()
 
     def _onShowAiAssistant(self):
-        qApp.postEvent(qApp, ShowAiAssistantEvent())
+        ApplicationBase.instance().postEvent(
+            ApplicationBase.instance(), ShowAiAssistantEvent())
 
     def cancel(self, force=False):
         self._delayTimer.stop()
@@ -669,7 +672,7 @@ class MainWindow(StateWindow):
             self.findSubmoduleThread.finished.disconnect(
                 self.__onFindSubmoduleFinished)
             self.findSubmoduleThread.requestInterruption()
-            if force and qApp.terminateThread(self.findSubmoduleThread):
+            if force and ApplicationBase.instance().terminateThread(self.findSubmoduleThread):
                 self._threads.remove(self.findSubmoduleThread)
                 self.findSubmoduleThread.finished.disconnect(self.__onThreadFinished)
                 logger.warning("Terminating find submodule thread")
@@ -680,7 +683,7 @@ class MainWindow(StateWindow):
 
         for thread in self._threads:
             thread.finished.disconnect(self.__onThreadFinished)
-            qApp.terminateThread(thread)
+            ApplicationBase.instance().terminateThread(thread)
         self._threads.clear()
 
     def __onThreadFinished(self):

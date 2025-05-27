@@ -11,6 +11,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPlainTextEdit
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiResponse, AiRole
 from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
 
@@ -44,18 +45,22 @@ class AiChatBotHighlighter(MarkdownHighlighter):
         if self.currentBlockState() == HighlighterState.NoState:
             if self.previousBlockState() == AiChatBotState.SystemBlock:
                 charFormat = QTextCharFormat()
-                charFormat.setForeground(qApp.colorSchema().ErrorText)
+                charFormat.setForeground(
+                    ApplicationBase.instance().colorSchema().ErrorText)
                 self.setFormat(0, len(text), charFormat)
 
     def _setTitleFormat(self, length: int, role: AiRole):
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
         if role == AiRole.User:
-            charFormat.setForeground(qApp.colorSchema().UserBlockFg)
+            charFormat.setForeground(
+                ApplicationBase.instance().colorSchema().UserBlockFg)
         elif role == AiRole.Assistant:
-            charFormat.setForeground(qApp.colorSchema().AssistantBlockFg)
+            charFormat.setForeground(
+                ApplicationBase.instance().colorSchema().AssistantBlockFg)
         elif role == AiRole.System:
-            charFormat.setForeground(qApp.colorSchema().SystemBlockFg)
+            charFormat.setForeground(
+                ApplicationBase.instance().colorSchema().SystemBlockFg)
         self.setFormat(0, length, charFormat)
 
     @staticmethod
@@ -143,7 +148,8 @@ class AiChatbot(QPlainTextEdit):
             if self._isAiBlock(blockType):
                 painter.setBrush(self._aiBlockBgColor(blockType))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(r, self.cornerRadius, self.cornerRadius)
+                painter.drawRoundedRect(
+                    r, self.cornerRadius, self.cornerRadius)
                 painter.setBrush(Qt.NoBrush)
 
             if currBlockType is None and not self._isAiBlock(blockType):
@@ -188,27 +194,38 @@ class AiChatbot(QPlainTextEdit):
 
         return None
 
-    def _drawAiBlock(self, painter: QPainter, blockType: AiChatBotState, blockAreaRect: QRectF, clipTop: bool):
+    def _drawAiBlock(
+            self,
+            painter: QPainter,
+            blockType: AiChatBotState,
+            blockAreaRect: QRectF,
+            clipTop: bool):
         if blockType is None:
             return
 
         if blockType == AiChatBotState.UserBlock:
-            painter.setPen(qApp.colorSchema().UserBlockBorder)
+            painter.setPen(
+                ApplicationBase.instance().colorSchema().UserBlockBorder)
         elif blockType == AiChatBotState.AssistantBlock:
-            painter.setPen(qApp.colorSchema().AssistantBlockBorder)
+            painter.setPen(ApplicationBase.instance(
+            ).colorSchema().AssistantBlockBorder)
         elif blockType == AiChatBotState.SystemBlock:
-            painter.setPen(qApp.colorSchema().SystemBlockBorder)
+            painter.setPen(ApplicationBase.instance(
+            ).colorSchema().SystemBlockBorder)
 
         if clipTop:
             # make the top out of viewport
             blockAreaRect.setTop(blockAreaRect.top() - self.cornerRadius)
 
         blockAreaRect.adjust(1, 1, -1, -1)
-        painter.drawRoundedRect(blockAreaRect, self.cornerRadius, self.cornerRadius)
+        painter.drawRoundedRect(
+            blockAreaRect,
+            self.cornerRadius,
+            self.cornerRadius)
 
     def _aiBlockBgColor(self, blockType):
         if blockType == AiChatBotState.UserBlock:
-            return qApp.colorSchema().UserBlockBg
+            return ApplicationBase.instance().colorSchema().UserBlockBg
         elif blockType == AiChatBotState.AssistantBlock:
-            return qApp.colorSchema().AssistantBlockBg
-        return qApp.colorSchema().SystemBlockBg
+            return ApplicationBase.instance().colorSchema().AssistantBlockBg
+        return ApplicationBase.instance().colorSchema().SystemBlockBg

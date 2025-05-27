@@ -6,6 +6,7 @@ from typing import Callable, Union
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import logger
 
@@ -154,7 +155,7 @@ class SubmoduleExecutor(QObject):
             self._threads.remove(thread)
 
     def _terminateThread(self, thread: SubmoduleThread):
-        if qApp.terminateThread(thread):
+        if ApplicationBase.instance().terminateThread(thread):
             handler = thread.actionHandler()
             handlerName = handler.__name__ if handler else "<None>"
             logger.warning("Terminated submodule thread (%s)", handlerName)

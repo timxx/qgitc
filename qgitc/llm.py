@@ -5,6 +5,7 @@ from threading import Lock
 import requests
 from PySide6.QtCore import QThread, Signal
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 
 
@@ -295,7 +296,7 @@ class LocalLLM(ChatGPTModel):
         if self.nameFetcher and self.nameFetcher.isRunning():
             self.nameFetcher.disconnect(self)
             self.nameFetcher.requestInterruption()
-            if qApp.terminateThread(self.nameFetcher):
+            if ApplicationBase.instance().terminateThread(self.nameFetcher):
                 logger.warning(
                     "Name fetcher thread is still running, terminating it.")
             self.nameFetcher = None

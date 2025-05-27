@@ -2,7 +2,7 @@
 
 import re
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSize, Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.gitutils import Git
 
 
@@ -68,7 +69,7 @@ class BugPatternModel(QAbstractTableModel):
             return data.pattern if col == 0 else data.url
         if col == 0:
             if role == Qt.ForegroundRole:
-                return qApp.palette().windowText() if data.error is None else qApp.colorSchema().ErrorText
+                return ApplicationBase.instance().palette().windowText() if data.error is None else ApplicationBase.instance().colorSchema().ErrorText
             elif role == Qt.ToolTipRole:
                 return data.error
 
@@ -228,14 +229,14 @@ class LinkEditWidget(QWidget):
         if not indexes:
             QMessageBox.information(
                 self,
-                qApp.applicationName(),
+                ApplicationBase.instance().applicationName(),
                 self.tr("Please select one row at least to remove."))
             return
 
         if len(indexes) > 1:
             text = self.tr(
                 "You have selected more than one row, do you really want remove all of them?")
-            r = QMessageBox.question(self, qApp.applicationName(),
+            r = QMessageBox.question(self, ApplicationBase.instance().applicationName(),
                                      text,
                                      QMessageBox.Yes,
                                      QMessageBox.No)

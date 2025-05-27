@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
     QScrollBar,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.findconstants import FindFlags, FindPart
 from qgitc.findwidget import FindWidget
 from qgitc.textcursor import TextCursor
@@ -88,9 +89,9 @@ class TextViewer(QAbstractScrollArea):
         self._findCurPageRange = None
 
         self._settingsTimer = None
-        qApp.settings().bugPatternChanged.connect(
+        ApplicationBase.instance().settings().bugPatternChanged.connect(
             self.delayUpdateSettings)
-        qApp.settings().fallbackGlobalChanged.connect(
+        ApplicationBase.instance().settings().fallbackGlobalChanged.connect(
             self.delayUpdateSettings)
 
         self._similarWordPattern = None
@@ -115,8 +116,8 @@ class TextViewer(QAbstractScrollArea):
 
     @staticmethod
     def reloadBugPattern():
-        repoName = qApp.repoName()
-        sett = qApp.settings()
+        repoName = ApplicationBase.instance().repoName()
+        sett = ApplicationBase.instance().settings()
         patterns = sett.bugPatterns(repoName)
         globalPatterns = sett.bugPatterns(
             None) if sett.fallbackGlobalLinks(repoName) else None
@@ -641,17 +642,19 @@ class TextViewer(QAbstractScrollArea):
         fmt = QTextCharFormat()
 
         def _hasFocus():
-            if qApp.applicationState() != Qt.ApplicationActive:
+            if ApplicationBase.instance().applicationState() != Qt.ApplicationActive:
                 return False
             if self.hasFocus():
                 return True
-            fw = qApp.focusWidget()
+            fw = ApplicationBase.instance().focusWidget()
             return fw and self.isAncestorOf(fw)
 
         if _hasFocus():
-            fmt.setBackground(QBrush(qApp.colorSchema().SelFocus))
+            fmt.setBackground(
+                QBrush(ApplicationBase.instance().colorSchema().SelFocus))
         else:
-            fmt.setBackground(QBrush(qApp.colorSchema().SelNoFocus))
+            fmt.setBackground(
+                QBrush(ApplicationBase.instance().colorSchema().SelNoFocus))
 
         return createFormatRange(start, end - start, fmt)
 
@@ -669,7 +672,7 @@ class TextViewer(QAbstractScrollArea):
 
         result = []
         fmt = QTextCharFormat()
-        fmt.setBackground(qApp.colorSchema().FindResult)
+        fmt.setBackground(ApplicationBase.instance().colorSchema().FindResult)
 
         for i in range(low, len(self._highlightFind)):
             r = self._highlightFind[i]
@@ -690,7 +693,7 @@ class TextViewer(QAbstractScrollArea):
 
         result = []
         fmt = QTextCharFormat()
-        fmt.setBackground(qApp.colorSchema().SimilarWord)
+        fmt.setBackground(ApplicationBase.instance().colorSchema().SimilarWord)
 
         matches = self._similarWordPattern.globalMatch(textLine.text())
         while matches.hasNext():
@@ -845,7 +848,7 @@ class TextViewer(QAbstractScrollArea):
 
         painter.setClipRect(eventRect)
 
-        highlightLineBg = qApp.colorSchema().HighlightLineBg
+        highlightLineBg = ApplicationBase.instance().colorSchema().HighlightLineBg
 
         borderStartLine = -1
         borderRect = QRectF()
@@ -1120,7 +1123,7 @@ class TextViewer(QAbstractScrollArea):
         pos = self.viewport().mapFromGlobal(globalPos)
         topPos = self.viewport().mapTo(self.topLevelWidget(), pos)
         ev = QMouseEvent(QEvent.MouseMove, pos, topPos, globalPos,
-                         Qt.LeftButton, Qt.LeftButton, qApp.keyboardModifiers())
+                         Qt.LeftButton, Qt.LeftButton, ApplicationBase.instance().keyboardModifiers())
         self.mouseMoveEvent(ev)
 
         deltaY = max(pos.y() - visible.top(), visible.bottom() -

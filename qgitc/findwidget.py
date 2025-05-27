@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
 from qgitc.findconstants import FindFlags, FindPart
@@ -225,7 +226,7 @@ class FindWidget(QWidget):
             self._lbStatus.setText(self.tr("No results"))
             palette = self._lbStatus.palette()
             palette.setColor(self._lbStatus.foregroundRole(),
-                             qApp.colorSchema().ErrorText)
+                             ApplicationBase.instance().colorSchema().ErrorText)
             self._lbStatus.setPalette(palette)
 
             pos = self.mapToGlobal(QPoint(0, 10))
@@ -243,7 +244,7 @@ class FindWidget(QWidget):
             color = self.palette().windowText().color()
             self._lbStatus.setText(self.tr("Finding..."))
         else:
-            color = qApp.colorSchema().ErrorText
+            color = ApplicationBase.instance().colorSchema().ErrorText
             self._lbStatus.setText(self.tr("No results"))
 
         palette = self._lbStatus.palette()

@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.aichatbot import AiChatbot
+from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
 from qgitc.githubcopilot import GithubCopilot
@@ -143,7 +144,8 @@ class ChatEdit(QWidget):
             self.setFixedHeight(maxHeight + margin)
 
     def keyPressEvent(self, event):
-        if event.modifiers() == Qt.ControlModifier and event.key() in [Qt.Key_Enter, Qt.Key_Return]:
+        if event.modifiers() == Qt.ControlModifier and event.key() in [
+                Qt.Key_Enter, Qt.Key_Return]:
             self.enterPressed.emit()
 
         return super().keyPressEvent(event)
@@ -202,7 +204,7 @@ class AiChatWidget(QWidget):
         self.cbBots.setMinimumWidth(130)
 
         aiModels: List[AiModelBase] = [
-            LocalLLM(qApp.settings().llmServer(), self),
+            LocalLLM(ApplicationBase.instance().settings().llmServer(), self),
             GithubCopilot(self),
         ]
 
@@ -258,7 +260,7 @@ class AiChatWidget(QWidget):
         self.cbChatMode.currentIndexChanged.connect(
             self._onChatModeChanged)
 
-        if qApp.settings().useLocalLlm():
+        if ApplicationBase.instance().settings().useLocalLlm():
             self.cbBots.setCurrentIndex(0)
         else:
             self.cbBots.setCurrentIndex(1)
@@ -287,7 +289,7 @@ class AiChatWidget(QWidget):
         if self._tokenCalculator:
             self._tokenCalculator.calc_async(None, None)
             self._tokenCalculator.requestInterruption()
-            qApp.terminateThread(self._tokenCalculator)
+            ApplicationBase.instance().terminateThread(self._tokenCalculator)
             self._tokenCalculator = None
 
         for i in range(self.cbBots.count()):
@@ -358,7 +360,7 @@ class AiChatWidget(QWidget):
             sb.setValue(sb.maximum())
             self._adjustingSccrollbar = False
 
-        if response.total_tokens != None:
+        if response.total_tokens is not None:
             self.statusBar.showMessage(
                 f"Totoal tokens {response.total_tokens}")
 
@@ -420,7 +422,7 @@ class AiChatWidget(QWidget):
 
         if self._tokenCalculator is None:
             self._tokenCalculator = LocalLLMTokensCalculator(
-                qApp.settings().llmServer())
+                ApplicationBase.instance().settings().llmServer())
             self._tokenCalculator.start()
             self._tokenCalculator.calcTokensFinished.connect(
                 self._onCalcTokensFinished)
@@ -518,7 +520,8 @@ class AiChatWindow(StateWindow):
     def _fetchDiff(self, submodule: str, files, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
-        data: bytes = Git.commitRawDiff(Git.LCC_SHA1, repoFiles, repoDir=repoDir)
+        data: bytes = Git.commitRawDiff(
+            Git.LCC_SHA1, repoFiles, repoDir=repoDir)
         if not data:
             logger.warning("AiChat: no diff for %s", repoDir)
             return
@@ -527,7 +530,7 @@ class AiChatWindow(StateWindow):
             return
 
         diff = data.decode("utf-8", errors="replace")
-        qApp.postEvent(self, DiffAvailableEvent(diff))
+        ApplicationBase.instance().postEvent(self, DiffAvailableEvent(diff))
 
     def event(self, event: QEvent):
         if event.type() == DiffAvailableEvent.Type:

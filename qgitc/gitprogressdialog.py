@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
 
@@ -92,7 +93,7 @@ class GitProgressDialog(QDialog):
          This method is thread-safe and can be called from any thread. """
 
         # sync to main thread to append
-        qApp.postEvent(self, AppendResultEvent(out, error))
+        ApplicationBase.instance().postEvent(self, AppendResultEvent(out, error))
 
     def _onFinished(self):
         self.finished.emit()
@@ -109,7 +110,8 @@ class GitProgressDialog(QDialog):
                 cursor.movePosition(QTextCursor.End)
 
                 format = QTextCharFormat()
-                format.setForeground(qApp.colorSchema().ErrorText)
+                format.setForeground(
+                    ApplicationBase.instance().colorSchema().ErrorText)
                 cursor.insertText(evt.error + "\n", format)
                 cursor.setCharFormat(QTextCharFormat())
             self._textEdit.moveCursor(QTextCursor.End)
@@ -122,7 +124,7 @@ class GitProgressDialog(QDialog):
         return super().event(evt)
 
     def _onHandleResult(self, *args):
-        qApp.postEvent(self, UpdateProgressEvent())
+        ApplicationBase.instance().postEvent(self, UpdateProgressEvent())
 
         if self._resultHandler:
             self._resultHandler(*args)

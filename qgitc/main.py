@@ -10,6 +10,7 @@ from PySide6.QtCore import QMessageLogContext, Qt, QtMsgType, qInstallMessageHan
 from PySide6.QtWidgets import QStyle
 
 from qgitc.application import Application
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import attachConsole, logger
 from qgitc.excepthandler import ExceptHandler
 from qgitc.gitutils import Git
@@ -93,7 +94,7 @@ def _move_center(window):
     window.setGeometry(QStyle.alignedRect(
         Qt.LeftToRight, Qt.AlignCenter,
         window.size(),
-        qApp.primaryScreen().availableGeometry()))
+        ApplicationBase.instance().primaryScreen().availableGeometry()))
 
 
 def _setup_logging():
@@ -102,7 +103,7 @@ def _setup_logging():
     logFile = os.path.join(logDir, "qgitc.log")
 
     rootLogger = logging.getLogger()
-    rootLogger.setLevel(qApp.settings().logLevel())
+    rootLogger.setLevel(ApplicationBase.instance().settings().logLevel())
 
     handler = logging.handlers.RotatingFileHandler(
         logFile, maxBytes=1 * 1024 * 1024, backupCount=3, encoding="utf-8")
@@ -152,7 +153,7 @@ def _detect_and_fix_repo(filterFile):
     if needFix:
         repoDir = Git.repoTopLevelDir(os.path.dirname(filterFile))
         if repoDir:
-            qApp.updateRepoDir(repoDir)
+            ApplicationBase.instance().updateRepoDir(repoDir)
 
 
 def _do_log(args):

@@ -7,6 +7,7 @@ import sys
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QStyleFactory
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchemaMode
 from qgitc.comboboxitemdelegate import ComboBoxItemDelegate
 from qgitc.commitactioneditdialog import CommitActionEditDialog
@@ -28,7 +29,7 @@ class Preferences(QDialog):
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
         self.settings = settings
-        self._repoName: str = qApp.repoName()
+        self._repoName: str = ApplicationBase.instance().repoName()
 
         model = ToolTableModel(self)
         self.ui.tableView.setModel(model)
@@ -111,14 +112,14 @@ class Preferences(QDialog):
         indexes = tableView.selectionModel().selectedRows()
         if not indexes:
             QMessageBox.information(self,
-                                    qApp.applicationName(),
+                                    ApplicationBase.instance().applicationName(),
                                     self.tr("Please select one row at least to delete."))
             return
 
         if len(indexes) > 1:
             text = self.tr(
                 "You have selected more than one record, do you really want delete all of them?")
-            r = QMessageBox.question(self, qApp.applicationName(),
+            r = QMessageBox.question(self, ApplicationBase.instance().applicationName(),
                                      text,
                                      QMessageBox.Yes,
                                      QMessageBox.No)
@@ -131,7 +132,7 @@ class Preferences(QDialog):
 
     def _onSuffixExists(self, suffix):
         QMessageBox.information(self,
-                                qApp.applicationName(),
+                                ApplicationBase.instance().applicationName(),
                                 self.tr("The suffix you specify is already exists."))
 
     def _onBtnGlobalClicked(self, clicked):
@@ -273,7 +274,7 @@ class Preferences(QDialog):
                 self.ui.cbLogLevel.currentData())
 
         if self.settings.gitBinPath() != GitProcess.GIT_BIN:
-            qApp.postEvent(qApp, GitBinChanged())
+            ApplicationBase.instance().postEvent(ApplicationBase.instance(), GitBinChanged())
 
     def _onTabChanged(self, index):
         tab = self.ui.tabWidget.widget(index)
@@ -330,7 +331,7 @@ class Preferences(QDialog):
 
         index = _findStyle(self.settings.styleName())
         if index == -1:
-            index = _findStyle(qApp.style().name())
+            index = _findStyle(ApplicationBase.instance().style().name())
         if index != -1:
             self.ui.cbStyle.setCurrentIndex(index)
         else:
@@ -372,7 +373,7 @@ class Preferences(QDialog):
 
         value = self.ui.cbStyle.currentText()
         self.settings.setStyleName(value)
-        qApp.setStyle(value)
+        ApplicationBase.instance().setStyle(value)
 
         value = self.ui.cbLanguage.currentData()
         self.settings.setLanguage(value)

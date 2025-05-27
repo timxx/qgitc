@@ -3,6 +3,8 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMainWindow
 
+from qgitc.applicationbase import ApplicationBase
+
 __all__ = ["StateWindow"]
 
 
@@ -13,7 +15,7 @@ class StateWindow(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def saveState(self):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         if not sett.rememberWindowState():
             return False
 
@@ -26,7 +28,7 @@ class StateWindow(QMainWindow):
         return True
 
     def restoreState(self):
-        sett = qApp.instance().settings()
+        sett = ApplicationBase.instance().settings()
         if not sett.rememberWindowState():
             return False
 
@@ -51,7 +53,7 @@ class StateWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
-            sett = qApp.settings()
+            sett = ApplicationBase.instance().settings()
             if sett.quitViaEsc():
                 self.close()
                 return

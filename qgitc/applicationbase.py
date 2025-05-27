@@ -32,6 +32,9 @@ class ApplicationBase(QApplication):
     def repoName(self) -> str: ...
 
     @abc.abstractmethod
+    def updateRepoDir(self, repoDir: str): ...
+
+    @abc.abstractmethod
     def getWindow(self, type: WindowType, ensureCreated=True): ...
 
     @staticmethod

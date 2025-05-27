@@ -9,6 +9,7 @@ from typing import List
 
 from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QThread, Signal
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import (
     Commit,
@@ -84,7 +85,7 @@ class LogsFetcherImpl(DataFetcher):
         if self.repoDir and not self.hasSinceArg(logArgs) and not hasRevisionRange:
             paths = extractFilePaths(logArgs) if logArgs else None
             if not paths:
-                days = qApp.settings().maxCompositeCommitsSince()
+                days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
                 if days > 0:
                     since = date.today() - timedelta(days=days)
                     git_args.append(f"--since={since.isoformat()}")
@@ -410,7 +411,7 @@ class LogsFetcher(QObject):
             self._thread.localChangesAvailable.disconnect(
                 self._onLocalChangesAvailable)
             self._thread.cancel()
-            if force and qApp.terminateThread(self._thread):
+            if force and ApplicationBase.instance().terminateThread(self._thread):
                 self._threads.remove(self._thread)
                 self._thread.finished.disconnect(self._onThreadFinished)
                 logger.warning("Terminating logs fetcher thread")
@@ -421,7 +422,7 @@ class LogsFetcher(QObject):
 
         for thread in self._threads:
             thread.finished.disconnect(self._onThreadFinished)
-            qApp.terminateThread(thread)
+            ApplicationBase.instance().terminateThread(thread)
         self._threads.clear()
 
     def isLoading(self):

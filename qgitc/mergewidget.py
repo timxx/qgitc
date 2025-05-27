@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import dataDirPath, logger
 from qgitc.conflictlog import (
     HAVE_EXCEL_API,
@@ -244,7 +245,7 @@ class MergeWidget(QWidget):
             text = self.tr(
                 "You are resolving this file, please close it first.")
             QMessageBox.information(self,
-                                    qApp.applicationName(),
+                                    ApplicationBase.instance().applicationName(),
                                     text)
             return False
 
@@ -260,7 +261,7 @@ class MergeWidget(QWidget):
     def __onStatusRefresh(self, link):
         if self.process:
             QMessageBox.information(self,
-                                    qApp.applicationName(),
+                                    ApplicationBase.instance().applicationName(),
                                     self.tr("You can't refresh before close the merge window."))
             return
         self.updateList()
@@ -335,7 +336,7 @@ class MergeWidget(QWidget):
             paths += path + "\n"
 
         if paths:
-            qApp.clipboard().setText(paths)
+            ApplicationBase.instance().clipboard().setText(paths)
 
     def __onMenuCopyPath(self):
         self.__doCopyPath()
@@ -370,7 +371,7 @@ class MergeWidget(QWidget):
             text = text.replace("(a)bort", "abort")
 
             msgBox = QMessageBox(
-                QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
+                QMessageBox.Question, ApplicationBase.instance().applicationName(), text, QMessageBox.NoButton, self)
             msgBox.addButton(self.tr("Use &created") if isCreated
                              else self.tr("Use &modified"),
                              QMessageBox.AcceptRole)
@@ -393,7 +394,7 @@ class MergeWidget(QWidget):
             text = text.replace("(a)bort", "abort")
 
             msgBox = QMessageBox(
-                QMessageBox.Question, qApp.applicationName(), text, QMessageBox.NoButton, self)
+                QMessageBox.Question, ApplicationBase.instance().applicationName(), text, QMessageBox.NoButton, self)
             msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
             msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
             msgBox.addButton(QMessageBox.Abort)
@@ -442,7 +443,7 @@ class MergeWidget(QWidget):
             return
 
         if self.resolvedCount == self.model.rowCount():
-            QMessageBox.information(self, qApp.applicationName(),
+            QMessageBox.information(self, ApplicationBase.instance().applicationName(),
                                     self.tr("All resolved!"))
             return
 
@@ -471,13 +472,14 @@ class MergeWidget(QWidget):
         if allFilterResolved:
             text = self.tr(
                 "All filter conflicts are resolved, please clear the filter to resolve the rest.")
-            QMessageBox.information(self, qApp.applicationName(), text)
+            QMessageBox.information(
+                self, ApplicationBase.instance().applicationName(), text)
             return
         elif noEndConflicts:
             text = self.tr(
                 "Resolve reach to the end of list, do you want to resolve from beginning?")
             r = QMessageBox.question(
-                self, qApp.applicationName(), text, QMessageBox.Yes, QMessageBox.No)
+                self, ApplicationBase.instance().applicationName(), text, QMessageBox.Yes, QMessageBox.No)
             if r == QMessageBox.No:
                 return
 
@@ -545,12 +547,12 @@ class MergeWidget(QWidget):
             return
 
         if index.data(StateRole) == STATE_RESOLVED:
-            QMessageBox.information(self, qApp.applicationName(),
+            QMessageBox.information(self, ApplicationBase.instance().applicationName(),
                                     self.tr("This file is already resolved."))
             return
 
         if self.process:
-            QMessageBox.information(self, qApp.applicationName(),
+            QMessageBox.information(self, ApplicationBase.instance().applicationName(),
                                     self.tr("Please resolve current conflicts before start a new one."))
             return
 
@@ -564,7 +566,7 @@ class MergeWidget(QWidget):
         args = ["mergetool", "--no-prompt"]
 
         toolName = None
-        tools = qApp.settings().mergeToolList()
+        tools = ApplicationBase.instance().settings().mergeToolList()
         # ignored case even on Unix platform
         lowercase_file = file.lower()
         for tool in tools:
@@ -574,7 +576,7 @@ class MergeWidget(QWidget):
                     break
 
         if not toolName:
-            toolName = qApp.settings().mergeToolName()
+            toolName = ApplicationBase.instance().settings().mergeToolName()
 
         if toolName:
             args.append("--tool=%s" % toolName)

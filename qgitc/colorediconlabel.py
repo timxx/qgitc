@@ -4,6 +4,8 @@ from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QBrush, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QLabel
 
+from qgitc.applicationbase import ApplicationBase
+
 
 class ColoredIconLabel(QLabel):
 
@@ -39,7 +41,8 @@ class ColoredIconLabel(QLabel):
         p.setPen(Qt.NoPen)
 
         if self._colorSchema:
-            brush = QBrush(getattr(qApp.colorSchema(), self._colorSchema))
+            brush = QBrush(
+                getattr(ApplicationBase.instance().colorSchema(), self._colorSchema))
         else:
             brush = self.palette().windowText()
         p.setCompositionMode(QPainter.CompositionMode_SourceIn)

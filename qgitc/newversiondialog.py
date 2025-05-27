@@ -2,6 +2,8 @@
 
 from PySide6.QtWidgets import QCheckBox, QMessageBox
 
+from qgitc.applicationbase import ApplicationBase
+
 
 class NewVersionDialog(QMessageBox):
 
@@ -24,4 +26,4 @@ class NewVersionDialog(QMessageBox):
         cb.toggled.connect(self._onCbIgnoreToggled)
 
     def _onCbIgnoreToggled(self, checked):
-        qApp.settings().setIgnoredVersion(self._version)
+        ApplicationBase.instance().settings().setIgnoredVersion(self._version)

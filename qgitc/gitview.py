@@ -5,6 +5,7 @@ import re
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QCompleter, QWidget
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import *
 from qgitc.events import BlameEvent
 from qgitc.gitutils import Git
@@ -101,7 +102,8 @@ class GitView(QWidget):
         self.ui.diffView.localChangeRestored.connect(
             self.ui.logView.reloadLogs)
 
-        qApp.settings().compositeModeChanged.connect(self.__onCompositeModeChanged)
+        ApplicationBase.instance().settings().compositeModeChanged.connect(
+            self.__onCompositeModeChanged)
         self.window().submoduleAvailable.connect(self.__onSubmoduleAvailable)
 
     def __updateBranches(self, activeBranch=None):
@@ -310,7 +312,7 @@ class GitView(QWidget):
             filePath = filePath[len(realCommit.repoDir) + 1:]
         repoDir = commitRepoDir(realCommit)
         QCoreApplication.postEvent(
-            qApp, BlameEvent(filePath, rev, repoDir=repoDir))
+            ApplicationBase.instance(), BlameEvent(filePath, rev, repoDir=repoDir))
 
     def setBranchDesc(self, desc):
         self.ui.lbBranch.setText(desc)
@@ -396,5 +398,5 @@ class GitView(QWidget):
 
     def __onSubmoduleAvailable(self, isCache):
         self._logWidgetSizes = self.ui.logWidget.sizes()
-        if qApp.settings().isCompositeMode():
+        if ApplicationBase.instance().settings().isCompositeMode():
             self.ui.logWidget.setSizes([0, 100])

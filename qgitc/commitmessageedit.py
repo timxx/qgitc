@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette, QSyntaxHighlighter, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import QPlainTextEdit
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import findInlineSpans
 from qgitc.textline import Link, TextLine
 from qgitc.textviewer import TextViewer
@@ -19,12 +20,14 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
         self.reloadBugPattern()
 
     def highlightBlock(self, text):
-        if qApp.settings().ignoreCommentLine() and text.startswith("#"):
-            self.setFormat(0, len(text), qApp.colorSchema().Comment)
+        if ApplicationBase.instance().settings().ignoreCommentLine() and text.startswith("#"):
+            self.setFormat(
+                0, len(text), ApplicationBase.instance().colorSchema().Comment)
             return
 
         inlineFmt = QTextCharFormat()
-        inlineFmt.setForeground(qApp.colorSchema().InlineCode)
+        inlineFmt.setForeground(
+            ApplicationBase.instance().colorSchema().InlineCode)
         for start, length in findInlineSpans(text):
             self.setFormat(start, length, inlineFmt)
 
@@ -38,7 +41,8 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
 
         fmt = QTextCharFormat()
         fmt.setUnderlineStyle(QTextCharFormat.SingleUnderline)
-        fmt.setForeground(qApp.palette().color(QPalette.Link))
+        fmt.setForeground(
+            ApplicationBase.instance().palette().color(QPalette.Link))
 
         for link in links:
             self.setFormat(link.start, link.end - link.start, fmt)
@@ -54,7 +58,7 @@ class CommitMessageEdit(QPlainTextEdit):
 
         self._highlighter = CommitMessageHighlighter(self.document())
 
-        sett = qApp.settings()
+        sett = ApplicationBase.instance().settings()
         sett.ignoreCommentLineChanged.connect(
             self._highlighter.rehighlight)
 
@@ -74,17 +78,17 @@ class CommitMessageEdit(QPlainTextEdit):
         super().keyPressEvent(e)
 
     def _isTabToGroupEnabled(self):
-        return qApp.settings().tabToNextGroup()
+        return ApplicationBase.instance().settings().tabToNextGroup()
 
     def _handleTabKey(self, isBackward=False):
         if self.document().isEmpty():
             return
 
-        groupChars = [groupChar.strip() for groupChar in qApp.settings(
+        groupChars = [groupChar.strip() for groupChar in ApplicationBase.instance().settings(
         ).groupChars().split(" ") if len(groupChar.strip()) == 2]
         if not groupChars:
             return
-        ignoreCommentLine = qApp.settings().ignoreCommentLine()
+        ignoreCommentLine = ApplicationBase.instance().settings().ignoreCommentLine()
 
         cursor = self.textCursor()
         firstRound = True

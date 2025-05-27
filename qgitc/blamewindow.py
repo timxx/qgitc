@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QWidget
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.blameview import BlameView
 from qgitc.gotodialog import GotoDialog
 from qgitc.statewindow import StateWindow
@@ -91,7 +92,7 @@ class BlameWindow(StateWindow):
         viewer.gotoLine(gotoDialog.lineNo - 1)
 
     def _onCopy(self):
-        fw = qApp.focusWidget()
+        fw = ApplicationBase.instance().focusWidget()
         if fw == self._view.commitPanel.detailPanel:
             fw.copy()
         elif fw == self._view.commitPanel.logView:
@@ -100,7 +101,7 @@ class BlameWindow(StateWindow):
             self._view.viewer.copy()
 
     def _onSelectAll(self):
-        if qApp.focusWidget() == self._view.commitPanel.detailPanel:
+        if ApplicationBase.instance().focusWidget() == self._view.commitPanel.detailPanel:
             self._view.commitPanel.detailPanel.selectAll()
         else:
             self._view.viewer.selectAll()
