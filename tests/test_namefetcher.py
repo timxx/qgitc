@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import unittest
+
 from qgitc.gitutils import Git
 from qgitc.namefetcher import NameFetcher
 from tests.base import TestBase
@@ -29,3 +31,18 @@ class TestNameFetcher(TestBase):
 
         names = set(sha1Names.values())
         self.assertSetEqual(names, {"test.py", "foo.py"})
+
+
+class TestNameFetcherParse(unittest.TestCase):
+    def setUp(self):
+        self.fetcher = NameFetcher()
+
+    def testInvalidSHA1(self):
+        data = b"abc\nfile.py\n"
+        with self.assertRaises(AssertionError):
+            self.fetcher.parse(data)
+
+    def testMissingSHA1(self):
+        data = b"file.py\n"
+        with self.assertRaises(AssertionError):
+            self.fetcher.parse(data)

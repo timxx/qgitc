@@ -22,11 +22,9 @@ class NameFetcher(DataFetcher):
             if self._isSha1:
                 self._curSha1 = line.decode("utf-8")
                 self._isSha1 = False
-                assert (len(self._curSha1) == 40,
-                        "Invalid SHA1 length: %s" % self._curSha1)
+                assert len(self._curSha1) == 40
             else:
-                assert (self._curSha1 is not None,
-                        "SHA1 is None, but we are not in SHA1 mode")
+                assert self._curSha1 is not None
                 result.append((self._curSha1, line.decode("utf-8")))
                 self._isSha1 = True
                 self._curSha1 = None
