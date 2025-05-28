@@ -53,7 +53,7 @@ class CommitDetailPanel(TextViewer):
         settings = ApplicationBase.instance().settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
-    def showCommit(self, commit: Commit, previous: str = None, file: str = None):
+    def showCommit(self, commit: Commit, previous: str = None):
         super().clear()
 
         text = self.tr("Commit: ") + commit.sha1
@@ -73,10 +73,6 @@ class CommitDetailPanel(TextViewer):
             text = self.tr("Previous: ") + previous
             textLine = LinkTextLine(text, self._font, Link.Sha1)
             self.appendTextLine(textLine)
-
-        if file:
-            text = self.tr("File: ") + file
-            self.appendLine(text)
 
         if commit.comments:
             self.appendLine("")
@@ -212,7 +208,7 @@ class CommitPanel(QSplitter):
         else:
             previous = panel.revisions[i].previous
 
-        self.detailPanel.showCommit(commit, previous, file)
+        self.detailPanel.showCommit(commit, previous)
 
     def _onLogFetchFinished(self):
         panel: RevisionPanel = self._viewer.panel
