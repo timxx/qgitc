@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 from typing import List
 
 from PySide6.QtCore import QSize, Qt, Signal
@@ -25,7 +26,9 @@ from qgitc.common import Commit, dataDirPath
 from qgitc.events import OpenLinkEvent
 from qgitc.gitutils import Git
 from qgitc.logview import LogView
+from qgitc.namefetcher import NameFetcher
 from qgitc.patchviewer import SummaryTextLine
+from qgitc.revisionpanel import RevisionPanel
 from qgitc.textline import Link, LinkTextLine
 from qgitc.textviewer import TextViewer
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
@@ -50,7 +53,7 @@ class CommitDetailPanel(TextViewer):
         settings = ApplicationBase.instance().settings()
         settings.diffViewFontChanged.connect(self.delayUpdateSettings)
 
-    def showCommit(self, commit: Commit, previous: str = None):
+    def showCommit(self, commit: Commit, previous: str = None, file: str = None):
         super().clear()
 
         text = self.tr("Commit: ") + commit.sha1
@@ -70,6 +73,10 @@ class CommitDetailPanel(TextViewer):
             text = self.tr("Previous: ") + previous
             textLine = LinkTextLine(text, self._font, Link.Sha1)
             self.appendTextLine(textLine)
+
+        if file:
+            text = self.tr("File: ") + file
+            self.appendLine(text)
 
         if commit.comments:
             self.appendLine("")
@@ -92,9 +99,17 @@ class CommitDetailPanel(TextViewer):
 class CommitPanel(QSplitter):
 
     linkActivated = Signal(Link)
+    requestBlame = Signal(str, str)
 
     def __init__(self, viewer: BlameSourceViewer, parent=None):
         super().__init__(Qt.Horizontal, parent)
+
+        self._nameFetcher = NameFetcher(self)
+        self._nameFetcher.dataAvailable.connect(
+            self._onNameAvailable)
+
+        self._sha1Names = {}
+        self._curFile = None
 
         self._viewer = viewer
         self.logView = LogView(self)
@@ -112,7 +127,6 @@ class CommitPanel(QSplitter):
             self.linkActivated)
 
     def clear(self):
-        self.logView.clear()
         self.detailPanel.clear()
 
     def showRevision(self, rev: BlameLine):
@@ -128,21 +142,81 @@ class CommitPanel(QSplitter):
         self.logView.blockSignals(False)
 
     def showLogs(self, repoDir: str, file: str, rev: str = None):
-        self.logView.clear()
+        assert (file)
+        # only refresh the log if the file has changed
+        normFile = os.path.normcase(os.path.normpath(file))
+        if self._isFileCached(normFile, repoDir):
+            return
+
+        self._curFile = normFile
+
+        self._sha1Names.clear()
+        self._nameFetcher.cwd = repoDir
+        self._nameFetcher.fetch(file)
+
         args = ["--follow", "--", file]
-        if rev:
-            args.insert(0, rev)
+        self.logView.clear()
+        self.logView.preferSha1 = rev
         self.logView.showLogs(branch=None, branchDir=repoDir, args=args)
 
+    def _isFileCached(self, file: str, repoDir: str):
+        if self._curFile is None:
+            return False
+
+        if self._curFile == file:
+            return True
+
+        normRepoDir = os.path.normcase(os.path.normpath(repoDir))
+        if normRepoDir.endswith(os.sep):
+            normRepoDir = normRepoDir[:-1]
+
+        isAbsFile = os.path.isabs(file)
+        isAbsCurFile = os.path.isabs(self._curFile)
+        if not isAbsFile and isAbsCurFile:
+            if os.path.join(normRepoDir, file) == self._curFile:
+                return True
+        elif isAbsFile and not isAbsCurFile:
+            if os.path.join(normRepoDir, self._curFile) == file:
+                return True
+
+        if isAbsFile and file.startswith(normRepoDir):
+            file = file[len(normRepoDir) + 1:]
+
+        file.replace("\\", "/")
+        if file in self._sha1Names.values():
+            return True
+
+        return False
+
     def _onCommitChanged(self, index: int):
+        # do nothing if the log is still loading
+        if self.logView.fetcher.isLoading():
+            return
+
         self.detailPanel.clear()
         if index == -1:
             return
 
         commit = self.logView.getCommit(index)
-        i = self._viewer.panel.setActiveRevBySha1(commit.sha1)
-        previous = self._viewer.panel.revisions[i].previous if i >= 0 else None
-        self.detailPanel.showCommit(commit, previous)
+        file = self._sha1Names.get(commit.sha1)
+        assert (file is not None)
+
+        panel: RevisionPanel = self._viewer.panel
+        i = panel.setActiveRevBySha1(commit.sha1)
+        if i == -1:
+            previous = None
+            self.requestBlame.emit(commit.sha1, file)
+        else:
+            previous = panel.revisions[i].previous
+
+        self.detailPanel.showCommit(commit, previous, file)
+
+    def _onNameAvailable(self, data: List[tuple]):
+        if not data:
+            return
+
+        for sha1, file in data:
+            self._sha1Names[sha1] = file
 
 
 class HeaderWidget(QWidget):
@@ -297,6 +371,8 @@ class BlameView(QWidget):
         layout.addWidget(self._viewer)
 
         self._commitPanel = CommitPanel(self._viewer, self)
+        self._commitPanel.requestBlame.connect(
+            self._onRequestBlame)
 
         vSplitter = QSplitter(Qt.Vertical, self)
         vSplitter.addWidget(sourceWidget)
@@ -347,6 +423,8 @@ class BlameView(QWidget):
             self._viewer.gotoLine(self._lineNo - 1)
             self._viewer.panel.setActiveRevByLineNumber(self._lineNo - 1)
             self._lineNo = -1
+        elif self._rev:
+            self._viewer.panel.setActiveRevBySha1(self._rev)
         self._viewer.endReading()
         if not self._viewer.hasTextLines() and self._fetcher.errorData:
             QMessageBox.critical(self, self.window().windowTitle(),
@@ -393,3 +471,8 @@ class BlameView(QWidget):
 
     def queryClose(self):
         self._fetcher.cancel()
+
+    def _onRequestBlame(self, sha1: str, file: str):
+        self.blame(file, sha1, repoDir=self._viewer.repoDir)
+        self._viewer.gotoLine(0)
+        self._viewer.panel.setActiveRevBySha1(sha1)
