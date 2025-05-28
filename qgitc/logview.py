@@ -444,6 +444,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.menu = None
         self._branchDir = None
 
+        self._editable = True
+
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
 
@@ -506,21 +508,22 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.tr("Generate &diff"),
             self.__onGenerateDiff)
 
-        self.menu.addSeparator()
-        self.acRevert = self.menu.addAction(
-            self.tr("Re&vert this commit"),
-            self.__onRevertCommit)
-        resetMenu = self.menu.addMenu(self.tr("Re&set to here"))
-        resetMenu.addAction(
-            self.tr("&Soft"),
-            self.__onResetSoft)
-        resetMenu.addAction(
-            self.tr("&Mixed"),
-            self.__onResetMixed)
-        resetMenu.addAction(
-            self.tr("&Hard"),
-            self.__onResetHard)
-        self.resetMenu = resetMenu
+        if self._editable:
+            self.menu.addSeparator()
+            self.acRevert = self.menu.addAction(
+                self.tr("Re&vert this commit"),
+                self.__onRevertCommit)
+            resetMenu = self.menu.addMenu(self.tr("Re&set to here"))
+            resetMenu.addAction(
+                self.tr("&Soft"),
+                self.__onResetSoft)
+            resetMenu.addAction(
+                self.tr("&Mixed"),
+                self.__onResetMixed)
+            resetMenu.addAction(
+                self.tr("&Hard"),
+                self.__onResetHard)
+            self.resetMenu = resetMenu
 
         self.menu.addSeparator()
         self.menu.addAction(self.tr("&Code Review"), self.__onCodeReview)
@@ -663,14 +666,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         if visible:
             self.acCopyToLog.setEnabled(isCommitted and w.isResolving())
 
-        enabled = isCommitted and not not self._branchDir
-        self.acRevert.setEnabled(enabled)
+        if self._editable:
+            enabled = isCommitted and not not self._branchDir
+            self.acRevert.setEnabled(enabled)
 
-        # to avoid bad reset on each repo
-        if enabled and ApplicationBase.instance().settings().isCompositeMode():
-            # disable only if have submodules
-            enabled = not self.submodules()
-        self.resetMenu.setEnabled(enabled)
+            # to avoid bad reset on each repo
+            if enabled and ApplicationBase.instance().settings().isCompositeMode():
+                # disable only if have submodules
+                enabled = not self.submodules()
+            self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
         self.acMarkTo.setVisible(hasMark)
@@ -1854,3 +1858,6 @@ class LogView(QAbstractScrollArea, CommitSource):
     def submodules(self):
         window = self.logWindow()
         return window.submodules() if window else []
+
+    def setEditable(self, editable: bool):
+        self._editable = editable
