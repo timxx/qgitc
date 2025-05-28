@@ -122,12 +122,15 @@ class CommitPanel(QSplitter):
 
         self.logView.currentIndexChanged.connect(
             self._onCommitChanged)
+        self.logView.endFetch.connect(
+            self._onLogFetchFinished)
 
         self.detailPanel.linkActivated.connect(
             self.linkActivated)
 
     def clear(self):
         self.detailPanel.clear()
+        self.logView.setCurrentIndex(-1)
 
     def showRevision(self, rev: BlameLine):
         self.logView.blockSignals(True)
@@ -210,6 +213,14 @@ class CommitPanel(QSplitter):
             previous = panel.revisions[i].previous
 
         self.detailPanel.showCommit(commit, previous, file)
+
+    def _onLogFetchFinished(self):
+        panel: RevisionPanel = self._viewer.panel
+        rev = panel._activeRev
+        if rev:
+            self.logView.switchToCommit(rev)
+        else:
+            self.logView.setCurrentIndex(-1)
 
     def _onNameAvailable(self, data: List[tuple]):
         if not data:

@@ -599,12 +599,13 @@ class LogView(QAbstractScrollArea, CommitSource):
         if index == self.curIdx:
             return
 
+        self.curIdx = index
         if index >= 0 and index < len(self.data):
-            self.curIdx = index
             self.ensureVisible()
-            self.viewport().update()
             self.__ensureChildren(index)
-            self.currentIndexChanged.emit(index)
+
+        self.viewport().update()
+        self.currentIndexChanged.emit(index)
 
     def switchToCommit(self, sha1, delay=False):
         # ignore if sha1 same as current's
