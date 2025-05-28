@@ -10,8 +10,8 @@ class TestNameFetcher(TestBase):
     def doCreateRepo(self):
         super().doCreateRepo()
 
-        Git.checkOutput(["mv", "test.py", "foo.py"])
-        Git.commit("Renamed test.py to foo.py")
+        Git.checkOutput(["mv", "test.py", "foo.py"], repoDir=self.gitDir.name)
+        Git.commit("Renamed test.py to foo.py", repoDir=self.gitDir.name)
 
     def testFetch(self):
         sha1Names = {}
