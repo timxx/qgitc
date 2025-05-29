@@ -569,6 +569,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.logGraph.render(None)
 
     def getCommit(self, index):
+        if index < 0 or index >= len(self.data):
+            return None
         return self.data[index]
 
     def isCurrentCommitted(self):
