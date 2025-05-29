@@ -13,6 +13,7 @@ class ChatGPTModel(AiModelBase):
     def __init__(self, url, parent=None):
         super().__init__(url, parent)
         self.api_token = None
+        self.model = "gpt-4o-mini"
 
     def query(self, params: AiParameters):
         payload = {
@@ -88,8 +89,6 @@ class ChatGPTModel(AiModelBase):
                     break
                 if "role" in delta:
                     role = delta["role"]
-                    if "model" in data:
-                        self.update_name(data["model"])
                 elif "content" in delta:
                     aiResponse = AiResponse()
                     aiResponse.is_delta = True
@@ -107,9 +106,6 @@ class ChatGPTModel(AiModelBase):
             aiResponse = AiResponse()
             aiResponse.total_tokens = usage["total_tokens"]
 
-            if "model" in data:
-                self.update_name(data["model"])
-
             for choice in data["choices"]:
                 message = choice["message"]
                 content = message["content"]
@@ -120,6 +116,3 @@ class ChatGPTModel(AiModelBase):
                 break
 
         self.add_history(self._makeMessage(role, content))
-
-    def update_name(self, name):
-        pass

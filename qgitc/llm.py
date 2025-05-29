@@ -49,8 +49,8 @@ class AiChatMode(Enum):
 
 class AiModelBase(QThread):
     responseAvailable = Signal(AiResponse)
-    nameChanged = Signal()
     serviceUnavailable = Signal()
+    modelsReady = Signal()
 
     def __init__(self, url, parent=None):
         super().__init__(parent)
@@ -86,6 +86,10 @@ class AiModelBase(QThread):
 
     def supportedChatModes(self):
         return [AiChatMode.Chat]
+
+    def models(self) -> List[str]:
+        """Returns a list of model names supported by this AI model."""
+        return []
 
     def cleanup(self):
         pass

@@ -15,7 +15,7 @@ class LocalLLMNameFetcher(QThread):
 
     def __init__(self, url):
         super().__init__()
-        self.name = None
+        self.models = []
         self.url_base = url
 
     def run(self):
@@ -30,11 +30,10 @@ class LocalLLMNameFetcher(QThread):
             model_list = json.loads(response.text)
             if not model_list or "data" not in model_list:
                 return
-            data = model_list["data"]
-            if not data or "id" not in data[0]:
-                return
-
-            self.name = data[0]["id"]
+            for model in model_list["data"]:
+                if not model or "id" not in model:
+                    continue
+                self.models.append(model["id"])
         except:
             pass
 
@@ -42,15 +41,18 @@ class LocalLLMNameFetcher(QThread):
 @AiModelFactory.register("Local LLM")
 class LocalLLM(ChatGPTModel):
 
+    _models = {}
+
     def __init__(self, parent=None):
         url = ApplicationBase.instance().settings().llmServer()
         super().__init__(url, parent)
         self.model = "local-llm"
-        self._name = "Local LLM"
 
-        self.nameFetcher = LocalLLMNameFetcher(self.url_base)
-        self.nameFetcher.finished.connect(self._onFetchFinished)
-        self.nameFetcher.start()
+        if url not in LocalLLM._models:
+            LocalLLM._models[url] = []
+            self.nameFetcher = LocalLLMNameFetcher(self.url_base)
+            self.nameFetcher.finished.connect(self._onFetchFinished)
+            self.nameFetcher.start()
 
     def query(self, params: AiParameters):
         if params.chat_mode == AiChatMode.Chat:
@@ -71,22 +73,16 @@ class LocalLLM(ChatGPTModel):
 
     @property
     def name(self):
-        return self._name
+        return "Local LLM"
 
     def isLocal(self):
         return True
 
-    def update_name(self, name):
-        if self.model != name:
-            self.model = name
-            self._name = self.model
-            self.nameChanged.emit()
-
     def _onFetchFinished(self):
-        if self.nameFetcher.name:
-            self.update_name(self.nameFetcher.name)
+        LocalLLM._models[self.url_base] = self.nameFetcher.models
         self.nameFetcher.deleteLater()
         self.nameFetcher = None
+        self.modelsReady.emit()
 
     def supportedChatModes(self):
         return [AiChatMode.Chat,
@@ -96,6 +92,9 @@ class LocalLLM(ChatGPTModel):
                 AiChatMode.CodeFix,
                 AiChatMode.CodeExplanation
                 ]
+
+    def models(self):
+        return LocalLLM._models.get(self.url_base, [])
 
     def cleanup(self):
         if self.nameFetcher and self.nameFetcher.isRunning():

@@ -180,9 +180,8 @@ class AiChatWidget(QWidget):
         self.sbMaxTokens.setRange(1, 0x7FFFFFFF)
         self.sbMaxTokens.setSingleStep(500)
         self.sbMaxTokens.setValue(4096)
-        self.sbMaxTokens.setSizePolicy(
-            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         self.sbMaxTokens.setToolTip(self.tr("Max tokens to generate"))
+        self.sbMaxTokens.setFixedWidth(80)
         hlayout.addWidget(self.sbMaxTokens)
 
         hlayout.addWidget(QLabel(self.tr("Temperature"), self))
@@ -194,7 +193,7 @@ class AiChatWidget(QWidget):
 
         self.cbBots = QComboBox(self)
         self.cbBots.setEditable(False)
-        self.cbBots.setMinimumWidth(130)
+        self.cbBots.setMinimumWidth(120)
 
         aiModels: List[AiModelBase] = [
             model(self) for model in AiModelProvider.models()]
@@ -212,9 +211,18 @@ class AiChatWidget(QWidget):
             if model.name == preferModelName:
                 self.cbBots.setCurrentIndex(i)
 
+            model.modelsReady.connect(
+                self._onModelsReady)
+
         self.stackWidget.setCurrentIndex(self.cbBots.currentIndex())
 
         hlayout.addWidget(self.cbBots)
+
+        self.cbModelNames = QComboBox(self)
+        self.cbModelNames.setEditable(False)
+        self.cbModelNames.setMinimumWidth(130)
+
+        hlayout.addWidget(self.cbModelNames)
 
         self.cbChatMode = QComboBox(self)
         self.cbChatMode.setEditable(False)
@@ -250,6 +258,8 @@ class AiChatWidget(QWidget):
             self._onModelChanged)
         self.cbChatMode.currentIndexChanged.connect(
             self._onChatModeChanged)
+
+        self._onModelChanged(self.cbBots.currentIndex())
 
         QWidget.setTabOrder(self.usrInput, self.btnSend)
         QWidget.setTabOrder(self.btnSend, self.btnClear)
@@ -373,7 +383,7 @@ class AiChatWidget(QWidget):
         messages: AiChatbot = self.stackWidget.widget(index)
         messages.appendServiceUnavailable()
 
-    def _onModelChanged(self, index):
+    def _onModelChanged(self, index: int):
         self.stackWidget.setCurrentIndex(index)
 
         model = self.currentChatModel()
@@ -385,6 +395,8 @@ class AiChatWidget(QWidget):
 
         self._initChatMode(model)
         self._onChatModeChanged(self.cbChatMode.currentIndex())
+
+        self._updateModelNames(model)
 
     def _initChatMode(self, model: AiModelBase):
         modes = model.supportedChatModes()
@@ -426,11 +438,6 @@ class AiChatWidget(QWidget):
             sb: QScrollBar = self.messages.verticalScrollBar()
             self._disableAutoScroll = sb.value() != sb.maximum()
 
-    def _onModelNameChanged(self):
-        model: AiModelBase = self.sender()
-        index = self.cbBots.findData(model)
-        self.cbBots.setItemText(index, model.name)
-
     def _onCalcTokensFinished(self, tokens):
         self.lbTokens.setText(f"{tokens} tokens")
 
@@ -463,6 +470,16 @@ class AiChatWidget(QWidget):
 
     def codeReviewForDiff(self, diff: str):
         self._doRequest(diff, AiChatMode.CodeReview)
+
+    def _updateModelNames(self, model: AiModelBase):
+        self.cbModelNames.clear()
+        for name in model.models():
+            self.cbModelNames.addItem(name)
+
+    def _onModelsReady(self):
+        model: AiModelBase = self.sender()
+        if model == self.currentChatModel():
+            self._updateModelNames(model)
 
 
 class DiffAvailableEvent(QEvent):
