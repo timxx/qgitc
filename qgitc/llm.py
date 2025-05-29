@@ -2,6 +2,7 @@
 
 from enum import Enum
 from threading import Lock
+from typing import List
 
 from PySide6.QtCore import QThread, Signal
 
@@ -88,3 +89,30 @@ class AiModelBase(QThread):
 
     def cleanup(self):
         pass
+
+
+class AiModelFactory:
+
+    _registry = {}
+
+    @classmethod
+    def register(cls, modelName: str):
+        def decorator(modelClass):
+            cls._registry[modelName] = modelClass
+            return modelClass
+        return decorator
+
+    @classmethod
+    def models(cls):
+        return list(cls._registry.values())
+
+    @classmethod
+    def modelNames(cls) -> List[str]:
+        return list(cls._registry.keys())
+
+    @classmethod
+    def create(cls, modelName: str, *args) -> AiModelBase:
+        modelClass = cls._registry.get(modelName, None)
+        if modelClass:
+            return modelClass(*args)
+        raise ValueError(f"Model {modelName} is not registered.")

@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.aichatwindow import AiChatWidget
+from qgitc.llm import AiModelBase
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
 from tests.mocklocalllm import MockLocalLLM
@@ -24,11 +25,13 @@ class TestAiChat(TestBase):
 
     def testBots(self):
         self.assertEqual(2, self.chatWidget.cbBots.count())
-        self.assertTrue(self.chatWidget.cbBots.itemData(0).isLocal())
-        self.assertFalse(self.chatWidget.cbBots.itemData(1).isLocal())
 
     def testLocalLLM(self):
-        self.chatWidget.cbBots.setCurrentIndex(0)
+        for i in range(self.chatWidget.cbBots.count()):
+            model: AiModelBase = self.chatWidget.cbBots.itemData(i)
+            if model.isLocal():
+                self.chatWidget.cbBots.setCurrentIndex(i)
+                break
         model = self.chatWidget.currentChatModel()
         self.assertTrue(model.isLocal())
 

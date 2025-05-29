@@ -305,11 +305,11 @@ class Settings(QSettings):
     def setLlmServer(self, server):
         self.setValue("llmServer", server)
 
-    def useLocalLlm(self):
-        return self.value("useLocalLlm", False, type=bool)
+    def preferLlmModel(self):
+        return self.value("preferLlmModel", "GitHub Copilot")
 
-    def setUseLocalLlm(self, use: bool):
-        self.setValue("useLocalLlm", use)
+    def setPreferLlmModel(self, model: str):
+        self.setValue("preferLlmModel", model)
 
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)

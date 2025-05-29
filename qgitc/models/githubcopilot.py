@@ -9,7 +9,14 @@ from PySide6.QtCore import QEventLoop
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
+from qgitc.llm import (
+    AiChatMode,
+    AiModelBase,
+    AiModelFactory,
+    AiParameters,
+    AiResponse,
+    AiRole,
+)
 from qgitc.settings import Settings
 
 CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions. Please focus only on the modified sections of the code. If you notice any serious issues in the old code that could impact functionality or performance, feel free to mention them. Otherwise, concentrate on providing feedback and suggestions for the changes made.
@@ -22,6 +29,7 @@ Please respond in {language}:
 """
 
 
+@AiModelFactory.register("GitHub Copilot")
 class GithubCopilot(AiModelBase):
 
     def __init__(self, parent=None):

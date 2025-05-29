@@ -9,7 +9,7 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, logger, toSubmodulePath
 from qgitc.gitutils import Git
 from qgitc.llm import AiModelBase, AiParameters, AiResponse
-from qgitc.models.githubcopilot import GithubCopilot
+from qgitc.llmprovider import AiModelProvider
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
 SYSTEM_PROMPT = \
@@ -134,7 +134,7 @@ class AiCommitMessage(QObject):
         params.max_tokens = 4096
         params.prompt = REFINE_MESSAGE_PROMPT.format(message=message)
 
-        self._aiModel = GithubCopilot(self)
+        self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
         self._aiModel.queryAsync(params)
@@ -226,8 +226,7 @@ class AiCommitMessage(QObject):
 
         logger.debug("AI commit message prompt: %s", params.prompt)
 
-        # TODO: add model provider to provide models
-        self._aiModel = GithubCopilot(self)
+        self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
         self._aiModel.finished.connect(self._onThreadFinished)

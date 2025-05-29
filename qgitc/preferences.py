@@ -16,6 +16,7 @@ from qgitc.events import GitBinChanged
 from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.gitutils import Git, GitProcess
 from qgitc.linkeditdialog import LinkEditDialog
+from qgitc.llm import AiModelFactory
 from qgitc.settings import Settings
 from qgitc.tooltablemodel import ToolTableModel
 from qgitc.ui_preferences import *
@@ -484,20 +485,27 @@ class Preferences(QDialog):
                 error)
 
     def _initLLMTab(self):
-        self.ui.cbUseLocalLLM.setChecked(self.settings.useLocalLlm())
         self.ui.leServerUrl.setText(self.settings.llmServer())
         token = self.settings.githubCopilotAccessToken()
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
+
+        models = AiModelFactory.modelNames()
+        prefer = self.settings.preferLlmModel()
+        for i, model in enumerate(models):
+            self.ui.cbModels.addItem(model)
+            if model == prefer:
+                self.ui.cbModels.setCurrentIndex(i)
 
         exts = self.settings.aiExcludedFileExtensions()
         if exts:
             self.ui.leExcludedFiles.setText(", ".join(exts))
 
     def _saveLLMTab(self):
-        self.settings.setUseLocalLlm(
-            self.ui.cbUseLocalLLM.isChecked())
         self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
+
+        model = self.ui.cbModels.currentText()
+        self.settings.setPreferLlmModel(model)
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):

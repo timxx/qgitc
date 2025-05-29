@@ -28,8 +28,7 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
 from qgitc.gitutils import Git
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
-from qgitc.models.githubcopilot import GithubCopilot
-from qgitc.models.localllm import LocalLLM
+from qgitc.llmprovider import AiModelProvider
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
@@ -198,14 +197,10 @@ class AiChatWidget(QWidget):
         self.cbBots.setMinimumWidth(130)
 
         aiModels: List[AiModelBase] = [
-            LocalLLM(ApplicationBase.instance().settings().llmServer(), self),
-            GithubCopilot(self),
-        ]
+            model(self) for model in AiModelProvider.models()]
+        preferModelName = ApplicationBase.instance().settings().preferLlmModel()
 
-        aiModels[0].nameChanged.connect(
-            self._onModelNameChanged)
-
-        for model in aiModels:
+        for i, model in enumerate(aiModels):
             self.cbBots.addItem(model.name, model)
             tb = AiChatbot(self)
             self.stackWidget.addWidget(tb)
@@ -214,6 +209,8 @@ class AiChatWidget(QWidget):
             model.responseAvailable.connect(self._onMessageReady)
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
+            if model.name == preferModelName:
+                self.cbBots.setCurrentIndex(i)
 
         self.stackWidget.setCurrentIndex(self.cbBots.currentIndex())
 
@@ -253,11 +250,6 @@ class AiChatWidget(QWidget):
             self._onModelChanged)
         self.cbChatMode.currentIndexChanged.connect(
             self._onChatModeChanged)
-
-        if ApplicationBase.instance().settings().useLocalLlm():
-            self.cbBots.setCurrentIndex(0)
-        else:
-            self.cbBots.setCurrentIndex(1)
 
         QWidget.setTabOrder(self.usrInput, self.btnSend)
         QWidget.setTabOrder(self.btnSend, self.btnClear)

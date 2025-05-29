@@ -7,7 +7,7 @@ from PySide6.QtCore import QThread
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
-from qgitc.llm import AiChatMode, AiParameters
+from qgitc.llm import AiChatMode, AiModelFactory, AiParameters
 from qgitc.models.chatgpt import ChatGPTModel
 
 
@@ -39,9 +39,11 @@ class LocalLLMNameFetcher(QThread):
             pass
 
 
+@AiModelFactory.register("Local LLM")
 class LocalLLM(ChatGPTModel):
 
-    def __init__(self, url, parent=None):
+    def __init__(self, parent=None):
+        url = ApplicationBase.instance().settings().llmServer()
         super().__init__(url, parent)
         self.model = "local-llm"
         self._name = "Local LLM"
@@ -63,6 +65,8 @@ class LocalLLM(ChatGPTModel):
             self.url = f"{self.url_base}/code/fix"
         elif params.chat_mode == AiChatMode.CodeExplanation:
             self.url = f"{self.url_base}/code/explanation"
+        else:
+            self.url = f"{self.url_base}/chat/completions"
         super().query(params)
 
     @property
