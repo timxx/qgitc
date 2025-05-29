@@ -270,7 +270,10 @@ class GithubCopilot(AiModelBase):
         if GithubCopilot._models is not None:
             return
 
-        if not self._token or not GithubCopilot.isTokenValid(self._token):
+        if not self._token:
+            return
+
+        if not GithubCopilot.isTokenValid(self._token):
             self.updateToken()
             return
 
