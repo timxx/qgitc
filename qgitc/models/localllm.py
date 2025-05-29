@@ -31,9 +31,10 @@ class LocalLLMNameFetcher(QThread):
             if not model_list or "data" not in model_list:
                 return
             for model in model_list["data"]:
-                if not model or "id" not in model:
+                id = model.get("id")
+                if not id:
                     continue
-                self.models.append(model["id"])
+                self.models.append((id, id))
         except:
             pass
 
@@ -53,6 +54,8 @@ class LocalLLM(ChatGPTModel):
             self.nameFetcher = LocalLLMNameFetcher(self.url_base)
             self.nameFetcher.finished.connect(self._onFetchFinished)
             self.nameFetcher.start()
+        else:
+            self.nameFetcher = None
 
     def query(self, params: AiParameters):
         if params.chat_mode == AiChatMode.Chat:

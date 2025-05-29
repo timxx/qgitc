@@ -2,7 +2,7 @@
 
 from enum import Enum
 from threading import Lock
-from typing import List
+from typing import List, Tuple
 
 from PySide6.QtCore import QThread, Signal
 
@@ -87,8 +87,10 @@ class AiModelBase(QThread):
     def supportedChatModes(self):
         return [AiChatMode.Chat]
 
-    def models(self) -> List[str]:
-        """Returns a list of model names supported by this AI model."""
+    def models(self) -> List[Tuple[str, str]]:
+        """Returns a list of model names supported by this AI model.
+        Each tuple contains (model_id, model_name).
+        """
         return []
 
     def cleanup(self):

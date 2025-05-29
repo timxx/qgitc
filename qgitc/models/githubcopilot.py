@@ -4,7 +4,7 @@ import json
 import time
 
 import requests
-from PySide6.QtCore import QEventLoop
+from PySide6.QtCore import QEventLoop, QThread
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
@@ -29,14 +29,61 @@ Please respond in {language}:
 """
 
 
+def _makeHeaders(token: str):
+    return {
+        "authorization": f"Bearer {token}",
+        "copilot-integration-id": "vscode-chat",
+        "editor-plugin-version": "copilot-chat/0.24.1",
+        "editor-version": "vscode/1.97.2",
+        "openai-intent": "conversation-other",
+        "user-agent": "GithubCopilotChat/0.24.1",
+    }
+
+
+class ModelsFetcher(QThread):
+
+    def __init__(self, token: str, parent=None):
+        super().__init__(parent)
+        self.models = []
+        self._token = token
+
+    def run(self):
+        try:
+            url = "https://api.business.githubcopilot.com/models"
+            headers = _makeHeaders(self._token)
+            response = requests.get(url, headers=headers)
+            if not response.ok:
+                return
+            if self.isInterruptionRequested():
+                return
+
+            model_list = json.loads(response.text)
+            if not model_list or "data" not in model_list:
+                return
+            for model in model_list["data"]:
+                id = model.get("id")
+                if not id:
+                    continue
+                if not model.get("model_picker_enabled", True):
+                    continue
+                name = model.get("name")
+                self.models.append((id, name or id))
+        except:
+            pass
+
+
 @AiModelFactory.register("GitHub Copilot")
 class GithubCopilot(AiModelBase):
+
+    _models = None
 
     def __init__(self, parent=None):
         super().__init__(None, parent)
         self._token = ApplicationBase.instance().settings().githubCopilotToken()
 
         self._eventLoop = None
+        self._modelFetcher: ModelsFetcher = None
+        self._updateModels()
 
     def query(self, params: AiParameters):
         if not self._token or not GithubCopilot.isTokenValid(self._token):
@@ -83,14 +130,7 @@ class GithubCopilot(AiModelBase):
     def _doQuery(self, payload, stream=True):
         response = requests.post(
             "https://api.business.githubcopilot.com/chat/completions",
-            headers={
-                "authorization": f"Bearer {self._token}",
-                "copilot-integration-id": "vscode-chat",
-                "editor-plugin-version": "copilot-chat/0.24.1",
-                "editor-version": "vscode/1.97.2",
-                "openai-intent": "conversation-other",
-                "user-agent": "GithubCopilotChat/0.24.1",
-            },
+            headers=_makeHeaders(self._token),
             json=payload,
             stream=stream, verify=True)
 
@@ -179,6 +219,7 @@ class GithubCopilot(AiModelBase):
         if not self._token:
             return False
         settings.setGithubCopilotToken(self._token)
+        self._updateModels()
         return True
 
     @staticmethod
@@ -221,3 +262,41 @@ class GithubCopilot(AiModelBase):
 
     def supportedChatModes(self):
         return [AiChatMode.Chat, AiChatMode.CodeReview]
+
+    def _updateModels(self):
+        if self._modelFetcher:
+            return
+
+        if GithubCopilot._models is not None:
+            return
+
+        if not self._token or not GithubCopilot.isTokenValid(self._token):
+            self.updateToken()
+            return
+
+        GithubCopilot._models = []
+
+        self._modelFetcher = ModelsFetcher(self._token, self)
+        self._modelFetcher.finished.connect(self._onModelsAvailable)
+        self._modelFetcher.start()
+
+    def _onModelsAvailable(self):
+        fetcher: ModelsFetcher = self.sender()
+        GithubCopilot._models = fetcher.models
+        self._modelFetcher = None
+        self.modelsReady.emit()
+
+    def models(self):
+        if GithubCopilot._models is None:
+            return []
+
+        return GithubCopilot._models
+
+    def cleanup(self):
+        if self._modelFetcher and self._modelFetcher.isRunning():
+            self._modelFetcher.disconnect(self)
+            self._modelFetcher.requestInterruption()
+            if ApplicationBase.instance().terminateThread(self._modelFetcher):
+                logger.warning(
+                    "Model fetcher thread is still running, terminating it.")
+            self._modelFetcher = None

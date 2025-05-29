@@ -473,8 +473,8 @@ class AiChatWidget(QWidget):
 
     def _updateModelNames(self, model: AiModelBase):
         self.cbModelNames.clear()
-        for name in model.models():
-            self.cbModelNames.addItem(name)
+        for id, name in model.models():
+            self.cbModelNames.addItem(name, id)
 
     def _onModelsReady(self):
         model: AiModelBase = self.sender()
