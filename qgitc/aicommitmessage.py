@@ -20,24 +20,20 @@ You excel in interpreting the purpose behind code changes to craft succinct, cle
 1. Analyze the CODE CHANGES thoroughly to understand what's been modified.
 2. Identify the purpose of the changes to answer the *why* for the commit messages, also considering the optionally provided RECENT USER COMMITS.
 3. Review the provided RECENT REPOSITORY COMMITS to identify established commit message conventions. Focus on the format and style, ignoring commit-specific details like refs, tags, and authors.
-4. Generate a thoughtful and succinct commit message for the given CODE CHANGES. It MUST follow the the established writing conventions. 5. Remove any meta information like issue references, tags, or author names from the commit message. The developer will add them.
-6. Now only show your message, wrapped with a single markdown ```text codeblock! Do not provide any explanations or details
-Follow Microsoft content policies.
-Avoid content that violates copyrights.
-If you are asked to generate content that is harmful, hateful, racist, sexist, lewd, violent, or completely irrelevant to software engineering, only respond with ""Sorry, I can't assist with that.""
-Keep your answers short and impersonal."""
+4. Generate a thoughtful and succinct commit message for the given CODE CHANGES. It MUST follow the the established writing conventions.
+5. Remove any meta information like issue references, tags, or author names from the commit message. The developer will add them.
+6. Now only show your message, wrapped with a single markdown ```text codeblock! Do not provide any explanations or details.
+"""
 
 
 COMMIT_PROMPT = \
     """<user-commits>
 # RECENT USER COMMITS (For reference only, do not copy!):
 {user_commits}
-
 </user-commits>
 <recent-commits>
 # RECENT REPOSITORY COMMITS (For reference only, do not copy!):
 {recent_commits}
-
 </recent-commits>
 <changes>
 # CODE CHANGES:
@@ -227,6 +223,8 @@ class AiCommitMessage(QObject):
             recent_commits=AiCommitMessage._makeLogs(self._repoLogs),
             code_changes="\n".join(self._diffs)
         )
+
+        logger.debug("AI commit message prompt: %s", params.prompt)
 
         # TODO: add model provider to provide models
         self._aiModel = GithubCopilot(self)
