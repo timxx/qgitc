@@ -193,7 +193,7 @@ class AiChatWidget(QWidget):
 
         self.cbBots = QComboBox(self)
         self.cbBots.setEditable(False)
-        self.cbBots.setMinimumWidth(120)
+        self.cbBots.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
         aiModels: List[AiModelBase] = [
             model(self) for model in AiModelProvider.models()]
@@ -221,6 +221,7 @@ class AiChatWidget(QWidget):
         self.cbModelNames = QComboBox(self)
         self.cbModelNames.setEditable(False)
         self.cbModelNames.setMinimumWidth(130)
+        self.cbModelNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
         hlayout.addWidget(self.cbModelNames)
 
