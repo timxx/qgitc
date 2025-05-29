@@ -13,13 +13,12 @@ class ChatGPTModel(AiModelBase):
     def __init__(self, url, parent=None):
         super().__init__(url, parent)
         self.api_token = None
-        self.model = "gpt-4o-mini"
 
     def query(self, params: AiParameters):
         payload = {
             "frequency_penalty": 0,
             "max_tokens": params.max_tokens,
-            "model": self.model,
+            "model": params.model or "gpt-4.1",
             "presence_penalty": 0,
             "temperature": params.temperature,
             "stream": params.stream

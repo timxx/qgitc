@@ -26,15 +26,16 @@ class AiResponse:
 class AiParameters:
 
     def __init__(self):
-        self.prompt = None
-        self.sys_prompt = None
-        self.temperature = None
+        self.prompt: str = None
+        self.sys_prompt: str = None
+        self.temperature: float = None
         self.top_p = None
         self.stream = True
         self.max_tokens = None
         self.chat_mode = None
         self.fill_point = None
         self.language = None
+        self.model: str = None
 
 
 class AiChatMode(Enum):

@@ -94,7 +94,7 @@ class GithubCopilot(AiModelBase):
                 return
 
         payload = {
-            "model": "gpt-4o-mini",  # TODO: allow user to select model
+            "model": params.model or "gpt-4.1",
             "temperature": params.temperature,
             "top_p": 1,
             "max_tokens": params.max_tokens,

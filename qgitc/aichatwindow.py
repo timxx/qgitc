@@ -312,6 +312,7 @@ class AiChatWidget(QWidget):
         params.max_tokens = self.sbMaxTokens.value()
         params.chat_mode = chatMode
         params.language = language
+        params.model = self.cbModelNames.currentData()
 
         if params.chat_mode == AiChatMode.Infilling:
             params.fill_point = self.usrInput.textCursor().position()

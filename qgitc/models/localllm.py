@@ -47,7 +47,6 @@ class LocalLLM(ChatGPTModel):
     def __init__(self, parent=None):
         url = ApplicationBase.instance().settings().llmServer()
         super().__init__(url, parent)
-        self.model = "local-llm"
 
         if url not in LocalLLM._models:
             LocalLLM._models[url] = []
