@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from unittest.mock import patch
+
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
@@ -73,3 +75,18 @@ class TestAiChat(TestBase):
             self.assertEqual(4, chatbot.blockCount())
             self.assertEqual("This is a mock response",
                              chatbot.document().lastBlock().text())
+
+
+class TestAiChatFetchModels(TestBase):
+
+    def doCreateRepo(self):
+        pass
+
+    @patch("qgitc.models.githubcopilot.GithubCopilot.updateToken")
+    def testGitHubCopilot(self, mock_update_token):
+        window = self.app.getWindow(WindowType.AiAssistant)
+        window.show()
+        QTest.qWaitForWindowExposed(window)
+        self.wait(50)
+        self.assertFalse(mock_update_token.called)
+        window.close()
