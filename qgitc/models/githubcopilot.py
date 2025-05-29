@@ -78,7 +78,7 @@ class GithubCopilot(AiModelBase):
 
     @property
     def name(self):
-        return "Github Copilot"
+        return "GitHub Copilot"
 
     def _doQuery(self, payload, stream=True):
         response = requests.post(
