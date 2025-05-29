@@ -7,9 +7,9 @@ from PySide6.QtCore import QEvent, QObject, Signal
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, logger, toSubmodulePath
-from qgitc.githubcopilot import GithubCopilot
 from qgitc.gitutils import Git
 from qgitc.llm import AiModelBase, AiParameters, AiResponse
+from qgitc.models.githubcopilot import GithubCopilot
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
 SYSTEM_PROMPT = \

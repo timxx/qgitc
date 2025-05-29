@@ -26,16 +26,10 @@ from qgitc.aichatbot import AiChatbot
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
-from qgitc.githubcopilot import GithubCopilot
 from qgitc.gitutils import Git
-from qgitc.llm import (
-    AiChatMode,
-    AiModelBase,
-    AiParameters,
-    AiResponse,
-    AiRole,
-    LocalLLM,
-)
+from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
+from qgitc.models.githubcopilot import GithubCopilot
+from qgitc.models.localllm import LocalLLM
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
 

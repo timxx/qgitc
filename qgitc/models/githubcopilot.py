@@ -4,7 +4,7 @@ import json
 import time
 
 import requests
-from PySide6.QtCore import QEventLoop, QLocale
+from PySide6.QtCore import QEventLoop
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger

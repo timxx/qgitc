@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import subprocess
 from enum import Enum
 from typing import Callable, Dict, List, Tuple
 
