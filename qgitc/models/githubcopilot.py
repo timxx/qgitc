@@ -22,14 +22,15 @@ Please respond in {language}:
 """
 
 
-def _makeHeaders(token: str):
+def _makeHeaders(token: str, intent: str = "conversation-other"):
     return {
         "authorization": f"Bearer {token}",
         "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.24.1",
+        "editor-plugin-version": "copilot-chat/0.27.2",
         "editor-version": "vscode/1.97.2",
-        "openai-intent": "conversation-other",
-        "user-agent": "GithubCopilotChat/0.24.1",
+        "openai-intent": intent,
+        "user-agent": "GithubCopilotChat/0.27.2",
+        "x-github-api-version": "2025-05-01",
     }
 
 
@@ -46,12 +47,13 @@ class ModelsFetcher(QThread):
         super().__init__(parent)
         self.models = []
         self.capabilities = {}
+        self.defaultModel = None
         self._token = token
 
     def run(self):
         try:
             url = "https://api.business.githubcopilot.com/models"
-            headers = _makeHeaders(self._token)
+            headers = _makeHeaders(self._token, "model-access")
             response = requests.get(url, headers=headers)
             if not response.ok:
                 return
@@ -81,6 +83,9 @@ class ModelsFetcher(QThread):
 
                 name = model.get("name")
                 self.models.append((id, name or id))
+
+                if model.get("is_chat_default", False):
+                    self.defaultModel = id
         except:
             pass
 
@@ -92,7 +97,7 @@ class GithubCopilot(AiModelBase):
     _capabilities = {}
 
     def __init__(self, model: str = None, parent=None):
-        super().__init__(None, model or "gpt-4.1", parent)
+        super().__init__(None, model, parent)
         self._token = ApplicationBase.instance().settings().githubCopilotToken()
 
         self._eventLoop = None
@@ -107,7 +112,7 @@ class GithubCopilot(AiModelBase):
             if self.isInterruptionRequested():
                 return
 
-        id = params.model or self.modelId
+        id = params.model or self.modelId or "gpt-4.1"
         caps: AiModelCapabilities = GithubCopilot._capabilities.get(
             id, AiModelCapabilities())
         stream = caps.streaming
@@ -265,6 +270,10 @@ class GithubCopilot(AiModelBase):
         fetcher: ModelsFetcher = self.sender()
         GithubCopilot._models = fetcher.models
         GithubCopilot._capabilities = fetcher.capabilities
+
+        if not self.modelId:
+            self.modelId = fetcher.defaultModel or "gpt-4.1"
+
         self._modelFetcher = None
         self.modelsReady.emit()
 
