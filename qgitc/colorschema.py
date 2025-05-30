@@ -192,7 +192,7 @@ class ColorSchemaDark(ColorSchema):
     InfoBg = QColor(0x282C34)
     InfoFg = QColor(0xDDDDDD)
     InfoBorder = QColor(0x4B5363)
-    Whitespace = QColor(68, 68, 68)
+    Whitespace = QColor(100, 100, 100)
     SelFocus = QColor(11, 75, 115)
     SelNoFocus = QColor(58, 61, 65)
     Submodule = QColor(105, 240, 174)
