@@ -992,7 +992,18 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
              </widget>
             </item>
             <item>
-             <widget class="QComboBox" name="cbModels"/>
+             <widget class="QComboBox" name="cbModels">
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="cbModelIds">
+              <property name="sizeAdjustPolicy">
+               <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+              </property>
+             </widget>
             </item>
             <item>
              <spacer name="horizontalSpacer_13">

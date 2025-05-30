@@ -299,17 +299,42 @@ class Settings(QSettings):
     def setFullCommitMessage(self, full):
         self.setValue("fullCommitMsg", full)
 
-    def llmServer(self):
-        return self.value("llmServer", "http://127.0.0.1:23719/v1")
+    def localLlmServer(self):
+        self.beginGroup("llm")
+        value = self.value("localServer", "http://127.0.0.1:23719/v1")
+        self.endGroup()
+        return value
 
-    def setLlmServer(self, server):
-        self.setValue("llmServer", server)
+    def setLocalLlmServer(self, server):
+        self.beginGroup("llm")
+        self.setValue("localServer", server)
+        self.endGroup()
 
-    def preferLlmModel(self):
-        return self.value("preferLlmModel", "GitHub Copilot")
+    def defaultLlmModel(self):
+        self.beginGroup("llm")
+        value = self.value("defaultModel", "GitHub Copilot")
+        self.endGroup()
+        return value
 
-    def setPreferLlmModel(self, model: str):
-        self.setValue("preferLlmModel", model)
+    def setDefaultLlmModel(self, model: str):
+        self.beginGroup("llm")
+        self.setValue("defaultModel", model)
+        self.endGroup()
+
+    def defaultLlmModelId(self, modelName: str):
+        self.beginGroup("llm")
+        self.beginGroup("defaultModelId")
+        value = self.value(modelName, None)
+        self.endGroup()
+        self.endGroup()
+        return value
+
+    def setDefaultLlmModelId(self, modelName: str, modelId: str):
+        self.beginGroup("llm")
+        self.beginGroup("defaultModelId")
+        self.setValue(modelName, modelId)
+        self.endGroup()
+        self.endGroup()
 
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)

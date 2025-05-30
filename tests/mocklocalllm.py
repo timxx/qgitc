@@ -44,7 +44,7 @@ class MockLocalLLM:
     def __init__(self, mockSuccess: bool = True):
         settings: Settings = QCoreApplication.instance().settings()
         global LOCAL_LLM_URL
-        LOCAL_LLM_URL = settings.llmServer()
+        LOCAL_LLM_URL = settings.localLlmServer()
 
         global MOCK_SUCCESS
         MOCK_SUCCESS = mockSuccess

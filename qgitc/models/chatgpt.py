@@ -10,15 +10,15 @@ from qgitc.llm import AiModelBase, AiParameters, AiResponse, AiRole
 
 class ChatGPTModel(AiModelBase):
 
-    def __init__(self, url, parent=None):
-        super().__init__(url, parent)
+    def __init__(self, url, model: str = None, parent=None):
+        super().__init__(url, model, parent)
         self.api_token = None
 
     def query(self, params: AiParameters):
         payload = {
             "frequency_penalty": 0,
             "max_tokens": params.max_tokens,
-            "model": params.model or "gpt-4.1",
+            "model": params.model or self.modelId or "gpt-4.1",
             "presence_penalty": 0,
             "temperature": params.temperature,
             "stream": params.stream

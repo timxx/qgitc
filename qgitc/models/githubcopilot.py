@@ -77,8 +77,8 @@ class GithubCopilot(AiModelBase):
 
     _models = None
 
-    def __init__(self, parent=None):
-        super().__init__(None, parent)
+    def __init__(self, model: str = None, parent=None):
+        super().__init__(None, model or "gpt-4.1", parent)
         self._token = ApplicationBase.instance().settings().githubCopilotToken()
 
         self._eventLoop = None
@@ -94,7 +94,7 @@ class GithubCopilot(AiModelBase):
                 return
 
         payload = {
-            "model": params.model or "gpt-4.1",
+            "model": params.model or self.modelId,
             "temperature": params.temperature,
             "top_p": 1,
             "max_tokens": params.max_tokens,

@@ -15,6 +15,8 @@ class AiModelProvider():
         return AiModelFactory.models()
 
     @classmethod
-    def createModel(cls, *args):
-        name = ApplicationBase.instance().settings().preferLlmModel()
-        return AiModelFactory.create(name, *args)
+    def createModel(cls, parent=None):
+        settings = ApplicationBase.instance().settings()
+        name = settings.defaultLlmModel()
+        id = settings.defaultLlmModelId(name)
+        return AiModelFactory.create(name, model=id, parent=parent)

@@ -196,8 +196,8 @@ class AiChatWidget(QWidget):
         self.cbBots.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
         aiModels: List[AiModelBase] = [
-            model(self) for model in AiModelProvider.models()]
-        preferModelName = ApplicationBase.instance().settings().preferLlmModel()
+            model(parent=self) for model in AiModelProvider.models()]
+        preferModelName = ApplicationBase.instance().settings().defaultLlmModel()
 
         for i, model in enumerate(aiModels):
             self.cbBots.addItem(model.name, model)
@@ -422,7 +422,7 @@ class AiChatWidget(QWidget):
 
         if self._tokenCalculator is None:
             self._tokenCalculator = LocalLLMTokensCalculator(
-                ApplicationBase.instance().settings().llmServer())
+                ApplicationBase.instance().settings().localLlmServer())
             self._tokenCalculator.start()
             self._tokenCalculator.calcTokensFinished.connect(
                 self._onCalcTokensFinished)
@@ -475,8 +475,13 @@ class AiChatWidget(QWidget):
 
     def _updateModelNames(self, model: AiModelBase):
         self.cbModelNames.clear()
+        defaultId = ApplicationBase.instance().settings().defaultLlmModelId(model.name)
+        if not defaultId:
+            defaultId = model.modelId
         for id, name in model.models():
             self.cbModelNames.addItem(name, id)
+            if id == defaultId:
+                self.cbModelNames.setCurrentText(name)
 
     def _onModelsReady(self):
         model: AiModelBase = self.sender()

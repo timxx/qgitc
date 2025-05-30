@@ -53,12 +53,13 @@ class AiModelBase(QThread):
     serviceUnavailable = Signal()
     modelsReady = Signal()
 
-    def __init__(self, url, parent=None):
+    def __init__(self, url, model: str = None, parent=None):
         super().__init__(parent)
         self._history = []
         self.url_base = url
         self._mutex = Lock()
         self._params: AiParameters = None
+        self.modelId: str = model
 
     def clear(self):
         with self._mutex:
@@ -118,8 +119,8 @@ class AiModelFactory:
         return list(cls._registry.keys())
 
     @classmethod
-    def create(cls, modelName: str, *args) -> AiModelBase:
+    def create(cls, modelName: str, **kwargs) -> AiModelBase:
         modelClass = cls._registry.get(modelName, None)
         if modelClass:
-            return modelClass(*args)
+            return modelClass(**kwargs)
         raise ValueError(f"Model {modelName} is not registered.")

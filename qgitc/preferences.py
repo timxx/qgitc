@@ -16,7 +16,7 @@ from qgitc.events import GitBinChanged
 from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.gitutils import Git, GitProcess
 from qgitc.linkeditdialog import LinkEditDialog
-from qgitc.llm import AiModelFactory
+from qgitc.llm import AiModelBase, AiModelFactory
 from qgitc.settings import Settings
 from qgitc.tooltablemodel import ToolTableModel
 from qgitc.ui_preferences import *
@@ -485,27 +485,55 @@ class Preferences(QDialog):
                 error)
 
     def _initLLMTab(self):
-        self.ui.leServerUrl.setText(self.settings.llmServer())
+        self.ui.leServerUrl.setText(self.settings.localLlmServer())
         token = self.settings.githubCopilotAccessToken()
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
 
         models = AiModelFactory.modelNames()
-        prefer = self.settings.preferLlmModel()
-        for i, model in enumerate(models):
-            self.ui.cbModels.addItem(model)
-            if model == prefer:
+        prefer = self.settings.defaultLlmModel()
+        for i, modelName in enumerate(models):
+            model = AiModelFactory.create(modelName, parent=self)
+            model.modelsReady.connect(self._onModelsReady)
+
+            self.ui.cbModels.addItem(modelName, model)
+            if modelName == prefer:
                 self.ui.cbModels.setCurrentIndex(i)
+
+        self.ui.cbModels.currentIndexChanged.connect(self._onModelChanged)
+        self._onModelChanged(self.ui.cbModels.currentIndex())
 
         exts = self.settings.aiExcludedFileExtensions()
         if exts:
             self.ui.leExcludedFiles.setText(", ".join(exts))
 
+    def _onModelsReady(self):
+        model: AiModelBase = self.sender()
+        if model == self.ui.cbModels.currentData():
+            self._onModelChanged(self.ui.cbModels.currentIndex())
+
+    def _onModelChanged(self, index):
+        model: AiModelBase = self.ui.cbModels.currentData()
+        if not model:
+            return
+        self.ui.cbModelIds.clear()
+        defaultId = self.settings.defaultLlmModelId(
+            self.ui.cbModels.currentText())
+        if not defaultId:
+            defaultId = model.modelId
+        for id, name in model.models():
+            self.ui.cbModelIds.addItem(name, id)
+            if id == defaultId:
+                self.ui.cbModelIds.setCurrentText(name)
+
     def _saveLLMTab(self):
-        self.settings.setLlmServer(self.ui.leServerUrl.text().strip())
+        self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
 
         model = self.ui.cbModels.currentText()
-        self.settings.setPreferLlmModel(model)
+        self.settings.setDefaultLlmModel(model)
+
+        self.settings.setDefaultLlmModelId(
+            model, self.ui.cbModelIds.currentData())
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):
