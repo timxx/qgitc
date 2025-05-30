@@ -312,7 +312,7 @@ class Settings(QSettings):
 
     def defaultLlmModel(self):
         self.beginGroup("llm")
-        value = self.value("defaultModel", "GitHub Copilot")
+        value = self.value("defaultModel", "GithubCopilot")
         self.endGroup()
         return value
 
@@ -321,18 +321,18 @@ class Settings(QSettings):
         self.setValue("defaultModel", model)
         self.endGroup()
 
-    def defaultLlmModelId(self, modelName: str):
+    def defaultLlmModelId(self, modelKey: str):
         self.beginGroup("llm")
         self.beginGroup("defaultModelId")
-        value = self.value(modelName, None)
+        value = self.value(modelKey, None)
         self.endGroup()
         self.endGroup()
         return value
 
-    def setDefaultLlmModelId(self, modelName: str, modelId: str):
+    def setDefaultLlmModelId(self, modelKey: str, modelId: str):
         self.beginGroup("llm")
         self.beginGroup("defaultModelId")
-        self.setValue(modelName, modelId)
+        self.setValue(modelKey, modelId)
         self.endGroup()
         self.endGroup()
 

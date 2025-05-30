@@ -90,7 +90,7 @@ class ModelsFetcher(QThread):
             pass
 
 
-@AiModelFactory.register("GitHub Copilot")
+@AiModelFactory.register()
 class GithubCopilot(AiModelBase):
 
     _models = None

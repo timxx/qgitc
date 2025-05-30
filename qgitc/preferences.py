@@ -490,14 +490,13 @@ class Preferences(QDialog):
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
 
-        models = AiModelFactory.modelNames()
         prefer = self.settings.defaultLlmModel()
-        for i, modelName in enumerate(models):
-            model = AiModelFactory.create(modelName, parent=self)
+        for i, modelClass in enumerate(AiModelFactory.models()):
+            model = modelClass(parent=self)
             model.modelsReady.connect(self._onModelsReady)
 
-            self.ui.cbModels.addItem(modelName, model)
-            if modelName == prefer:
+            self.ui.cbModels.addItem(model.name, model)
+            if AiModelFactory.modelKey(model) == prefer:
                 self.ui.cbModels.setCurrentIndex(i)
 
         self.ui.cbModels.currentIndexChanged.connect(self._onModelChanged)
@@ -518,7 +517,7 @@ class Preferences(QDialog):
             return
         self.ui.cbModelIds.clear()
         defaultId = self.settings.defaultLlmModelId(
-            self.ui.cbModels.currentText())
+            AiModelFactory.modelKey(model))
         if not defaultId:
             defaultId = model.modelId
         for id, name in model.models():
@@ -529,11 +528,12 @@ class Preferences(QDialog):
     def _saveLLMTab(self):
         self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
 
-        model = self.ui.cbModels.currentText()
-        self.settings.setDefaultLlmModel(model)
+        model: AiModelBase = self.ui.cbModels.currentData()
+        modelKey = AiModelFactory.modelKey(model)
+        self.settings.setDefaultLlmModel(modelKey)
 
         self.settings.setDefaultLlmModelId(
-            model, self.ui.cbModelIds.currentData())
+            modelKey, self.ui.cbModelIds.currentData())
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):

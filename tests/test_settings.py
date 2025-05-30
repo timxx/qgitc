@@ -20,6 +20,14 @@ class TestSettings(TestBase):
         submodules = self.settings.submodulesCache(Git.REPO_DIR)
         self.assertTrue(isinstance(submodules, list))
 
-        self.settings.setSubmodulesCache(Git.REPO_DIR, ["submodule1", "submodule2"])
+        self.settings.setSubmodulesCache(
+            Git.REPO_DIR, ["submodule1", "submodule2"])
         submodules = self.settings.submodulesCache(Git.REPO_DIR)
         self.assertEqual(submodules, ["submodule1", "submodule2"])
+
+    def testDefaultLlmModel(self):
+        # avoid `GithubCopilot` named changed without knowing
+        self.assertEqual(self.settings.defaultLlmModel(), "GithubCopilot")
+
+        self.settings.setDefaultLlmModel("TestModel")
+        self.assertEqual(self.settings.defaultLlmModel(), "TestModel")

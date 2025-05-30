@@ -170,23 +170,23 @@ class AiModelFactory:
     _registry = {}
 
     @classmethod
-    def register(cls, modelName: str):
+    def register(cls):
         def decorator(modelClass):
-            cls._registry[modelName] = modelClass
+            cls._registry[modelClass.__name__] = modelClass
             return modelClass
         return decorator
 
     @classmethod
-    def models(cls):
+    def models(cls) -> List[type[AiModelBase]]:
         return list(cls._registry.values())
 
     @classmethod
-    def modelNames(cls) -> List[str]:
-        return list(cls._registry.keys())
-
-    @classmethod
-    def create(cls, modelName: str, **kwargs) -> AiModelBase:
-        modelClass = cls._registry.get(modelName, None)
+    def create(cls, modelClassName: str, **kwargs) -> AiModelBase:
+        modelClass = cls._registry.get(modelClassName, None)
         if modelClass:
             return modelClass(**kwargs)
-        raise ValueError(f"Model {modelName} is not registered.")
+        raise ValueError(f"Model {modelClassName} is not registered.")
+
+    @classmethod
+    def modelKey(cls, model: AiModelBase) -> str:
+        return model.__class__.__name__

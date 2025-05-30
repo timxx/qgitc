@@ -39,7 +39,7 @@ class LocalLLMNameFetcher(QThread):
             pass
 
 
-@AiModelFactory.register("Local LLM")
+@AiModelFactory.register()
 class LocalLLM(ChatGPTModel):
 
     _models = {}
@@ -75,7 +75,7 @@ class LocalLLM(ChatGPTModel):
 
     @property
     def name(self):
-        return "Local LLM"
+        return self.tr("Local LLM")
 
     def isLocal(self):
         return True

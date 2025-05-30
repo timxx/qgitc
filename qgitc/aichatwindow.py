@@ -27,7 +27,14 @@ from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
 from qgitc.gitutils import Git
-from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
+from qgitc.llm import (
+    AiChatMode,
+    AiModelBase,
+    AiModelFactory,
+    AiParameters,
+    AiResponse,
+    AiRole,
+)
 from qgitc.llmprovider import AiModelProvider
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
@@ -197,7 +204,7 @@ class AiChatWidget(QWidget):
 
         aiModels: List[AiModelBase] = [
             model(parent=self) for model in AiModelProvider.models()]
-        preferModelName = ApplicationBase.instance().settings().defaultLlmModel()
+        defaultModelKey = ApplicationBase.instance().settings().defaultLlmModel()
 
         for i, model in enumerate(aiModels):
             self.cbBots.addItem(model.name, model)
@@ -208,7 +215,7 @@ class AiChatWidget(QWidget):
             model.responseAvailable.connect(self._onMessageReady)
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
-            if model.name == preferModelName:
+            if AiModelFactory.modelKey(model) == defaultModelKey:
                 self.cbBots.setCurrentIndex(i)
 
             model.modelsReady.connect(
@@ -475,7 +482,8 @@ class AiChatWidget(QWidget):
 
     def _updateModelNames(self, model: AiModelBase):
         self.cbModelNames.clear()
-        defaultId = ApplicationBase.instance().settings().defaultLlmModelId(model.name)
+        modelKey = AiModelFactory.modelKey(model)
+        defaultId = ApplicationBase.instance().settings().defaultLlmModelId(modelKey)
         if not defaultId:
             defaultId = model.modelId
         for id, name in model.models():

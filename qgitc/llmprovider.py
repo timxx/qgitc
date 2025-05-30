@@ -17,6 +17,6 @@ class AiModelProvider():
     @classmethod
     def createModel(cls, parent=None):
         settings = ApplicationBase.instance().settings()
-        name = settings.defaultLlmModel()
-        id = settings.defaultLlmModelId(name)
-        return AiModelFactory.create(name, model=id, parent=parent)
+        modelKey = settings.defaultLlmModel()
+        id = settings.defaultLlmModelId(modelKey)
+        return AiModelFactory.create(modelKey, model=id, parent=parent)
