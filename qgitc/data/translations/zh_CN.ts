@@ -32,72 +32,72 @@
 <context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwindow.py" line="157"/>
+        <location filename="../../aichatwindow.py" line="164"/>
         <source>Enter the query prompt here</source>
         <translation>请在此输入请求提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="168"/>
+        <location filename="../../aichatwindow.py" line="175"/>
         <source>User</source>
         <translation>用户</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="178"/>
+        <location filename="../../aichatwindow.py" line="185"/>
         <source>Max Tokens</source>
         <translation>最大Token数</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="183"/>
+        <location filename="../../aichatwindow.py" line="190"/>
         <source>Max tokens to generate</source>
         <translation>生成的最大Token数量</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="187"/>
+        <location filename="../../aichatwindow.py" line="194"/>
         <source>Temperature</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="276"/>
+        <location filename="../../aichatwindow.py" line="283"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="277"/>
+        <location filename="../../aichatwindow.py" line="284"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="278"/>
+        <location filename="../../aichatwindow.py" line="285"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="279"/>
+        <location filename="../../aichatwindow.py" line="286"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="280"/>
+        <location filename="../../aichatwindow.py" line="287"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="281"/>
+        <location filename="../../aichatwindow.py" line="288"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="242"/>
+        <location filename="../../aichatwindow.py" line="249"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="244"/>
+        <location filename="../../aichatwindow.py" line="251"/>
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="333"/>
+        <location filename="../../aichatwindow.py" line="340"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -105,7 +105,7 @@
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="505"/>
+        <location filename="../../aichatwindow.py" line="513"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -947,6 +947,14 @@
         <location filename="../../linkeditwidget.py" line="286"/>
         <source>Unsupported repository</source>
         <translation>暂不支持自动识别此仓库</translation>
+    </message>
+</context>
+<context>
+    <name>LocalLLM</name>
+    <message>
+        <location filename="../../models/localllm.py" line="80"/>
+        <source>Local LLM</source>
+        <translation>本地大语言模型</translation>
     </message>
 </context>
 <context>
