@@ -33,11 +33,19 @@ def _makeHeaders(token: str):
     }
 
 
+class AiModelCapabilities:
+
+    def __init__(self, streaming: bool = True, tool_calls: bool = False):
+        self.streaming = streaming
+        self.tool_calls = tool_calls
+
+
 class ModelsFetcher(QThread):
 
     def __init__(self, token: str, parent=None):
         super().__init__(parent)
         self.models = []
+        self.capabilities = {}
         self._token = token
 
     def run(self):
@@ -59,6 +67,18 @@ class ModelsFetcher(QThread):
                     continue
                 if not model.get("model_picker_enabled", True):
                     continue
+
+                caps = model.get("capabilities", {})
+                type = caps.get("type", "chat")
+                if type != "chat":
+                    continue
+
+                supports = caps.get("supports", {})
+                self.capabilities[id] = AiModelCapabilities(
+                    supports.get("streaming", False),
+                    supports.get("tool_calls", False)
+                )
+
                 name = model.get("name")
                 self.models.append((id, name or id))
         except:
@@ -69,6 +89,7 @@ class ModelsFetcher(QThread):
 class GithubCopilot(AiModelBase):
 
     _models = None
+    _capabilities = {}
 
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model or "gpt-4.1", parent)
@@ -86,13 +107,18 @@ class GithubCopilot(AiModelBase):
             if self.isInterruptionRequested():
                 return
 
+        id = params.model or self.modelId
+        caps: AiModelCapabilities = GithubCopilot._capabilities.get(
+            id, AiModelCapabilities())
+        stream = caps.streaming
+
         payload = {
-            "model": params.model or self.modelId,
+            "model": id,
             "temperature": params.temperature,
             "top_p": 1,
             "max_tokens": params.max_tokens,
             "n": 1,
-            "stream": params.stream
+            "stream": stream
         }
 
         if params.top_p is not None:
@@ -110,7 +136,7 @@ class GithubCopilot(AiModelBase):
         payload["messages"] = self._history
 
         try:
-            self._doQuery(payload, params.stream)
+            self._doQuery(payload, stream)
         except requests.exceptions.ConnectionError as e:
             self.serviceUnavailable.emit()
         except Exception as e:
@@ -238,6 +264,7 @@ class GithubCopilot(AiModelBase):
     def _onModelsAvailable(self):
         fetcher: ModelsFetcher = self.sender()
         GithubCopilot._models = fetcher.models
+        GithubCopilot._capabilities = fetcher.capabilities
         self._modelFetcher = None
         self.modelsReady.emit()
 
