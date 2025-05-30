@@ -9,14 +9,7 @@ from PySide6.QtCore import QEventLoop, QThread
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import (
-    AiChatMode,
-    AiModelBase,
-    AiModelFactory,
-    AiParameters,
-    AiResponse,
-    AiRole,
-)
+from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters, AiResponse
 from qgitc.settings import Settings
 
 CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions. Please focus only on the modified sections of the code. If you notice any serious issues in the old code that could impact functionality or performance, feel free to mention them. Otherwise, concentrate on providing feedback and suggestions for the changes made.
@@ -144,50 +137,9 @@ class GithubCopilot(AiModelBase):
             return
 
         if stream:
-            role = "assistant"
-            content = ""
-            first_delta = True
-            for chunk in response.iter_lines():
-                if self.isInterruptionRequested():
-                    return
-                if not chunk:
-                    continue
-                if not chunk.startswith(b"data:"):
-                    if not chunk.startswith(b": ping - "):
-                        logger.warning(b"Corrupted chunk: %s", chunk)
-                    continue
-
-                if chunk == b"data: [DONE]":
-                    # we should break here, but in case there is still more data
-                    # to process, we will just continue
-                    continue
-
-                data: dict = json.loads(chunk[5:].decode("utf-8"))
-                choices: list = data.get("choices")
-                if not choices:
-                    continue
-
-                delta = choices[0]["delta"]
-                if not delta:
-                    break
-                if "role" in delta:
-                    role = delta["role"]
-                elif "content" in delta:
-                    if not delta["content"]:
-                        continue
-                    aiResponse = AiResponse()
-                    aiResponse.is_delta = True
-                    aiResponse.role = AiRole.Assistant
-                    aiResponse.message = delta["content"]
-                    aiResponse.first_delta = first_delta
-                    self.responseAvailable.emit(aiResponse)
-                    content += aiResponse.message
-                    first_delta = False
-                else:
-                    logger.warning(b"Invalid delta: %s", delta)
+            role, content = self.handleStreamResponse(response)
         else:
-            # TODO: handle non-streaming response
-            pass
+            role, content = self.handleNonStreamResponse(response)
 
         self.add_history(self._makeMessage(role, content))
 

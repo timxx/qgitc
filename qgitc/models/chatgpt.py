@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import json
-
 import requests
 
 from qgitc.common import logger
-from qgitc.llm import AiModelBase, AiParameters, AiResponse, AiRole
+from qgitc.llm import AiModelBase, AiParameters, AiResponse
 
 
 class ChatGPTModel(AiModelBase):
@@ -70,48 +68,8 @@ class ChatGPTModel(AiModelBase):
             return
 
         if stream:
-            role = "assistant"
-            content = ""
-            first_delta = True
-            for chunk in response.iter_lines():
-                if self.isInterruptionRequested():
-                    return
-                if not chunk:
-                    continue
-                if not chunk.startswith(b"data:"):
-                    if not chunk.startswith(b": ping - "):
-                        logger.warning(b"Corrupted chunk: %s", chunk)
-                    continue
-                data = json.loads(chunk[5:].decode("utf-8"))
-                delta = data["choices"][0]["delta"]
-                if not delta:
-                    break
-                if "role" in delta:
-                    role = delta["role"]
-                elif "content" in delta:
-                    aiResponse = AiResponse()
-                    aiResponse.is_delta = True
-                    aiResponse.role = AiRole.Assistant
-                    aiResponse.message = delta["content"]
-                    aiResponse.first_delta = first_delta
-                    self.responseAvailable.emit(aiResponse)
-                    content += aiResponse.message
-                    first_delta = False
-                else:
-                    logger.warning(b"Invalid delta: %s", delta)
+            role, content = self.handleStreamResponse(response)
         else:
-            data = json.loads(response.text)
-            usage = data["usage"]
-            aiResponse = AiResponse()
-            aiResponse.total_tokens = usage["total_tokens"]
-
-            for choice in data["choices"]:
-                message = choice["message"]
-                content = message["content"]
-                role = message["role"]
-                aiResponse.role = AiRole.Assistant
-                aiResponse.message = content
-                self.responseAvailable.emit(aiResponse)
-                break
+            role, content = self.handleNonStreamResponse(response)
 
         self.add_history(self._makeMessage(role, content))
