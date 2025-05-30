@@ -131,7 +131,7 @@ class AiModelBase(QThread):
                 break
             if "role" in delta:
                 role = delta["role"]
-            elif "content" in delta:
+            if "content" in delta:
                 if not delta["content"]:
                     continue
                 aiResponse = AiResponse()
