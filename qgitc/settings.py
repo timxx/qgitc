@@ -63,6 +63,7 @@ class Settings(QSettings):
     compositeModeChanged = Signal(bool)
     colorSchemaModeChanged = Signal(int)
     ignoreCommentLineChanged = Signal(bool)
+    useNtpTimeChanged = Signal(bool)
 
     def __init__(self, parent=None, testing=False):
         super().__init__(
@@ -425,6 +426,21 @@ class Settings(QSettings):
         self.beginGroup("commit")
         self.setValue("groupChars", chars)
         self.endGroup()
+
+    def useNtpTime(self):
+        self.beginGroup("commit")
+        use = self.value("useNtpTime", False, type=bool)
+        self.endGroup()
+        return use
+
+    def setUseNtpTime(self, use: bool):
+        if use == self.useNtpTime():
+            return
+
+        self.beginGroup("commit")
+        self.setValue("useNtpTime", use)
+        self.endGroup()
+        self.useNtpTimeChanged.emit(use)
 
     def commitActions(self, repoName: str) -> List[CommitAction]:
         self.beginGroup(repoName)

@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>4</number>
+      <number>5</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -1101,6 +1101,16 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
              </widget>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cbUseNTP">
+            <property name="toolTip">
+             <string>Use network time for commit datetime</string>
+            </property>
+            <property name="text">
+             <string>Use Network Time</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

@@ -547,6 +547,7 @@ class Preferences(QDialog):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())
         self.ui.cbTab.setChecked(self.settings.tabToNextGroup())
         self.ui.leGroupChars.setText(self.settings.groupChars())
+        self.ui.cbUseNTP.setChecked(self.settings.useNtpTime())
 
         actions = self.settings.commitActions(self._repoName)
         self.ui.commitAction.setActions(actions)
@@ -566,6 +567,9 @@ class Preferences(QDialog):
 
         value = self.ui.leGroupChars.text().strip()
         self.settings.setGroupChars(value)
+
+        value = self.ui.cbUseNTP.isChecked()
+        self.settings.setUseNtpTime(value)
 
         actions = self.ui.commitAction.actions()
         self.settings.setCommitActions(self._repoName, actions)

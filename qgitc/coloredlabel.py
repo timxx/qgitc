@@ -16,10 +16,19 @@ class ColoredLabel(QLabel):
     def _updatePalette(self):
         palette = self.palette()
         role = self.foregroundRole()
-        color = getattr(ApplicationBase.instance(
-        ).colorSchema(), self._colorSchema)
+        if self._colorSchema:
+            color = getattr(ApplicationBase.instance(
+            ).colorSchema(), self._colorSchema)
+        else:
+            # Fallback to default color schema
+            color = ApplicationBase.instance().palette().color(role)
         palette.setColor(role, color)
         self.setPalette(palette)
+
+    def setColorSchema(self, colorSchema: str):
+        if self._colorSchema != colorSchema:
+            self._colorSchema = colorSchema
+            self._updatePalette()
 
     def event(self, evt):
         if evt.type() == QEvent.PaletteChange:

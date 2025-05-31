@@ -448,6 +448,8 @@ class CommitWindow(StateWindow):
 
         ApplicationBase.instance().repoDirChanged.connect(
             self._onRepoDirChanged)
+        ApplicationBase.instance().settings().useNtpTimeChanged.connect(
+            self._onUseNtpTimeChanged)
 
         if Git.REPO_DIR:
             self._onRepoDirChanged()
@@ -651,11 +653,12 @@ class CommitWindow(StateWindow):
         message = self._filterMessage(
             self.ui.teMessage.toPlainText().strip())
 
+        settings: Settings = ApplicationBase.instance().settings()
+
         if self.ui.cbRunAction.isChecked():
             actions = []
             self._committedActions = []
 
-            settings: Settings = ApplicationBase.instance().settings()
             self._collectCommitActions(
                 settings.commitActions(self._repoName()),
                 actions,
@@ -670,17 +673,24 @@ class CommitWindow(StateWindow):
             actions = []
             self._committedActions = []
 
+        date = None
+        if settings.useNtpTime():
+            if not self._ntpDateTime:
+                logger.warning("NTP time is not available, using local time")
+            else:
+                date = self._ntpDateTime.toString(Qt.ISODate)
+
         submodules = {}
         for row in range(self._stagedModel.rowCount()):
             index = self._stagedModel.index(row, 0)
             repoDir = self._stagedModel.data(
                 index, StatusFileListModel.RepoDirRole)
-            submodules.setdefault(repoDir, (message, amend, actions))
+            submodules.setdefault(repoDir, (message, amend, actions, date))
 
         # amend to main repo
         if not submodules:
             assert (amend)
-            submodules[None] = (message, amend, actions)
+            submodules[None] = (message, amend, actions, date)
 
         self.ui.progressBar.setRange(
             0, len(submodules) + len(self._committedActions))
@@ -750,14 +760,15 @@ class CommitWindow(StateWindow):
 
         self.ui.btnCodeReview.setEnabled(hasStagedFiles)
 
-    def _doCommit(self, submodule: str, userData: Tuple[str, bool, list], cancelEvent: CancelEvent):
+    def _doCommit(self, submodule: str, userData: Tuple[str, bool, list, str], cancelEvent: CancelEvent):
         amend = userData[1]
         message = userData[0]
 
         actions: List[CommitAction] = userData[2]
+        date = userData[3]
 
         repoDir = fullRepoDir(submodule)
-        out, error = Git.commit(message, amend, repoDir)
+        out, error = Git.commit(message, amend, repoDir, date=date)
         if cancelEvent.isSet():
             return
 
@@ -1622,20 +1633,11 @@ class CommitWindow(StateWindow):
         self._ntpElapsed.start()
 
         # 10 seconds difference is acceptable
-        diff = ntpDateTime.secsTo(localDateTime)
-        if abs(diff) > 10:
-            self._ntpTimer = QTimer(self)
-            self._ntpTimer.setInterval(1000)
-            self._ntpTimer.timeout.connect(self._onUpdateNtpTime)
-            self._ntpTimer.start()
-            self._onUpdateNtpTime()
-            self._ntpDateTimeLabel.setToolTip(
-                self.tr("Local time is not synchronized with the network time"))
-        elif self._ntpTimer:
-            self._ntpTimer.stop()
-            self._ntpTimer = None
-            self._ntpDateTimeLabel.clear()
-            self._ntpDateTimeLabel.setToolTip("")
+        outOfSync = abs(ntpDateTime.secsTo(localDateTime)) > 10
+        if outOfSync or ApplicationBase.instance().settings().useNtpTime():
+            self._showNtpTime(outOfSync)
+        else:
+            self._clearNtpTime()
 
     def _onUpdateNtpTime(self):
         self._ntpDateTime = self._ntpDateTime.addMSecs(
@@ -1643,3 +1645,44 @@ class CommitWindow(StateWindow):
         self._ntpElapsed.restart()
         self._ntpDateTimeLabel.setText(
             self._ntpDateTime.toString("yyyy/MM/dd hh:mm:ss"))
+
+    def _showNtpTime(self, outOfSync=False):
+        self._ntpTimer = QTimer(self)
+        self._ntpTimer.setInterval(1000)
+        self._ntpTimer.timeout.connect(self._onUpdateNtpTime)
+        self._ntpTimer.start()
+        self._onUpdateNtpTime()
+
+        if outOfSync:
+            self._ntpDateTimeLabel.setColorSchema("ErrorText")
+            self._ntpDateTimeLabel.setToolTip(
+                self.tr("Local time is not synchronized with the network time"))
+        else:
+            self._ntpDateTimeLabel.setColorSchema(None)
+            self._ntpDateTimeLabel.setToolTip("")
+
+    def _clearNtpTime(self):
+        if self._ntpTimer:
+            self._ntpTimer.stop()
+            self._ntpTimer = None
+        self._ntpDateTimeLabel.clear()
+        self._ntpDateTimeLabel.setToolTip("")
+
+    def _isDateTimeOutOfSync(self) -> bool:
+        if not self._ntpDateTime:
+            return False
+
+        # 10 seconds difference is acceptable
+        return abs(self._ntpDateTime.secsTo(QDateTime.currentDateTime())) > 10
+
+    def _onUseNtpTimeChanged(self, use: bool):
+        if not use:
+            if not self._isDateTimeOutOfSync():
+                self._clearNtpTime()
+            return
+
+        if not self._ntpDateTime:
+            # TODO: maybe NTP unavailable
+            pass
+        elif not self._ntpTimer:
+            self._showNtpTime(self._isDateTimeOutOfSync())
