@@ -7,6 +7,8 @@ from typing import Callable, Dict, List, Tuple
 from PySide6.QtCore import (
     SIGNAL,
     QAbstractListModel,
+    QDateTime,
+    QElapsedTimer,
     QEvent,
     QEventLoop,
     QFileInfo,
@@ -46,18 +48,13 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
-from qgitc.common import (
-    dataDirPath,
-    decodeFileData,
-    fullRepoDir,
-    logger,
-    toSubmodulePath,
-)
+from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView, _makeTextIcon
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
 from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.gitutils import Git
+from qgitc.ntpdatetime import getNtpDateTime
 from qgitc.preferences import Preferences
 from qgitc.settings import Settings
 from qgitc.statewindow import StateWindow
@@ -237,6 +234,15 @@ class FileRestoreEvent(QEvent):
         self.submodule = submodule
         self.files = files
         self.error = error
+
+
+class NtpDateTimeReadyEvent(QEvent):
+    Type = QEvent.User + 7
+
+    def __init__(self, ntpDateTime: QDateTime, localDateTime: QDateTime):
+        super().__init__(QEvent.Type(NtpDateTimeReadyEvent.Type))
+        self.ntpDateTime = ntpDateTime
+        self.localDateTime = localDateTime
 
 
 class CommitWindow(StateWindow):
@@ -435,6 +441,10 @@ class CommitWindow(StateWindow):
         self._setupContextMenu()
 
         self._outputBlocks: Dict[str, int] = {}
+
+        self._ntpTimer = None
+        self._ntpDateTime = None
+        self._ntpElapsed = None
 
         ApplicationBase.instance().repoDirChanged.connect(
             self._onRepoDirChanged)
@@ -891,7 +901,7 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setEnabled(not blocked)
         self.ui.cbAmend.setEnabled(not blocked)
 
-    def event(self, evt):
+    def event(self, evt: QEvent):
         if evt.type() == GitErrorEvent.Type:
             # TODO: merge the same error and report at end
             QMessageBox.critical(
@@ -926,6 +936,12 @@ class CommitWindow(StateWindow):
 
         if evt.type() == FileRestoreEvent.Type:
             self._handleFileRestoreEvent(evt.submodule, evt.files, evt.error)
+            return True
+
+        if evt.type() == NtpDateTimeReadyEvent.Type:
+            self._handleNtpDateTimeReadyEvent(
+                evt.ntpDateTime, evt.localDateTime)
+            return True
 
         return super().event(evt)
 
@@ -1071,6 +1087,15 @@ class CommitWindow(StateWindow):
 
         ApplicationBase.instance().postEvent(self, RepoInfoEvent(info))
 
+        dt = getNtpDateTime()
+        localDt = QDateTime.currentDateTime()
+        if cancelEvent.isSet():
+            return
+
+        if dt is not None:
+            ApplicationBase.instance().postEvent(
+                self, NtpDateTimeReadyEvent(dt, localDt))
+
     def _setupStatusBar(self):
         widget = QWidget(self)
         hbox = QHBoxLayout(widget)
@@ -1104,6 +1129,9 @@ class CommitWindow(StateWindow):
 
         self.ui.statusbar.addWidget(self._branchWidget)
         self._branchWidget.setVisible(False)
+
+        self._ntpDateTimeLabel = ColoredLabel("ErrorText", self)
+        self.ui.statusbar.addWidget(self._ntpDateTimeLabel)
 
     def isMaximizedByDefault(self):
         return False
@@ -1584,3 +1612,34 @@ class CommitWindow(StateWindow):
                 return
 
         super().keyPressEvent(event)
+
+    def _handleNtpDateTimeReadyEvent(self, ntpDateTime: QDateTime, localDateTime: QDateTime):
+        # ms elapsed since last local time
+        ms = localDateTime.msecsTo(QDateTime.currentDateTime())
+        self._ntpDateTime = ntpDateTime.addMSecs(ms)
+
+        self._ntpElapsed = QElapsedTimer()
+        self._ntpElapsed.start()
+
+        # 10 seconds difference is acceptable
+        diff = ntpDateTime.secsTo(localDateTime)
+        if abs(diff) > 10:
+            self._ntpTimer = QTimer(self)
+            self._ntpTimer.setInterval(1000)
+            self._ntpTimer.timeout.connect(self._onUpdateNtpTime)
+            self._ntpTimer.start()
+            self._onUpdateNtpTime()
+            self._ntpDateTimeLabel.setToolTip(
+                self.tr("Local time is not synchronized with the network time"))
+        elif self._ntpTimer:
+            self._ntpTimer.stop()
+            self._ntpTimer = None
+            self._ntpDateTimeLabel.clear()
+            self._ntpDateTimeLabel.setToolTip("")
+
+    def _onUpdateNtpTime(self):
+        self._ntpDateTime = self._ntpDateTime.addMSecs(
+            self._ntpElapsed.elapsed())
+        self._ntpElapsed.restart()
+        self._ntpDateTimeLabel.setText(
+            self._ntpDateTime.toString("yyyy/MM/dd hh:mm:ss"))
