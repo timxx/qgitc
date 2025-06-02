@@ -1647,11 +1647,13 @@ class CommitWindow(StateWindow):
         self._ntpDateTimeLabel.setText(
             self._ntpDateTime.toString("yyyy/MM/dd hh:mm:ss"))
 
+        interval = 1000 - self._ntpDateTime.toMSecsSinceEpoch() % 1000
+        self._ntpTimer.start(interval)
+
     def _showNtpTime(self, outOfSync=False):
         self._ntpTimer = QTimer(self)
-        self._ntpTimer.setInterval(1000)
+        self._ntpTimer.setSingleShot(True)
         self._ntpTimer.timeout.connect(self._onUpdateNtpTime)
-        self._ntpTimer.start()
         self._onUpdateNtpTime()
 
         if outOfSync:
