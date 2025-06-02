@@ -678,7 +678,8 @@ class CommitWindow(StateWindow):
             if not self._ntpDateTime:
                 logger.warning("NTP time is not available, using local time")
             else:
-                date = self._ntpDateTime.toString(Qt.ISODate)
+                ntpDateTime = self._ntpDateTime.addMSecs(self._ntpElapsed.elapsed())
+                date = ntpDateTime.toString(Qt.ISODate)
 
         submodules = {}
         for row in range(self._stagedModel.rowCount()):
