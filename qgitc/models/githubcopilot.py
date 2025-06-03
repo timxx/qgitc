@@ -126,6 +126,9 @@ class GithubCopilot(AiModelBase):
 
         if params.max_tokens > caps.max_output_tokens:
             params.max_tokens = caps.max_output_tokens
+        elif id.startswith("claude-") and "thought" in id:
+            # claude-3.7-sonnet-thought seems cannot be 4096
+            params.max_tokens = caps.max_output_tokens
 
         payload = {
             "model": id,
