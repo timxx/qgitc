@@ -1144,6 +1144,7 @@ class CommitWindow(StateWindow):
 
         self._ntpDateTimeLabel = ColoredLabel("ErrorText", self)
         self.ui.statusbar.addWidget(self._ntpDateTimeLabel)
+        self._ntpDateTimeLabel.setVisible(False)
 
     def isMaximizedByDefault(self):
         return False
@@ -1656,6 +1657,7 @@ class CommitWindow(StateWindow):
         self._ntpTimer.timeout.connect(self._onUpdateNtpTime)
         self._onUpdateNtpTime()
 
+        self._ntpDateTimeLabel.setVisible(True)
         if outOfSync:
             self._ntpDateTimeLabel.setColorSchema("ErrorText")
             self._ntpDateTimeLabel.setToolTip(
@@ -1668,8 +1670,7 @@ class CommitWindow(StateWindow):
         if self._ntpTimer:
             self._ntpTimer.stop()
             self._ntpTimer = None
-        self._ntpDateTimeLabel.clear()
-        self._ntpDateTimeLabel.setToolTip("")
+        self._ntpDateTimeLabel.setVisible(False)
 
     def _isDateTimeOutOfSync(self) -> bool:
         if not self._ntpDateTime:
