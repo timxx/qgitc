@@ -34,11 +34,13 @@ def _makeHeaders(token: str, intent: str = "conversation-other"):
     }
 
 
+# TODO: upgrade to Python 3.7 to support @dataclass
 class AiModelCapabilities:
 
     def __init__(self, streaming: bool = True, tool_calls: bool = False):
         self.streaming = streaming
         self.tool_calls = tool_calls
+        self.max_output_tokens = 4096
 
 
 class ModelsFetcher(QThread):
@@ -70,16 +72,21 @@ class ModelsFetcher(QThread):
                 if not model.get("model_picker_enabled", True):
                     continue
 
-                caps = model.get("capabilities", {})
+                caps: dict = model.get("capabilities", {})
                 type = caps.get("type", "chat")
                 if type != "chat":
                     continue
 
-                supports = caps.get("supports", {})
-                self.capabilities[id] = AiModelCapabilities(
+                supports: dict = caps.get("supports", {})
+                limits: dict = caps.get("limits", {})
+
+                modelCaps = AiModelCapabilities(
                     supports.get("streaming", False),
                     supports.get("tool_calls", False)
                 )
+                modelCaps.max_output_tokens = limits.get(
+                    "max_output_tokens", 4096)
+                self.capabilities[id] = modelCaps
 
                 name = model.get("name")
                 self.models.append((id, name or id))
@@ -116,6 +123,9 @@ class GithubCopilot(AiModelBase):
         caps: AiModelCapabilities = GithubCopilot._capabilities.get(
             id, AiModelCapabilities())
         stream = caps.streaming
+
+        if params.max_tokens > caps.max_output_tokens:
+            params.max_tokens = caps.max_output_tokens
 
         payload = {
             "model": id,
