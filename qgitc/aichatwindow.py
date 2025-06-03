@@ -95,6 +95,8 @@ class ChatEdit(QWidget):
         super().__init__(parent)
 
         layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         self.edit = QPlainTextEdit(self)
         layout.addWidget(self.edit)
 
@@ -104,12 +106,10 @@ class ChatEdit(QWidget):
 
         self.setFocusProxy(self.edit)
 
-        self._margin = 6
         self.edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.edit.document().setDocumentMargin(4)
 
         self._lineHeight = self.fontMetrics().height()
-        self._lineSpace = self.height() - self._lineHeight
 
         self.edit.textChanged.connect(self._onTextChanged)
         self.edit.textChanged.connect(self.textChanged)
@@ -134,14 +134,16 @@ class ChatEdit(QWidget):
     def _adjustHeight(self):
         lineCount = self.edit.document().lineCount()
         margin = self.edit.document().documentMargin()
+        # see `QLineEdit::sizeHint()`
+        verticalMarin = 2 * 1
         if lineCount < ChatEdit.MaxLines:
-            height = lineCount * self._lineHeight + self._lineSpace
-            self.edit.setMinimumHeight(height - self._margin)
-            self.setFixedHeight(height + margin)
+            height = lineCount * self._lineHeight
+            self.edit.setMinimumHeight(height)
+            self.setFixedHeight(height + margin * 2 + verticalMarin)
         else:
-            maxHeight = ChatEdit.MaxLines * self._lineHeight + self._lineSpace
-            self.edit.setMinimumHeight(maxHeight - self._margin)
-            self.setFixedHeight(maxHeight + margin)
+            maxHeight = ChatEdit.MaxLines * self._lineHeight
+            self.edit.setMinimumHeight(maxHeight + margin * 2)
+            self.setFixedHeight(maxHeight + margin * 2 + verticalMarin)
 
     def keyPressEvent(self, event):
         if event.modifiers() == Qt.ControlModifier and event.key() in [
@@ -178,7 +180,7 @@ class AiChatWidget(QWidget):
 
         gridLayout = QGridLayout()
         gridLayout.setContentsMargins(0, 0, 0, 0)
-        gridLayout.setSpacing(0)
+        gridLayout.setSpacing(4)
         gridLayout.addWidget(QLabel(self.tr("System")), 0, 0)
         gridLayout.addWidget(self.sysInput, 0, 1)
         gridLayout.addWidget(QLabel(self.tr("User")), 1, 0)
