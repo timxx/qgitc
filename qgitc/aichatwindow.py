@@ -156,6 +156,9 @@ class AiChatWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
         self.stackWidget = QStackedWidget(self)
         layout.addWidget(self.stackWidget)
 
