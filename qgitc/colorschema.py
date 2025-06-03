@@ -68,6 +68,7 @@ class ColorSchema:
     Builtin = QColor()
     Literal = QColor()
     InlineCode = QColor()
+    HorizontalRuler = QColor()
 
     UserBlockBorder = QColor()
     UserBlockBg = QColor()
@@ -165,6 +166,7 @@ class ColorSchemaLight(ColorSchema):
     Builtin = QColor(0x3a7e98)
     Literal = QColor(0x298559)
     InlineCode = QColor(0x7a1007)
+    HorizontalRuler = QColor(0xc1c1c1)
 
     UserBlockBorder = QColor(0x1A73E8)
     UserBlockBg = QColor(0xE8F0FE)
@@ -262,6 +264,7 @@ class ColorSchemaDark(ColorSchema):
     Builtin = QColor(0x62c7b0)
     Literal = QColor(0xbdcda9)
     InlineCode = QColor(0xc9937a)
+    HorizontalRuler = QColor(0x676767)
 
     UserBlockBorder = QColor(0x8AB4F8)
     UserBlockBg = QColor(0x1E3A5F)

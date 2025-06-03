@@ -538,8 +538,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Set character format for horizontal rulers
         charFormat = QTextCharFormat()
-        charFormat.setForeground(Qt.darkGray)
-        charFormat.setBackground(Qt.lightGray)
+        charFormat.setForeground(schema.HorizontalRuler)
         formats[HighlighterState.HorizontalRuler] = charFormat
 
         # Set character format for lists
@@ -625,7 +624,6 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # set character format for trailing spaces
         charFormat = QTextCharFormat()
-        charFormat.setBackground(QColor(252, 175, 62))
         formats[HighlighterState.TrailingSpace] = charFormat
 
         # Formats for syntax highlighting
