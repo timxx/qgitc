@@ -268,6 +268,11 @@ class AiCommitMessage(QObject):
         stripMessage = ""
         if self._message:
             message = self._message.strip()
+            if message.startswith("<think>"):
+                pos = message.find("</think>\n")
+                if pos >= 0:
+                    message = message[pos + 9:].strip()
+
             if message.startswith("```text"):
                 message = message[7:]
             if message.endswith("```"):
