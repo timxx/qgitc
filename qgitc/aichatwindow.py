@@ -162,6 +162,10 @@ class AiChatWidget(QWidget):
         self.stackWidget = QStackedWidget(self)
         layout.addWidget(self.stackWidget)
 
+        self.sysInput = ChatEdit(self)
+        self.sysInput.setPlaceholderText(
+            self.tr("Enter the system prompt here"))
+
         self.usrInput = ChatEdit(self)
         self.usrInput.setPlaceholderText(
             self.tr("Enter the query prompt here"))
@@ -175,6 +179,8 @@ class AiChatWidget(QWidget):
         gridLayout = QGridLayout()
         gridLayout.setContentsMargins(0, 0, 0, 0)
         gridLayout.setSpacing(0)
+        gridLayout.addWidget(QLabel(self.tr("System")), 0, 0)
+        gridLayout.addWidget(self.sysInput, 0, 1)
         gridLayout.addWidget(QLabel(self.tr("User")), 1, 0)
         gridLayout.addWidget(self.usrInput, 1, 1)
 
@@ -312,11 +318,13 @@ class AiChatWidget(QWidget):
         self._doRequest(
             self.usrInput.toPlainText(),
             self.cbChatMode.currentData(),
-            self.cbLang.currentText())
+            self.cbLang.currentText(),
+            self.sysInput.toPlainText())
 
-    def _doRequest(self, prompt: str, chatMode: AiChatMode, language=""):
+    def _doRequest(self, prompt: str, chatMode: AiChatMode, language="", sysPrompt: str = None):
         params = AiParameters()
         params.prompt = prompt
+        params.sys_prompt = sysPrompt
         params.stream = True
         params.temperature = self.sbTemperature.value()
         params.max_tokens = self.sbMaxTokens.value()
