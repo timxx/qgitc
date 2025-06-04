@@ -352,7 +352,8 @@ class GitView(QWidget):
             preSha1 = None
             curIdx = self.ui.logView.currentIndex()
             if curIdx != -1:
-                preSha1 = self.ui.logView.getCommit(curIdx).sha1
+                commit = self.ui.logView.getCommit(curIdx)
+                preSha1 = commit.sha1 if commit else None
 
             self.__onBranchChanged(index)
 

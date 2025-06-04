@@ -952,7 +952,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if self.delayVisible:
             self.ensureVisible()
             self.delayVisible = False
-        elif self.curIdx == -1:
+        elif self.curIdx == -1 and self.data:
             self.setCurrentIndex(0)
 
         self.endFetch.emit()

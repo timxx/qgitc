@@ -6,16 +6,13 @@ from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.gitutils import Git
 from qgitc.windowtype import WindowType
-from tests.base import TestBase, createRepo
+from tests.base import TestBase
 
 
 class TestLogWindow(TestBase):
     def setUp(self):
         super().setUp()
         self.window = self.app.getWindow(WindowType.LogWindow)
-        # reduce logs to load to speed up tests
-        self.window.ui.leOpts.setText("-n50")
-        QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)
 
     def tearDown(self):
         self.window.close()
@@ -129,3 +126,23 @@ class TestLogWindow(TestBase):
         self.assertEqual(5, logView.getCount())
         self.assertEqual(Git.LUC_SHA1, logView.getCommit(0).sha1)
         self.assertEqual(Git.LCC_SHA1, logView.getCommit(1).sha1)
+
+    def testInvalidFileFilter(self):
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.window.ui.leOpts.setText("-- invalidfile.txt")
+        QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)
+        self.wait(1000, logView.fetcher.isLoading)
+        self.wait(50)
+
+        self.assertEqual(0, logView.getCount())
+        self.assertEqual(-1, logView.currentIndex())
+
+        self.window.ui.leOpts.setText("-- invalidfile.py")
+        QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)
+        self.wait(1000, logView.fetcher.isLoading)
+        self.wait(50)
+
+        self.assertEqual(0, logView.getCount())
+        self.assertEqual(-1, logView.currentIndex())
