@@ -177,7 +177,7 @@ class AiModelFactory:
         return decorator
 
     @classmethod
-    def models(cls) -> List[type[AiModelBase]]:
+    def models(cls):
         return list(cls._registry.values())
 
     @classmethod
