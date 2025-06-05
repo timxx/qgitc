@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QDialog
 
 from qgitc.gitutils import Git
 from qgitc.windowtype import WindowType
-from tests.base import TestBase, createRepo
+from tests.base import TemporaryDirectory, TestBase, createRepo
 from tests.mockgithubcopilot import MockGithubCopilot, MockGithubCopilotStep
 
 
@@ -41,7 +41,7 @@ class TestCommitWindow(TestBase):
     def testRepoChanged(self):
         self.waitForLoaded()
 
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as dir:
+        with TemporaryDirectory() as dir:
             createRepo(dir)
 
             with patch("qgitc.commitwindow.CommitWindow._onRepoDirChanged") as mock:

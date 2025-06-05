@@ -2,6 +2,7 @@
 import logging
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import threading
@@ -93,6 +94,31 @@ def addSubmoduleRepo(dir, submoduleDir, subdir):
     Git.commit("Add submodule", repoDir=dir)
 
 
+class TemporaryDirectory:
+    def __init__(self):
+        self.name = tempfile.mkdtemp()
+
+    def __repr__(self):
+        return "<{} {!r}>".format(self.__class__.__name__, self.name)
+
+    def __enter__(self):
+        return self.name
+
+    def __exit__(self, exc, value, tb):
+        self.cleanup()
+
+    def cleanup(self):
+        def removeReadonly(func, path, _):
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+
+        if os.path.exists(self.name):
+            if sys.version_info < (3, 12):
+                shutil.rmtree(self.name, onerror=removeReadonly)
+            else:
+                shutil.rmtree(self.name, onexc=removeReadonly)
+
+
 _setup_logging()
 
 
@@ -166,7 +192,7 @@ class TestBase(unittest.TestCase):
         return False
 
     def doCreateRepo(self):
-        self.gitDir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.gitDir = TemporaryDirectory()
         self.submoduleDir = None
         os.chdir(self.gitDir.name)
 
@@ -175,8 +201,7 @@ class TestBase(unittest.TestCase):
 
         createRepo(self.gitDir.name)
         if self.createSubmodule():
-            self.submoduleDir = tempfile.TemporaryDirectory(
-                ignore_cleanup_errors=True)
+            self.submoduleDir = TemporaryDirectory()
             createRepo(self.submoduleDir.name,
                        "https://foo.com/bar/submodule.git")
             addSubmoduleRepo(self.gitDir.name,

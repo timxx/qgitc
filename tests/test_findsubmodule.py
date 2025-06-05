@@ -7,7 +7,7 @@ from PySide6.QtCore import QCoreApplication
 
 from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.gitutils import Git
-from tests.base import TestBase, addSubmoduleRepo, createRepo
+from tests.base import TemporaryDirectory, TestBase, addSubmoduleRepo, createRepo
 
 
 class TestFindSubmodule(TestBase):
@@ -21,7 +21,7 @@ class TestFindSubmodule(TestBase):
         self.assertEqual(thread.submodules, [])
 
     def testSubmoduleRepo(self):
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as dir:
+        with TemporaryDirectory() as dir:
             mainRepo = os.path.join(dir, "mainRepo")
             createRepo(mainRepo)
 
@@ -45,7 +45,7 @@ class TestFindSubmodule(TestBase):
                 mock_walk.assert_not_called()
 
     def testSubRepo(self):
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as dir:
+        with TemporaryDirectory() as dir:
             createRepo(dir)
             createRepo(os.path.join(dir, "subrepo"))
             createRepo(os.path.join(dir, "dir1", "dir2", "dir3", "subrepo2"))
