@@ -12,9 +12,7 @@ authors = [
 description = "A cross-platform Git GUI tool"
 requires-python = ">=3.6"
 license = "Apache-2.0"
-license-files = [
-    "LICENSE",
-]
+license-files = [ "LICENSE" ]
 keywords = [
     "git",
     "conflict",
