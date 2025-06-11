@@ -642,7 +642,9 @@ class Git():
     def restoreRepoFiles(repoFiles: Dict[str, List[str]], staged=False, branchDir=None):
         for repoDir, files in repoFiles.items():
             fullRepoDir = repoDir or branchDir
-            if repoDir and repoDir != ".":
+            if not repoDir or repoDir == ".":
+                fullRepoDir = branchDir or Git.REPO_DIR
+            else:
                 fullRepoDir = os.path.join(branchDir or Git.REPO_DIR, repoDir)
             error = Git.restoreFiles(
                 fullRepoDir or Git.REPO_DIR, files, staged)
