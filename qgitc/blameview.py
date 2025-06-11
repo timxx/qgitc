@@ -479,6 +479,7 @@ class BlameView(QWidget):
 
     def queryClose(self):
         self._fetcher.cancel()
+        self._commitPanel.logView.queryClose()
 
     def _onRequestBlame(self, sha1: str, file: str):
         self.blame(file, sha1, repoDir=self._viewer.repoDir)
