@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
-from typing import List, cast
+from typing import Dict, List, cast
 
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import QApplication
@@ -44,3 +44,7 @@ class ApplicationBase(QApplication):
 
     @abc.abstractmethod
     def telemetry(self) -> TelemetryBase: ...
+
+    @abc.abstractmethod
+    def trackFeatureUsage(self, feature: str,
+                          properties: Dict[str, object] = None): ...

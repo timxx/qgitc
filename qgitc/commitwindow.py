@@ -1332,6 +1332,8 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
+        ApplicationBase.instance().trackFeatureUsage("ai.msg.generate")
+
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self.ui.btnRefineMsg.setEnabled(False)
@@ -1343,6 +1345,7 @@ class CommitWindow(StateWindow):
         self.ui.btnCancelGen.show()
         self.ui.btnGenMessage.setEnabled(False)
 
+        ApplicationBase.instance().trackFeatureUsage("ai.msg.refine")
         self._aiMessage.refine(self.ui.teMessage.toPlainText().strip())
         logger.debug("Begin refine commit message")
 
@@ -1402,6 +1405,7 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
+        ApplicationBase.instance().trackFeatureUsage("ai.codereview")
         event = CodeReviewEvent(submoduleFiles)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 

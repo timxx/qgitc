@@ -3,6 +3,7 @@
 import os
 import shutil
 from datetime import datetime
+from typing import Dict
 
 from PySide6.QtCore import (
     QElapsedTimer,
@@ -405,3 +406,11 @@ class Application(ApplicationBase):
 
     def telemetry(self):
         return self._telemetry
+
+    def trackFeatureUsage(self, feature: str, properties: Dict[str, object] = None):
+        props = {
+            "user.id": self._settings.userId(),
+        }
+        if properties:
+            props.update(properties)
+        self._telemetry.trackMetric(feature, props)
