@@ -44,3 +44,9 @@ jobs:
       - name: Upload
         if: ${{ github.ref_type == 'tag' }}
         uses: pypa/gh-action-pypi-publish@release/v1
+ 
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qgitc-artifact
+          path: dist/qgitc*.whl
