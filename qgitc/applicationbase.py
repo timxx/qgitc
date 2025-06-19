@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication
 
 from qgitc.colorschema import ColorSchema
 from qgitc.settings import Settings
+from qgitc.telemetry import TelemetryBase
 from qgitc.windowtype import WindowType
 
 
@@ -40,3 +41,6 @@ class ApplicationBase(QApplication):
     @staticmethod
     def instance():
         return cast(ApplicationBase, QApplication.instance())
+
+    @abc.abstractmethod
+    def telemetry(self) -> TelemetryBase: ...

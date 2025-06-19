@@ -127,7 +127,7 @@ def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
         logger.debug(msg)
 
 
-def _init_gui():
+def _init_gui(cmd: str):
     setAppUserId("appid.qgitc.xyz")
     qInstallMessageHandler(_qt_message_handler)
 
@@ -141,7 +141,18 @@ def _init_gui():
         app.setStyle(styleName)
         logger.info("Set style: %s", styleName)
 
+    app.telemetry().trackMetric("app.activity", {
+        "user.id": app.settings().userId(),
+        "app.cmd": cmd,
+    })
+
     return app
+
+
+def _do_exec(app: ApplicationBase):
+    ret = app.exec()
+    app.telemetry().shutdown()
+    return ret
 
 
 def _detect_and_fix_repo(filterFile):
@@ -157,7 +168,7 @@ def _detect_and_fix_repo(filterFile):
 
 
 def _do_log(args):
-    app = _init_gui()
+    app = _init_gui(args.cmd)
 
     merge_mode = args.cmd == "mergetool"
     window = app.getWindow(WindowType.LogWindow)
@@ -198,11 +209,11 @@ def _do_log(args):
     else:
         window.showMaximized()
 
-    return app.exec()
+    return _do_exec(app)
 
 
 def _do_blame(args):
-    app = _init_gui()
+    app = _init_gui(args.cmd)
 
     window = app.getWindow(WindowType.BlameWindow)
     _move_center(window)
@@ -217,11 +228,11 @@ def _do_blame(args):
 
     window.blame(file, args.rev, args.line_number)
 
-    return app.exec()
+    return _do_exec(app)
 
 
 def _do_commit(args):
-    app = _init_gui()
+    app = _init_gui(args.cmd)
 
     window = app.getWindow(WindowType.CommitWindow)
     _move_center(window)
@@ -231,11 +242,11 @@ def _do_commit(args):
     else:
         window.showMaximized()
 
-    return app.exec()
+    return _do_exec(app)
 
 
 def _do_chat(args):
-    app = _init_gui()
+    app = _init_gui(args.cmd)
 
     window = app.getWindow(WindowType.AiAssistant)
     _move_center(window)
@@ -245,7 +256,7 @@ def _do_chat(args):
     else:
         window.showMaximized()
 
-    return app.exec()
+    return _do_exec(app)
 
 
 def main():

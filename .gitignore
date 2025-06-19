@@ -95,3 +95,5 @@ ENV/
 *.qm
 qgitc/ui_*.py
 qgitc/version.py
+
+otelenv.py

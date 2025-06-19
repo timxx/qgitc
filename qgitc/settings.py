@@ -3,6 +3,7 @@
 import logging
 import os
 import platform
+import uuid
 from typing import List
 
 from PySide6.QtCore import QSettings, Signal
@@ -554,3 +555,13 @@ class Settings(QSettings):
 
     def setLanguage(self, lang: str):
         self.setValue("language", lang)
+
+    def isTelemetryEnabled(self) -> bool:
+        return self.value("enableTelemetry", True, type=bool)
+
+    def userId(self) -> str:
+        userId = self.value("userId", "")
+        if not userId:
+            userId = str(uuid.uuid4())
+            self.setValue("userId", userId)
+        return userId

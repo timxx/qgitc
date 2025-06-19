@@ -42,8 +42,10 @@ from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.gitutils import Git
 from qgitc.mainwindow import MainWindow
 from qgitc.newversiondialog import NewVersionDialog
+from qgitc.otelimpl import OTelService
 from qgitc.settings import Settings
 from qgitc.textline import Link
+from qgitc.version import __version__
 from qgitc.versionchecker import VersionChecker
 from qgitc.windowtype import WindowType
 
@@ -67,6 +69,11 @@ class Application(ApplicationBase):
         self.testing = testing
         self._settings = Settings(self, testing=testing)
         self.setupTranslator()
+
+        self._telemetry = OTelService(
+            serviceName=self.applicationName(),
+            serviceVersion=__version__,
+        )
 
         self._logWindow = None
         self._blameWindow = None
@@ -395,3 +402,6 @@ class Application(ApplicationBase):
             thread.terminate()
             return True
         return False
+
+    def telemetry(self):
+        return self._telemetry
