@@ -53,12 +53,17 @@ class OTelService(TelemetryBase):
         if not self._isEnabled:
             return
 
+        arch = platform.machine().lower()
+        if arch in ("amd64", "x86_64"):
+            arch = "x86_64"
+        elif arch in ("arm64", "aarch64"):
+            arch = "arm64"
         resource = Resource.create(attributes={
             "service.name": serviceName,
             "service.version": serviceVersion,
             "py.version": sys.version.split()[0],
             "os.platform": sys.platform,
-            "os.arch": platform.machine(),
+            "os.arch": arch,
         })
 
         self._setupTracer(resource, serviceName, f"{OTEL_ENDPOINT}/v1/traces")
