@@ -33,6 +33,10 @@ jobs:
             echo "SETUPTOOLS_SCM_PRETEND_VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
           fi
 
+      - name: Make Telemetry Env
+        run: |
+          echo -e "OTEL_ENDPOINT=\"${{ secrets.OTEL_ENDPOINT }}\"\nOTEL_AUTH=\"${{ secrets.OTEL_AUTH }}\"" > qgitc/otelenv.py
+
       - name: Package
         run: |
           python -m build -w -n

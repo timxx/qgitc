@@ -40,6 +40,9 @@ dependencies = [
     "requests",
     "psutil; sys_platform == 'win32'",
     "packaging",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp-proto-http"
 ]
 
 [project.gui-scripts]
