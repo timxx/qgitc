@@ -2274,7 +2274,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         textLen = len(text)
 
         for i in range(textLen):
-            if i + 1 > textLen:
+            if i + 1 >= textLen:
                 break
 
             # Check for comments: single-line, or multi-line start or end
