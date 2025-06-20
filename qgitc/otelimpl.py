@@ -34,6 +34,11 @@ class OTelTraceSpan(TraceSpanBase):
             return
         self._span.set_attribute(key, value)
 
+    def addEvent(self, name: str, attributes: Dict[str, object] = None) -> None:
+        if self._span is None:
+            return
+        self._span.add_event(name, attributes)
+
     def __enter__(self):
         if self._impl is not None:
             self._span = self._impl.__enter__()

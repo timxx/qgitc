@@ -13,6 +13,11 @@ class TraceSpanBase(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def addEvent(self, name: str, attributes: Dict[str, object] = None) -> None:
+        """Add an event to the span."""
+        pass
+
+    @abc.abstractmethod
     def __enter__(self):
         """Start the span."""
         pass
