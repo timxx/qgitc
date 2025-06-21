@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import logging
 import platform
 import sys
 from typing import Dict
 
-from opentelemetry import metrics, trace
+from opentelemetry import _logs, metrics, trace
+from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs._internal import LogRecord
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -14,6 +19,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.common import logger
 from qgitc.telemetry import TelemetryBase, TraceSpanBase
 
 try:
@@ -73,6 +79,7 @@ class OTelService(TelemetryBase):
 
         self._setupTracer(resource, serviceName, f"{OTEL_ENDPOINT}/v1/traces")
         self._setupMeter(resource, serviceName, f"{OTEL_ENDPOINT}/v1/metrics")
+        self._setupLogger(resource, serviceName, f"{OTEL_ENDPOINT}/v1/logs")
 
     def _headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
@@ -107,6 +114,23 @@ class OTelService(TelemetryBase):
 
         self._meter = meterProvider.get_meter(servieName)
 
+    def _setupLogger(self, resource: Resource, serviceName: str, otelEndpoint: str):
+        provider = LoggerProvider(resource=resource)
+        _logs.set_logger_provider(provider)
+
+        exporter = OTLPLogExporter(
+            endpoint=otelEndpoint,
+            timeout=1,
+            headers=self._headers())
+        provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+
+        logger = logging.getLogger()
+        logger.addHandler(LoggingHandler(logging.WARNING, provider))
+
+        self._logger = logging.getLogger("_otel_")
+        self._logger.addHandler(LoggingHandler(logging.INFO, provider))
+        self._logger.setLevel(logging.INFO)
+
     def trackMetric(self, name: str, properties: Dict[str, object] = None, value: float = 1.0) -> None:
         if not self._isEnabled:
             return
@@ -120,6 +144,11 @@ class OTelService(TelemetryBase):
 
         span = self._tracker.start_as_current_span(name)
         return OTelTraceSpan(span)
+
+    def logger(self):
+        if not self._isEnabled:
+            return logger
+        return self._logger
 
     def shutdown(self):
         if not self._isEnabled:

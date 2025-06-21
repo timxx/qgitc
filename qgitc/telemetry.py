@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
+from logging import Logger
 from typing import Dict
 
 
@@ -38,6 +39,11 @@ class TelemetryBase(abc.ABC):
     @abc.abstractmethod
     def startTrace(self, name: str) -> TraceSpanBase:
         """Start a trace with a given name."""
+        pass
+
+    @abc.abstractmethod
+    def logger(self) -> Logger:
+        """The common logger for otel"""
         pass
 
     @abc.abstractmethod
