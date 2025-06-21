@@ -141,10 +141,12 @@ def _init_gui(cmd: str):
         app.setStyle(styleName)
         logger.info("Set style: %s", styleName)
 
-    app.telemetry().trackMetric("app.activity", {
-        "user.id": app.settings().userId(),
-        "app.cmd": cmd,
-    })
+    app.telemetry().logger().info(
+        "app activity", extra={
+            "event.type": "user_activity",
+            "user.id": app.settings().userId(),
+            "app.cmd": cmd
+        })
 
     return app
 
