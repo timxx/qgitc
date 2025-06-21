@@ -60,7 +60,8 @@ class OTelTraceSpan(TraceSpanBase):
 class OTelService(TelemetryBase):
 
     def __init__(self, serviceName: str, serviceVersion: str):
-        self._isEnabled = ApplicationBase.instance().settings().isTelemetryEnabled()
+        app = ApplicationBase.instance()
+        self._isEnabled = app.settings().isTelemetryEnabled() and not app.testing
         if not self._isEnabled:
             return
 

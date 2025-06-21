@@ -112,11 +112,15 @@ class TemporaryDirectory:
             os.chmod(path, stat.S_IWRITE)
             func(path)
 
-        if os.path.exists(self.name):
-            if sys.version_info < (3, 12):
-                shutil.rmtree(self.name, onerror=removeReadonly)
-            else:
-                shutil.rmtree(self.name, onexc=removeReadonly)
+        try:
+            if os.path.exists(self.name):
+                if sys.version_info < (3, 12):
+                    shutil.rmtree(self.name, onerror=removeReadonly)
+                else:
+                    shutil.rmtree(self.name, onexc=removeReadonly)
+        except:
+            logger.warning(
+                "Failed to remove temporary directory %s", self.name)
 
 
 _setup_logging()
