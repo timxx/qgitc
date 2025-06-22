@@ -557,11 +557,40 @@ class Settings(QSettings):
         self.setValue("language", lang)
 
     def isTelemetryEnabled(self) -> bool:
-        return self.value("enableTelemetry", True, type=bool)
+        self.beginGroup("telemetry")
+        value = self.value("enableTelemetry", True, type=bool)
+        self.endGroup()
+        return value
+
+    def isTelemetryServerConnectable(self, endpoint: str):
+        self.beginGroup("telemetry")
+        key = str(hash(endpoint))
+        value = self.value(key, False, type=bool)
+        self.endGroup()
+        return value
+
+    def setTelemetryServerConnectable(self, endpoint: str, connectable: bool):
+        self.beginGroup("telemetry")
+        key = str(hash(endpoint))
+        self.setValue(key, connectable)
+        self.endGroup()
+
+    def lastTelemetryServerCheck(self):
+        self.beginGroup("telemetry")
+        value = self.value("lastCheck", 0, type=int)
+        self.endGroup()
+        return value
+
+    def setLastTelemetryServerCheck(self, datetime: int):
+        self.beginGroup("telemetry")
+        self.setValue("lastCheck", datetime)
+        self.endGroup()
 
     def userId(self) -> str:
+        self.beginGroup("telemetry")
         userId = self.value("userId", "")
         if not userId:
             userId = str(uuid.uuid4())
             self.setValue("userId", userId)
+        self.endGroup()
         return userId

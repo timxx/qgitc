@@ -18,6 +18,7 @@ from PySide6.QtCore import (
     qVersion,
 )
 from PySide6.QtGui import QDesktopServices, QIcon, QPalette
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QMessageBox
 
 from qgitc.aichatwindow import AiChatWindow
@@ -50,6 +51,11 @@ from qgitc.version import __version__
 from qgitc.versionchecker import VersionChecker
 from qgitc.windowtype import WindowType
 
+try:
+    from qgitc.otelenv import OTEL_AUTH, OTEL_ENDPOINT
+except ImportError:
+    OTEL_ENDPOINT = None
+
 
 def qtVersion():
     return tuple(map(int, qVersion().split('.')))
@@ -71,10 +77,8 @@ class Application(ApplicationBase):
         self._settings = Settings(self, testing=testing)
         self.setupTranslator()
 
-        self._telemetry = OTelService(
-            serviceName=self.applicationName(),
-            serviceVersion=__version__,
-        )
+        self._manager = QNetworkAccessManager(self)
+        self._initTelemetry()
 
         self._logWindow = None
         self._blameWindow = None
@@ -415,3 +419,51 @@ class Application(ApplicationBase):
         if properties:
             props.update(properties)
         self._telemetry.trackMetric("qgitc.feature", props)
+
+    def _initTelemetry(self):
+        self._telemetry = OTelService()
+        if not self._settings.isTelemetryEnabled():
+            return
+        if not OTEL_ENDPOINT or self.testing:
+            return
+
+        # trust the cache first
+        if self._settings.isTelemetryServerConnectable(OTEL_ENDPOINT):
+            self._telemetry.setupService(
+                self.applicationName(),
+                __version__,
+                OTEL_ENDPOINT,
+                OTEL_AUTH
+            )
+
+        ts = self._settings.lastTelemetryServerCheck()
+        dt = datetime.fromtimestamp(ts)
+        diff = datetime.now() - dt
+        if diff.days < 3:
+            return
+
+        request = QNetworkRequest()
+        request.setUrl(OTEL_ENDPOINT)
+        reply = self._manager.get(request)
+
+        reply.finished.connect(
+            self._onCheckEndpointFinished)
+
+    def _onCheckEndpointFinished(self):
+        reply: QNetworkReply = self.sender()
+        reply.deleteLater()
+
+        self._settings.setLastTelemetryServerCheck(
+            int(datetime.now().timestamp()))
+
+        ok = reply.error() == QNetworkReply.NoError
+        self._settings.setTelemetryServerConnectable(
+            OTEL_ENDPOINT, ok)
+
+        if ok and self._settings.isTelemetryEnabled() and not self._telemetry.inited:
+            self._telemetry.setupService(
+                self.applicationName(),
+                __version__,
+                OTEL_ENDPOINT,
+                OTEL_AUTH
+            )

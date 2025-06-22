@@ -17,15 +17,8 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.telemetry import TelemetryBase, TraceSpanBase
-
-try:
-    from qgitc.otelenv import OTEL_AUTH, OTEL_ENDPOINT
-except ImportError:
-    OTEL_ENDPOINT = "http://localhost:4318"
-    OTEL_AUTH = ""
 
 
 class OTelTraceSpan(TraceSpanBase):
@@ -58,11 +51,13 @@ class OTelTraceSpan(TraceSpanBase):
 
 class OTelService(TelemetryBase):
 
-    def __init__(self, serviceName: str, serviceVersion: str):
-        app = ApplicationBase.instance()
-        self._isEnabled = app.settings().isTelemetryEnabled() and not app.testing
-        if not self._isEnabled:
-            return
+    def __init__(self):
+        self._isEnabled = False
+        self.inited = False
+
+    def setupService(self, serviceName: str, serviceVersion: str, endPoint: str, auth: str = None):
+        self._isEnabled = True
+        self.inited = True
 
         arch = platform.machine().lower()
         if arch in ("amd64", "x86_64"):
@@ -77,26 +72,24 @@ class OTelService(TelemetryBase):
             "os.arch": arch,
         })
 
-        self._setupTracer(resource, serviceName, f"{OTEL_ENDPOINT}/v1/traces")
-        self._setupMeter(resource, serviceName, f"{OTEL_ENDPOINT}/v1/metrics")
-        self._setupLogger(resource, serviceName, f"{OTEL_ENDPOINT}/v1/logs")
+        headers = {"Content-Type": "application/json"}
+        if auth:
+            headers["Authorization"] = auth
+
+        self._setupTracer(resource, serviceName, f"{endPoint}/v1/traces", headers)
+        self._setupMeter(resource, serviceName, f"{endPoint}/v1/metrics", headers)
+        self._setupLogger(resource, serviceName, f"{endPoint}/v1/logs", headers)
 
         self._counters: Dict[str, metrics.Counter] = {}
 
-    def _headers(self) -> Dict[str, str]:
-        headers = {"Content-Type": "application/json"}
-        if OTEL_AUTH:
-            headers["Authorization"] = OTEL_AUTH
-        return headers
-
-    def _setupTracer(self, resource: Resource, serviceName: str, otelEndpoint: str):
+    def _setupTracer(self, resource: Resource, serviceName: str, otelEndpoint: str, headers: Dict[str, str]):
         traceProvder = TracerProvider(resource=resource)
         trace.set_tracer_provider(traceProvder)
 
         exporter = OTLPSpanExporter(
             endpoint=otelEndpoint,
             timeout=1,
-            headers=self._headers())
+            headers=headers)
 
         processor = BatchSpanProcessor(
             exporter,
@@ -105,11 +98,11 @@ class OTelService(TelemetryBase):
 
         self._tracker = traceProvder.get_tracer(serviceName)
 
-    def _setupMeter(self, resource: Resource, servieName: str, otelEndpoint: str):
+    def _setupMeter(self, resource: Resource, servieName: str, otelEndpoint: str, headers: Dict[str, str]):
         exporter = OTLPMetricExporter(
             endpoint=otelEndpoint,
             timeout=1,
-            headers=self._headers())
+            headers=headers)
         reader = PeriodicExportingMetricReader(exporter, 5000, 500)
 
         meterProvider = MeterProvider([reader], resource=resource)
@@ -117,14 +110,14 @@ class OTelService(TelemetryBase):
 
         self._meter = meterProvider.get_meter(servieName)
 
-    def _setupLogger(self, resource: Resource, serviceName: str, otelEndpoint: str):
+    def _setupLogger(self, resource: Resource, serviceName: str, otelEndpoint: str, headers: Dict[str, str]):
         provider = LoggerProvider(resource=resource)
         _logs.set_logger_provider(provider)
 
         exporter = OTLPLogExporter(
             endpoint=otelEndpoint,
             timeout=1,
-            headers=self._headers())
+            headers=headers)
         processor = BatchLogRecordProcessor(
             exporter, 3000, export_timeout_millis=500)
         provider.add_log_record_processor(processor)
