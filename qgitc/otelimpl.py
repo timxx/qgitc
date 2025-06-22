@@ -10,7 +10,6 @@ from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs._internal import LogRecord
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -96,11 +95,12 @@ class OTelService(TelemetryBase):
 
         exporter = OTLPSpanExporter(
             endpoint=otelEndpoint,
+            timeout=1,
             headers=self._headers())
 
         processor = BatchSpanProcessor(
             exporter,
-            export_timeout_millis=3000)
+            export_timeout_millis=500)
         traceProvder.add_span_processor(processor)
 
         self._tracker = traceProvder.get_tracer(serviceName)
@@ -110,7 +110,7 @@ class OTelService(TelemetryBase):
             endpoint=otelEndpoint,
             timeout=1,
             headers=self._headers())
-        reader = PeriodicExportingMetricReader(exporter, 5000, 3000)
+        reader = PeriodicExportingMetricReader(exporter, 5000, 500)
 
         meterProvider = MeterProvider([reader], resource=resource)
         metrics.set_meter_provider(meterProvider)
@@ -125,7 +125,9 @@ class OTelService(TelemetryBase):
             endpoint=otelEndpoint,
             timeout=1,
             headers=self._headers())
-        provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+        processor = BatchLogRecordProcessor(
+            exporter, 3000, export_timeout_millis=500)
+        provider.add_log_record_processor(processor)
 
         logger = logging.getLogger()
         logger.addHandler(LoggingHandler(logging.WARNING, provider))
