@@ -167,3 +167,4 @@ class OTelService(TelemetryBase):
 
         trace.get_tracer_provider().shutdown()
         metrics.get_meter_provider().shutdown()
+        _logs.get_logger_provider().shutdown()
