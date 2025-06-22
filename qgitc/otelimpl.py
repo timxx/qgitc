@@ -82,6 +82,8 @@ class OTelService(TelemetryBase):
         self._setupMeter(resource, serviceName, f"{OTEL_ENDPOINT}/v1/metrics")
         self._setupLogger(resource, serviceName, f"{OTEL_ENDPOINT}/v1/logs")
 
+        self._counters: Dict[str, metrics.Counter] = {}
+
     def _headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
         if OTEL_AUTH:
@@ -136,7 +138,13 @@ class OTelService(TelemetryBase):
         if not self._isEnabled:
             return
 
-        counter = self._meter.create_counter(name, unit=unit)
+        key = f"{name}:{unit}"
+        if key in self._counters:
+            counter = self._counters[key]
+        else:
+            counter = self._meter.create_counter(name, unit=unit)
+            self._counters[key] = counter
+
         counter.add(value, properties)
 
     def startTrace(self, name: str):
