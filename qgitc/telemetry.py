@@ -32,7 +32,7 @@ class TraceSpanBase(abc.ABC):
 class TelemetryBase(abc.ABC):
 
     @abc.abstractmethod
-    def trackMetric(self, name: str, properties: Dict[str, object] = None, value: float = 1.0) -> None:
+    def trackMetric(self, name: str, properties: Dict[str, object] = None, value=1.0, unit="1") -> None:
         """Track a metric with a given name and value."""
         pass
 

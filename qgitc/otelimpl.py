@@ -132,12 +132,12 @@ class OTelService(TelemetryBase):
         self._logger.addHandler(LoggingHandler(logging.INFO, provider))
         self._logger.setLevel(logging.INFO)
 
-    def trackMetric(self, name: str, properties: Dict[str, object] = None, value: float = 1.0) -> None:
+    def trackMetric(self, name: str, properties: Dict[str, object] = None, value=1.0, unit="1") -> None:
         if not self._isEnabled:
             return
 
-        counter = self._meter.create_counter(name, unit="event")
-        counter.add(value, properties or {})
+        counter = self._meter.create_counter(name, unit=unit)
+        counter.add(value, properties)
 
     def startTrace(self, name: str):
         if not self._isEnabled:

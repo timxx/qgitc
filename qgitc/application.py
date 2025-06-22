@@ -409,8 +409,9 @@ class Application(ApplicationBase):
 
     def trackFeatureUsage(self, feature: str, properties: Dict[str, object] = None):
         props = {
+            "feature.name": feature,
             "user.id": self._settings.userId(),
         }
         if properties:
             props.update(properties)
-        self._telemetry.trackMetric(feature, props)
+        self._telemetry.trackMetric("qgitc.feature", props)
