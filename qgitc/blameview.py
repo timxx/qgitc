@@ -215,7 +215,14 @@ class CommitPanel(QSplitter):
         panel: RevisionPanel = self._viewer.panel
         rev = panel._activeRev
         if rev:
-            self.logView.switchToCommit(rev)
+            if self.logView.switchToCommit(rev):
+                commit = self.logView.getCommit(self.logView.currentIndex())
+                previous = None
+                for r in panel.revisions:
+                    if r.sha1 == rev:
+                        previous = r.previous
+                        break
+                self.detailPanel.showCommit(commit, previous)
         else:
             self.logView.setCurrentIndex(-1)
 
