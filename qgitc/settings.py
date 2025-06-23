@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import hashlib
 import logging
 import os
 import platform
@@ -557,11 +558,49 @@ class Settings(QSettings):
         self.setValue("language", lang)
 
     def isTelemetryEnabled(self) -> bool:
-        return self.value("enableTelemetry", True, type=bool)
+        self.beginGroup("telemetry")
+        value = self.value("enableTelemetry", True, type=bool)
+        self.endGroup()
+        return value
+
+    @staticmethod
+    def _endPointHash(endpoint: str) -> str:
+        m = hashlib.md5()
+        m.update(endpoint.encode('utf-8'))
+        return m.hexdigest()
+
+    def isTelemetryServerConnectable(self, endpoint: str):
+        self.beginGroup("telemetry")
+        key = Settings._endPointHash(endpoint)
+        if self.contains(key):
+            value = self.value(key, False, type=bool)
+        else:
+            value = None
+        self.endGroup()
+        return value
+
+    def setTelemetryServerConnectable(self, endpoint: str, connectable: bool):
+        self.beginGroup("telemetry")
+        key = Settings._endPointHash(endpoint)
+        self.setValue(key, connectable)
+        self.endGroup()
+
+    def lastTelemetryServerCheck(self):
+        self.beginGroup("telemetry")
+        value = self.value("lastCheck", 0, type=int)
+        self.endGroup()
+        return value
+
+    def setLastTelemetryServerCheck(self, datetime: int):
+        self.beginGroup("telemetry")
+        self.setValue("lastCheck", datetime)
+        self.endGroup()
 
     def userId(self) -> str:
+        self.beginGroup("telemetry")
         userId = self.value("userId", "")
         if not userId:
             userId = str(uuid.uuid4())
             self.setValue("userId", userId)
+        self.endGroup()
         return userId
