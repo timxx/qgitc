@@ -382,7 +382,7 @@ class CommitWindow(StateWindow):
         self.ui.cbRunAction.setChecked(
             ApplicationBase.instance().settings().runCommitActions())
         self.ui.cbRunAction.toggled.connect(
-            lambda checked: ApplicationBase.instance().settings().setRunCommitActions(checked))
+            self._onToggleRunCommitActions)
 
         self.ui.leFilterFiles.textChanged.connect(
             self._onFilterFilesChanged)
@@ -834,6 +834,7 @@ class CommitWindow(StateWindow):
                 submoduleFiles[repoDir] = []
 
     def _onUnstageClicked(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.unstage")
         submoduleFiles = self._collectSectionFiles(self.ui.lvStaged)
         if not submoduleFiles:
             return
@@ -847,6 +848,7 @@ class CommitWindow(StateWindow):
         self.clearModels()
 
     def _onUnstageAllClicked(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.unstage_all")
         submoduleFiles = self._collectModelFiles(self.ui.lvStaged.model())
         if not submoduleFiles:
             return
@@ -859,6 +861,7 @@ class CommitWindow(StateWindow):
         self.clearModels()
 
     def _onStageClicked(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.stage")
         submoduleFiles = self._collectSectionFiles(self.ui.lvFiles)
         if not submoduleFiles:
             return
@@ -872,6 +875,7 @@ class CommitWindow(StateWindow):
         self.clearModels()
 
     def _onStageAllClicked(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.stage_all")
         submoduleFiles = self._collectModelFiles(self.ui.lvFiles.model())
         if not submoduleFiles:
             return
@@ -884,6 +888,7 @@ class CommitWindow(StateWindow):
         self.clearModels()
 
     def _doUnstage(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
+        ApplicationBase.instance().trackFeatureUsage("commit.unstage")
         repoDir = fullRepoDir(submodule)
         if files:
             repoFiles = [toSubmodulePath(submodule, file) for file in files]
@@ -1332,7 +1337,7 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
-        ApplicationBase.instance().trackFeatureUsage("ai.msg.generate")
+        ApplicationBase.instance().trackFeatureUsage("commit.ai_gen")
 
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
@@ -1345,7 +1350,7 @@ class CommitWindow(StateWindow):
         self.ui.btnCancelGen.show()
         self.ui.btnGenMessage.setEnabled(False)
 
-        ApplicationBase.instance().trackFeatureUsage("ai.msg.refine")
+        ApplicationBase.instance().trackFeatureUsage("commit.ai_refine")
         self._aiMessage.refine(self.ui.teMessage.toPlainText().strip())
         logger.debug("Begin refine commit message")
 
@@ -1405,7 +1410,7 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
-        ApplicationBase.instance().trackFeatureUsage("ai.codereview")
+        ApplicationBase.instance().trackFeatureUsage("commit.ai_cr")
         event = CodeReviewEvent(submoduleFiles)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
@@ -1477,6 +1482,7 @@ class CommitWindow(StateWindow):
         return statusCode in ["?", "!"]
 
     def _onRestoreFiles(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.restore_files")
         listView: QListView = self._acRestoreFiles.data()
         repoFiles = self._collectSectionFiles(
             listView, CommitWindow._filterUntrackedFiles)
@@ -1519,6 +1525,8 @@ class CommitWindow(StateWindow):
             self._filesModel.removeFile(file, submodule)
 
     def _onAmendToggled(self, checked: bool):
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.toggle_amend", {"checked": checked})
         self._updateCommitButtonState()
         if not checked:
             return
@@ -1565,6 +1573,7 @@ class CommitWindow(StateWindow):
         ApplicationBase.instance().postEvent(self, TemplateReadyEvent(message, True))
 
     def _onExternalDiff(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.external_diff")
         listView: QListView = self._acRestoreFiles.data()
         index = listView.currentIndex()
         if not index.isValid():
@@ -1575,6 +1584,7 @@ class CommitWindow(StateWindow):
             self._onStagedDoubleClicked(index)
 
     def _onOpenContainingFolder(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.open_folder")
         listView: QListView = self._acRestoreFiles.data()
         index = listView.currentIndex()
         if not index.isValid():
@@ -1694,3 +1704,8 @@ class CommitWindow(StateWindow):
             pass
         elif not self._ntpTimer:
             self._showNtpTime(self._isDateTimeOutOfSync())
+
+    def _onToggleRunCommitActions(self, checked: bool):
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.toggle_run_action", {"checked": checked})
+        ApplicationBase.instance().settings().setRunCommitActions(checked)
