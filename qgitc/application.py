@@ -413,12 +413,17 @@ class Application(ApplicationBase):
 
     def trackFeatureUsage(self, feature: str, properties: Dict[str, object] = None):
         props = {
+            "event.type": "feature_usage",
             "feature.name": feature,
             "user.id": self._settings.userId(),
         }
         if properties:
             props.update(properties)
-        self._telemetry.trackMetric("qgitc.feature", props)
+        logger = self._telemetry.logger()
+        logger.info(
+            f"Feature usage: {feature}",
+            extra=props
+        )
 
     def _initTelemetry(self):
         self._telemetry = OTelService()
