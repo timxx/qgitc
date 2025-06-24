@@ -84,9 +84,12 @@ class OTelService(TelemetryBase):
         if auth:
             headers["Authorization"] = auth
 
-        self._setupTracer(resource, serviceName, f"{endPoint}/v1/traces", headers)
-        self._setupMeter(resource, serviceName, f"{endPoint}/v1/metrics", headers)
-        self._setupLogger(resource, serviceName, f"{endPoint}/v1/logs", headers)
+        self._setupTracer(resource, serviceName,
+                          f"{endPoint}/v1/traces", headers)
+        self._setupMeter(resource, serviceName,
+                         f"{endPoint}/v1/metrics", headers)
+        self._setupLogger(resource, serviceName,
+                          f"{endPoint}/v1/logs", headers)
 
         self._counters: Dict[str, metrics.Counter] = {}
 
