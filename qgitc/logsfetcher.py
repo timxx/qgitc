@@ -267,6 +267,10 @@ class LogsFetcherThread(QThread):
 
         b = time.time()
 
+        telemetry = ApplicationBase.instance().telemetry()
+        span = telemetry.startTrace("fetchComposite")
+        span.addTag("sm_count", len(self._submodules))
+
         logsArgs = self._args[1]
         paths = extractFilePaths(logsArgs)
         submodules = filterSubmoduleByPath(self._submodules, paths)
@@ -298,6 +302,7 @@ class LogsFetcherThread(QThread):
                     if self.isInterruptionRequested():
                         logger.debug("Logs fetcher cancelled")
                         executor.shutdown(wait=False, cancel_futures=True)
+                        span.setStatus(False, "cancelled")
                         return
 
                     tasks.remove(task)
@@ -310,6 +315,7 @@ class LogsFetcherThread(QThread):
                         if handleCount % 100 == 0 and self.isInterruptionRequested():
                             logger.debug("Logs fetcher cancelled")
                             executor.shutdown(wait=False, cancel_futures=True)
+                            span.setStatus(False, "cancelled")
                             return
                         # require same day at least
                         key = (log.committerDateTime.date(),
@@ -332,6 +338,7 @@ class LogsFetcherThread(QThread):
         if self.isInterruptionRequested():
             logger.debug("Logs fetcher cancelled")
             executor.shutdown(wait=False, cancel_futures=True)
+            span.setStatus(False, "cancelled")
             return
 
         logger.debug("fetch elapsed: %fs", time.time() - b)
@@ -349,6 +356,9 @@ class LogsFetcherThread(QThread):
             self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
         self.fetchFinished.emit(exitCode)
+
+        span.setStatus(True)
+        span.end()
 
     def cancel(self):
         self.requestInterruption()

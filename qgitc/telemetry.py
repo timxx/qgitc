@@ -19,6 +19,16 @@ class TraceSpanBase(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def end(self) -> None:
+        """End the span."""
+        pass
+
+    @abc.abstractmethod
+    def setStatus(self, ok: bool, desc: str = None) -> None:
+        """Set the status of the span."""
+        pass
+
+    @abc.abstractmethod
     def __enter__(self):
         """Start the span."""
         pass

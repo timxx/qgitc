@@ -23,30 +23,38 @@ from qgitc.telemetry import TelemetryBase, TraceSpanBase
 
 class OTelTraceSpan(TraceSpanBase):
 
-    def __init__(self, ctx):
-        self._impl = ctx
-        self._span: trace.Span = None
+    def __init__(self, span: trace.Span):
+        self._impl = span
 
-    def addTag(self, key: str, value: object) -> None:
-        if self._span is None:
+    def addTag(self, key: str, value: object):
+        if self._impl is None:
             return
-        self._span.set_attribute(key, value)
+        self._impl.set_attribute(key, value)
 
-    def addEvent(self, name: str, attributes: Dict[str, object] = None) -> None:
-        if self._span is None:
+    def addEvent(self, name: str, attributes: Dict[str, object] = None):
+        if self._impl is None:
             return
-        self._span.add_event(name, attributes)
+        self._impl.add_event(name, attributes)
+
+    def end(self) -> None:
+        if self._impl is None:
+            return
+        self._impl.end()
+
+    def setStatus(self, ok: bool, desc: str = None) -> None:
+        if self._impl is None:
+            return
+
+        if ok:
+            self._impl.set_status(trace.StatusCode.OK)
+        else:
+            self._impl.set_status(trace.StatusCode.ERROR, desc)
 
     def __enter__(self):
-        if self._impl is not None:
-            self._span = self._impl.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        if self._span is None:
-            return
-        self._impl.__exit__(exc_type, exc_value, traceback)
-        self._span = None
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.end()
 
 
 class OTelService(TelemetryBase):
@@ -146,7 +154,7 @@ class OTelService(TelemetryBase):
         if not self._isEnabled:
             return OTelTraceSpan(None)
 
-        span = self._tracker.start_as_current_span(name)
+        span = self._tracker.start_span(name)
         return OTelTraceSpan(span)
 
     def logger(self):
