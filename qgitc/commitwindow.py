@@ -649,6 +649,11 @@ class CommitWindow(StateWindow):
         if not self._checkMessage():
             return
 
+        ApplicationBase.instance().trackFeatureUsage("commit.commit", {
+            "runCommitActions": self.ui.cbRunAction.isChecked(),
+            "amend": self.ui.cbAmend.isChecked(),
+        })
+
         amend = self.ui.cbAmend.isChecked()
         message = self._filterMessage(
             self.ui.teMessage.toPlainText().strip())
@@ -1525,8 +1530,6 @@ class CommitWindow(StateWindow):
             self._filesModel.removeFile(file, submodule)
 
     def _onAmendToggled(self, checked: bool):
-        ApplicationBase.instance().trackFeatureUsage(
-            "commit.toggle_amend", {"checked": checked})
         self._updateCommitButtonState()
         if not checked:
             return
@@ -1706,6 +1709,4 @@ class CommitWindow(StateWindow):
             self._showNtpTime(self._isDateTimeOutOfSync())
 
     def _onToggleRunCommitActions(self, checked: bool):
-        ApplicationBase.instance().trackFeatureUsage(
-            "commit.toggle_run_action", {"checked": checked})
         ApplicationBase.instance().settings().setRunCommitActions(checked)
