@@ -132,16 +132,17 @@ class Git():
         return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None, repoDir=None) -> Union[bytes, str, None]:
+    def checkOutput(args, text=None, repoDir=None, reportError=True) -> Union[bytes, str, None]:
         process = Git.run(args, text, repoDir)
         data, error = process.communicate()
         if process.returncode != 0:
-            if not text:
-                msg = error.decode("utf-8", errors="replace")
-            else:
-                msg = error
-            logger.warning("git %s (%s)(%s)", " ".join(args),
-                           msg.rstrip(), repoDir or Git.REPO_DIR)
+            if reportError:
+                if not text:
+                    msg = error.decode("utf-8", errors="replace")
+                else:
+                    msg = error
+                logger.warning("git %s (%s)(%s)", " ".join(args),
+                               msg.rstrip(), repoDir or Git.REPO_DIR)
             return None
 
         return data
@@ -460,7 +461,7 @@ class Git():
     @staticmethod
     def repoUrl():
         args = ["config", "remote.origin.url"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, reportError=False)
         if data:
             return data.rstrip(b'\n').decode("utf-8")
         return ""
