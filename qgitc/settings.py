@@ -563,6 +563,11 @@ class Settings(QSettings):
         self.endGroup()
         return value
 
+    def setTelemetryEnabled(self, enabled: bool):
+        self.beginGroup("telemetry")
+        self.setValue("enableTelemetry", enabled)
+        self.endGroup()
+
     @staticmethod
     def _endPointHash(endpoint: str) -> str:
         m = hashlib.md5()

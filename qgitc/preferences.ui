@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>5</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -150,6 +150,13 @@
             </item>
             <item>
              <widget class="QComboBox" name="cbLogLevel"/>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="cbTelemetry">
+              <property name="text">
+               <string>Send Usage Data</string>
+              </property>
+             </widget>
             </item>
             <item>
              <spacer name="horizontalSpacer_12">

@@ -305,6 +305,8 @@ class Preferences(QDialog):
         index = self.ui.cbLogLevel.findData(self.settings.logLevel())
         self.ui.cbLogLevel.setCurrentIndex(index)
 
+        self.ui.cbTelemetry.setChecked(self.settings.isTelemetryEnabled())
+
         self.ui.cbColorSchema.addItem(self.tr("Auto"), ColorSchemaMode.Auto)
         self.ui.cbColorSchema.addItem(self.tr("Light"), ColorSchemaMode.Light)
         self.ui.cbColorSchema.addItem(self.tr("Dark"), ColorSchemaMode.Dark)
@@ -368,6 +370,9 @@ class Preferences(QDialog):
 
         value = self.ui.cbLogLevel.currentData()
         self.settings.setLogLevel(value)
+
+        value = self.ui.cbTelemetry.isChecked()
+        self.settings.setTelemetryEnabled(value)
 
         value = self.ui.cbColorSchema.currentData()
         self.settings.setColorSchemaMode(value)
