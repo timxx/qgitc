@@ -42,11 +42,6 @@ class TraceSpanBase(abc.ABC):
 class TelemetryBase(abc.ABC):
 
     @abc.abstractmethod
-    def trackMetric(self, name: str, properties: Dict[str, object] = None, value=1.0, unit="1") -> None:
-        """Track a metric with a given name and value."""
-        pass
-
-    @abc.abstractmethod
     def startTrace(self, name: str) -> TraceSpanBase:
         """Start a trace with a given name."""
         pass

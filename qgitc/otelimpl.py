@@ -5,14 +5,11 @@ import platform
 import sys
 from typing import Dict
 
-from opentelemetry import _logs, metrics, trace
+from opentelemetry import _logs, trace
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -86,12 +83,8 @@ class OTelService(TelemetryBase):
 
         self._setupTracer(resource, serviceName,
                           f"{endPoint}/v1/traces", headers)
-        self._setupMeter(resource, serviceName,
-                         f"{endPoint}/v1/metrics", headers)
         self._setupLogger(resource, serviceName,
                           f"{endPoint}/v1/logs", headers)
-
-        self._counters: Dict[str, metrics.Counter] = {}
 
     def _setupTracer(self, resource: Resource, serviceName: str, otelEndpoint: str, headers: Dict[str, str]):
         traceProvder = TracerProvider(resource=resource)
@@ -108,18 +101,6 @@ class OTelService(TelemetryBase):
         traceProvder.add_span_processor(processor)
 
         self._tracker = traceProvder.get_tracer(serviceName)
-
-    def _setupMeter(self, resource: Resource, servieName: str, otelEndpoint: str, headers: Dict[str, str]):
-        exporter = OTLPMetricExporter(
-            endpoint=otelEndpoint,
-            timeout=1,
-            headers=headers)
-        reader = PeriodicExportingMetricReader(exporter, 5000, 500)
-
-        meterProvider = MeterProvider([reader], resource=resource)
-        metrics.set_meter_provider(meterProvider)
-
-        self._meter = meterProvider.get_meter(servieName)
 
     def _setupLogger(self, resource: Resource, serviceName: str, otelEndpoint: str, headers: Dict[str, str]):
         provider = LoggerProvider(resource=resource)
@@ -140,19 +121,6 @@ class OTelService(TelemetryBase):
         self._logger.addHandler(LoggingHandler(logging.INFO, provider))
         self._logger.setLevel(logging.INFO)
 
-    def trackMetric(self, name: str, properties: Dict[str, object] = None, value=1.0, unit="1") -> None:
-        if not self._isEnabled:
-            return
-
-        key = f"{name}:{unit}"
-        if key in self._counters:
-            counter = self._counters[key]
-        else:
-            counter = self._meter.create_counter(name, unit=unit)
-            self._counters[key] = counter
-
-        counter.add(value, properties)
-
     def startTrace(self, name: str):
         if not self._isEnabled:
             return OTelTraceSpan(None)
@@ -170,5 +138,4 @@ class OTelService(TelemetryBase):
             return
 
         trace.get_tracer_provider().shutdown()
-        metrics.get_meter_provider().shutdown()
         _logs.get_logger_provider().shutdown()
