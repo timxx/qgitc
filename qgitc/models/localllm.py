@@ -2,8 +2,8 @@
 
 import json
 
-import requests
-from PySide6.QtCore import QThread
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
@@ -11,32 +11,50 @@ from qgitc.llm import AiChatMode, AiModelFactory, AiParameters
 from qgitc.models.chatgpt import ChatGPTModel
 
 
-class LocalLLMNameFetcher(QThread):
+class LocalLLMNameFetcher(QObject):
+
+    finished = Signal()
 
     def __init__(self, url):
         super().__init__()
         self.models = []
         self.url_base = url
+        self._reply: QNetworkReply = None
 
-    def run(self):
-        try:
-            url = f"{self.url_base}/models"
-            response = requests.get(url, timeout=0.3)
-            if not response.ok:
-                return
-            if self.isInterruptionRequested():
-                return
+    def start(self):
+        url = f"{self.url_base}/models"
 
-            model_list = json.loads(response.text)
-            if not model_list or "data" not in model_list:
-                return
-            for model in model_list["data"]:
-                id = model.get("id")
-                if not id:
-                    continue
-                self.models.append((id, id))
-        except:
-            pass
+        mgr = ApplicationBase.instance().networkManager
+        request = QNetworkRequest()
+        request.setUrl(url)
+
+        self._reply = mgr.get(request)
+        self._reply.finished.connect(self._onFinished)
+
+    def _onFinished(self):
+        reply = self._reply
+        reply.deleteLater()
+        self._reply = None
+        if reply.error() != QNetworkReply.NoError:
+            return
+
+        model_list = json.loads(reply.readAll().data())
+        if not model_list or "data" not in model_list:
+            return
+        for model in model_list["data"]:
+            id = model.get("id")
+            if not id:
+                continue
+            self.models.append((id, id))
+
+        self.finished.emit()
+
+    def isRunning(self):
+        return self._reply is not None and self._reply.isRunning()
+
+    def requestInterruption(self):
+        if self._reply and self._reply.isRunning():
+            self._reply.abort()
 
 
 @AiModelFactory.register()
@@ -102,7 +120,4 @@ class LocalLLM(ChatGPTModel):
         if self.nameFetcher and self.nameFetcher.isRunning():
             self.nameFetcher.disconnect(self)
             self.nameFetcher.requestInterruption()
-            if ApplicationBase.instance().terminateThread(self.nameFetcher):
-                logger.warning(
-                    "Name fetcher thread is still running, terminating it.")
             self.nameFetcher = None

@@ -103,8 +103,13 @@ class AiModelBase(QObject):
     def cleanup(self):
         pass
 
-    def post(self, url: str, headers: Dict[bytes, bytes] = None, data: Dict[str, any] = None):
+    def post(self, url: str, headers: Dict[bytes, bytes] = None, data: Dict[str, any] = None, stream=True):
         self.requestInterruption()
+        self._isStreaming = stream
+        if stream:
+            headers = headers or {}
+            headers[b"Accept"] = b"text/event-stream"
+            headers[b"Cache-Control"] = b"no-cache"
         reply = AiModelBase.request(url, headers=headers, post=True, data=data)
         self._initReply(reply)
 
@@ -160,6 +165,8 @@ class AiModelBase(QObject):
         self._reply.deleteLater()
         self._reply = None
         self.finished.emit()
+        self._isStreaming = False
+        self._content = ""
 
     def _handleData(self, data: bytes):
         if self._isStreaming:

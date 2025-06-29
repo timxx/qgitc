@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import requests
-
-from qgitc.common import logger
-from qgitc.llm import AiModelBase, AiParameters, AiResponse
+from qgitc.llm import AiModelBase, AiParameters
 
 
 class ChatGPTModel(AiModelBase):
 
     def __init__(self, url, model: str = None, parent=None):
         super().__init__(url, model, parent)
-        self.api_token = None
+        self.url = ""
 
     def queryAsync(self, params: AiParameters):
         payload = {
@@ -38,38 +35,17 @@ class ChatGPTModel(AiModelBase):
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
-        try:
-            self._doQuery(payload, params.stream)
-        except requests.exceptions.ConnectionError as e:
-            self.serviceUnavailable.emit()
-        except Exception as e:
-            logger.exception("Error in query")
+        self._doQuery(payload, params.stream)
 
     def _makeMessage(self, role, prompt):
         return {"role": role, "content": prompt}
 
     def _doQuery(self, payload, stream=True):
         headers = {
-            "Content-Type": "application/json; charset=utf-8"
+            b"Content-Type": b"application/json; charset=utf-8"
         }
+        self.post(self.url, headers=headers, data=payload, stream=stream)
 
-        if self.api_token:
-            headers["api_key"] = self.api_token,
-
-        response = requests.post(
-            self.url, headers=headers, json=payload, stream=stream)
-        if not response.ok:
-            aiResponse = AiResponse()
-            aiResponse.message = response.text
-            self.responseAvailable.emit(aiResponse)
-            return
-
-        if self.isInterruptionRequested():
-            return
-
-        if stream:
-            role, content = self.handleStreamResponse(response)
-        else:
-            role, content = self.handleNonStreamResponse(response)
-
-        self.add_history(self._makeMessage(role, content))
+    def _handleFinished(self):
+        if self._content:
+            self.add_history(self._makeMessage(self._role, self._content))

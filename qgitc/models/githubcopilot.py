@@ -72,6 +72,7 @@ class ModelsFetcher(QObject):
     def _onFinished(self):
         reply: QNetworkReply = self.sender()
         reply.deleteLater()
+        self._reply = None
         if reply.error() != QNetworkReply.NoError:
             return
 
@@ -112,8 +113,6 @@ class ModelsFetcher(QObject):
     def requestInterruption(self):
         if self._reply and self._reply.isRunning():
             self._reply.abort()
-            self._reply.deleteLater()
-        self._reply = None
 
     def isRunning(self):
         return self._reply is not None and self._reply.isRunning()
@@ -181,15 +180,11 @@ class GithubCopilot(AiModelBase):
 
     def _doQuery(self, payload, stream=True):
         headers = _makeHeaders(self._token)
-        if stream:
-            headers[b"Accept"] = b"text/event-stream"
-            headers[b"Cache-Control"] = b"no-cache"
-
-        self._isStreaming = stream
         self.post(
             "https://api.business.githubcopilot.com/chat/completions",
             headers=headers,
-            data=payload)
+            data=payload,
+            stream=stream)
 
     def _makeMessage(self, role, prompt):
         return {"role": role, "content": prompt}
