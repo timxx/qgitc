@@ -202,9 +202,6 @@ class AiModelBase(QObject):
             return
 
         self._reply.abort()
-        self._reply.deleteLater()
-        self._reply.disconnect()
-        self._reply = None
 
     def handleStreamResponse(self, line: bytes):
         if not line:

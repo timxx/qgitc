@@ -95,7 +95,6 @@ class AiCommitMessage(QObject):
         self._message = ""
 
         self._aiModel: AiModelBase = None
-        self._threads = []
 
     def generate(self, submoduleFiles: Dict[str, str]):
         if len(submoduleFiles) <= 1:
@@ -146,18 +145,7 @@ class AiCommitMessage(QObject):
                 self._onAiResponseAvailable)
             self._aiModel.finished.disconnect(self._onAiResponseFinished)
             self._aiModel.requestInterruption()
-
-            if force and ApplicationBase.instance().terminateThread(self._aiModel):
-                self._threads.remove(self._aiModel)
-                self._aiModel.finished.disconnect(self._onThreadFinished)
-                logger.warning("Terminating AI model thread")
             self._aiModel = None
-
-        if force:
-            for thread in self._threads:
-                thread.finished.disconnect(self._onThreadFinished)
-                ApplicationBase.instance().terminateThread(thread)
-            self._threads.clear()
 
         self._executor.cancel()
 
@@ -229,8 +217,6 @@ class AiCommitMessage(QObject):
         self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
-        self._aiModel.finished.connect(self._onThreadFinished)
-        self._threads.append(self._aiModel)
         self._aiModel.queryAsync(params)
 
     @staticmethod
@@ -285,8 +271,3 @@ class AiCommitMessage(QObject):
 
         self.messageAvailable.emit(stripMessage)
         self._aiModel = None
-
-    def _onThreadFinished(self):
-        thread = self.sender()
-        if thread in self._threads:
-            self._threads.remove(thread)
