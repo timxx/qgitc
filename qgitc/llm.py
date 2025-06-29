@@ -173,9 +173,13 @@ class AiModelBase(QObject):
             self._data += data
             while self._data:
                 pos = self._data.find(b"\n\n")
+                offset = 2
+                if pos == -1:
+                    pos = self._data.find(b"\r\n\r\n")
+                    offset = 4
                 if pos != -1:
                     line = self._data[:pos]
-                    self._data = self._data[pos+2:]
+                    self._data = self._data[pos+offset:]
                     self.handleStreamResponse(line)
                 else:
                     break
