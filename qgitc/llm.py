@@ -237,7 +237,7 @@ class AiModelBase(QObject):
             self.responseAvailable.emit(aiResponse)
             self._content += aiResponse.message
             self._firstDelta = False
-        else:
+        elif "role" not in delta:
             logger.warning(b"Invalid delta: %s", delta)
 
     def handleNonStreamResponse(self, response: bytes):
