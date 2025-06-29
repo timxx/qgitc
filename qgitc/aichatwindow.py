@@ -1,9 +1,7 @@
-import json
 import queue as queue
 from typing import List, Union
 
-import requests
-from PySide6.QtCore import QEvent, QSize, Qt, QThread, Signal
+from PySide6.QtCore import QEvent, QSize, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -38,52 +36,6 @@ from qgitc.llm import (
 from qgitc.llmprovider import AiModelProvider
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
-
-
-class LocalLLMTokensCalculator(QThread):
-
-    calcTokensFinished = Signal(int)
-
-    def __init__(self, url):
-        super().__init__()
-        self._tasks = queue.Queue()
-        self._server_url = url
-
-    def calc_async(self, model, text):
-        self._tasks.put((model, text))
-
-    def run(self):
-        while not self.isInterruptionRequested():
-            model, text = self._tasks.get()
-            if model is None:
-                break
-
-            tokens = LocalLLMTokensCalculator.calc_tokens(
-                self._server_url, model, text)
-            self.calcTokensFinished.emit(tokens)
-
-    @staticmethod
-    def calc_tokens(url, model, text):
-        url = f"{url}/tokens"
-        payload = {
-            "text": text,
-            "model": model,
-        }
-
-        headers = {
-            "Content-Type": "application/json",
-        }
-
-        try:
-            response = requests.post(
-                url, headers=headers, json=payload, stream=False)
-            if not response.ok:
-                return 0
-
-            data = json.loads(response.text)
-            return int(data["tokens"])
-        except:
-            return 0
 
 
 class ChatEdit(QWidget):
@@ -175,8 +127,6 @@ class AiChatWidget(QWidget):
 
         self.usrInput.enterPressed.connect(
             self._onEnterKeyPressed)
-        self.usrInput.textChanged.connect(
-            self._onPromptTextChanged)
 
         gridLayout = QGridLayout()
         gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -287,8 +237,6 @@ class AiChatWidget(QWidget):
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
 
-        self._tokenCalculator = None
-
     def _chatModeStr(self, mode: AiChatMode):
         strings = {
             AiChatMode.Chat: self.tr("Chat"),
@@ -301,12 +249,6 @@ class AiChatWidget(QWidget):
         return strings[mode]
 
     def queryClose(self):
-        if self._tokenCalculator:
-            self._tokenCalculator.calc_async(None, None)
-            self._tokenCalculator.requestInterruption()
-            ApplicationBase.instance().terminateThread(self._tokenCalculator)
-            self._tokenCalculator = None
-
         for i in range(self.cbBots.count()):
             model: AiModelBase = self.cbBots.itemData(i)
             if model.isRunning():
@@ -435,22 +377,6 @@ class AiChatWidget(QWidget):
     def _onEnterKeyPressed(self):
         self._onButtonSend(False)
 
-    def _onPromptTextChanged(self):
-        if not self.isLocalLLM():
-            self.lbTokens.clear()
-            return
-
-        if self._tokenCalculator is None:
-            self._tokenCalculator = LocalLLMTokensCalculator(
-                ApplicationBase.instance().settings().localLlmServer())
-            self._tokenCalculator.start()
-            self._tokenCalculator.calcTokensFinished.connect(
-                self._onCalcTokensFinished)
-
-        self._tokenCalculator.calc_async(
-            self.cbBots.currentText(),
-            self.usrInput.toPlainText())
-
     def _onTextBrowserScrollbarChanged(self, value):
         if self._adjustingSccrollbar:
             return
@@ -459,9 +385,6 @@ class AiChatWidget(QWidget):
         if model is not None and model.isRunning():
             sb: QScrollBar = self.messages.verticalScrollBar()
             self._disableAutoScroll = sb.value() != sb.maximum()
-
-    def _onCalcTokensFinished(self, tokens):
-        self.lbTokens.setText(f"{tokens} tokens")
 
     @property
     def messages(self) -> AiChatbot:
