@@ -1,6 +1,5 @@
 PySide6-Essentials
 chardet
-requests
 psutil; sys_platform == 'win32'
 packaging
 opentelemetry-api
