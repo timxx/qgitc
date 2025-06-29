@@ -12,7 +12,7 @@ class ChatGPTModel(AiModelBase):
         super().__init__(url, model, parent)
         self.api_token = None
 
-    def query(self, params: AiParameters):
+    def queryAsync(self, params: AiParameters):
         payload = {
             "frequency_penalty": 0,
             "max_tokens": params.max_tokens,

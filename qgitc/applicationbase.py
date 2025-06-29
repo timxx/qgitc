@@ -4,6 +4,7 @@ import abc
 from typing import Dict, List, cast
 
 from PySide6.QtCore import QThread, Signal
+from PySide6.QtNetwork import QNetworkAccessManager
 from PySide6.QtWidgets import QApplication
 
 from qgitc.colorschema import ColorSchema
@@ -48,3 +49,7 @@ class ApplicationBase(QApplication):
     @abc.abstractmethod
     def trackFeatureUsage(self, feature: str,
                           properties: Dict[str, object] = None): ...
+
+    @property
+    @abc.abstractmethod
+    def networkManager(self) -> QNetworkAccessManager: ...

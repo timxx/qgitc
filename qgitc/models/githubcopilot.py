@@ -3,13 +3,13 @@
 import json
 import time
 
-import requests
-from PySide6.QtCore import QEventLoop, QThread
+from PySide6.QtCore import QEventLoop, QObject, Signal
+from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters, AiResponse
+from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters
 from qgitc.settings import Settings
 
 CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions. Please focus only on the modified sections of the code. If you notice any serious issues in the old code that could impact functionality or performance, feel free to mention them. Otherwise, concentrate on providing feedback and suggestions for the changes made.
@@ -22,15 +22,15 @@ Please respond in {language}:
 """
 
 
-def _makeHeaders(token: str, intent: str = "conversation-other"):
+def _makeHeaders(token: str, intent: bytes = b"conversation-other"):
     return {
-        "authorization": f"Bearer {token}",
-        "copilot-integration-id": "vscode-chat",
-        "editor-plugin-version": "copilot-chat/0.27.2",
-        "editor-version": "vscode/1.97.2",
-        "openai-intent": intent,
-        "user-agent": "GithubCopilotChat/0.27.2",
-        "x-github-api-version": "2025-05-01",
+        b"authorization": f"Bearer {token}".encode("utf-8"),
+        b"copilot-integration-id": b"vscode-chat",
+        b"editor-plugin-version": b"copilot-chat/0.27.2",
+        b"editor-version": b"vscode/1.97.2",
+        b"openai-intent": intent,
+        b"user-agent": b"GithubCopilotChat/0.27.2",
+        b"x-github-api-version": b"2025-05-01",
     }
 
 
@@ -43,7 +43,9 @@ class AiModelCapabilities:
         self.max_output_tokens = 4096
 
 
-class ModelsFetcher(QThread):
+class ModelsFetcher(QObject):
+
+    finished = Signal()
 
     def __init__(self, token: str, parent=None):
         super().__init__(parent)
@@ -51,50 +53,70 @@ class ModelsFetcher(QThread):
         self.capabilities = {}
         self.defaultModel = None
         self._token = token
+        self._reply: QNetworkReply = None
 
-    def run(self):
-        try:
-            url = "https://api.business.githubcopilot.com/models"
-            headers = _makeHeaders(self._token, "model-access")
-            response = requests.get(url, headers=headers)
-            if not response.ok:
-                return
-            if self.isInterruptionRequested():
-                return
+    def start(self):
+        url = "https://api.business.githubcopilot.com/models"
+        headers = _makeHeaders(self._token, b"model-access")
 
-            model_list = json.loads(response.text)
-            if not model_list or "data" not in model_list:
-                return
-            for model in model_list["data"]:
-                id = model.get("id")
-                if not id:
-                    continue
-                if not model.get("model_picker_enabled", True):
-                    continue
+        mgr = ApplicationBase.instance().networkManager
+        request = QNetworkRequest()
+        request.setUrl(url)
 
-                caps: dict = model.get("capabilities", {})
-                type = caps.get("type", "chat")
-                if type != "chat":
-                    continue
+        for key, value in headers.items():
+            request.setRawHeader(key, value)
 
-                supports: dict = caps.get("supports", {})
-                limits: dict = caps.get("limits", {})
+        self._reply = mgr.get(request)
+        self._reply.finished.connect(self._onFinished)
 
-                modelCaps = AiModelCapabilities(
-                    supports.get("streaming", False),
-                    supports.get("tool_calls", False)
-                )
-                modelCaps.max_output_tokens = limits.get(
-                    "max_output_tokens", 4096)
-                self.capabilities[id] = modelCaps
+    def _onFinished(self):
+        reply: QNetworkReply = self.sender()
+        reply.deleteLater()
+        if reply.error() != QNetworkReply.NoError:
+            return
 
-                name = model.get("name")
-                self.models.append((id, name or id))
+        model_list = json.loads(reply.readAll().data())
+        if not model_list or "data" not in model_list:
+            return
+        for model in model_list["data"]:
+            id = model.get("id")
+            if not id:
+                continue
+            if not model.get("model_picker_enabled", True):
+                continue
 
-                if model.get("is_chat_default", False):
-                    self.defaultModel = id
-        except:
-            pass
+            caps: dict = model.get("capabilities", {})
+            type = caps.get("type", "chat")
+            if type != "chat":
+                continue
+
+            supports: dict = caps.get("supports", {})
+            limits: dict = caps.get("limits", {})
+
+            modelCaps = AiModelCapabilities(
+                supports.get("streaming", False),
+                supports.get("tool_calls", False)
+            )
+            modelCaps.max_output_tokens = limits.get(
+                "max_output_tokens", 4096)
+            self.capabilities[id] = modelCaps
+
+            name = model.get("name")
+            self.models.append((id, name or id))
+
+            if model.get("is_chat_default", False):
+                self.defaultModel = id
+
+        self.finished.emit()
+
+    def requestInterruption(self):
+        if self._reply and self._reply.isRunning():
+            self._reply.abort()
+            self._reply.deleteLater()
+        self._reply = None
+
+    def isRunning(self):
+        return self._reply is not None and self._reply.isRunning()
 
 
 @AiModelFactory.register()
@@ -111,12 +133,10 @@ class GithubCopilot(AiModelBase):
         self._modelFetcher: ModelsFetcher = None
         self._updateModels()
 
-    def query(self, params: AiParameters):
+    def queryAsync(self, params: AiParameters):
         if not self._token or not GithubCopilot.isTokenValid(self._token):
             if not self.updateToken():
                 self.serviceUnavailable.emit()
-                return
-            if self.isInterruptionRequested():
                 return
 
         id = params.model or self.modelId or "gpt-4.1"
@@ -153,39 +173,23 @@ class GithubCopilot(AiModelBase):
         self.add_history(self._makeMessage("user", prompt))
         payload["messages"] = self._history
 
-        try:
-            self._doQuery(payload, stream)
-        except requests.exceptions.ConnectionError as e:
-            self.serviceUnavailable.emit()
-        except Exception as e:
-            logger.exception("Error in Github Copilot query")
+        self._doQuery(payload, stream)
 
     @property
     def name(self):
         return "GitHub Copilot"
 
     def _doQuery(self, payload, stream=True):
-        response = requests.post(
-            "https://api.business.githubcopilot.com/chat/completions",
-            headers=_makeHeaders(self._token),
-            json=payload,
-            stream=stream, verify=True)
-
-        if not response.ok:
-            aiResponse = AiResponse()
-            aiResponse.message = response.text
-            self.responseAvailable.emit(aiResponse)
-            return
-
-        if self.isInterruptionRequested():
-            return
-
+        headers = _makeHeaders(self._token)
         if stream:
-            role, content = self.handleStreamResponse(response)
-        else:
-            role, content = self.handleNonStreamResponse(response)
+            headers[b"Accept"] = b"text/event-stream"
+            headers[b"Cache-Control"] = b"no-cache"
 
-        self.add_history(self._makeMessage(role, content))
+        self._isStreaming = stream
+        self.post(
+            "https://api.business.githubcopilot.com/chat/completions",
+            headers=headers,
+            data=payload)
 
     def _makeMessage(self, role, prompt):
         return {"role": role, "content": prompt}
@@ -198,19 +202,28 @@ class GithubCopilot(AiModelBase):
             if not accessToken:
                 return False
 
-        response = requests.get(
+        reply = AiModelBase.request(
             "https://api.github.com/copilot_internal/v2/token",
             headers={
-                "authorization": f"token {accessToken}",
-                "editor-plugin-version": "copilot-chat/0.24.1",
-                "editor-version": "vscode/1.97.2",
-                "user-agent": "GithubCopilotChat/0.24.1",
-            }, verify=True)
+                b"authorization": f"token {accessToken}".encode("utf-8"),
+                b"editor-plugin-version": b"copilot-chat/0.24.1",
+                b"editor-version": b"vscode/1.97.2",
+                b"user-agent": b"GithubCopilotChat/0.24.1",
+            }, post=False)
 
-        if not response.ok:
+        self._eventLoop = QEventLoop()
+        reply.finished.connect(self._eventLoop.quit)
+        self._eventLoop.exec()
+
+        # If the event loop is interrupted, we should not process the reply
+        if self._eventLoop is None:
+            return False
+        self._eventLoop = None
+
+        if reply.error() != QNetworkReply.NoError:
             return False
 
-        data: dict = response.json()
+        data: dict = json.loads(reply.readAll().data())
         self._token = data.get("token")
         if not self._token:
             return False
@@ -300,7 +313,14 @@ class GithubCopilot(AiModelBase):
         if self._modelFetcher and self._modelFetcher.isRunning():
             self._modelFetcher.disconnect(self)
             self._modelFetcher.requestInterruption()
-            if ApplicationBase.instance().terminateThread(self._modelFetcher):
-                logger.warning(
-                    "Model fetcher thread is still running, terminating it.")
             self._modelFetcher = None
+
+    def _handleFinished(self):
+        if self._content:
+            self.add_history(self._makeMessage(self._role, self._content))
+
+    def requestInterruption(self):
+        if self._eventLoop:
+            self._eventLoop.quit()
+            self._eventLoop = None
+        return super().requestInterruption()

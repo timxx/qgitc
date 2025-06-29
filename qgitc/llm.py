@@ -3,11 +3,12 @@
 import json
 from enum import Enum
 from threading import Lock
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
-from PySide6.QtCore import QThread, Signal
-from requests import Response
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 
 
@@ -52,28 +53,31 @@ class AiChatMode(Enum):
     CodeExplanation = 5
 
 
-class AiModelBase(QThread):
+class AiModelBase(QObject):
     responseAvailable = Signal(AiResponse)
     serviceUnavailable = Signal()
     modelsReady = Signal()
+    finished = Signal()
 
     def __init__(self, url, model: str = None, parent=None):
         super().__init__(parent)
         self._history = []
         self.url_base = url
         self._mutex = Lock()
-        self._params: AiParameters = None
         self.modelId: str = model
+        self._reply: QNetworkReply = None
+
+        self._data: bytes = b""
+        self._isStreaming = False
+        self._role = "assistant"
+        self._content = ""
+        self._firstDelta = True
 
     def clear(self):
         with self._mutex:
             self._history.clear()
 
     def queryAsync(self, params: AiParameters):
-        self._params = params
-        self.start()
-
-    def query(self, params: AiParameters):
         pass
 
     def add_history(self, message):
@@ -83,9 +87,6 @@ class AiModelBase(QThread):
     @property
     def name(self):
         return None
-
-    def run(self):
-        self.query(self._params)
 
     def isLocal(self):
         return False
@@ -102,53 +103,137 @@ class AiModelBase(QThread):
     def cleanup(self):
         pass
 
-    def handleStreamResponse(self, response: Response):
-        role = "assistant"
-        content = ""
-        first_delta = True
-        for chunk in response.iter_lines():
-            if self.isInterruptionRequested():
+    def post(self, url: str, headers: Dict[bytes, bytes] = None, data: Dict[str, any] = None):
+        self.requestInterruption()
+        reply = AiModelBase.request(url, headers=headers, post=True, data=data)
+        self._initReply(reply)
+
+    def get(self, url: str, headers: Dict[bytes, bytes] = None):
+        self.requestInterruption()
+        _reply = AiModelBase.request(url, headers=headers, post=False)
+        self._initReply(_reply)
+
+    def _initReply(self, reply: QNetworkReply):
+        self._data = b""
+        self._content = ""
+        self._role = "assistant"
+        self._firstDelta = True
+
+        if not reply:
+            return
+
+        self._reply = reply
+        self._reply.readyRead.connect(self._onDataReady)
+        self._reply.errorOccurred.connect(self._onError)
+        self._reply.finished.connect(self._onFinished)
+    
+    @staticmethod
+    def request(url: str, headers: Dict[bytes, bytes] = None, post=True, data: Dict[str, any] = None):
+        mgr = ApplicationBase.instance().networkManager
+        request = QNetworkRequest()
+        request.setUrl(url)
+
+        if headers:
+            for key, value in headers.items():
+                request.setRawHeader(key, value)
+
+        if post:
+            jsonData = json.dumps(data).encode("utf-8") if data else b''
+            reply = mgr.post(request, jsonData)
+        else:
+            reply = mgr.get(request)
+
+        return reply
+
+    def _onDataReady(self):
+        reply: QNetworkReply = self.sender()
+        data = reply.readAll()
+        if not data:
+            return
+        self._handleData(data.data())
+
+    def _onError(self, code: QNetworkReply.NetworkError):
+        self._handleError(code)
+
+    def _onFinished(self):
+        self._handleFinished()
+        self._reply.deleteLater()
+        self._reply = None
+        self.finished.emit()
+
+    def _handleData(self, data: bytes):
+        if self._isStreaming:
+            self._data += data
+            while self._data:
+                pos = self._data.find(b"\n\n")
+                if pos != -1:
+                    line = self._data[:pos]
+                    self._data = self._data[pos+2:]
+                    self.handleStreamResponse(line)
+                else:
+                    break
+        else:
+            pass
+
+    def _handleFinished(self):
+        """Implement this method to handle the finished state of the network reply."""
+        pass
+
+    def _handleError(self, code: QNetworkReply.NetworkError):
+        if code == QNetworkReply.ConnectionRefusedError:
+            self.serviceUnavailable.emit()
+
+    def isRunning(self):
+        return self._reply is not None and self._reply.isRunning()
+
+    def requestInterruption(self):
+        if not self._reply:
+            return
+
+        self._reply.abort()
+        self._reply.deleteLater()
+        self._reply.disconnect()
+        self._reply = None
+
+    def handleStreamResponse(self, line: bytes):
+        if not line:
+            return
+
+        if not line.startswith(b"data:"):
+            if not line.startswith(b": ping - "):
+                logger.warning(b"Corrupted chunk: %s", line)
+            return
+
+        if line == b"data: [DONE]":
+            return
+
+        data: dict = json.loads(line[5:].decode("utf-8"))
+        choices: list = data.get("choices")
+        if not choices:
+            return
+
+        delta = choices[0]["delta"]
+        if not delta:
+            return
+
+        if "role" in delta:
+            self._role = delta["role"]
+        if "content" in delta:
+            if not delta["content"]:
                 return
-            if not chunk:
-                continue
-            if not chunk.startswith(b"data:"):
-                if not chunk.startswith(b": ping - "):
-                    logger.warning(b"Corrupted chunk: %s", chunk)
-                continue
+            aiResponse = AiResponse()
+            aiResponse.is_delta = True
+            aiResponse.role = AiRole.Assistant
+            aiResponse.message = delta["content"]
+            aiResponse.first_delta = self._firstDelta
+            self.responseAvailable.emit(aiResponse)
+            self._content += aiResponse.message
+            self._firstDelta = False
+        else:
+            logger.warning(b"Invalid delta: %s", delta)
 
-            if chunk == b"data: [DONE]":
-                # we should break here, but in case there is still more data
-                # to process, we will just continue
-                continue
-
-            data: dict = json.loads(chunk[5:].decode("utf-8"))
-            choices: list = data.get("choices")
-            if not choices:
-                continue
-
-            delta = choices[0]["delta"]
-            if not delta:
-                break
-            if "role" in delta:
-                role = delta["role"]
-            if "content" in delta:
-                if not delta["content"]:
-                    continue
-                aiResponse = AiResponse()
-                aiResponse.is_delta = True
-                aiResponse.role = AiRole.Assistant
-                aiResponse.message = delta["content"]
-                aiResponse.first_delta = first_delta
-                self.responseAvailable.emit(aiResponse)
-                content += aiResponse.message
-                first_delta = False
-            else:
-                logger.warning(b"Invalid delta: %s", delta)
-
-        return role, content
-
-    def handleNonStreamResponse(self, response: Response):
-        data = json.loads(response.text)
+    def handleNonStreamResponse(self, response: bytes):
+        data = json.loads(response)
         usage = data["usage"]
         aiResponse = AiResponse()
         aiResponse.total_tokens = usage["total_tokens"]

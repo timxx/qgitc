@@ -481,3 +481,7 @@ class Application(ApplicationBase):
                 OTEL_ENDPOINT,
                 OTEL_AUTH
             )
+
+    @property
+    def networkManager(self) -> QNetworkAccessManager:
+        return self._manager

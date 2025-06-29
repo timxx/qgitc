@@ -56,7 +56,7 @@ class LocalLLM(ChatGPTModel):
         else:
             self.nameFetcher = None
 
-    def query(self, params: AiParameters):
+    def queryAsync(self, params: AiParameters):
         if params.chat_mode == AiChatMode.Chat:
             self.url = f"{self.url_base}/chat/completions"
         elif params.chat_mode == AiChatMode.Completion:
@@ -71,7 +71,7 @@ class LocalLLM(ChatGPTModel):
             self.url = f"{self.url_base}/code/explanation"
         else:
             self.url = f"{self.url_base}/chat/completions"
-        super().query(params)
+        super().queryAsync(params)
 
     @property
     def name(self):
