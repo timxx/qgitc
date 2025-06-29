@@ -10,7 +10,6 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QDialog
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import logger
 from qgitc.ui_githubcopilotlogindialog import Ui_GithubCopilotLoginDialog
 
 

@@ -4,7 +4,8 @@ from enum import Enum, auto
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtCore import QCoreApplication, QTimer
+from PySide6.QtCore import QByteArray, QCoreApplication, QTimer
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
 
 from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.settings import Settings
@@ -29,59 +30,66 @@ def _mockLoginExec(dialog: GithubCopilotLoginDialog, *args, **kwargs):
     GithubCopilotLoginDialogExec(dialog)
 
 
-def _mockRequestPost(url: str, **kwargs):
+def _mockQNetworkAccessManagerPost(mgr: QNetworkAccessManager, request: QNetworkRequest, data: QByteArray):
+    url = request.url().toString()
     if url == "https://github.com/login/device/code":
-        response = MagicMock()
-        response.status_code = 200
-        response.json.return_value = {
-            "device_code": "FAKE_DEVICE_CODE",
-            "user_code": "FAKE_USER_CODE",
-            "verification_uri": "https://github.com/login/device"
-        }
-        return response
+        reply = MagicMock()
+        reply.error = MagicMock(return_value=0)
+        reply.readAll = MagicMock(return_value=b'{"device_code": "FAKE_DEVICE_CODE", "user_code": "FAKE_USER_CODE", "verification_uri": "https://github.com/login/device"}')
+        reply.readyRead = MagicMock()
+        reply.readyRead.connect = lambda slot: QTimer.singleShot(0, slot)
+        reply.finished = MagicMock()
+        reply.finished.connect = lambda slot: QTimer.singleShot(10, slot)
+        return reply
 
     if url == "https://github.com/login/oauth/access_token":
-        response = MagicMock()
-        response.status_code = 200
-        response.json.return_value = {
-            "access_token": "FAKE_ACCESS_TOKEN"
-        }
+        reply = MagicMock()
+        reply.error = MagicMock(return_value=0)
         if MOCK_STEP == MockGithubCopilotStep.LoginAccessDenied:
-            response.json.return_value["error"] = "access_denied"
-        return response
+            reply.readAll = MagicMock(return_value=b'{"error": "access_denied"}')
+        else:
+            reply.readAll = MagicMock(return_value=b'{"access_token": "FAKE_ACCESS_TOKEN"}')
+        reply.readyRead = MagicMock()
+        reply.readyRead.connect = lambda slot: QTimer.singleShot(0, slot)
+        reply.finished = MagicMock()
+        reply.finished.connect = lambda slot: QTimer.singleShot(10, slot)
+        return reply
 
     if url == "https://api.business.githubcopilot.com/chat/completions":
-        response = MagicMock()
-        response.ok = True
-        response.status_code = 200
+        reply = MagicMock()
+        reply.error = MagicMock(return_value=0)
+        stream = request.hasRawHeader("Accept") and request.rawHeader("Accept") == b"text/event-stream"
+        if stream:
+            reply.readAll = MagicMock(return_value=b'''
+data: {"choices":[{"delta":{"role":"assistant"}}]}\n
+data: {"choices":[{"delta":{"content":"This"}}]}\n
+data: {"choices":[{"delta":{"content":" is"}}]}\n
+data: {"choices":[{"delta":{"content":" a"}}]}\n
+data: {"choices":[{"delta":{"content":" mock"}}]}\n
+data: {"choices":[{"delta":{"content":" response"}}]}\n
+data: [DONE]\n
+''')
 
-        if kwargs.get("stream", False):
-            mock_chunks = [
-                b'data: {"choices":[{"delta":{"role":"assistant"}}]}',
-                b'data: {"choices":[{"delta":{"content":"This"}}]}',
-                b'data: {"choices":[{"delta":{"content":" is"}}]}',
-                b'data: {"choices":[{"delta":{"content":" a"}}]}',
-                b'data: {"choices":[{"delta":{"content":" mock"}}]}',
-                b'data: {"choices":[{"delta":{"content":" response"}}]}',
-                b'data: [DONE]'
-            ]
-
-            response.iter_lines = MagicMock(return_value=iter(mock_chunks))
-
-        return response
+        reply.readyRead = MagicMock()
+        reply.readyRead.connect = lambda slot: QTimer.singleShot(0, slot)
+        reply.finished = MagicMock()
+        reply.finished.connect = lambda slot: QTimer.singleShot(10, slot)
+        return reply
 
     assert False, f"Unexpected URL: {url}"
 
 
-def _mockRequestGet(url: str, **kwargs):
+def _mockQNetworkAccessManagerGet(mgr: QNetworkAccessManager, request: QNetworkRequest):
+    url = request.url().toString()
     if url == "https://api.github.com/copilot_internal/v2/token":
-        response = MagicMock()
-        response.ok = True
-        response.status_code = 200
-        response.json.return_value = {
-            "token": "tid=fake_tid;ol=fake_ol;exp=9999999999"
-        }
-        return response
+        reply = MagicMock()
+        reply.error = MagicMock(return_value=0)
+        reply.readAll = MagicMock(return_value=b'{"token": "tid=fake_tid;ol=fake_ol;exp=9999999999"}')
+        reply.readyRead = MagicMock()
+        reply.readyRead.connect = lambda slot: QTimer.singleShot(0, slot)
+        reply.finished = MagicMock()
+        reply.finished.connect = lambda slot: QTimer.singleShot(10, slot)
+        return reply
 
     assert False, f"Unexpected URL: {url}"
 
@@ -97,8 +105,10 @@ class MockGithubCopilot:
             GithubCopilotLoginDialog, "exec", new=_mockLoginExec)
         self._openUrlPatcher = patch("PySide6.QtGui.QDesktopServices.openUrl")
 
-        self._postPatcher = patch("requests.post", new=_mockRequestPost)
-        self._getPatcher = patch("requests.get", new=_mockRequestGet)
+        self._postPatcher = patch(
+            "PySide6.QtNetwork.QNetworkAccessManager.post", new=_mockQNetworkAccessManagerPost)
+        self._getPatcher = patch(
+            "PySide6.QtNetwork.QNetworkAccessManager.get", new=_mockQNetworkAccessManagerGet)
 
         self._openUrlMock = None
 
