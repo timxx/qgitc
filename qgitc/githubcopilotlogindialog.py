@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import json
 from enum import Enum
+from typing import Dict
 
-import requests
-from PySide6.QtCore import QThread, QUrl, Signal
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
+from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QDialog
 
 from qgitc.applicationbase import ApplicationBase
@@ -18,8 +20,9 @@ class LoginStep(Enum):
     UserInfo = 2
 
 
-class LoginThread(QThread):
+class LoginThread(QObject):
     loginFailed = Signal(str)
+    finished = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -28,6 +31,7 @@ class LoginThread(QThread):
         self.verificationUri = None
         self.accessToken = None
         self.step = LoginStep.VerifyUrl
+        self._reply: QNetworkReply = None
 
     def startVerifyUrl(self):
         self.step = LoginStep.VerifyUrl
@@ -41,7 +45,7 @@ class LoginThread(QThread):
         self.step = LoginStep.UserInfo
         self.start()
 
-    def run(self):
+    def start(self):
         try:
             if self.step == LoginStep.VerifyUrl:
                 self._getVerifyUrl()
@@ -53,70 +57,98 @@ class LoginThread(QThread):
             self.loginFailed.emit(str(e))
 
     def _getVerifyUrl(self):
-        response = requests.post(
+        self._post(
             "https://github.com/login/device/code",
             headers={
-                "accept": "application/json",
-                "editor-version": "Neovim/0.6.1",
-                "editor-plugin-version": "copilot.vim/1.16.0",
-                "content-type": "application/json",
-                "user-agent": "GithubCopilot/1.155.0",
-                "accept-encoding": "gzip,deflate,br"
+                b"accept": b"application/json",
+                b"editor-version": b"Neovim/0.6.1",
+                b"editor-plugin-version": b"copilot.vim/1.16.0",
+                b"content-type": b"application/json",
+                b"user-agent": b"GithubCopilot/1.155.0",
             },
-            # data='{"client_id":"Iv1.b507a08c87ecfe98","scope":"read:user"}',
-            json={
+            data={
                 "client_id": "Iv1.b507a08c87ecfe98",
                 "scope": "read:user"
-            },
-            verify=True)
-
-        data: dict = response.json()
-        self.deviceCode = data.get("device_code")
-        self.userCode = data.get("user_code")
-        self.verificationUri = data.get("verification_uri")
-
-        if not self.deviceCode or not self.userCode or not self.verificationUri:
-            self.loginFailed.emit(self.tr("Failed to get verification URL"))
+            })
 
     def _getAccessCode(self):
-        i = 0
-        isMocked = ApplicationBase.instance(
-        ).testing and requests.post.__module__.startswith("tests")
-        while not self.accessToken and not self.isInterruptionRequested():
-            self.msleep(50)
-            i += 1
-            if i % 100 != 0 and not isMocked:
-                continue
-
-            response = requests.post(
-                "https://github.com/login/oauth/access_token",
-                headers={
-                    "accept": "application/json",
-                    "editor-version": "Neovim/0.6.1",
-                    "editor-plugin-version": "copilot.vim/1.16.0",
-                    "content-type": "application/json",
-                    "user-agent": "GithubCopilot/1.155.0",
-                    "accept-encoding": "gzip,deflate,br"
-                },
-                # data=f'{{"client_id":"Iv1.b507a08c87ecfe98","device_code":"{self.deviceCode}","grant_type":"urn:ietf:params:oauth:grant-type:device_code"}}',
-                json={
-                    "client_id": "Iv1.b507a08c87ecfe98",
-                    "device_code": self.deviceCode,
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
-                },
-                verify=True)
-
-            data: dict = response.json()
-            error = data.get("error")
-            if error == "access_denied":
-                self.loginFailed.emit(self.tr("Access denied"))
-                break
-            self.accessToken = data.get("access_token")
+        self._post(
+            "https://github.com/login/oauth/access_token",
+            headers={
+                b"accept": b"application/json",
+                b"editor-version": b"Neovim/0.6.1",
+                b"editor-plugin-version": b"copilot.vim/1.16.0",
+                b"content-type": b"application/json",
+                b"user-agent": b"GithubCopilot/1.155.0",
+            },
+            data={
+                "client_id": "Iv1.b507a08c87ecfe98",
+                "device_code": self.deviceCode,
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code"
+            })
 
     def _getUserInfo(self):
         # TODO: the below URL cannot fetch user name
         # http://api.github.com/copilot_internal/user
         pass
+
+    def isRunning(self):
+        return self._reply is not None and self._reply.isRunning()
+
+    def requestInterruption(self):
+        if self.isRunning():
+            self._reply.abort()
+
+    def _post(self, url: str, headers: Dict[bytes, bytes], data: Dict[str, str] = None):
+        mgr = ApplicationBase.instance().networkManager
+        request = QNetworkRequest()
+        request.setUrl(url)
+
+        if headers:
+            for key, value in headers.items():
+                request.setRawHeader(key, value)
+
+        jsonData = json.dumps(data).encode("utf-8") if data else b''
+        self._reply = mgr.post(request, jsonData)
+
+        self._reply.finished.connect(self._onFinished)
+        self._reply.errorOccurred.connect(self._onError)
+        self._reply.finished.connect(self.finished)
+
+    def _onFinished(self):
+        reply = self._reply
+        reply.deleteLater()
+        self._reply = None
+
+        if reply.error() != QNetworkReply.NoError:
+            return
+
+        data: dict = json.loads(reply.readAll().data())
+        if self.step == LoginStep.VerifyUrl:
+            self.deviceCode = data.get("device_code")
+            self.userCode = data.get("user_code")
+            self.verificationUri = data.get("verification_uri")
+
+            if not self.deviceCode or not self.userCode or not self.verificationUri:
+                self.loginFailed.emit(
+                    self.tr("Failed to get verification URL"))
+        elif self.step == LoginStep.AccessCode:
+            error = data.get("error")
+            if error == "access_denied":
+                self.loginFailed.emit(self.tr("Access denied"))
+            self.accessToken = data.get("access_token")
+            if not self.accessToken:
+                QTimer.singleShot(5000, self._getAccessCode)
+
+    def _onError(self, code: QNetworkReply.NetworkError):
+        if code == QNetworkReply.NoError:
+            return
+
+        if self.step == LoginStep.VerifyUrl:
+            self.loginFailed.emit(
+                self.tr("Failed to get verification URL: {}").format(code))
+        elif self.step == LoginStep.AccessCode:
+            self.loginFailed.emit(self.tr("Access denied"))
 
 
 class GithubCopilotLoginDialog(QDialog):
@@ -188,8 +220,6 @@ class GithubCopilotLoginDialog(QDialog):
         if self._loginThread.isRunning():
             self._loginThread.disconnect(self)
             self._loginThread.requestInterruption()
-            if ApplicationBase.instance().terminateThread(self._loginThread, 100):
-                logger.warning("Terminating login thread")
         return super().closeEvent(event)
 
     def isLoginSuccessful(self):
