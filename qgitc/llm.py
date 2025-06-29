@@ -184,7 +184,7 @@ class AiModelBase(QObject):
                 else:
                     break
         else:
-            pass
+            self.handleNonStreamResponse(data)
 
     def _handleFinished(self):
         """Implement this method to handle the finished state of the network reply."""
@@ -258,7 +258,8 @@ class AiModelBase(QObject):
             self.responseAvailable.emit(aiResponse)
             break
 
-        return role, content
+        self._role = role
+        self._content = content
 
 
 class AiModelFactory:
