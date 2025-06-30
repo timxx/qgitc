@@ -56,6 +56,7 @@ class TestAiChat(TestBase):
 
             self.assertEqual(4, chatbot.blockCount())
 
+            self.wait(100)
             self.assertTrue(self.chatWidget.btnClear.isEnabled())
             QTest.mouseClick(self.chatWidget.btnClear, Qt.LeftButton)
             self.processEvents()
