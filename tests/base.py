@@ -49,12 +49,6 @@ def _setup_logging():
 
     rootLogger.addHandler(handler)
 
-    thirdLoggers = ["requests", "urllib3"]
-    for name in thirdLoggers:
-        logger = logging.getLogger(name)
-        if logger:
-            logger.setLevel(logging.WARNING)
-
     qInstallMessageHandler(_qt_message_handler)
 
 
