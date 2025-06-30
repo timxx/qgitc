@@ -19,3 +19,6 @@ class TestMarkdownHighlighter(TestBase):
             self.highlighter.sqlHighlighter("-")
         except IndexError as e:
             self.fail(f"Index out of range: {e}")
+
+    def testTomlHighlighter(self):
+        self.edit.setPlainText('```TOML\n[project]\nname = "qgitc"\n```')

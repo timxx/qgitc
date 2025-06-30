@@ -2324,7 +2324,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         i = 0
         while i < textLen:
-            if i + 1 > textLen:
+            if i + 1 >= textLen:
                 break
 
             # track the state of strings
@@ -2332,7 +2332,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             # of " and ' chars, but this accomodates normal " and ' strings, as
             # well as ones wrapped by either """ or '''
             if text[i] == doubleQ:
-                if i + 2 <= textLen and text[i + 1] == doubleQ and \
+                if i + 2 < textLen and text[i + 1] == doubleQ and \
                         text[i + 2] == doubleQ:
                     if multiDoubleQStringStart > -1:
                         multiDoubleQStringStart = -1
@@ -2353,7 +2353,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     else:
                         doubleQStringStart = i
             elif text[i] == singleQ:
-                if i + 2 <= textLen and text[i + 1] == singleQ and \
+                if i + 2 < textLen and text[i + 1] == singleQ and \
                         text[i + 2] == singleQ:
                     if multiSingleQStringStart > -1:
                         multiSingleQStringStart = -1
@@ -2414,7 +2414,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
             if not text[i].isspace():
                 onlyWhitespaceBeforeHeader = False
-        i += 1
+            i += 1
 
     def highlightCheckbox(self, text: str, curPos: int):
         if curPos + 4 >= len(text):
