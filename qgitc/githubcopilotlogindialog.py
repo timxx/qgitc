@@ -10,7 +10,6 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QDialog
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import logger
 from qgitc.ui_githubcopilotlogindialog import Ui_GithubCopilotLoginDialog
 
 
@@ -113,7 +112,6 @@ class LoginThread(QObject):
 
         self._reply.finished.connect(self._onFinished)
         self._reply.errorOccurred.connect(self._onError)
-        self._reply.finished.connect(self.finished)
 
     def _onFinished(self):
         reply = self._reply
@@ -121,6 +119,7 @@ class LoginThread(QObject):
         self._reply = None
 
         if reply.error() != QNetworkReply.NoError:
+            self.finished.emit()
             return
 
         data: dict = json.loads(reply.readAll().data())
@@ -132,13 +131,18 @@ class LoginThread(QObject):
             if not self.deviceCode or not self.userCode or not self.verificationUri:
                 self.loginFailed.emit(
                     self.tr("Failed to get verification URL"))
+            self.finished.emit()
         elif self.step == LoginStep.AccessCode:
             error = data.get("error")
             if error == "access_denied":
                 self.loginFailed.emit(self.tr("Access denied"))
-            self.accessToken = data.get("access_token")
-            if not self.accessToken:
-                QTimer.singleShot(5000, self._getAccessCode)
+                self.finished.emit()
+            else:
+                self.accessToken = data.get("access_token")
+                if not self.accessToken:
+                    QTimer.singleShot(5000, self._getAccessCode)
+                else:
+                    self.finished.emit()
 
     def _onError(self, code: QNetworkReply.NetworkError):
         if code == QNetworkReply.NoError:

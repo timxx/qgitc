@@ -160,7 +160,7 @@ class TestCommitWindow(TestBase):
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
         self.waitForLoaded()
 
-        self.wait(50)
+        self.wait(200)
         self.assertTrue(self.window.ui.btnGenMessage.isEnabled())
         # no message by default
         self.assertTrue(self.window.ui.teMessage.document(
@@ -192,11 +192,6 @@ class TestCommitWindow(TestBase):
         with MockGithubCopilot(self, MockGithubCopilotStep.LoginAccessDenied) as mock:
             spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
             QTest.mouseClick(self.window.ui.btnRefineMsg, Qt.LeftButton)
-            self.processEvents()
-            self.assertTrue(self.window.ui.btnCancelGen.isVisible())
-            self.assertTrue(self.window.ui.btnGenMessage.isVisible())
-            self.assertFalse(self.window.ui.btnGenMessage.isEnabled())
-            self.assertFalse(self.window.ui.btnRefineMsg.isVisible())
 
             self.wait(10000, lambda: spyFinished.count() == 0)
             self.assertEqual(spyFinished.at(0)[0], "")

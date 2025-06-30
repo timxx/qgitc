@@ -70,7 +70,7 @@ class ModelsFetcher(QObject):
         self._reply.finished.connect(self._onFinished)
 
     def _onFinished(self):
-        reply: QNetworkReply = self.sender()
+        reply = self._reply
         reply.deleteLater()
         self._reply = None
         if reply.error() != QNetworkReply.NoError:
@@ -136,6 +136,7 @@ class GithubCopilot(AiModelBase):
         if not self._token or not GithubCopilot.isTokenValid(self._token):
             if not self.updateToken():
                 self.serviceUnavailable.emit()
+                self.finished.emit()
                 return
 
         id = params.model or self.modelId or "gpt-4.1"

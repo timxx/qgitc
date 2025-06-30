@@ -151,8 +151,7 @@ class AiModelBase(QObject):
         return reply
 
     def _onDataReady(self):
-        reply: QNetworkReply = self.sender()
-        data = reply.readAll()
+        data = self._reply.readAll()
         if not data:
             return
         self._handleData(data.data())

@@ -2,41 +2,35 @@
 
 from unittest.mock import MagicMock, patch
 
-import requests
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QByteArray, QCoreApplication
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
 from qgitc.settings import Settings
+from tests.mockqnetworkreply import MockQNetworkReply
 
 MOCK_SUCCESS = True
 LOCAL_LLM_URL = ""
 
 
-def _mockRequestPost(url: str, **kwargs):
+def _mockQNetworkAccessManagerPost(mgr: QNetworkAccessManager, request: QNetworkRequest, data: QByteArray):
     if not MOCK_SUCCESS:
-        raise requests.exceptions.ConnectionError()
+        return MockQNetworkReply(QNetworkReply.ConnectionRefusedError)
 
+    url = request.url().toString()
     if not url.startswith(LOCAL_LLM_URL):
         return MagicMock(status_code=404, ok=False)
 
     url_base = url[len(LOCAL_LLM_URL):]
     if url_base == "/chat/completions":
-        response = MagicMock()
-        response.ok = True
-        response.status_code = 200
-
-        if kwargs.get("stream", False):
-            mock_chunks = [
-                b'data: {"choices":[{"delta":{"role":"assistant"}}]}',
-                b'data: {"choices":[{"delta":{"content":"This"}}]}',
-                b'data: {"choices":[{"delta":{"content":" is"}}]}',
-                b'data: {"choices":[{"delta":{"content":" a"}}]}',
-                b'data: {"choices":[{"delta":{"content":" mock"}}]}',
-                b'data: {"choices":[{"delta":{"content":" response"}}]}'
-            ]
-
-            response.iter_lines = MagicMock(return_value=iter(mock_chunks))
-
-        return response
+        data = b'''data: {"choices":[{"delta":{"role":"assistant"}}]}\n
+data: {"choices":[{"delta":{"content":"This"}}]}\n
+data: {"choices":[{"delta":{"content":" is"}}]}\n
+data: {"choices":[{"delta":{"content":" a"}}]}\n
+data: {"choices":[{"delta":{"content":" mock"}}]}\n
+data: {"choices":[{"delta":{"content":" response"}}]}\n
+data: [DONE]\n
+'''
+        return MockQNetworkReply(data)
 
 
 class MockLocalLLM:
@@ -49,7 +43,8 @@ class MockLocalLLM:
         global MOCK_SUCCESS
         MOCK_SUCCESS = mockSuccess
 
-        self._postPatcher = patch("requests.post", new=_mockRequestPost)
+        self._postPatcher = patch(
+            "PySide6.QtNetwork.QNetworkAccessManager.post", new=_mockQNetworkAccessManagerPost)
 
     def __enter__(self):
         self._postPatcher.start()
