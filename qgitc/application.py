@@ -49,6 +49,7 @@ from qgitc.settings import Settings
 from qgitc.textline import Link
 from qgitc.version import __version__
 from qgitc.versionchecker import VersionChecker
+from qgitc.watchdog import Watchdog
 from qgitc.windowtype import WindowType
 
 try:
@@ -104,6 +105,11 @@ class Application(ApplicationBase):
 
         self._settings.colorSchemaModeChanged.connect(
             self.overrideColorSchema)
+
+        self._watchDog = Watchdog(self)
+        self._watchDog.start()
+
+        self.aboutToQuit.connect(self._watchDog.stop)
 
     def settings(self):
         return self._settings
