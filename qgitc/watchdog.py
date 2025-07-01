@@ -97,6 +97,7 @@ class Watchdog(QObject):
     def stop(self):
         if self._thread:
             self._thread.quit()
+            self._thread.wait()
             self._thread = None
 
         if self._worker:

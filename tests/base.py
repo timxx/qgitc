@@ -158,6 +158,8 @@ class TestBase(unittest.TestCase):
         self._threadPatcher.stop()
         self.app.settings().clear()
         self.processEvents()
+        self.app.aboutToQuit.emit()
+        self.processEvents()
         self.app.quit()
         # FIXME: `RuntimeError: Please destroy the Application singleton before creating a new Application instance`
         delete(self.app)
