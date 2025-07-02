@@ -4,7 +4,7 @@ import sys
 import threading
 import traceback
 
-from PySide6.QtCore import QEvent, QObject, Qt, QThread, QTimer
+from PySide6.QtCore import QEvent, QObject, QThread, QTimer
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
@@ -36,7 +36,7 @@ class WatchdogWorker(QObject):
     def stop(self):
         if not self._timer:
             return
-        self._timer.stop()
+        self._timer.deleteLater()
         self._timer = None
 
     def notifyMainThreadAlive(self):
@@ -95,14 +95,15 @@ class Watchdog(QObject):
         self._uiTimer.start()
 
     def stop(self):
+        if self._worker:
+            self._worker.stop()
+
         if self._thread:
             self._thread.quit()
             self._thread.wait()
             self._thread = None
 
-        if self._worker:
-            self._worker.stop()
-            self._worker = None
+        self._worker = None
 
         if self._uiTimer:
             self._uiTimer.stop()
