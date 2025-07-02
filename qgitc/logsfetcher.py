@@ -145,7 +145,7 @@ class LogsFetcherThread(QThread):
         super().__init__(parent)
         self._errors = {}  # error: repo
         self._errorData = b''
-        self._fetchers = []
+        self._fetchers: List[LogsFetcherImpl] = []
         self._submodules = submodules.copy()
         self._eventLoop = None
         self._branchDir = branchDir
@@ -158,7 +158,7 @@ class LogsFetcherThread(QThread):
         # profile = MyProfile()
         # lineProfile = MyLineProfile(Commit.fromRawString)
 
-        self._fetchers.clear()
+        self._clearFetcher()
         if not self._submodules:
             self._fetchNormal()
         else:
@@ -361,6 +361,7 @@ class LogsFetcherThread(QThread):
         span.end()
 
     def cancel(self):
+        self._clearFetcher()
         self.requestInterruption()
         if self._eventLoop:
             self._eventLoop.quit()
@@ -368,6 +369,7 @@ class LogsFetcherThread(QThread):
     def _clearFetcher(self):
         for fetcher in self._fetchers:
             fetcher.cancel()
+        self._fetchers.clear()
 
     @property
     def errorData(self):
