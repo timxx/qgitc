@@ -2,15 +2,14 @@
 
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from ast import Dict
 from datetime import date, datetime, timedelta
 from sys import version_info
-from typing import List
+from typing import List, Tuple
 
-from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QThread, Signal
+from PySide6.QtCore import QEventLoop, QObject, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.cancelevent import CancelEvent
 from qgitc.common import (
     Commit,
     MyLineProfile,
@@ -36,7 +35,7 @@ class LogsFetcherImpl(DataFetcher):
         self.separator = b'\0'
         self.repoDir = repoDir
         self._branch: bytes = None
-        self.commits = []
+        self.commits: List[Commit] = []
 
     def parse(self, data: bytes):
         logs = data.rstrip(self.separator) \
@@ -150,6 +149,10 @@ class LogsFetcherThread(QThread):
         self._eventLoop = None
         self._branchDir = branchDir
 
+        # for composite mode
+        self._exitCode = 0
+        self._mergedLogs: Dict[any, Commit] = {}
+
     def fetch(self, *args):
         self._args = args
         self.start()
@@ -236,35 +239,47 @@ class LogsFetcherThread(QThread):
 
         self.fetchFinished.emit(fetcher._exitCode)
 
-    def _fetchComposite(self):
-        def _fetch(submodule: str, repoDir: str, cancelEvent: CancelEvent):
-            if cancelEvent.isSet():
+    @staticmethod
+    def _isSameRepoCommit(commit: Commit, repoDir: str):
+        if commit.repoDir == repoDir:
+            return True
+        for commit in commit.subCommits:
+            if commit.repoDir == repoDir:
+                return True
+        return False
+
+    def _fetchFinished(self):
+        fetcher: LogsFetcherImpl = self.sender()
+        self._fetchers.remove(fetcher)
+
+        repoDir = fetcher.repoDir
+        handleCount = 0
+
+        for log in fetcher.commits:
+            handleCount += 1
+            if handleCount % 100 == 0 and self.isInterruptionRequested():
+                logger.debug("Logs fetcher cancelled")
                 return
-
-            fetcher = LogsFetcherImpl(submodule)
-            if submodule != '.':
-                fetcher.cwd = os.path.join(repoDir, submodule)
-            fetcher.fetch(*self._args)
-
-            if cancelEvent.isSet():
-                fetcher.cancel()
-                return
-
-            if not self._args[1]:
-                hasLCC, hasLUC = self._fetchLocalChanges(
-                    self._branchDir, submodule)
+            # require same day at least
+            key = (log.committerDateTime.date(),
+                   log.comments, log.author)
+            if key in self._mergedLogs.keys():
+                main_commit = self._mergedLogs[key]
+                # don't merge commits in same repo
+                if LogsFetcherThread._isSameRepoCommit(main_commit, repoDir):
+                    self._mergedLogs[log.sha1] = log
+                else:
+                    main_commit.subCommits.append(log)
             else:
-                hasLCC, hasLUC = False, False
+                self._mergedLogs[key] = log
 
-            if cancelEvent.isSet():
-                fetcher.cancel()
-                return
+        if not self._fetchers and self._eventLoop:
+            self._eventLoop.quit()
 
-            fetcher._process.waitForFinished()
-            return fetcher._exitCode, fetcher._errorData, \
-                fetcher._branch, fetcher.repoDir, fetcher.commits, \
-                hasLCC, hasLUC
+        self._exitCode |= fetcher._exitCode
+        self._handleError(fetcher.errorData, fetcher._branch, repoDir)
 
+    def _fetchComposite(self):
         b = time.time()
 
         telemetry = ApplicationBase.instance().telemetry()
@@ -275,87 +290,43 @@ class LogsFetcherThread(QThread):
         paths = extractFilePaths(logsArgs)
         submodules = filterSubmoduleByPath(self._submodules, paths)
 
-        max_workers = max(2, os.cpu_count() - 2)
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-        cancelEvent = CancelEvent(self)
-        tasks = [executor.submit(_fetch, submodule, Git.REPO_DIR, cancelEvent)
-                 for submodule in submodules]
+        self._exitCode = 0
+        self._mergedLogs.clear()
 
-        mergedLogs = {}
-        handleCount = 0
-        exitCode = 0
+        self._eventLoop = QEventLoop()
 
-        def _isSameRepoCommit(commit: Commit, repoDir: str):
-            if commit.repoDir == repoDir:
-                return True
-            for commit in commit.subCommits:
-                if commit.repoDir == repoDir:
-                    return True
-            return False
+        for submodule in submodules:
+            if self.isInterruptionRequested():
+                return
+            fetcher = LogsFetcherImpl(submodule)
+            if submodule != '.':
+                fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
+            fetcher.fetchFinished.connect(self._fetchFinished)
+            self._fetchers.append(fetcher)
+            fetcher.fetch(*self._args)
 
-        lccCommit = Commit()
-        lucCommit = Commit()
+        self._eventLoop.exec()
+        self._eventLoop = None
+        self._clearFetcher()
 
-        while tasks and not self.isInterruptionRequested():
-            try:
-                for task in as_completed(tasks, 0.01):
-                    if self.isInterruptionRequested():
-                        logger.debug("Logs fetcher cancelled")
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        span.setStatus(False, "cancelled")
-                        return
-
-                    tasks.remove(task)
-                    code, errorData, branch, repoDir, logs, hasLCC, hasLUC = task.result()
-                    self._makeLocalCommits(
-                        lccCommit, lucCommit, hasLCC, hasLUC, repoDir)
-
-                    for log in logs:
-                        handleCount += 1
-                        if handleCount % 100 == 0 and self.isInterruptionRequested():
-                            logger.debug("Logs fetcher cancelled")
-                            executor.shutdown(wait=False, cancel_futures=True)
-                            span.setStatus(False, "cancelled")
-                            return
-                        # require same day at least
-                        key = (log.committerDateTime.date(),
-                               log.comments, log.author)
-                        if key in mergedLogs.keys():
-                            main_commit = mergedLogs[key]
-                            # don't merge commits in same repo
-                            if _isSameRepoCommit(main_commit, repoDir):
-                                mergedLogs[log.sha1] = log
-                            else:
-                                main_commit.subCommits.append(log)
-                        else:
-                            mergedLogs[key] = log
-
-                    exitCode |= code
-                    self._handleError(errorData, branch, repoDir)
-            except Exception:
-                pass
+        logger.debug("fetch elapsed: %fs", time.time() - b)
 
         if self.isInterruptionRequested():
             logger.debug("Logs fetcher cancelled")
-            executor.shutdown(wait=False, cancel_futures=True)
             span.setStatus(False, "cancelled")
+            span.end()
             return
 
-        logger.debug("fetch elapsed: %fs", time.time() - b)
-        b = time.time()
-
-        self.localChangesAvailable.emit(lccCommit, lucCommit)
-
-        if mergedLogs:
-            sortedLogs = sorted(mergedLogs.values(),
+        if self._mergedLogs:
+            sortedLogs = sorted(self._mergedLogs.values(),
                                 key=lambda x: x.committerDateTime, reverse=True)
             self.logsAvailable.emit(sortedLogs)
+            self._mergedLogs.clear()
 
-        logger.debug("sort elapsed: %fms", (time.time() - b) * 1000)
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
-        self.fetchFinished.emit(exitCode)
+        self.fetchFinished.emit(self._exitCode)
 
         span.setStatus(True)
         span.end()
@@ -411,7 +382,8 @@ class LogsFetcher(QObject):
         self._thread = LogsFetcherThread(self._submodules, branchDir, self)
         self._thread.logsAvailable.connect(self._onLogsAvailable)
         self._thread.fetchFinished.connect(self._onFetchFinished)
-        self._thread.localChangesAvailable.connect(self._onLocalChangesAvailable)
+        self._thread.localChangesAvailable.connect(
+            self._onLocalChangesAvailable)
         self._thread.finished.connect(self._onThreadFinished)
         self._threads.append(self._thread)
         self._thread.fetch(*args)
