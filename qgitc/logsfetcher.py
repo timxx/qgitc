@@ -5,9 +5,9 @@ import time
 from ast import Dict
 from datetime import date, datetime, timedelta
 from sys import version_info
-from typing import List, Tuple
+from typing import List
 
-from PySide6.QtCore import QEventLoop, QObject, QThread, Signal
+from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import (
@@ -16,12 +16,13 @@ from qgitc.common import (
     MyProfile,
     extractFilePaths,
     filterSubmoduleByPath,
+    fullRepoDir,
     isRevisionRange,
     logger,
     toSubmodulePath,
 )
 from qgitc.datafetcher import DataFetcher
-from qgitc.gitutils import Git
+from qgitc.gitutils import Git, GitProcess
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 
@@ -134,6 +135,71 @@ class LogsFetcherImpl(DataFetcher):
         return False
 
 
+class LocalChangesFetcher(QObject):
+    finished = Signal()
+
+    def __init__(self, repoDir=None, parent=None):
+        super().__init__(parent)
+        self._repoDir = repoDir
+        self._lccProcess: QProcess = None
+        self._lucProcess: QProcess = None
+
+        self.hasLCC = False
+        self.hasLUC = False
+
+    def fetch(self):
+        self._lccProcess = self._startProcess(True)
+        self._lucProcess = self._startProcess(False)
+
+    def cancel(self):
+        self._cancelProcess(self._lccProcess)
+        self._cancelProcess(self._lucProcess)
+
+        self.hasLCC = False
+        self.hasLUC = False
+        self._lucProcess = None
+        self._lccProcess = None
+
+    def _startProcess(self, cached: bool):
+        args = ["diff", "--quiet", "-s"]
+        if cached:
+            args.append("--cached")
+        if Git.versionGE(1, 7, 2):
+            args.append("--ignore-submodules=dirty")
+
+        process = QProcess()
+        process.setWorkingDirectory(self._repoDir or Git.REPO_DIR)
+        process.finished.connect(self._onFinished)
+
+        process.start(GitProcess.GIT_BIN, args)
+
+        return process
+
+    def _cancelProcess(self, process: QProcess):
+        if not process:
+            return
+
+        QObject.disconnect(process, SIGNAL(
+            "finished(int, QProcess::ExitStatus)"), self._onFinished)
+        process.close()
+        process.waitForFinished(50)
+        if process.state() == QProcess.Running:
+            logger.warning("Kill git process")
+            process.kill()
+
+    def _onFinished(self, exitCode, exitStatus):
+        process = self.sender()
+        if process == self._lccProcess:
+            self.hasLCC = exitCode == 1
+            self._lccProcess = None
+        else:
+            self.hasLUC = exitCode == 1
+            self._lucProcess = None
+
+        if not self._lccProcess and not self._lucProcess:
+            self.finished.emit()
+
+
 class LogsFetcherThread(QThread):
 
     localChangesAvailable = Signal(Commit, Commit)
@@ -152,6 +218,8 @@ class LogsFetcherThread(QThread):
         # for composite mode
         self._exitCode = 0
         self._mergedLogs: Dict[any, Commit] = {}
+        self._lccCommit = Commit()
+        self._lucCommit = Commit()
 
     def fetch(self, *args):
         self._args = args
@@ -248,7 +316,7 @@ class LogsFetcherThread(QThread):
                 return True
         return False
 
-    def _fetchFinished(self):
+    def _onFetchLogsFinished(self):
         fetcher: LogsFetcherImpl = self.sender()
         self._fetchers.remove(fetcher)
 
@@ -279,6 +347,20 @@ class LogsFetcherThread(QThread):
         self._exitCode |= fetcher._exitCode
         self._handleError(fetcher.errorData, fetcher._branch, repoDir)
 
+    def _onFetchLocalChangesFinished(self):
+        fetcher: LocalChangesFetcher = self.sender()
+        self._fetchers.remove(fetcher)
+
+        hasLCC = fetcher.hasLCC
+        hasLUC = fetcher.hasLUC
+
+        if hasLCC or hasLUC:
+            self._makeLocalCommits(
+                self._lccCommit, self._lucCommit, hasLCC, hasLUC, fetcher._repoDir)
+
+        if not self._fetchers and self._eventLoop:
+            self._eventLoop.quit()
+
     def _fetchComposite(self):
         b = time.time()
 
@@ -301,15 +383,15 @@ class LogsFetcherThread(QThread):
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
                 fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-            fetcher.fetchFinished.connect(self._fetchFinished)
+            fetcher.fetchFinished.connect(self._onFetchLogsFinished)
             self._fetchers.append(fetcher)
             fetcher.fetch(*self._args)
 
         self._eventLoop.exec()
-        self._eventLoop = None
         self._clearFetcher()
 
         logger.debug("fetch elapsed: %fs", time.time() - b)
+        span.addEvent("logs_fetched")
 
         if self.isInterruptionRequested():
             logger.debug("Logs fetcher cancelled")
@@ -323,10 +405,40 @@ class LogsFetcherThread(QThread):
             self.logsAvailable.emit(sortedLogs)
             self._mergedLogs.clear()
 
+            span.addEvent("logs_available")
+
+        if not self._args[1]:
+            b = time.time()
+            for submodule in submodules:
+                if self.isInterruptionRequested():
+                    self._eventLoop = None
+                    return
+
+                fetcher = LocalChangesFetcher(
+                    fullRepoDir(submodule, self._branchDir))
+                fetcher.finished.connect(self._onFetchLocalChangesFinished)
+                fetcher.fetch()
+                self._fetchers.append(fetcher)
+
+            self._eventLoop.exec()
+            self._clearFetcher()
+
+            if self.isInterruptionRequested():
+                logger.debug("Local changes fetcher cancelled")
+                span.setStatus(False, "cancelled")
+                span.end()
+                return
+
+            self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
+            logger.debug("fetch local changes elapsed: %fs", time.time() - b)
+            span.addEvent("local_changes_available")
+
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
         self.fetchFinished.emit(self._exitCode)
+
+        self._eventLoop = None
 
         span.setStatus(True)
         span.end()
