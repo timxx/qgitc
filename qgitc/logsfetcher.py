@@ -221,6 +221,8 @@ class LogsFetcherThread(QThread):
         self._lccCommit = Commit()
         self._lucCommit = Commit()
 
+        self._queueTasks = []
+
     def fetch(self, *args):
         self._args = args
         self.start()
@@ -279,7 +281,7 @@ class LogsFetcherThread(QThread):
         lcFetcher = None
         if not self._args[1]:
             lcFetcher = LocalChangesFetcher()
-            lcFetcher.finished.connect(self._onFetchLocalChangesFinished)
+            lcFetcher.finished.connect(self._onFetchFinished)
             self._fetchers.append(lcFetcher)
             lcFetcher.fetch()
 
@@ -310,10 +312,7 @@ class LogsFetcherThread(QThread):
                 return True
         return False
 
-    def _onFetchLogsFinished(self):
-        fetcher: LogsFetcherImpl = self.sender()
-        self._fetchers.remove(fetcher)
-
+    def _onFetchLogsFinished(self, fetcher: LogsFetcherImpl):
         repoDir = fetcher.repoDir
         handleCount = 0
 
@@ -335,22 +334,33 @@ class LogsFetcherThread(QThread):
             else:
                 self._mergedLogs[key] = log
 
-        if not self._fetchers and self._eventLoop:
-            self._eventLoop.quit()
-
         self._exitCode |= fetcher._exitCode
         self._handleError(fetcher.errorData, fetcher._branch, repoDir)
 
-    def _onFetchLocalChangesFinished(self):
-        fetcher: LocalChangesFetcher = self.sender()
-        self._fetchers.remove(fetcher)
-
+    def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
         hasLCC = fetcher.hasLCC
         hasLUC = fetcher.hasLUC
 
         if hasLCC or hasLUC:
             self._makeLocalCommits(
                 self._lccCommit, self._lucCommit, hasLCC, hasLUC, fetcher._repoDir)
+
+    def _onFetchFinished(self):
+        fetcher = self.sender()
+        self._fetchers.remove(fetcher)
+
+        if self._queueTasks:
+            nextFetcher = self._queueTasks.pop(0)
+            self._fetchers.append(nextFetcher)
+            if isinstance(nextFetcher, LogsFetcherImpl):
+                nextFetcher.fetch(*self._args)
+            else:
+                nextFetcher.fetch()
+
+        if isinstance(fetcher, LogsFetcherImpl):
+            self._onFetchLogsFinished(fetcher)
+        else:
+            self._onFetchLocalChangesFinished(fetcher)
 
         if not self._fetchers and self._eventLoop:
             self._eventLoop.quit()
@@ -370,6 +380,7 @@ class LogsFetcherThread(QThread):
         self._mergedLogs.clear()
 
         self._eventLoop = QEventLoop()
+        MAX_QUEUE_SIZE = 32
 
         for submodule in submodules:
             if self.isInterruptionRequested():
@@ -377,29 +388,13 @@ class LogsFetcherThread(QThread):
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
                 fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-            fetcher.fetchFinished.connect(self._onFetchLogsFinished)
-            self._fetchers.append(fetcher)
-            fetcher.fetch(*self._args)
+            fetcher.fetchFinished.connect(self._onFetchFinished)
 
-        self._eventLoop.exec()
-        self._clearFetcher()
-
-        logger.debug("fetch elapsed: %fs", time.time() - b)
-        span.addEvent("logs_fetched")
-
-        if self.isInterruptionRequested():
-            logger.debug("Logs fetcher cancelled")
-            span.setStatus(False, "cancelled")
-            span.end()
-            return
-
-        if self._mergedLogs:
-            sortedLogs = sorted(self._mergedLogs.values(),
-                                key=lambda x: x.committerDateTime, reverse=True)
-            self.logsAvailable.emit(sortedLogs)
-            self._mergedLogs.clear()
-
-            span.addEvent("logs_available")
+            if len(self._fetchers) < MAX_QUEUE_SIZE:
+                self._fetchers.append(fetcher)
+                fetcher.fetch(*self._args)
+            else:
+                self._queueTasks.append(fetcher)
 
         if not self._args[1]:
             b = time.time()
@@ -410,22 +405,32 @@ class LogsFetcherThread(QThread):
 
                 fetcher = LocalChangesFetcher(
                     fullRepoDir(submodule, self._branchDir))
-                fetcher.finished.connect(self._onFetchLocalChangesFinished)
-                fetcher.fetch()
-                self._fetchers.append(fetcher)
+                fetcher.finished.connect(self._onFetchFinished)
 
-            self._eventLoop.exec()
-            self._clearFetcher()
+                if len(self._fetchers) < MAX_QUEUE_SIZE:
+                    fetcher.fetch()
+                    self._fetchers.append(fetcher)
+                else:
+                    self._queueTasks.append(fetcher)
 
-            if self.isInterruptionRequested():
-                logger.debug("Local changes fetcher cancelled")
-                span.setStatus(False, "cancelled")
-                span.end()
-                return
+        self._eventLoop.exec()
+        self._clearFetcher()
 
-            self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
-            logger.debug("fetch local changes elapsed: %fs", time.time() - b)
-            span.addEvent("local_changes_available")
+        logger.debug("fetch elapsed: %fs", time.time() - b)
+
+        if self.isInterruptionRequested():
+            logger.debug("Logs fetcher cancelled")
+            span.setStatus(False, "cancelled")
+            span.end()
+            return
+
+        self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
+
+        if self._mergedLogs:
+            sortedLogs = sorted(self._mergedLogs.values(),
+                                key=lambda x: x.committerDateTime, reverse=True)
+            self.logsAvailable.emit(sortedLogs)
+            self._mergedLogs.clear()
 
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
@@ -438,7 +443,6 @@ class LogsFetcherThread(QThread):
         span.end()
 
     def cancel(self):
-        self._clearFetcher()
         self.requestInterruption()
         self._lccCommit = Commit()
         self._lucCommit = Commit()
@@ -446,6 +450,7 @@ class LogsFetcherThread(QThread):
             self._eventLoop.quit()
 
     def _clearFetcher(self):
+        self._queueTasks.clear()
         for fetcher in self._fetchers:
             fetcher.cancel()
         self._fetchers.clear()
