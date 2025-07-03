@@ -238,20 +238,6 @@ class LogsFetcherThread(QThread):
         # del profile
 
     @staticmethod
-    def _fetchLocalChanges(branchDir: str, submodule: str = None):
-        if not branchDir:
-            return False, False
-
-        repoPath = branchDir
-        if submodule and submodule != '.':
-            repoPath = os.path.join(branchDir, submodule)
-
-        hasLCC = Git.hasLocalChanges(True, repoPath)
-        hasLUC = Git.hasLocalChanges(repoDir=repoPath)
-
-        return hasLCC, hasLUC
-
-    @staticmethod
     def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
         if hasLCC:
             lccCommit.sha1 = Git.LCC_SHA1
@@ -273,34 +259,42 @@ class LogsFetcherThread(QThread):
                 subCommit.repoDir = repoDir
                 lucCommit.subCommits.append(subCommit)
 
+    def _onFetchNormalLogsFinished(self):
+        fetcher = self.sender()
+        self._fetchers.remove(fetcher)
+        if not self._fetchers and self._eventLoop:
+            self._eventLoop.quit()
+
     def _fetchNormal(self):
         self._eventLoop = QEventLoop()
-
-        if not self._args[1]:
-            hasLCC, hasLUC = self._fetchLocalChanges(self._branchDir)
-            if hasLCC or hasLUC:
-                lccCommit = Commit()
-                lucCommit = Commit()
-                self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC)
-                self.localChangesAvailable.emit(lccCommit, lucCommit)
 
         fetcher = LogsFetcherImpl()
         fetcher.logsAvailable.connect(
             self.logsAvailable)
-        fetcher.fetchFinished.connect(self._eventLoop.quit)
+        fetcher.fetchFinished.connect(self._onFetchNormalLogsFinished)
         self._fetchers.append(fetcher)
 
         fetcher.fetch(*self._args)
+
+        lcFetcher = None
+        if not self._args[1]:
+            lcFetcher = LocalChangesFetcher()
+            lcFetcher.finished.connect(self._onFetchLocalChangesFinished)
+            self._fetchers.append(lcFetcher)
+            lcFetcher.fetch()
+
         self._eventLoop.exec()
         self._eventLoop = None
 
+        if lcFetcher and not self.isInterruptionRequested():
+            self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
+
         # the fetcher may still be running
         # we have to cancel to avoid crash
-        fetcher.cancel()
+        self._clearFetcher()
 
         self._handleError(fetcher.errorData, fetcher._branch, fetcher.repoDir)
 
-        self._fetchers.remove(fetcher)
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
@@ -446,6 +440,8 @@ class LogsFetcherThread(QThread):
     def cancel(self):
         self._clearFetcher()
         self.requestInterruption()
+        self._lccCommit = Commit()
+        self._lucCommit = Commit()
         if self._eventLoop:
             self._eventLoop.quit()
 
