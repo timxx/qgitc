@@ -287,12 +287,13 @@ class LogsFetcherWorker(QObject):
         self._eventLoop.exec()
         self._eventLoop = None
 
-        if lcFetcher and not self.isInterruptionRequested():
-            self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
+        if self.isInterruptionRequested():
+            logger.debug("Logs fetcher cancelled")
+            self._clearFetcher()
+            return
 
-        # the fetcher may still be running
-        # we have to cancel to avoid crash
-        self._clearFetcher()
+        if lcFetcher:
+            self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
 
         self._handleError(fetcher.errorData, fetcher._branch, fetcher.repoDir)
 
@@ -319,6 +320,7 @@ class LogsFetcherWorker(QObject):
             handleCount += 1
             if handleCount % 100 == 0 and self.isInterruptionRequested():
                 logger.debug("Logs fetcher cancelled")
+                self._clearFetcher()
                 return
             # require same day at least
             key = (log.committerDateTime.date(),
@@ -345,6 +347,11 @@ class LogsFetcherWorker(QObject):
                 self._lccCommit, self._lucCommit, hasLCC, hasLUC, fetcher._repoDir)
 
     def _onFetchFinished(self):
+        if self.isInterruptionRequested():
+            logger.debug("Logs fetcher cancelled")
+            self._clearFetcher()
+            return
+
         fetcher = self.sender()
         self._fetchers.remove(fetcher)
 
@@ -383,6 +390,7 @@ class LogsFetcherWorker(QObject):
 
         for submodule in submodules:
             if self.isInterruptionRequested():
+                self._clearFetcher()
                 return
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
@@ -399,7 +407,7 @@ class LogsFetcherWorker(QObject):
             b = time.time()
             for submodule in submodules:
                 if self.isInterruptionRequested():
-                    self._eventLoop = None
+                    self._clearFetcher()
                     return
 
                 fetcher = LocalChangesFetcher(
@@ -413,11 +421,11 @@ class LogsFetcherWorker(QObject):
                     self._queueTasks.append(fetcher)
 
         self._eventLoop.exec()
-        self._clearFetcher()
 
         logger.debug("fetch elapsed: %fs", time.time() - b)
 
         if self.isInterruptionRequested():
+            self._clearFetcher()
             logger.debug("Logs fetcher cancelled")
             span.setStatus(False, "cancelled")
             span.end()
@@ -445,6 +453,8 @@ class LogsFetcherWorker(QObject):
         self._interruptionRequested = True
         if self._eventLoop:
             self._eventLoop.quit()
+        # we don't cancel fetchers here, because we have to cancel
+        # in the thread is was started
 
     def isInterruptionRequested(self):
         return self._interruptionRequested
