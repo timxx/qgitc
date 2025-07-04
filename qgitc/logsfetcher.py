@@ -10,6 +10,7 @@ from typing import List
 from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.asyncprocess import AsyncProcess
 from qgitc.common import (
     Commit,
     MyLineProfile,
@@ -141,8 +142,8 @@ class LocalChangesFetcher(QObject):
     def __init__(self, repoDir=None, parent=None):
         super().__init__(parent)
         self._repoDir = repoDir
-        self._lccProcess: QProcess = None
-        self._lucProcess: QProcess = None
+        self._lccProcess: AsyncProcess = None
+        self._lucProcess: AsyncProcess = None
 
         self.hasLCC = False
         self.hasLUC = False
@@ -167,7 +168,7 @@ class LocalChangesFetcher(QObject):
         if Git.versionGE(1, 7, 2):
             args.append("--ignore-submodules=dirty")
 
-        process = QProcess()
+        process = AsyncProcess()
         process.setWorkingDirectory(self._repoDir or Git.REPO_DIR)
         process.finished.connect(self._onFinished)
 
@@ -175,19 +176,18 @@ class LocalChangesFetcher(QObject):
 
         return process
 
-    def _cancelProcess(self, process: QProcess):
+    def _cancelProcess(self, process: AsyncProcess):
         if not process:
             return
 
-        QObject.disconnect(process, SIGNAL(
-            "finished(int, QProcess::ExitStatus)"), self._onFinished)
+        QObject.disconnect(process, SIGNAL("finished(int)"), self._onFinished)
         process.close()
         process.waitForFinished(50)
-        if process.state() == QProcess.Running:
+        if process.isRunning():
             logger.warning("Kill git process")
             process.kill()
 
-    def _onFinished(self, exitCode, exitStatus):
+    def _onFinished(self, exitCode):
         process = self.sender()
         if process == self._lccProcess:
             self.hasLCC = exitCode == 1
