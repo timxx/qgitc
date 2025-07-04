@@ -200,38 +200,37 @@ class LocalChangesFetcher(QObject):
             self.finished.emit()
 
 
-class LogsFetcherThread(QThread):
+class LogsFetcherWorker(QObject):
 
     localChangesAvailable = Signal(Commit, Commit)
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
-    def __init__(self, submodules, branchDir, parent=None):
-        super().__init__(parent)
+    def __init__(self, submodules: List[str], branchDir: str, *args):
+        super().__init__()
+        self._args = args
+
         self._errors = {}  # error: repo
         self._errorData = b''
+        self._exitCode = 0
+
         self._fetchers: List[LogsFetcherImpl] = []
         self._submodules = submodules.copy()
         self._eventLoop = None
         self._branchDir = branchDir
 
-        # for composite mode
-        self._exitCode = 0
         self._mergedLogs: Dict[any, Commit] = {}
         self._lccCommit = Commit()
         self._lucCommit = Commit()
 
         self._queueTasks = []
 
-    def fetch(self, *args):
-        self._args = args
-        self.start()
+        self._interruptionRequested = False
 
     def run(self):
         # profile = MyProfile()
         # lineProfile = MyLineProfile(Commit.fromRawString)
 
-        self._clearFetcher()
         if not self._submodules:
             self._fetchNormal()
         else:
@@ -327,7 +326,7 @@ class LogsFetcherThread(QThread):
             if key in self._mergedLogs.keys():
                 main_commit = self._mergedLogs[key]
                 # don't merge commits in same repo
-                if LogsFetcherThread._isSameRepoCommit(main_commit, repoDir):
+                if LogsFetcherWorker._isSameRepoCommit(main_commit, repoDir):
                     self._mergedLogs[log.sha1] = log
                 else:
                     main_commit.subCommits.append(log)
@@ -435,19 +434,20 @@ class LogsFetcherThread(QThread):
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
             self._errorData.rstrip(b'\n')
-        self.fetchFinished.emit(self._exitCode)
-
-        self._eventLoop = None
 
         span.setStatus(True)
         span.end()
 
-    def cancel(self):
-        self.requestInterruption()
-        self._lccCommit = Commit()
-        self._lucCommit = Commit()
+        self._eventLoop = None
+        self.fetchFinished.emit(self._exitCode)
+
+    def requestInterruption(self):
+        self._interruptionRequested = True
         if self._eventLoop:
             self._eventLoop.quit()
+
+    def isInterruptionRequested(self):
+        return self._interruptionRequested
 
     def _clearFetcher(self):
         self._queueTasks.clear()
@@ -481,38 +481,49 @@ class LogsFetcher(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._thread = None
-        self._submodules = []
+        self._worker: LogsFetcherWorker = None
+        self._thread: QThread = None
+        self._submodules: List[str] = []
         self._errorData = b''
         self._threads: List[QThread] = []
 
-    def setSubmodules(self, submodules):
+    def setSubmodules(self, submodules: List[str]):
         self._submodules = submodules
 
     def fetch(self, *args, branchDir=None):
         self.cancel()
         self._errorData = b''
-        self._thread = LogsFetcherThread(self._submodules, branchDir, self)
-        self._thread.logsAvailable.connect(self._onLogsAvailable)
-        self._thread.fetchFinished.connect(self._onFetchFinished)
-        self._thread.localChangesAvailable.connect(
+        self._worker = LogsFetcherWorker(self._submodules, branchDir, *args)
+        self._worker.logsAvailable.connect(self._onLogsAvailable)
+        self._worker.fetchFinished.connect(self._onFetchFinished)
+        self._worker.localChangesAvailable.connect(
             self._onLocalChangesAvailable)
+
+        self._thread = QThread()
         self._thread.finished.connect(self._onThreadFinished)
+        self._thread.started.connect(self._worker.run)
+        self._worker.moveToThread(self._thread)
+        self._thread.start()
+
         self._threads.append(self._thread)
-        self._thread.fetch(*args)
 
     def cancel(self, force=False):
-        if self._thread:
-            self._thread.logsAvailable.disconnect(self._onLogsAvailable)
-            self._thread.fetchFinished.disconnect(self._onFetchFinished)
-            self._thread.localChangesAvailable.disconnect(
+        if self._worker:
+            self._worker.logsAvailable.disconnect(self._onLogsAvailable)
+            self._worker.fetchFinished.disconnect(self._onFetchFinished)
+            self._worker.localChangesAvailable.disconnect(
                 self._onLocalChangesAvailable)
-            self._thread.cancel()
+            self._worker.requestInterruption()
+            self._worker.deleteLater()
+
+        if self._thread and self._thread.isRunning():
+            self._thread.quit()
+
             if force and ApplicationBase.instance().terminateThread(self._thread):
                 self._threads.remove(self._thread)
                 self._thread.finished.disconnect(self._onThreadFinished)
                 logger.warning("Terminating logs fetcher thread")
-            self._thread = None
+                self._thread = None
 
         if not force:
             return
@@ -527,27 +538,28 @@ class LogsFetcher(QObject):
             self._thread.isRunning()
 
     def _onLogsAvailable(self, logs: List[Commit]):
-        thread = self.sender()
-        if thread == self._thread:
+        worker = self.sender()
+        if worker == self._worker:
             self.logsAvailable.emit(logs)
         else:
             logger.info("_onLogsAvailable but thread changed")
 
     def _onFetchFinished(self, exitCode):
-        thread = self.sender()
-        if not thread:
+        worker = self.sender()
+        if not worker:
             return
 
-        if thread == self._thread:
-            self._errorData = self._thread.errorData
-            self._thread = None
+        if worker == self._worker:
+            self._thread.quit()
+            self._errorData = self._worker.errorData
+            self._worker = None
             self.fetchFinished.emit(exitCode)
         else:
             logger.info("_onFetchFinished but thread changed")
 
     def _onLocalChangesAvailable(self, lccCommit: Commit, lucCommit: Commit):
-        thread = self.sender()
-        if thread == self._thread:
+        worker = self.sender()
+        if worker == self._worker:
             self.localChangesAvailable.emit(lccCommit, lucCommit)
         else:
             logger.info("_onLocalChangesAvailable but thread changed")
