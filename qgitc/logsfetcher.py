@@ -339,6 +339,9 @@ class LogsFetcherWorker(QObject):
         self._exitCode |= fetcher._exitCode
         self._handleError(fetcher.errorData, fetcher._branch, repoDir)
 
+        if self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
+            self._emitLogsAvailable()
+
     def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
         hasLCC = fetcher.hasLCC
         hasLUC = fetcher.hasLUC
@@ -371,6 +374,13 @@ class LogsFetcherWorker(QObject):
 
         if not self._fetchers and self._eventLoop:
             self._eventLoop.quit()
+
+    def _emitLogsAvailable(self):
+        if self._mergedLogs:
+            sortedLogs = sorted(self._mergedLogs.values(),
+                                key=lambda x: x.committerDateTime, reverse=True)
+            self.logsAvailable.emit(sortedLogs)
+            self._mergedLogs.clear()
 
     def _fetchComposite(self):
         b = time.time()
@@ -433,11 +443,7 @@ class LogsFetcherWorker(QObject):
 
         self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
 
-        if self._mergedLogs:
-            sortedLogs = sorted(self._mergedLogs.values(),
-                                key=lambda x: x.committerDateTime, reverse=True)
-            self.logsAvailable.emit(sortedLogs)
-            self._mergedLogs.clear()
+        self._emitLogsAvailable()
 
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
