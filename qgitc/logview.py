@@ -1036,10 +1036,10 @@ class LogView(QAbstractScrollArea, CommitSource):
         msgBox.setIcon(QMessageBox.Question)
         msgBox.setWindowTitle(self.tr("Performance Issue Detected"))
         text = self.tr(
-            "Git log retrieval is taking longer than expected ({0} seconds).\n\n"
-            "Disabling 'Detect Local Changes' can significantly improve performance. "
-            "This feature checks for uncommitted changes, which can be slow in large repositories."
-        ).format(seconds)
+            "Git log retrieval is taking longer than expected ({0} seconds).").format(seconds)
+        text += "\n\n"
+        text += self.tr("Disabling 'Detect Local Changes' can significantly improve performance. ")
+        text += self.tr("This feature checks for uncommitted changes, which can be slow in large repositories.")
         text += "\n\n" + self.tr("Would you like to disable this feature now?")
         msgBox.setText(text)
         
