@@ -12,8 +12,6 @@ from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, QThread, Signa
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import (
     Commit,
-    MyLineProfile,
-    MyProfile,
     extractFilePaths,
     filterSubmoduleByPath,
     fullRepoDir,
@@ -25,6 +23,8 @@ from qgitc.datafetcher import DataFetcher
 from qgitc.gitutils import Git, GitProcess
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
+
+RUN_GIT_SLOW = None
 
 
 class LogsFetcherImpl(DataFetcher):
@@ -229,15 +229,10 @@ class LogsFetcherWorker(QObject):
         self._interruptionRequested = False
 
     def run(self):
-        # profile = MyProfile()
-        # lineProfile = MyLineProfile(Commit.fromRawString)
-
         if not self._submodules:
             self._fetchNormal()
         else:
             self._fetchComposite()
-
-        # del profile
 
     @staticmethod
     def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
@@ -339,7 +334,7 @@ class LogsFetcherWorker(QObject):
         self._exitCode |= fetcher._exitCode
         self._handleError(fetcher.errorData, fetcher._branch, repoDir)
 
-        if self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
+        if RUN_GIT_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
             self._emitLogsAvailable()
 
     def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
@@ -399,6 +394,8 @@ class LogsFetcherWorker(QObject):
         self._eventLoop = QEventLoop()
         MAX_QUEUE_SIZE = 32
 
+        global RUN_GIT_SLOW
+
         for submodule in submodules:
             if self.isInterruptionRequested():
                 self._clearFetcher()
@@ -410,7 +407,15 @@ class LogsFetcherWorker(QObject):
 
             if len(self._fetchers) < MAX_QUEUE_SIZE:
                 self._fetchers.append(fetcher)
+                if RUN_GIT_SLOW is None:
+                    begin = time.time()
                 fetcher.fetch(*self._args)
+                if RUN_GIT_SLOW is None:
+                    ms = int((time.time() - begin) * 1000)
+                    # on Linux, it takes about 1ms
+                    # on Win10, it takes about 5ms
+                    # on latest Win11, it takes about 60ms!!!
+                    RUN_GIT_SLOW = ms > 10
             else:
                 self._queueTasks.append(fetcher)
 
