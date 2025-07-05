@@ -17,6 +17,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
+    QCheckBox,
     QFileDialog,
     QFrame,
     QMenu,
@@ -459,6 +460,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.__onFetchFinished)
         self.fetcher.localChangesAvailable.connect(
             self.__onLocalChangesAvailable)
+        self.fetcher.fetchTooSlow.connect(
+            self.__onFetchTooSlow)
 
         self.updateSettings()
 
@@ -1023,6 +1026,45 @@ class LogView(QAbstractScrollArea, CommitSource):
             # force update the diff
             self.currentIndexChanged.emit(0)
             self.viewport().update()
+
+    def __onFetchTooSlow(self, seconds: int):
+        settings = ApplicationBase.instance().settings()
+        if not settings.showFetchSlowAlert():
+            return
+
+        msgBox = QMessageBox(self)
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.setWindowTitle(self.tr("Performance Issue Detected"))
+        text = self.tr(
+            "Git log retrieval is taking longer than expected ({0} seconds).\n\n"
+            "Disabling 'Detect Local Changes' can significantly improve performance. "
+            "This feature checks for uncommitted changes, which can be slow in large repositories."
+        ).format(seconds)
+        text += "\n\n" + self.tr("Would you like to disable this feature now?")
+        msgBox.setText(text)
+        
+        details = self.tr(
+            "About this setting:\n"
+            "- When enabled, Git checks for local changes that haven't been committed\n"
+            "- This allows you to see uncommitted changes in the log view\n"
+            "- Disabling it will make log loading faster but won't show uncommitted changes\n\n"
+            "You can change this setting later in:\n"
+            "Settings → Commit → Detect Local Changes"
+        )
+        msgBox.setDetailedText(details)
+        
+        cb = QCheckBox(self.tr("Don't show this message again"), self)
+        msgBox.setCheckBox(cb)
+        msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msgBox.setDefaultButton(QMessageBox.No)
+        
+        r = msgBox.exec()
+        if r == QMessageBox.Yes:
+            settings.setDetectLocalChanges(False)
+
+        if cb.isChecked():
+            settings = ApplicationBase.instance().settings()
+            settings.setShowFetchSlowAlert(False)
 
     def __resetGraphs(self):
         self.graphs.clear()

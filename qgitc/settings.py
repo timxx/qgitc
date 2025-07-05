@@ -609,3 +609,15 @@ class Settings(QSettings):
             self.setValue("userId", userId)
         self.endGroup()
         return userId
+
+    def setDetectLocalChanges(self, detect: bool):
+        self.setValue("detectLocalChanges", detect)
+
+    def detectLocalChanges(self) -> bool:
+        return self.value("detectLocalChanges", True, type=bool)
+
+    def setShowFetchSlowAlert(self, show: bool):
+        self.setValue("showFetchSlowAlert", show)
+
+    def showFetchSlowAlert(self) -> bool:
+        return self.value("showFetchSlowAlert", True, type=bool)

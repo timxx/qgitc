@@ -432,6 +432,9 @@ class Preferences(QDialog):
         self.ui.linkGroup.setTitle(
             self.tr("Links") + (" (" + self._repoName + ")"))
 
+        self.ui.cbDetectLocalChanges.setChecked(
+            self.settings.detectLocalChanges())
+
     def _saveSummaryTab(self):
         color = self.ui.colorA.getColor()
         self.settings.setCommitColorA(color)
@@ -450,6 +453,9 @@ class Preferences(QDialog):
 
         value = self.ui.cbCommitSince.currentData()
         self.settings.setMaxCompositeCommitsSince(value)
+
+        value = self.ui.cbDetectLocalChanges.isChecked()
+        self.settings.setDetectLocalChanges(value)
 
     def _initToolsTab(self):
         tools = self.settings.mergeToolList()

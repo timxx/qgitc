@@ -206,7 +206,7 @@ class LogsFetcherWorker(QObject):
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
-    def __init__(self, submodules: List[str], branchDir: str, *args):
+    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__()
         self._args = args
 
@@ -218,6 +218,7 @@ class LogsFetcherWorker(QObject):
         self._submodules = submodules.copy()
         self._eventLoop = None
         self._branchDir = branchDir
+        self._noLocalChanges = noLocalChanges
 
         self._mergedLogs: Dict[any, Commit] = {}
         self._lccCommit = Commit()
@@ -278,7 +279,7 @@ class LogsFetcherWorker(QObject):
         fetcher.fetch(*self._args)
 
         lcFetcher = None
-        if not self._args[1]:
+        if self.needLocalChanges():
             lcFetcher = LocalChangesFetcher()
             lcFetcher.finished.connect(self._onFetchFinished)
             self._fetchers.append(lcFetcher)
@@ -403,8 +404,7 @@ class LogsFetcherWorker(QObject):
             else:
                 self._queueTasks.append(fetcher)
 
-        if not self._args[1]:
-            b = time.time()
+        if self.needLocalChanges():
             for submodule in submodules:
                 if self.isInterruptionRequested():
                     self._clearFetcher()
@@ -482,12 +482,16 @@ class LogsFetcherWorker(QObject):
                 return True
         return False
 
+    def needLocalChanges(self):
+        return not self._noLocalChanges and not self._args[1]
+
 
 class LogsFetcher(QObject):
 
     localChangesAvailable = Signal(Commit, Commit)
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
+    fetchTooSlow = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -496,6 +500,7 @@ class LogsFetcher(QObject):
         self._submodules: List[str] = []
         self._errorData = b''
         self._threads: List[QThread] = []
+        self._beginTime = None
 
     def setSubmodules(self, submodules: List[str]):
         self._submodules = submodules
@@ -503,7 +508,11 @@ class LogsFetcher(QObject):
     def fetch(self, *args, branchDir=None):
         self.cancel()
         self._errorData = b''
-        self._worker = LogsFetcherWorker(self._submodules, branchDir, *args)
+        # always detect local changes for single repo
+        noLocalChanges = len(self._submodules) > 0 and not ApplicationBase.instance(
+        ).settings().detectLocalChanges()
+        self._worker = LogsFetcherWorker(
+            self._submodules, branchDir, noLocalChanges, *args)
         self._worker.logsAvailable.connect(self._onLogsAvailable)
         self._worker.fetchFinished.connect(self._onFetchFinished)
         self._worker.localChangesAvailable.connect(
@@ -516,6 +525,8 @@ class LogsFetcher(QObject):
         self._thread.start()
 
         self._threads.append(self._thread)
+        if self._submodules and self._worker.needLocalChanges():
+            self._beginTime = time.time()
 
     def cancel(self, force=False):
         if self._worker:
@@ -555,15 +566,20 @@ class LogsFetcher(QObject):
             logger.info("_onLogsAvailable but thread changed")
 
     def _onFetchFinished(self, exitCode):
-        worker = self.sender()
+        worker: LogsFetcherWorker = self.sender()
         if not worker:
             return
 
         if worker == self._worker:
+            needLocalChanges = worker.needLocalChanges()
             self._thread.quit()
             self._errorData = self._worker.errorData
             self._worker = None
             self.fetchFinished.emit(exitCode)
+            if self._submodules and needLocalChanges:
+                seconds = int(time.time() - self._beginTime)
+                if seconds > 15:
+                    self.fetchTooSlow.emit(seconds)
         else:
             logger.info("_onFetchFinished but thread changed")
 
