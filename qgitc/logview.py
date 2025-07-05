@@ -1066,6 +1066,13 @@ class LogView(QAbstractScrollArea, CommitSource):
             settings = ApplicationBase.instance().settings()
             settings.setShowFetchSlowAlert(False)
 
+        logger = ApplicationBase.instance().telemetry().logger()
+        logger.info("Slow fetch alert", extra={
+            "seconds": seconds,
+            "disabled": r == QMessageBox.Yes,
+            "dont_show": cb.isChecked()
+        })
+
     def __resetGraphs(self):
         self.graphs.clear()
         self.lanes = Lanes()
