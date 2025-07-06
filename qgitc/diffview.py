@@ -356,12 +356,17 @@ class DiffView(QWidget):
         filePath = index.data()
         self.window().setFilterFile(filePath)
 
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("diffview.filter_path")
+
     def __onBlameFile(self):
         index = self.fileListView.currentIndex()
         if not index.isValid():
             return
 
         self.requestBlame.emit(index.data(), False, self.commit)
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("diffview.blame_file")
 
     def __onBlameParentCommit(self):
         index = self.fileListView.currentIndex()
@@ -369,6 +374,9 @@ class DiffView(QWidget):
             return
 
         self.requestBlame.emit(index.data(), True, self.commit)
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("diffview.blame_parent_commit")
 
     def __onRestoreFiles(self):
         indexes = self.fileListView.selectedIndexes()
@@ -399,6 +407,9 @@ class DiffView(QWidget):
 
         # TODO: reload the local changes only
         self.localChangeRestored.emit()
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("diffview.restore_files")
 
     def __isCommentItem(self, index):
         if not index.isValid():
@@ -446,6 +457,9 @@ class DiffView(QWidget):
         self._difftoolProc.finished.connect(self.__onDiffToolFinished)
 
         self._difftoolProc.start(GitProcess.GIT_BIN, args)
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("diffview.run_diff")
 
     def __onDiffToolFinished(self, exitCode, exitStatus):
         if exitStatus == QProcess.CrashExit:

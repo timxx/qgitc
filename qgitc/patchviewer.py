@@ -406,3 +406,6 @@ class PatchViewer(SourceViewer):
         mimeData = QMimeData()
         mimeData.setText(newText)
         clipboard.setMimeData(mimeData)
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("viwer.copy_plain_text")

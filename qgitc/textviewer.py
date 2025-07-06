@@ -516,6 +516,9 @@ class TextViewer(QAbstractScrollArea):
         if not text:
             return
 
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("viwer.copy")
+
         clipboard = QApplication.clipboard()
         mimeData = QMimeData()
         mimeData.setText(text)
