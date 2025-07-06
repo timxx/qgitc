@@ -30,9 +30,21 @@ class LogsFetcherWorkerBase(QObject):
     def isInterruptionRequested(self):
         return self._interruptionRequested
 
+    def requestInterruption(self):
+        self._interruptionRequested = True
+
     def needLocalChanges(self):
         return not self._noLocalChanges and not self._args[1]
 
     @property
     def errorData(self):
         return self._errorData
+
+    @staticmethod
+    def _isSameRepoCommit(commit: Commit, repoDir: str):
+        if commit.repoDir == repoDir:
+            return True
+        for commit in commit.subCommits:
+            if commit.repoDir == repoDir:
+                return True
+        return False
