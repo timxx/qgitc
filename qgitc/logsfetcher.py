@@ -244,6 +244,55 @@ def _checkLocalChanges(submodule: str, branchDir: str, cancelEvent: CancelEvent 
     return hasLCC, hasLUC, submodule
 
 
+def _fetchLogs(submodule: str, branchDir: str, args: List[str]):
+    def fromRawCommit(rawCommit: pygit2.Commit):
+        """ Convert from pygit2's commit """
+        commit = Commit()
+
+        def timeStr(signature: pygit2.Signature):
+            dt = datetime.fromtimestamp(float(signature.time))
+            return "%d-%02d-%02d %02d:%02d:%02d" % (
+                dt.year, dt.month, dt.day,
+                dt.hour, dt.minute, dt.second)
+
+        def authorStr(author: pygit2.Signature):
+            return author.name + " <" + author.email + ">"
+
+        commit.sha1 = str(rawCommit.id)
+        commit.comments = rawCommit.message.rstrip()
+        commit.author = authorStr(rawCommit.author)
+        commit.authorDate = timeStr(rawCommit.author)
+        commit.committer = authorStr(rawCommit.committer)
+        if rawCommit.committer.time == rawCommit.author.time:
+            commit.committerDate = commit.authorDate
+        else:
+            commit.committerDate = timeStr(rawCommit.committer)
+        commit.parents = []
+        for id in rawCommit.parent_ids:
+            commit.parents.append(str(id))
+
+        return commit
+
+    repoDir = fullRepoDir(submodule, branchDir)
+    repo = pygit2.Repository(repoDir)
+    logs = []
+
+    for log in repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL):
+        commit = fromRawCommit(log)
+        commit.repoDir = submodule
+        isoDate = ''
+        if version_info < (3, 11):
+            isoDate = commit.committerDate.replace(
+                ' ', 'T', 1).replace(' ', '', 1)
+            isoDate = isoDate[:-2] + ':' + isoDate[-2:]
+        else:
+            isoDate = commit.committerDate
+        commit.committerDateTime = datetime.fromisoformat(isoDate)
+        logs.append(commit)
+
+    return logs, submodule
+
+
 class LogsFetcherWorker(QObject):
 
     localChangesAvailable = Signal(Commit, Commit)
@@ -350,9 +399,18 @@ class LogsFetcherWorker(QObject):
 
     def _onFetchLogsFinished(self, fetcher: LogsFetcherImpl):
         repoDir = fetcher.repoDir
-        handleCount = 0
 
-        for log in fetcher.commits:
+        self._mergeLogs(fetcher.commits, repoDir)
+
+        self._exitCode |= fetcher._exitCode
+        self._handleError(fetcher.errorData, fetcher._branch, repoDir)
+
+        if RUN_GIT_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
+            self._emitLogsAvailable()
+
+    def _mergeLogs(self, commits: List[Commit], repoDir: str):
+        handleCount = 0
+        for log in commits:
             handleCount += 1
             if handleCount % 100 == 0 and self.isInterruptionRequested():
                 logger.debug("Logs fetcher cancelled")
@@ -370,12 +428,6 @@ class LogsFetcherWorker(QObject):
                     main_commit.subCommits.append(log)
             else:
                 self._mergedLogs[key] = log
-
-        self._exitCode |= fetcher._exitCode
-        self._handleError(fetcher.errorData, fetcher._branch, repoDir)
-
-        if RUN_GIT_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
-            self._emitLogsAvailable()
 
     def _onFetchFinished(self):
         if self.isInterruptionRequested():
@@ -421,35 +473,23 @@ class LogsFetcherWorker(QObject):
         self._exitCode = 0
         self._mergedLogs.clear()
 
-        self._eventLoop = QEventLoop()
-        MAX_QUEUE_SIZE = 32
+        max_workers = max(2, os.cpu_count() - 2)
+        executor = ProcessPoolExecutor(max_workers=max_workers)
+        # TODO: args
+        tasks = [executor.submit(_fetchLogs, submodule, self._branchDir, self._args)
+                 for submodule in submodules]
 
-        global RUN_GIT_SLOW
-
-        for submodule in submodules:
-            if self.isInterruptionRequested():
-                self._clearFetcher()
-                return
-            fetcher = LogsFetcherImpl(submodule)
-            if submodule != '.':
-                fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-            fetcher.fetchFinished.connect(self._onFetchFinished)
-
-            if len(self._fetchers) < MAX_QUEUE_SIZE:
-                self._fetchers.append(fetcher)
-                if RUN_GIT_SLOW is None:
-                    begin = time.time()
-                fetcher.fetch(*self._args)
-                if RUN_GIT_SLOW is None:
-                    ms = int((time.time() - begin) * 1000)
-                    # on Linux, it takes about 1ms
-                    # on Win10, it takes about 5ms
-                    # on latest Win11, it takes about 60ms!!!
-                    RUN_GIT_SLOW = ms > 10
-            else:
-                self._queueTasks.append(fetcher)
-
-        self._eventLoop.exec()
+        while tasks and not self.isInterruptionRequested():
+            try:
+                for task in as_completed(tasks, 0.01):
+                    tasks.remove(task)
+                    if self.isInterruptionRequested():
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return
+                    logs, submodule, = task.result()
+                    self._mergeLogs(logs, submodule)
+            except Exception:
+                pass
 
         logger.debug("fetch logs elapsed: %fs", time.time() - b)
         print(f"fetch logs elapsed: {time.time() - b:.3f}s")
@@ -465,11 +505,6 @@ class LogsFetcherWorker(QObject):
 
         if self.needLocalChanges():
             begin = time.time()
-            max_workers = max(2, os.cpu_count() - 2)
-            executor = ProcessPoolExecutor(max_workers=max_workers)
-            cancelEvent = CancelEvent(self)
-            tasks = [executor.submit(_checkLocalChanges, submodule, self._branchDir, cancelEvent)
-                     for submodule in submodules]
 
             lccCommit = Commit()
             lucCommit = Commit()
