@@ -119,3 +119,7 @@ class LogsFetcher(QObject):
         thread = self.sender()
         if thread in self._threads:
             self._threads.remove(thread)
+
+    @property
+    def errorData(self):
+        return self._errorData
