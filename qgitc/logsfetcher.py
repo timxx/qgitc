@@ -7,6 +7,8 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, logger
+from qgitc.gitutils import Git
+from qgitc.logsfetchermpworker import LogsFetcherMPWorker
 from qgitc.logsfetcherqprocessworker import LogsFetcherQProcessWorker
 from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 
@@ -36,8 +38,12 @@ class LogsFetcher(QObject):
         # always detect local changes for single repo
         noLocalChanges = len(self._submodules) > 0 and not ApplicationBase.instance(
         ).settings().detectLocalChanges()
-        self._worker = LogsFetcherQProcessWorker(
-            self._submodules, branchDir, noLocalChanges, *args)
+        if Git.RUN_SLOW and len(self._submodules) > 50:
+            self._worker = LogsFetcherMPWorker(
+                self._submodules, branchDir, noLocalChanges, *args)
+        else:
+            self._worker = LogsFetcherQProcessWorker(
+                self._submodules, branchDir, noLocalChanges, *args)
         self._worker.logsAvailable.connect(self._onLogsAvailable)
         self._worker.fetchFinished.connect(self._onFetchFinished)
         self._worker.localChangesAvailable.connect(
@@ -119,3 +125,7 @@ class LogsFetcher(QObject):
         thread = self.sender()
         if thread in self._threads:
             self._threads.remove(thread)
+
+    @property
+    def errorData(self):
+        return self._errorData
