@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from ast import Dict
 import os
 import time
 from typing import List
@@ -8,7 +7,13 @@ from typing import List
 from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, Signal
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, extractFilePaths, filterSubmoduleByPath, fullRepoDir, logger
+from qgitc.common import (
+    Commit,
+    extractFilePaths,
+    filterSubmoduleByPath,
+    fullRepoDir,
+    logger,
+)
 from qgitc.gitutils import Git, GitProcess
 from qgitc.logsfetcherimpl import LogsFetcherImpl
 from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
@@ -86,12 +91,9 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
     def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__(submodules, branchDir, noLocalChanges, *args)
 
-        self._errors = {}  # error: repo
-
         self._fetchers: List[LogsFetcherImpl] = []
         self._eventLoop = None
 
-        self._mergedLogs: Dict[any, Commit] = {}
         self._lccCommit = Commit()
         self._lucCommit = Commit()
 
@@ -102,28 +104,6 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             self._fetchNormal()
         else:
             self._fetchComposite()
-
-    @staticmethod
-    def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
-        if hasLCC:
-            lccCommit.sha1 = Git.LCC_SHA1
-            if not lccCommit.repoDir:
-                lccCommit.repoDir = repoDir
-            else:
-                subCommit = Commit()
-                subCommit.sha1 = Git.LCC_SHA1
-                subCommit.repoDir = repoDir
-                lccCommit.subCommits.append(subCommit)
-
-        if hasLUC:
-            lucCommit.sha1 = Git.LUC_SHA1
-            if not lucCommit.repoDir:
-                lucCommit.repoDir = repoDir
-            else:
-                subCommit = Commit()
-                subCommit.sha1 = Git.LUC_SHA1
-                subCommit.repoDir = repoDir
-                lucCommit.subCommits.append(subCommit)
 
     def _onFetchNormalLogsFinished(self):
         fetcher = self.sender()
@@ -170,39 +150,20 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
     def _onFetchLogsFinished(self, fetcher: LogsFetcherImpl):
         repoDir = fetcher.repoDir
-        handleCount = 0
 
-        for log in fetcher.commits:
-            handleCount += 1
-            if handleCount % 100 == 0 and self.isInterruptionRequested():
-                logger.debug("Logs fetcher cancelled")
-                self._clearFetcher()
-                return
-            # require same day at least
-            key = (log.committerDateTime.date(),
-                   log.comments, log.author)
-            if key in self._mergedLogs.keys():
-                main_commit: Commit = self._mergedLogs[key]
-                # don't merge commits in same repo
-                if LogsFetcherWorkerBase._isSameRepoCommit(main_commit, repoDir):
-                    self._mergedLogs[log.sha1] = log
-                else:
-                    main_commit.subCommits.append(log)
-            else:
-                self._mergedLogs[key] = log
-
-        self._exitCode |= fetcher._exitCode
-        self._handleError(fetcher.errorData, fetcher._branch, repoDir)
+        self._handleCompositeLogs(
+            fetcher.commits, repoDir,
+            fetcher._exitCode, fetcher.errorData)
 
         if RUN_GIT_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
-            self._emitLogsAvailable()
+            self._emitCompositeLogsAvailable()
 
     def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
         hasLCC = fetcher.hasLCC
         hasLUC = fetcher.hasLUC
 
         if hasLCC or hasLUC:
-            self._makeLocalCommits(
+            LogsFetcherWorkerBase._makeLocalCommits(
                 self._lccCommit, self._lucCommit, hasLCC, hasLUC, fetcher._repoDir)
 
     def _onFetchFinished(self):
@@ -229,13 +190,6 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         if not self._fetchers and self._eventLoop:
             self._eventLoop.quit()
-
-    def _emitLogsAvailable(self):
-        if self._mergedLogs:
-            sortedLogs = sorted(self._mergedLogs.values(),
-                                key=lambda x: x.committerDateTime, reverse=True)
-            self.logsAvailable.emit(sortedLogs)
-            self._mergedLogs.clear()
 
     def _fetchComposite(self):
         b = time.time()
@@ -308,7 +262,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
 
-        self._emitLogsAvailable()
+        self._emitCompositeLogsAvailable()
 
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
@@ -332,20 +286,3 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         for fetcher in self._fetchers:
             fetcher.cancel()
         self._fetchers.clear()
-
-    @property
-    def errorData(self):
-        return self._errorData
-
-    def _handleError(self, errorData, branch, repoDir):
-        if errorData and errorData not in self._errors:
-            if not self._submodules or not self._isIgnoredError(errorData, branch):
-                self._errors[errorData] = repoDir
-
-    def _isIgnoredError(self, error: bytes, branch: bytes):
-        msgs = [b"fatal: ambiguous argument '%s': unknown revision or path" % branch,
-                b"fatal: bad revision '%s'" % branch]
-        for msg in msgs:
-            if error.startswith(msg):
-                return True
-        return False
