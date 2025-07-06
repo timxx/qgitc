@@ -3,7 +3,7 @@
 import os
 import time
 from ast import Dict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from sys import version_info
 from typing import List
@@ -466,7 +466,7 @@ class LogsFetcherWorker(QObject):
         if self.needLocalChanges():
             begin = time.time()
             max_workers = max(2, os.cpu_count() - 2)
-            executor = ThreadPoolExecutor(max_workers=max_workers)
+            executor = ProcessPoolExecutor(max_workers=max_workers)
             cancelEvent = CancelEvent(self)
             tasks = [executor.submit(_checkLocalChanges, submodule, self._branchDir, cancelEvent)
                      for submodule in submodules]
@@ -479,6 +479,7 @@ class LogsFetcherWorker(QObject):
                     for task in as_completed(tasks, 0.01):
                         tasks.remove(task)
                         if self.isInterruptionRequested():
+                            executor.shutdown(wait=False, cancel_futures=True)
                             return
                         hasLCC, hasLUC, submodule, = task.result()
                         self._makeLocalCommits(
@@ -487,6 +488,7 @@ class LogsFetcherWorker(QObject):
                     pass
 
             self.localChangesAvailable.emit(lccCommit, lucCommit)
+            executor.shutdown(wait=False)
 
             elapsed = time.time() - begin
             logger.debug("Local changes check elapsed: %fs", elapsed)
