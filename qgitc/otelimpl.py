@@ -118,6 +118,7 @@ class OTelService(TelemetryBase):
         logger.addHandler(LoggingHandler(logging.WARNING, provider))
 
         self._logger = logging.getLogger("_otel_")
+        self._logger.propagate = False
         self._logger.addHandler(LoggingHandler(logging.INFO, provider))
         self._logger.setLevel(logging.INFO)
 
