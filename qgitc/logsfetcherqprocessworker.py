@@ -18,8 +18,6 @@ from qgitc.gitutils import Git, GitProcess
 from qgitc.logsfetcherimpl import LogsFetcherImpl
 from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 
-RUN_GIT_SLOW = None
-
 
 class LocalChangesFetcher(QObject):
     finished = Signal()
@@ -155,7 +153,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             fetcher.commits, repoDir,
             fetcher._exitCode, fetcher.errorData)
 
-        if RUN_GIT_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
+        if Git.RUN_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
             self._emitCompositeLogsAvailable()
 
     def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
@@ -208,8 +206,6 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         self._eventLoop = QEventLoop()
         MAX_QUEUE_SIZE = 32
 
-        global RUN_GIT_SLOW
-
         for submodule in submodules:
             if self.isInterruptionRequested():
                 self._clearFetcher()
@@ -221,15 +217,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
             if len(self._fetchers) < MAX_QUEUE_SIZE:
                 self._fetchers.append(fetcher)
-                if RUN_GIT_SLOW is None:
-                    begin = time.time()
                 fetcher.fetch(*self._args)
-                if RUN_GIT_SLOW is None:
-                    ms = int((time.time() - begin) * 1000)
-                    # on Linux, it takes about 1ms
-                    # on Win10, it takes about 5ms
-                    # on latest Win11, it takes about 60ms!!!
-                    RUN_GIT_SLOW = ms > 10
             else:
                 self._queueTasks.append(fetcher)
 

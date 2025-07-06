@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import subprocess
+import time
 from collections import defaultdict
 from typing import Dict, List, Union
 
@@ -122,6 +123,8 @@ class Git():
     VERSION_MAJOR = 0
     VERSION_MINOR = 0
     VERSION_PATCH = 0
+
+    RUN_SLOW = False
 
     @staticmethod
     def available():
@@ -577,7 +580,13 @@ class Git():
     def initGit(gitBin: str):
         GitProcess.GIT_BIN = gitBin
 
+        begin = time.time()
         version: bytes = Git.checkOutput(["version"])
+        ms = int((time.time() - begin) * 1000)
+
+        # only latest Win11 takes more than 60ms
+        Git.RUN_SLOW = ms >= 60
+
         if not version:
             return
 
