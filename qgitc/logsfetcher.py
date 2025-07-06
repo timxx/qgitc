@@ -3,13 +3,16 @@
 import os
 import time
 from ast import Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta
 from sys import version_info
 from typing import List
 
+import pygit2
 from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.cancelevent import CancelEvent
 from qgitc.common import (
     Commit,
     extractFilePaths,
@@ -200,6 +203,47 @@ class LocalChangesFetcher(QObject):
             self.finished.emit()
 
 
+_COMMITTED_FLAGS = (pygit2.GIT_STATUS_INDEX_NEW |
+                    pygit2.GIT_STATUS_INDEX_MODIFIED |
+                    pygit2.GIT_STATUS_INDEX_DELETED |
+                    pygit2.GIT_STATUS_INDEX_RENAMED |
+                    pygit2.GIT_STATUS_INDEX_TYPECHANGE)
+
+_UNCOMMITTED_FLAGS = (pygit2.GIT_STATUS_WT_NEW |
+                      pygit2.GIT_STATUS_WT_MODIFIED |
+                      pygit2.GIT_STATUS_WT_DELETED |
+                      pygit2.GIT_STATUS_WT_RENAMED |
+                      pygit2.GIT_STATUS_WT_TYPECHANGE |
+                      pygit2.GIT_STATUS_WT_UNREADABLE)
+
+
+def _checkLocalChanges(submodule: str, branchDir: str, cancelEvent: CancelEvent = None):
+    hasLCC = False
+    hasLUC = False
+    try:
+        repoDir = fullRepoDir(submodule, branchDir)
+        repo = pygit2.Repository(repoDir)
+        # repo.index.read()
+        if cancelEvent and cancelEvent.isSet():
+            return hasLCC, hasLUC, submodule
+
+        status = repo.status(untracked_files="no")
+        if cancelEvent and cancelEvent.isSet():
+            return hasLCC, hasLUC, submodule
+
+        for _, flags in status.items():
+            if flags & _COMMITTED_FLAGS:
+                hasLCC = True
+            if flags & _UNCOMMITTED_FLAGS:
+                hasLUC = True
+            if hasLCC and hasLUC:
+                break
+    except Exception as e:
+        logger.exception(e)
+
+    return hasLCC, hasLUC, submodule
+
+
 class LogsFetcherWorker(QObject):
 
     localChangesAvailable = Signal(Commit, Commit)
@@ -221,8 +265,6 @@ class LogsFetcherWorker(QObject):
         self._noLocalChanges = noLocalChanges
 
         self._mergedLogs: Dict[any, Commit] = {}
-        self._lccCommit = Commit()
-        self._lucCommit = Commit()
 
         self._queueTasks = []
 
@@ -273,12 +315,13 @@ class LogsFetcherWorker(QObject):
 
         fetcher.fetch(*self._args)
 
-        lcFetcher = None
         if self.needLocalChanges():
-            lcFetcher = LocalChangesFetcher()
-            lcFetcher.finished.connect(self._onFetchFinished)
-            self._fetchers.append(lcFetcher)
-            lcFetcher.fetch()
+            hasLCC, hasLUC, _ = _checkLocalChanges(None, self._branchDir)
+            if hasLCC or hasLUC:
+                lccCommit = Commit()
+                lucCommit = Commit()
+                self._makeLocalCommits(lccCommit, lucCommit, hasLCC, hasLUC)
+                self.localChangesAvailable.emit(lccCommit, lucCommit)
 
         self._eventLoop.exec()
         self._eventLoop = None
@@ -287,9 +330,6 @@ class LogsFetcherWorker(QObject):
             logger.debug("Logs fetcher cancelled")
             self._clearFetcher()
             return
-
-        if lcFetcher:
-            self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
 
         self._handleError(fetcher.errorData, fetcher._branch, fetcher.repoDir)
 
@@ -337,14 +377,6 @@ class LogsFetcherWorker(QObject):
         if RUN_GIT_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
             self._emitLogsAvailable()
 
-    def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
-        hasLCC = fetcher.hasLCC
-        hasLUC = fetcher.hasLUC
-
-        if hasLCC or hasLUC:
-            self._makeLocalCommits(
-                self._lccCommit, self._lucCommit, hasLCC, hasLUC, fetcher._repoDir)
-
     def _onFetchFinished(self):
         if self.isInterruptionRequested():
             logger.debug("Logs fetcher cancelled")
@@ -364,8 +396,6 @@ class LogsFetcherWorker(QObject):
 
         if isinstance(fetcher, LogsFetcherImpl):
             self._onFetchLogsFinished(fetcher)
-        else:
-            self._onFetchLocalChangesFinished(fetcher)
 
         if not self._fetchers and self._eventLoop:
             self._eventLoop.quit()
@@ -419,25 +449,10 @@ class LogsFetcherWorker(QObject):
             else:
                 self._queueTasks.append(fetcher)
 
-        if self.needLocalChanges():
-            for submodule in submodules:
-                if self.isInterruptionRequested():
-                    self._clearFetcher()
-                    return
-
-                fetcher = LocalChangesFetcher(
-                    fullRepoDir(submodule, self._branchDir))
-                fetcher.finished.connect(self._onFetchFinished)
-
-                if len(self._fetchers) < MAX_QUEUE_SIZE:
-                    fetcher.fetch()
-                    self._fetchers.append(fetcher)
-                else:
-                    self._queueTasks.append(fetcher)
-
         self._eventLoop.exec()
 
-        logger.debug("fetch elapsed: %fs", time.time() - b)
+        logger.debug("fetch logs elapsed: %fs", time.time() - b)
+        print(f"fetch logs elapsed: {time.time() - b:.3f}s")
 
         if self.isInterruptionRequested():
             self._clearFetcher()
@@ -446,9 +461,36 @@ class LogsFetcherWorker(QObject):
             span.end()
             return
 
-        self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
-
         self._emitLogsAvailable()
+
+        if self.needLocalChanges():
+            begin = time.time()
+            max_workers = max(2, os.cpu_count() - 2)
+            executor = ThreadPoolExecutor(max_workers=max_workers)
+            cancelEvent = CancelEvent(self)
+            tasks = [executor.submit(_checkLocalChanges, submodule, self._branchDir, cancelEvent)
+                     for submodule in submodules]
+
+            lccCommit = Commit()
+            lucCommit = Commit()
+
+            while tasks and not self.isInterruptionRequested():
+                try:
+                    for task in as_completed(tasks, 0.01):
+                        tasks.remove(task)
+                        if self.isInterruptionRequested():
+                            return
+                        hasLCC, hasLUC, submodule, = task.result()
+                        self._makeLocalCommits(
+                            lccCommit, lucCommit, hasLCC, hasLUC, submodule)
+                except Exception:
+                    pass
+
+            self.localChangesAvailable.emit(lccCommit, lucCommit)
+
+            elapsed = time.time() - begin
+            logger.debug("Local changes check elapsed: %fs", elapsed)
+            print(f"Local changes check elapsed: {elapsed:.3f}s")
 
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
