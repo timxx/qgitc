@@ -150,7 +150,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         repoDir = fetcher.repoDir
 
         self._handleCompositeLogs(
-            fetcher.commits, repoDir,
+            fetcher.commits, repoDir, fetcher._branch,
             fetcher._exitCode, fetcher.errorData)
 
         if Git.RUN_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):

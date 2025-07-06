@@ -41,9 +41,15 @@ class LogsFetcherWorkerBase(QObject):
         self._interruptionRequested = True
 
     def needLocalChanges(self):
-        return not self._noLocalChanges and not self._args[1]
+        # only if branch checked out
+        # and no disable by user
+        # and no logs filtered
+        return self._branchDir and \
+            not self._noLocalChanges \
+            and not self._args[1]
 
-    def _handleCompositeLogs(self, commits: List[Commit], repoDir: str, exitCode: int, errorData: bytes):
+    def _handleCompositeLogs(self, commits: List[Commit], repoDir: str, branch: bytes,
+                             exitCode: int, errorData: bytes):
         handleCount = 0
 
         for log in commits:
@@ -64,7 +70,7 @@ class LogsFetcherWorkerBase(QObject):
                 self._mergedLogs[key] = log
 
         self._exitCode |= exitCode
-        self._handleError(errorData, self._branchDir, repoDir)
+        self._handleError(errorData, branch, repoDir)
 
     def _handleError(self, errorData, branch, repoDir):
         if errorData and errorData not in self._errors:
