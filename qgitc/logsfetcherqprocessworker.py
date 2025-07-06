@@ -51,7 +51,11 @@ class LocalChangesFetcher(QObject):
         if Git.versionGE(1, 7, 2):
             args.append("--ignore-submodules=dirty")
 
-        process = QProcess()
+        if os.name == "nt":
+            from qgitc.asyncprocess import AsyncProcess
+            process = AsyncProcess()
+        else:
+            process = QProcess()
         process.setWorkingDirectory(self._repoDir or Git.REPO_DIR)
         process.finished.connect(self._onFinished)
 
