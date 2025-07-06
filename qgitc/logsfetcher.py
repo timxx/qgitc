@@ -3,8 +3,6 @@
 import os
 import time
 from ast import Dict
-from datetime import date, datetime, timedelta
-from sys import version_info
 from typing import List
 
 from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, QThread, Signal
@@ -15,124 +13,13 @@ from qgitc.common import (
     extractFilePaths,
     filterSubmoduleByPath,
     fullRepoDir,
-    isRevisionRange,
     logger,
-    toSubmodulePath,
 )
-from qgitc.datafetcher import DataFetcher
 from qgitc.gitutils import Git, GitProcess
-
-log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
+from qgitc.logsfetcherimpl import LogsFetcherImpl
+from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 
 RUN_GIT_SLOW = None
-
-
-class LogsFetcherImpl(DataFetcher):
-
-    logsAvailable = Signal(list)
-
-    def __init__(self, repoDir=None, parent=None):
-        super().__init__(parent)
-        self.separator = b'\0'
-        self.repoDir = repoDir
-        self._branch: bytes = None
-        self.commits: List[Commit] = []
-
-    def parse(self, data: bytes):
-        logs = data.rstrip(self.separator) \
-            .decode("utf-8", "replace") \
-            .split('\0')
-
-        commits = []
-        for log in logs:
-            commit = Commit.fromRawString(log)
-            if not commit or not commit.sha1:
-                continue
-            commit.repoDir = self.repoDir
-            if self.repoDir:
-                isoDate = ''
-                if version_info < (3, 11):
-                    isoDate = commit.committerDate.replace(
-                        ' ', 'T', 1).replace(' ', '', 1)
-                    isoDate = isoDate[:-2] + ':' + isoDate[-2:]
-                else:
-                    isoDate = commit.committerDate
-                commit.committerDateTime = datetime.fromisoformat(isoDate)
-            commits.append(commit)
-
-        if self.repoDir:
-            self.commits.extend(commits)
-        else:
-            self.logsAvailable.emit(commits)
-
-    def makeArgs(self, args):
-        branch = args[0]
-        logArgs = args[1]
-        self._branch = branch.encode("utf-8") if branch else None
-
-        hasRevisionRange = self.hasRevisionRange(logArgs)
-        if branch and (branch.startswith("(HEAD detached") or hasRevisionRange):
-            branch = None
-
-        git_args = ["log", "-z", "--topo-order",
-                    "--parents",
-                    "--no-color",
-                    "--pretty=format:{0}".format(log_fmt)]
-
-        needBoundary = True
-        paths = None
-        # reduce commits to analyze
-        if self.repoDir and not self.hasSinceArg(logArgs) and not hasRevisionRange:
-            paths = extractFilePaths(logArgs) if logArgs else None
-            if not paths:
-                days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
-                if days > 0:
-                    since = date.today() - timedelta(days=days)
-                    git_args.append(f"--since={since.isoformat()}")
-                    needBoundary = False
-
-        if branch:
-            git_args.append(branch)
-
-        if logArgs:
-            if self.repoDir and self.repoDir != ".":
-                paths = paths or extractFilePaths(logArgs)
-                if paths:
-                    for arg in logArgs:
-                        if arg not in paths and arg != "--":
-                            git_args.append(arg)
-                    git_args.append("--")
-                    for path in paths:
-                        git_args.append(toSubmodulePath(self.repoDir, path))
-                else:
-                    git_args.extend(logArgs)
-            else:
-                git_args.extend(logArgs)
-        elif needBoundary:
-            git_args.append("--boundary")
-
-        return git_args
-
-    def isLoading(self):
-        return self.process is not None
-
-    @staticmethod
-    def hasSinceArg(args: List[str]):
-        if not args:
-            return False
-        for arg in args:
-            if arg.startswith("--since"):
-                return True
-        return False
-
-    @staticmethod
-    def hasRevisionRange(args: List[str]):
-        if not args:
-            return False
-        for arg in args:
-            if isRevisionRange(arg):
-                return True
-        return False
 
 
 class LocalChangesFetcher(QObject):
@@ -200,33 +87,21 @@ class LocalChangesFetcher(QObject):
             self.finished.emit()
 
 
-class LogsFetcherWorker(QObject):
-
-    localChangesAvailable = Signal(Commit, Commit)
-    logsAvailable = Signal(list)
-    fetchFinished = Signal(int)
+class LogsFetcherWorker(LogsFetcherWorkerBase):
 
     def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
-        super().__init__()
-        self._args = args
+        super().__init__(submodules, branchDir, noLocalChanges, *args)
 
         self._errors = {}  # error: repo
-        self._errorData = b''
-        self._exitCode = 0
 
         self._fetchers: List[LogsFetcherImpl] = []
-        self._submodules = submodules.copy()
         self._eventLoop = None
-        self._branchDir = branchDir
-        self._noLocalChanges = noLocalChanges
 
         self._mergedLogs: Dict[any, Commit] = {}
         self._lccCommit = Commit()
         self._lucCommit = Commit()
 
         self._queueTasks = []
-
-        self._interruptionRequested = False
 
     def run(self):
         if not self._submodules:
@@ -322,7 +197,7 @@ class LogsFetcherWorker(QObject):
             key = (log.committerDateTime.date(),
                    log.comments, log.author)
             if key in self._mergedLogs.keys():
-                main_commit = self._mergedLogs[key]
+                main_commit: Commit = self._mergedLogs[key]
                 # don't merge commits in same repo
                 if LogsFetcherWorker._isSameRepoCommit(main_commit, repoDir):
                     self._mergedLogs[log.sha1] = log
@@ -467,9 +342,6 @@ class LogsFetcherWorker(QObject):
         # we don't cancel fetchers here, because we have to cancel
         # in the thread is was started
 
-    def isInterruptionRequested(self):
-        return self._interruptionRequested
-
     def _clearFetcher(self):
         self._queueTasks.clear()
         for fetcher in self._fetchers:
@@ -493,9 +365,6 @@ class LogsFetcherWorker(QObject):
                 return True
         return False
 
-    def needLocalChanges(self):
-        return not self._noLocalChanges and not self._args[1]
-
 
 class LogsFetcher(QObject):
 
@@ -506,7 +375,7 @@ class LogsFetcher(QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._worker: LogsFetcherWorker = None
+        self._worker: LogsFetcherWorkerBase = None
         self._thread: QThread = None
         self._submodules: List[str] = []
         self._errorData = b''
@@ -577,7 +446,7 @@ class LogsFetcher(QObject):
             logger.info("_onLogsAvailable but thread changed")
 
     def _onFetchFinished(self, exitCode):
-        worker: LogsFetcherWorker = self.sender()
+        worker: LogsFetcherWorkerBase = self.sender()
         if not worker:
             return
 
@@ -605,7 +474,3 @@ class LogsFetcher(QObject):
         thread = self.sender()
         if thread in self._threads:
             self._threads.remove(thread)
-
-    @property
-    def errorData(self):
-        return self._errorData
