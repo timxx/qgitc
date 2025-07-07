@@ -3,7 +3,7 @@
 import os
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 import pygit2
@@ -61,13 +61,16 @@ def _fromRawCommit(rawCommit: pygit2.Commit):
     return commit
 
 
-# TODO: args and maxCompositeCommitsSince
-def _fetchLogs(submodule: str, branchDir: str, args: List[str], maxCompositeCommitsSince=0, checkLocalChanges=False):
+# TODO: args
+def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = None, checkLocalChanges=False):
     repoDir = fullRepoDir(submodule, branchDir)
     repo = pygit2.Repository(repoDir)
     logs = []
 
-    for log in repo.walk(repo.head.target, pygit2.GIT_SORT_TOPOLOGICAL):
+    for log in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME | pygit2.GIT_SORT_TOPOLOGICAL):
+        if since is not None and log.commit_time < since:
+            break
+
         commit = _fromRawCommit(log)
         commit.repoDir = submodule
         isoDate = ''
@@ -108,7 +111,7 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
     def _fetchComposite(self):
         telemetry = ApplicationBase.instance().telemetry()
-        span = telemetry.startTrace("fetchCompositeMP")
+        span = telemetry.startTrace("fetchCompositeGit2")
         span.addTag("sm_count", len(self._submodules))
 
         logsArgs = self._args[1]
@@ -143,10 +146,11 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
         days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
         checkLocalChanges = self.needLocalChanges()
         branch = self._args[0].encode("utf-8") if self._args[0] else None
+        since = (datetime.today() - timedelta(days)).timestamp()
 
         for submodule in submodules:
             task = executor.submit(
-                _fetchLogs, submodule, self._branchDir, self._args, days, checkLocalChanges)
+                _fetchLogs, submodule, self._branchDir, self._args, since, checkLocalChanges)
             tasks.append(task)
             taskSubmodules[task] = submodule
 
