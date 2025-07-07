@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from typing import List
@@ -36,27 +35,26 @@ def _fromRawCommit(rawCommit: pygit2.Commit):
     """ Convert from pygit2's commit """
     commit = Commit()
 
-    def timeStr(signature: pygit2.Signature):
-        dt = datetime.fromtimestamp(float(signature.time))
-        return "%d-%02d-%02d %02d:%02d:%02d" % (
-            dt.year, dt.month, dt.day,
-            dt.hour, dt.minute, dt.second)
-
-    def authorStr(author: pygit2.Signature):
-        return author.name + " <" + author.email + ">"
+    authorDt = datetime.fromtimestamp(float(rawCommit.author.time))
+    authorDateStr = "%d-%02d-%02d %02d:%02d:%02d" % (
+        authorDt.year, authorDt.month, authorDt.day,
+        authorDt.hour, authorDt.minute, authorDt.second)
 
     commit.sha1 = str(rawCommit.id)
     commit.comments = rawCommit.message.rstrip()
-    commit.author = authorStr(rawCommit.author)
-    commit.authorDate = timeStr(rawCommit.author)
-    commit.committer = authorStr(rawCommit.committer)
+    commit.author = f"{rawCommit.author.name} <{rawCommit.author.email}>"
+    commit.authorDate = authorDateStr
+    commit.committer = f"{rawCommit.committer.name} <{rawCommit.committer.email}>"
+
     if rawCommit.committer.time == rawCommit.author.time:
-        commit.committerDate = commit.authorDate
+        commit.committerDate = authorDateStr
     else:
-        commit.committerDate = timeStr(rawCommit.committer)
-    commit.parents = []
-    for id in rawCommit.parent_ids:
-        commit.parents.append(str(id))
+        committerDt = datetime.fromtimestamp(float(rawCommit.committer.time))
+        commit.committerDate = "%d-%02d-%02d %02d:%02d:%02d" % (
+            committerDt.year, committerDt.month, committerDt.day,
+            committerDt.hour, committerDt.minute, committerDt.second)
+
+    commit.parents = [str(id) for id in rawCommit.parent_ids]
 
     return commit
 
@@ -73,14 +71,8 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
 
         commit = _fromRawCommit(log)
         commit.repoDir = submodule
-        isoDate = ''
-        if sys.version_info < (3, 11):
-            isoDate = commit.committerDate.replace(
-                ' ', 'T', 1).replace(' ', '', 1)
-            isoDate = isoDate[:-2] + ':' + isoDate[-2:]
-        else:
-            isoDate = commit.committerDate
-        commit.committerDateTime = datetime.fromisoformat(isoDate)
+        commit.committerDateTime = datetime.fromtimestamp(log.commit_time)
+
         logs.append(commit)
 
     hasLCC = False
