@@ -32,7 +32,8 @@ class LogsFetcherImpl(DataFetcher):
             self.logsAvailable.emit(commits)
 
     def makeArgs(self, args):
-        gitArgs, self._branch = LogsFetcherImpl.makeGitArgs(args, self.repoDir)
+        days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
+        gitArgs, self._branch = LogsFetcherImpl.makeGitArgs(args, self.repoDir, days)
         return gitArgs
 
     @staticmethod
@@ -61,7 +62,7 @@ class LogsFetcherImpl(DataFetcher):
         return commits
 
     @staticmethod
-    def makeGitArgs(args, repoDir=None):
+    def makeGitArgs(args, repoDir=None, maxCompositeCommitsSince=0):
         branch = args[0]
         logArgs = args[1]
         _branch = branch.encode("utf-8") if branch else None
@@ -81,9 +82,8 @@ class LogsFetcherImpl(DataFetcher):
         if repoDir and not LogsFetcherImpl.hasSinceArg(logArgs) and not hasRevisionRange:
             paths = extractFilePaths(logArgs) if logArgs else None
             if not paths:
-                days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
-                if days > 0:
-                    since = date.today() - timedelta(days=days)
+                if maxCompositeCommitsSince > 0:
+                    since = date.today() - timedelta(days=maxCompositeCommitsSince)
                     git_args.append(f"--since={since.isoformat()}")
                     needBoundary = False
 
