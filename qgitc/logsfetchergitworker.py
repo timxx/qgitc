@@ -15,6 +15,7 @@ from qgitc.common import (
     fullRepoDir,
     logger,
 )
+from qgitc.gitutils import Git
 from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 
 _COMMITTED_FLAGS = (pygit2.GIT_STATUS_INDEX_NEW |
@@ -63,7 +64,15 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
     repo = pygit2.Repository(repoDir)
     logs = []
 
-    for log in repo.walk(repo.head.target, pygit2.GIT_SORT_TIME | pygit2.GIT_SORT_TOPOLOGICAL):
+    branch = args[0]
+    if branch.startswith("remotes/"):
+        branch = branch[8:]
+    gitBranch = repo.branches.get(branch)
+    if gitBranch is None:
+        # TODO: errors
+        return submodule, logs, False, False
+
+    for log in repo.walk(gitBranch.target, pygit2.GIT_SORT_TIME | pygit2.GIT_SORT_TOPOLOGICAL):
         if since is not None and log.commit_time < since:
             break
 
@@ -145,7 +154,7 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
         for submodule in submodules:
             task = executor.submit(
-                _fetchLogs, submodule, self._branchDir, self._args, since, checkLocalChanges)
+                _fetchLogs, submodule, self._branchDir or Git.REPO_DIR, self._args, since, checkLocalChanges)
             tasks.append(task)
             taskSubmodules[task] = submodule
 
