@@ -23,12 +23,10 @@ _COMMITTED_FLAGS = (pygit2.GIT_STATUS_INDEX_NEW |
                     pygit2.GIT_STATUS_INDEX_RENAMED |
                     pygit2.GIT_STATUS_INDEX_TYPECHANGE)
 
-_UNCOMMITTED_FLAGS = (pygit2.GIT_STATUS_WT_NEW |
-                      pygit2.GIT_STATUS_WT_MODIFIED |
+_UNCOMMITTED_FLAGS = (pygit2.GIT_STATUS_WT_MODIFIED |
                       pygit2.GIT_STATUS_WT_DELETED |
                       pygit2.GIT_STATUS_WT_RENAMED |
-                      pygit2.GIT_STATUS_WT_TYPECHANGE |
-                      pygit2.GIT_STATUS_WT_UNREADABLE)
+                      pygit2.GIT_STATUS_WT_TYPECHANGE)
 
 
 def _fromRawCommit(rawCommit: pygit2.Commit):
@@ -79,13 +77,18 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
     hasLUC = False
     if checkLocalChanges:
         status = repo.status(untracked_files="no")
-        for _, flags in status.items():
-            if flags & _COMMITTED_FLAGS:
+        for file, flags in status.items():
+            if not hasLCC and (flags & _COMMITTED_FLAGS):
                 hasLCC = True
-            if flags & _UNCOMMITTED_FLAGS:
+                if hasLUC:
+                    break
+            if not hasLUC and (flags & _UNCOMMITTED_FLAGS):
+                # Augly way to fix libgit2 bug with deleted files
+                if flags == pygit2.GIT_STATUS_WT_DELETED and os.path.exits(os.path.join(repoDir, file)):
+                    continue
                 hasLUC = True
-            if hasLCC and hasLUC:
-                break
+                if hasLCC:
+                    break
 
     return submodule, logs, hasLCC, hasLUC
 
