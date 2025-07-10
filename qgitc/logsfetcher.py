@@ -56,7 +56,7 @@ class LogsFetcher(QObject):
         self._thread.start()
 
         self._threads.append(self._thread)
-        if self._submodules and self._worker.needLocalChanges():
+        if self._worker.needReportSlowFetch():
             self._beginTime = time.time()
 
     def cancel(self, force=False):
@@ -102,12 +102,12 @@ class LogsFetcher(QObject):
             return
 
         if worker == self._worker:
-            needLocalChanges = worker.needLocalChanges()
+            report = worker.needReportSlowFetch()
             self._thread.quit()
             self._errorData = self._worker.errorData
             self._worker = None
             self.fetchFinished.emit(exitCode)
-            if self._submodules and needLocalChanges:
+            if report:
                 seconds = int(time.time() - self._beginTime)
                 if seconds > 15:
                     self.fetchTooSlow.emit(seconds)

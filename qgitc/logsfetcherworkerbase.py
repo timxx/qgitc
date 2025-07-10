@@ -48,6 +48,9 @@ class LogsFetcherWorkerBase(QObject):
             not self._noLocalChanges \
             and not self._args[1]
 
+    def needReportSlowFetch(self):
+        return self._submodules and self.needLocalChanges()
+
     def _handleCompositeLogs(self, commits: List[Commit], repoDir: str, branch: bytes,
                              exitCode: int, errorData: bytes):
         handleCount = 0

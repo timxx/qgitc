@@ -182,3 +182,6 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
         self._emitCompositeLogsAvailable()
 
         return True
+
+    def needReportSlowFetch(self):
+        return False
