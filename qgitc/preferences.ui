@@ -480,14 +480,14 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_5">
             <item>
-             <widget class="QComboBox" name="cbCommitSince"/>
-            </item>
-            <item>
              <widget class="QLabel" name="label_17">
               <property name="text">
                <string>Max Commits:</string>
               </property>
              </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="cbCommitSince"/>
             </item>
             <item>
              <spacer name="horizontalSpacer_5">
