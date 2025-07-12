@@ -3,6 +3,7 @@
 import argparse
 import os
 import re
+import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -72,7 +73,7 @@ class LogFilter:
 
         parser = LogsFetcherGitWorker.argParser()
         try:
-            parsedArgs = parser.parse_args(args)
+            parsedArgs, _ = parser.parse_known_args(args)
         except Exception as e:
             raise ValueError(f"Invalid arguments: {e}")
 
@@ -289,7 +290,10 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
     @staticmethod
     def argParser():
-        parser = argparse.ArgumentParser(exit_on_error=False)
+        if sys.version_info >= (3, 9):
+            parser = argparse.ArgumentParser(exit_on_error=False)
+        else:
+            parser = argparse.ArgumentParser()
         parser.add_argument('--author', type=str)
         parser.add_argument('--since', type=str)
         parser.add_argument('--max-count', type=int)
