@@ -148,7 +148,11 @@ class LogFilter:
 
 def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = None, checkLocalChanges=False):
     repoDir = fullRepoDir(submodule, branchDir)
-    repo = pygit2.Repository(repoDir)
+    try:
+        repo = pygit2.Repository(repoDir)
+    except Exception as e:
+        return submodule, [], False, False, str(e).encode("utf-8")
+
     logs = []
 
     branch = args[0]
@@ -156,15 +160,13 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
         branch = branch[8:]
     gitBranch = repo.branches.get(branch)
     if gitBranch is None:
-        # TODO: errors
-        return submodule, logs, False, False
+        return submodule, logs, False, False, b"No branch found"
 
     filter = LogFilter(since)
     try:
         filter.setupFilters(args[1])
     except ValueError as e:
-        # TODO: errors
-        return submodule, logs, False, False
+        return submodule, logs, False, False, str(e).encode("utf-8")
 
     for log in repo.walk(gitBranch.target, pygit2.GIT_SORT_TIME | pygit2.GIT_SORT_TOPOLOGICAL):
         if filter.isStop(log):
@@ -196,7 +198,7 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
                 if hasLCC:
                     break
 
-    return submodule, logs, hasLCC, hasLUC
+    return submodule, logs, hasLCC, hasLUC, None
 
 
 class LogsFetcherGitWorker(LogsFetcherWorkerBase):
@@ -265,9 +267,10 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
                     if self.isInterruptionRequested():
                         return False
                     tasks.remove(task)
-                    submodule, commits, hasLCC, hasLUC = task.result()
+                    submodule, commits, hasLCC, hasLUC, error = task.result()
+                    exitCode = 1 if error else 0
                     self._handleCompositeLogs(
-                        commits, submodule, branch, 0, b'')
+                        commits, submodule, branch, exitCode, error)
                     self._makeLocalCommits(
                         lccCommit, lucCommit, hasLCC, hasLUC, submodule)
             except Exception:
