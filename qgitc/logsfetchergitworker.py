@@ -222,7 +222,7 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
         max_workers = max(2, os.cpu_count())
         executor = ProcessPoolExecutor(max_workers=max_workers)
 
-        if not self._doFetchCompositeLogs(executor, submodules or ['.']):
+        if not self._doFetchLogs(executor, submodules or [None]):
             logger.debug("Fetch logs cancelled")
             span.setStatus(False, "cancelled")
             span.end()
@@ -237,14 +237,18 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
         self.fetchFinished.emit(self._exitCode)
 
-    def _doFetchCompositeLogs(self, executor: ProcessPoolExecutor, submodules: List[str]):
+    def _doFetchLogs(self, executor: ProcessPoolExecutor, submodules: List[str]):
         tasks = []
         taskSubmodules = {}
 
-        days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
         checkLocalChanges = self.needLocalChanges()
         branch = self._args[0].encode("utf-8") if self._args[0] else None
-        since = (datetime.today() - timedelta(days)).timestamp()
+
+        if len(submodules) > 1:
+            days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
+            since = (datetime.today() - timedelta(days)).timestamp()
+        else:
+            since = None
 
         for submodule in submodules:
             task = executor.submit(
