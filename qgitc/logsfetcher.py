@@ -38,7 +38,7 @@ class LogsFetcher(QObject):
         # always detect local changes for single repo
         noLocalChanges = len(self._submodules) > 0 and not ApplicationBase.instance(
         ).settings().detectLocalChanges()
-        if Git.RUN_SLOW and len(self._submodules) > 50:
+        if Git.RUN_SLOW and len(self._submodules) > 50 and LogsFetcherGitWorker.isSupportFilterArgs(args[1]):
             self._worker = LogsFetcherGitWorker(
                 self._submodules, branchDir, noLocalChanges, *args)
         else:

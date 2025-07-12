@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import argparse
 import os
+import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 import pygit2
@@ -58,7 +60,92 @@ def _fromRawCommit(rawCommit: pygit2.Commit):
     return commit
 
 
-# TODO: args
+class LogFilter:
+    def __init__(self, since=None):
+        self.author = None
+        self.since = since
+        self.max_count = None
+
+    def setupFilters(self, args: List[str]):
+        if not args:
+            return
+
+        parser = LogsFetcherGitWorker.argParser()
+        try:
+            parsedArgs = parser.parse_args(args)
+        except Exception as e:
+            raise ValueError(f"Invalid arguments: {e}")
+
+        if parsedArgs.author:
+            self.author = parsedArgs.author.lower()
+        if parsedArgs.since:
+            self.since = self._parse_date(parsedArgs.since).timestamp()
+        if parsedArgs.max_count:
+            self.max_count = parsedArgs.max_count
+
+    def _parse_date(self, dateStr: str):
+        formats = [
+            '%Y-%m-%d',         # 2025-01-01
+            '%Y-%m-%d %H:%M',   # 2025-01-01 12:00
+            '%Y/%m/%d',         # 2025/01/01
+            '%Y',               # 2025
+            '%d %b %Y',         # 01 Jan 2025
+        ]
+
+        for fmt in formats:
+            try:
+                return datetime.strptime(dateStr, fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+        try:
+            if re.match(r'^\d+\.(day|week|month|year)s?\.ago$', dateStr):
+                return self._parse_relative_date(dateStr)
+            raise ValueError(f"Unsupported date format: {dateStr}")
+        except Exception as e:
+            raise ValueError(f"Invalid date format: {dateStr} - {str(e)}")
+
+    def _parse_relative_date(self, dateStr: str):
+        parts = dateStr.split('.')
+        if len(parts) != 3:
+            raise ValueError(f"Invalid relative date: {dateStr}")
+
+        quantity = int(parts[0])
+        unit = parts[1].rstrip('s')
+        now = datetime.now(timezone.utc)
+
+        if unit == 'day':
+            delta = timedelta(days=quantity)
+        elif unit == 'week':
+            delta = timedelta(weeks=quantity)
+        elif unit == 'month':
+            delta = timedelta(days=quantity*30)
+        elif unit == 'year':
+            delta = timedelta(days=quantity*365)
+        else:
+            raise ValueError(f"Unknown time unit: {unit}")
+
+        return now - delta
+
+    def isFiltered(self, commit: pygit2.Commit) -> bool:
+        if self.author is not None:
+            author = commit.author.name.lower()
+            if self.author not in author:
+                return True
+
+        return False
+    
+    def isStop(self, commit: pygit2.Commit) -> bool:
+        if self.since is not None and commit.commit_time < self.since:
+            return True
+
+        if self.max_count is not None:
+            self.max_count -= 1
+            if self.max_count < 0:
+                return True
+
+        return False
+
+
 def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = None, checkLocalChanges=False):
     repoDir = fullRepoDir(submodule, branchDir)
     repo = pygit2.Repository(repoDir)
@@ -72,9 +159,19 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
         # TODO: errors
         return submodule, logs, False, False
 
+    filter = LogFilter(since)
+    try:
+        filter.setupFilters(args[1])
+    except ValueError as e:
+        # TODO: errors
+        return submodule, logs, False, False
+
     for log in repo.walk(gitBranch.target, pygit2.GIT_SORT_TIME | pygit2.GIT_SORT_TOPOLOGICAL):
-        if since is not None and log.commit_time < since:
+        if filter.isStop(log):
             break
+
+        if filter.isFiltered(log):
+            continue
 
         commit = _fromRawCommit(log)
         commit.repoDir = submodule
@@ -107,9 +204,6 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
     def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__(submodules, branchDir, noLocalChanges, *args)
 
-        # only for composite fetch
-        assert len(submodules) > 0, "Submodules list cannot be empty"
-
     def run(self):
         self._fetchComposite()
 
@@ -128,7 +222,7 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
         max_workers = max(2, os.cpu_count())
         executor = ProcessPoolExecutor(max_workers=max_workers)
 
-        if not self._doFetchCompositeLogs(executor, submodules):
+        if not self._doFetchCompositeLogs(executor, submodules or ['.']):
             logger.debug("Fetch logs cancelled")
             span.setStatus(False, "cancelled")
             span.end()
@@ -185,3 +279,28 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
     def needReportSlowFetch(self):
         return False
+
+    @staticmethod
+    def argParser():
+        parser = argparse.ArgumentParser(exit_on_error=False)
+        parser.add_argument('--author', type=str)
+        parser.add_argument('--since', type=str)
+        parser.add_argument('--max-count', type=int)
+        return parser
+
+    @staticmethod
+    def isSupportFilterArgs(args: List[str]) -> bool:
+        if not args:
+            return True
+
+        parser = LogsFetcherGitWorker.argParser()
+        _, unknownArgs = parser.parse_known_args(args)
+        if unknownArgs:
+            app = ApplicationBase.instance()
+            telemetry = app.telemetry() if app else None
+            if telemetry:
+                logger = telemetry.logger()
+                logger.warning(
+                    f"Unsupported log fetcher arguments: {unknownArgs}")
+            return False
+        return True
