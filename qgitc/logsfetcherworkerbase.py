@@ -17,7 +17,7 @@ class LogsFetcherWorkerBase(QObject):
     def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__()
 
-        self._submodules = submodules.copy()
+        self._submodules = submodules.copy() if submodules else []
         self._branchDir = branchDir
         self._noLocalChanges = noLocalChanges
         self._args = args
