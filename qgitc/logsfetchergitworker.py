@@ -161,7 +161,9 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
         branch = branch[8:]
     gitBranch = repo.branches.get(branch)
     if gitBranch is None:
-        return submodule, logs, False, False, b"No branch found"
+        return submodule, logs, False, False, \
+            b"fatal: ambiguous argument '%s': unknown revision or path" % args[0].encode(
+                "utf-8")
 
     filter = LogFilter(since)
     try:
