@@ -99,14 +99,14 @@ class LogFilter:
             except ValueError:
                 continue
         try:
-            if re.match(r'^\d+\.(day|week|month|year)s?\.ago$', dateStr):
+            if re.match(r'^\d+ +(day|week|month|year)s? +ago$', dateStr):
                 return self._parse_relative_date(dateStr)
             raise ValueError(f"Unsupported date format: {dateStr}")
         except Exception as e:
             raise ValueError(f"Invalid date format: {dateStr} - {str(e)}")
 
     def _parse_relative_date(self, dateStr: str):
-        parts = dateStr.split('.')
+        parts = dateStr.split(' ')
         if len(parts) != 3:
             raise ValueError(f"Invalid relative date: {dateStr}")
 
