@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    Executor,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+    as_completed,
+)
 from typing import Callable, Union
 
 from PySide6.QtCore import QObject, QThread, Signal
@@ -13,13 +18,14 @@ from qgitc.common import logger
 
 class SubmoduleThread(QThread):
 
-    def __init__(self, submodules: Union[list, dict], parent=None):
+    def __init__(self, submodules: Union[list, dict], executor: Executor, parent=None):
         super().__init__(parent)
 
         self._submodules = submodules
         self._actionHandler: Callable[[str, any, CancelEvent], any] = None
         self._resultHandler: Callable[[any], any] = None
         self._cancellation = CancelEvent(self)
+        self._executor = executor
 
     def setActionHandler(self, action: Callable):
         """ Set the action to be performed on each submodule.
@@ -71,17 +77,16 @@ class SubmoduleThread(QThread):
                 else:
                     self.onResultAvailable(result)
         else:
-            max_workers = max(2, os.cpu_count() - 2)
-            executor = ThreadPoolExecutor(max_workers=max_workers)
-            tasks = [executor.submit(self.processSubmodule, submodule, self._submodules[submodule]
-                                     if hasData else None) for submodule in submodules]
+            tasks = [self._executor.submit(self.processSubmodule, submodule, self._submodules[submodule]
+                                           if hasData else None) for submodule in submodules]
 
             while tasks and not self.isInterruptionRequested():
                 try:
                     for task in as_completed(tasks, 0.01):
                         if self.isInterruptionRequested():
                             logger.debug("Submodule executor cancelled")
-                            executor.shutdown(wait=False, cancel_futures=True)
+                            self._executor.shutdown(
+                                wait=False, cancel_futures=True)
                             return
                         tasks.remove(task)
                         result = task.result()
@@ -93,17 +98,19 @@ class SubmoduleThread(QThread):
                     pass
             if self.isInterruptionRequested():
                 logger.debug("Submodule executor cancelled")
-                executor.shutdown(wait=False, cancel_futures=True)
+                self._executor.shutdown(wait=False, cancel_futures=True)
 
 
 class SubmoduleExecutor(QObject):
     started = Signal()
     finished = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, useMultiThreading=True):
         super().__init__(parent)
         self._thread: SubmoduleThread = None
         self._threads = []
+        self._executor: Executor = None
+        self._useMultiThreading = useMultiThreading
 
     def submit(self, submodules: Union[list, dict], actionHandler: Callable, resultHandler: Callable = None):
         """ Submit a list of submodules and an action to be performed on each submodule.
@@ -112,7 +119,15 @@ class SubmoduleExecutor(QObject):
         The result handler is called with the result of the action."""
 
         self.cancel()
-        self._thread = SubmoduleThread(submodules, self)
+
+        if not self._executor:
+            max_workers = max(2, os.cpu_count())
+            if self._useMultiThreading:
+                self._executor = ThreadPoolExecutor(max_workers=max_workers)
+            else:
+                self._executor = ProcessPoolExecutor(max_workers=max_workers)
+
+        self._thread = SubmoduleThread(submodules, self._executor, self)
         self._thread.setActionHandler(actionHandler)
         self._thread.setResultHandler(resultHandler)
         self._thread.finished.connect(self.onFinished)
