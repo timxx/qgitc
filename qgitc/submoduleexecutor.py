@@ -68,7 +68,10 @@ class SubmoduleThread(QThread):
             submodules = self._submodules or [None]
             hasData = False
 
-        if len(submodules) == 1:
+        if isinstance(self._executor, ProcessPoolExecutor):
+            tasks = [self._executor.submit(self._actionHandler, submodule, self._submodules[submodule]
+                                           if hasData else None, None) for submodule in submodules]
+        elif len(submodules) == 1:
             data = self._submodules[submodules[0]] if hasData else None
             result = self.processSubmodule(submodules[0], data)
             if not self.isInterruptionRequested():
@@ -76,29 +79,30 @@ class SubmoduleThread(QThread):
                     self.onResultAvailable(*result)
                 else:
                     self.onResultAvailable(result)
+            return
         else:
             tasks = [self._executor.submit(self.processSubmodule, submodule, self._submodules[submodule]
                                            if hasData else None) for submodule in submodules]
 
-            while tasks and not self.isInterruptionRequested():
-                try:
-                    for task in as_completed(tasks, 0.01):
-                        if self.isInterruptionRequested():
-                            logger.debug("Submodule executor cancelled")
-                            self._executor.shutdown(
-                                wait=False, cancel_futures=True)
-                            return
-                        tasks.remove(task)
-                        result = task.result()
-                        if isinstance(result, tuple):
-                            self.onResultAvailable(*result)
-                        else:
-                            self.onResultAvailable(result)
-                except Exception:
-                    pass
-            if self.isInterruptionRequested():
-                logger.debug("Submodule executor cancelled")
-                self._executor.shutdown(wait=False, cancel_futures=True)
+        while tasks and not self.isInterruptionRequested():
+            try:
+                for task in as_completed(tasks, 0.01):
+                    if self.isInterruptionRequested():
+                        logger.debug("Submodule executor cancelled")
+                        self._executor.shutdown(
+                            wait=False, cancel_futures=True)
+                        return
+                    tasks.remove(task)
+                    result = task.result()
+                    if isinstance(result, tuple):
+                        self.onResultAvailable(*result)
+                    else:
+                        self.onResultAvailable(result)
+            except Exception:
+                pass
+        if self.isInterruptionRequested():
+            logger.debug("Submodule executor cancelled")
+            self._executor.shutdown(wait=False, cancel_futures=True)
 
 
 class SubmoduleExecutor(QObject):
