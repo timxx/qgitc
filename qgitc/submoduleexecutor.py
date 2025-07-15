@@ -14,6 +14,12 @@ from PySide6.QtCore import QObject, QThread, Signal
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import logger
+from qgitc.gitutils import Git
+
+
+def _actionWrapper(action: Callable, submodule: str, userData: any, gitDir: str):
+    Git.REPO_DIR = gitDir
+    return action(submodule, userData, None)
 
 
 class SubmoduleThread(QThread):
@@ -69,8 +75,8 @@ class SubmoduleThread(QThread):
             hasData = False
 
         if isinstance(self._executor, ProcessPoolExecutor):
-            tasks = [self._executor.submit(self._actionHandler, submodule, self._submodules[submodule]
-                                           if hasData else None, None) for submodule in submodules]
+            tasks = [self._executor.submit(_actionWrapper, self._actionHandler, submodule, self._submodules[submodule]
+                                           if hasData else None, Git.REPO_DIR) for submodule in submodules]
         elif len(submodules) == 1:
             data = self._submodules[submodules[0]] if hasData else None
             result = self.processSubmodule(submodules[0], data)
@@ -109,14 +115,14 @@ class SubmoduleExecutor(QObject):
     started = Signal()
     finished = Signal()
 
-    def __init__(self, parent=None, useMultiThreading=True):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self._thread: SubmoduleThread = None
         self._threads = []
         self._executor: Executor = None
-        self._useMultiThreading = useMultiThreading
 
-    def submit(self, submodules: Union[list, dict], actionHandler: Callable, resultHandler: Callable = None):
+    def submit(self, submodules: Union[list, dict], actionHandler: Callable,
+               resultHandler: Callable = None, useMultiThreading=True):
         """ Submit a list of submodules and an action to be performed on each submodule.
         Submodules can be a list or a dictionary of submodule paths.
         The action should be a callable that takes a submodule path as an argument, and optionally additional data.
@@ -124,14 +130,13 @@ class SubmoduleExecutor(QObject):
 
         self.cancel()
 
-        if not self._executor:
-            max_workers = max(2, os.cpu_count())
-            if self._useMultiThreading:
-                self._executor = ThreadPoolExecutor(max_workers=max_workers)
-            else:
-                self._executor = ProcessPoolExecutor(max_workers=max_workers)
+        max_workers = max(2, os.cpu_count())
+        if useMultiThreading:
+            executor = ThreadPoolExecutor(max_workers=max_workers)
+        else:
+            executor = ProcessPoolExecutor(max_workers=max_workers)
 
-        self._thread = SubmoduleThread(submodules, self._executor, self)
+        self._thread = SubmoduleThread(submodules, executor, self)
         self._thread.setActionHandler(actionHandler)
         self._thread.setResultHandler(resultHandler)
         self._thread.finished.connect(self.onFinished)

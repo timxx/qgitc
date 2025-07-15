@@ -195,7 +195,7 @@ def _fetchLogs(submodule: str, branchDir: str, args: List[str], since: float = N
                     break
             if not hasLUC and (flags & _UNCOMMITTED_FLAGS):
                 # Augly way to fix libgit2 bug with deleted files
-                if flags == pygit2.GIT_STATUS_WT_DELETED and os.path.exits(os.path.join(repoDir, file)):
+                if flags == pygit2.GIT_STATUS_WT_DELETED and os.path.exists(os.path.join(repoDir, file)):
                     continue
                 hasLUC = True
                 if hasLCC:
