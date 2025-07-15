@@ -142,6 +142,7 @@ class StatusFetcher(SubmoduleExecutor):
             submodules) if submodules else "None")
 
         self._span = ApplicationBase.instance().telemetry().startTrace("fetchStatus")
+        self._span.addTag("sm_count", len(submodules))
 
     def cancel(self, force=False):
         super().cancel(force)
