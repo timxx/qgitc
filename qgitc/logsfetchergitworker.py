@@ -231,7 +231,7 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
         if sys.version_info >= (3, 9):
             executor.shutdown(wait=False, cancel_futures=True)
         else:
-            executor.shutdown(wait=False)
+            executor.shutdown(wait=True)
 
         if not done:
             logger.debug("Fetch logs cancelled")
