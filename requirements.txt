@@ -5,7 +5,7 @@ packaging
 opentelemetry-api
 opentelemetry-sdk
 opentelemetry-exporter-otlp-proto-http
-pygit2; sys_platform == 'win32'
+pygit2
 
 # for building the package
 setuptools>=77

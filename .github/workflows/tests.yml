@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt coverage pygit2
+          python -m pip install -r requirements.txt coverage
           sudo apt install -y libegl1
 
       - name: Build
