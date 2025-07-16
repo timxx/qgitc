@@ -78,7 +78,8 @@ class GitView(QWidget):
     def __setupSignals(self):
         self.ui.cbBranch.currentIndexChanged.connect(
             self.__onDelayBranchChanged)
-        self.ui.logView.currentIndexChanged.connect(self.__onCommitChanged)
+        self.ui.logView.currentIndexChanged.connect(
+            self.__onCommitChanged, Qt.QueuedConnection)
         self.ui.logView.findFinished.connect(self.__onFindFinished)
         self.ui.logView.beginFetch.connect(self.__onBeginFetch)
         self.ui.logView.endFetch.connect(self.__onEndFetch)

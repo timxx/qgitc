@@ -127,6 +127,13 @@ class TestLogWindow(TestBase):
         self.assertEqual(Git.LUC_SHA1, logView.getCommit(0).sha1)
         self.assertEqual(Git.LCC_SHA1, logView.getCommit(1).sha1)
 
+        diffView = self.window.ui.gitViewA.ui.diffView
+        self.wait(1000, lambda: diffView.viewer._inReading)
+        model = diffView.fileListModel
+        self.assertEqual(model.rowCount(), 2)
+        file: str = model.data(model.index(1, 0))
+        self.assertTrue(file.endswith("subRepo/test.py"))
+
     def testInvalidFileFilter(self):
         self.waitForLoaded()
 

@@ -11,6 +11,7 @@ from PySide6.QtCore import (
     QSize,
     QSortFilterProxyModel,
     Qt,
+    QTimer,
     QUrl,
     Signal,
 )
@@ -177,6 +178,11 @@ class DiffView(QWidget):
         self._commitList: List[Commit] = []
 
         self._commitSource: CommitSource = None
+        self._showingCommit = False
+        self._delayCommit: Commit = None
+        self._delayShowTimer: QTimer = QTimer(self)
+        self._delayShowTimer.setSingleShot(True)
+        self._delayShowTimer.timeout.connect(self._onDelayShowCommit)
 
         self.twMenu.addAction(self.tr("External &diff"),
                               self.__onExternalDiff)
@@ -604,10 +610,16 @@ class DiffView(QWidget):
                 content += self.__commitDesc(parent, repoDir)
                 self.viewer.addSHA1Line(content, True)
 
+            if self._delayCommit:
+                return
+
             for child in commit.children:
                 content = self.tr("Child: ") + child.sha1
                 content += self.__commitDesc(child, child.repoDir)
                 self.viewer.addSHA1Line(content, False)
+
+            if self._delayCommit:
+                return
 
         for subCommit in commit.subCommits:
             content = makeRepoName(subCommit.repoDir) + ": " + subCommit.sha1
@@ -638,6 +650,29 @@ class DiffView(QWidget):
         return ApplicationBase.instance().settings().diffToolName()
 
     def showCommit(self, commit: Commit):
+        if self._showingCommit:
+            self._delayCommit = commit
+            if not self._delayShowTimer.isActive():
+                self._delayShowTimer.start(50)
+            return
+
+        self._showingCommit = True
+        try:
+            self._doShowCommit(commit)
+        except Exception as e:
+            logger.exception("_doShowCommit: %s", str(e))
+        self._showingCommit = False
+
+    def _onDelayShowCommit(self):
+        # already canceled
+        if not self._delayCommit:
+            return
+
+        commit = self._delayCommit
+        self._delayCommit = None
+        self.showCommit(commit)
+
+    def _doShowCommit(self, commit: Commit):
         self.clear()
         self.commit = commit
 
@@ -647,6 +682,10 @@ class DiffView(QWidget):
         self.fileListView.setCurrentIndex(index)
 
         self.__commitToTextLines(commit)
+
+        # early stop if new request is made (due to Git.commitSubject)
+        if self._delayCommit:
+            return
 
         self.viewer.setParentCount(len(commit.parents))
         self.viewer.beginReading()
@@ -668,6 +707,9 @@ class DiffView(QWidget):
         self.fileListModel.clear()
         self.viewer.clear()
         self._updateFilterStatus()
+        self.commit = None
+        self._delayCommit = None
+        self._delayShowTimer.stop()
 
     def setFilterPath(self, path):
         # no need update
