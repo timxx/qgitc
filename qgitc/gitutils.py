@@ -66,6 +66,12 @@ class QGitProcess():
         return self._process.exitStatus() == QProcess.CrashExit
 
     def communicate(self):
+        if self._process.state() == QProcess.NotRunning:
+            return None, None
+
+        if self._process.state() == QProcess.Starting:
+            self._process.waitForStarted(1000)
+
         if self._process.state() == QProcess.Running:
             # QEventLoop seems not working in ThreadPoolExecutor
             if QCoreApplication.instance() is None or QCoreApplication.instance().thread() != QThread.currentThread():
