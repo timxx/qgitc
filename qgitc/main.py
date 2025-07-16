@@ -5,6 +5,8 @@ import logging
 import logging.handlers
 import os
 import sys
+import threading
+import traceback
 
 from PySide6.QtCore import QMessageLogContext, Qt, QtMsgType, qInstallMessageHandler
 from PySide6.QtWidgets import QStyle
@@ -114,8 +116,27 @@ def _setup_logging():
     handler.setFormatter(formatter)
 
 
+def _log_bad_timer_frame():
+    mainThread = threading.main_thread()
+    frames = sys._current_frames()
+    mainFrame = frames.get(mainThread.ident)
+    if mainFrame:
+        stack = traceback.format_stack(mainFrame)
+        logger.error(f"Bad stop/killTimer (main):\n{''.join(stack)}")
+
+    curThread = threading.current_thread()
+    if curThread is mainThread:
+        return
+    curFrame = frames.get(curThread.ident)
+    if curFrame:
+        stack = traceback.format_stack(curFrame)
+        logger.error(f"Bad stop/killTimer (child):\n{''.join(stack)}")
+
+
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
     if type == QtMsgType.QtWarningMsg:
+        if msg.startswith("QBasicTimer::stop: Failed") or msg.startswith("QObject::killTimer"):
+            _log_bad_timer_frame()
         logger.warning(msg)
     elif type == QtMsgType.QtCriticalMsg:
         logger.critical(msg)
