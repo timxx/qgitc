@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from PySide6.QtTest import QSignalSpy
 
@@ -93,7 +94,13 @@ class TestLogsFetcherQProcessWorker(TestBase):
         self.assertEqual(spyFinished.count(), 1)
         self.assertEqual(spyFinished.at(0)[0], 0)
 
-        self.assertLessEqual(spyLogsAvailable.count(), 2)
+        logs: List[Commit] = []
+        for i in range(spyLogsAvailable.count()):
+            logs.extend(spyLogsAvailable.at(i)[0])
+
+        self.assertEqual(len(logs), 3)
+        self.assertEqual(logs[0].comments, "Add .gitignore")
+
         self.assertGreaterEqual(spyLogsAvailable.count(), 1)
 
         self.assertEqual(spyLocalChangesAvailable.count(), 1)
