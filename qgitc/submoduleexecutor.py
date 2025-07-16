@@ -7,7 +7,7 @@ from concurrent.futures import (
     ThreadPoolExecutor,
     as_completed,
 )
-from typing import Callable, Union
+from typing import Callable, List, Union
 
 from PySide6.QtCore import QObject, QThread, Signal
 
@@ -24,14 +24,14 @@ def _actionWrapper(action: Callable, submodule: str, userData: any, gitDir: str)
 
 class SubmoduleThread(QThread):
 
-    def __init__(self, submodules: Union[list, dict], executor: Executor, parent=None):
+    def __init__(self, submodules: Union[list, dict], useMultiThreading=True, parent=None):
         super().__init__(parent)
 
         self._submodules = submodules
         self._actionHandler: Callable[[str, any, CancelEvent], any] = None
         self._resultHandler: Callable[[any], any] = None
         self._cancellation = CancelEvent(self)
-        self._executor = executor
+        self._useMultiThreading = useMultiThreading
 
     def setActionHandler(self, action: Callable):
         """ Set the action to be performed on each submodule.
@@ -74,9 +74,15 @@ class SubmoduleThread(QThread):
             submodules = self._submodules or [None]
             hasData = False
 
-        if isinstance(self._executor, ProcessPoolExecutor):
-            tasks = [self._executor.submit(_actionWrapper, self._actionHandler, submodule, self._submodules[submodule]
-                                           if hasData else None, Git.REPO_DIR) for submodule in submodules]
+        max_workers = max(2, os.cpu_count())
+        if self._useMultiThreading:
+            executor = ThreadPoolExecutor(max_workers=max_workers)
+        else:
+            executor = ProcessPoolExecutor(max_workers=max_workers)
+
+        if isinstance(executor, ProcessPoolExecutor):
+            tasks = [executor.submit(_actionWrapper, self._actionHandler, submodule, self._submodules[submodule]
+                                     if hasData else None, Git.REPO_DIR) for submodule in submodules]
         elif len(submodules) == 1:
             data = self._submodules[submodules[0]] if hasData else None
             result = self.processSubmodule(submodules[0], data)
@@ -87,16 +93,15 @@ class SubmoduleThread(QThread):
                     self.onResultAvailable(result)
             return
         else:
-            tasks = [self._executor.submit(self.processSubmodule, submodule, self._submodules[submodule]
-                                           if hasData else None) for submodule in submodules]
+            tasks = [executor.submit(self.processSubmodule, submodule, self._submodules[submodule]
+                                     if hasData else None) for submodule in submodules]
 
         while tasks and not self.isInterruptionRequested():
             try:
                 for task in as_completed(tasks, 0.01):
                     if self.isInterruptionRequested():
                         logger.debug("Submodule executor cancelled")
-                        self._executor.shutdown(
-                            wait=False, cancel_futures=True)
+                        executor.shutdown(wait=False, cancel_futures=True)
                         return
                     tasks.remove(task)
                     result = task.result()
@@ -108,7 +113,7 @@ class SubmoduleThread(QThread):
                 pass
         if self.isInterruptionRequested():
             logger.debug("Submodule executor cancelled")
-            self._executor.shutdown(wait=False, cancel_futures=True)
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 class SubmoduleExecutor(QObject):
@@ -118,8 +123,7 @@ class SubmoduleExecutor(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._thread: SubmoduleThread = None
-        self._threads = []
-        self._executor: Executor = None
+        self._threads: List[QThread] = []
 
     def submit(self, submodules: Union[list, dict], actionHandler: Callable,
                resultHandler: Callable = None, useMultiThreading=True):
@@ -130,13 +134,7 @@ class SubmoduleExecutor(QObject):
 
         self.cancel()
 
-        max_workers = max(2, os.cpu_count())
-        if useMultiThreading:
-            executor = ThreadPoolExecutor(max_workers=max_workers)
-        else:
-            executor = ProcessPoolExecutor(max_workers=max_workers)
-
-        self._thread = SubmoduleThread(submodules, executor, self)
+        self._thread = SubmoduleThread(submodules, useMultiThreading, self)
         self._thread.setActionHandler(actionHandler)
         self._thread.setResultHandler(resultHandler)
         self._thread.finished.connect(self.onFinished)

@@ -226,8 +226,10 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
         max_workers = max(2, os.cpu_count())
         executor = ProcessPoolExecutor(max_workers=max_workers)
+        done = self._doFetchLogs(executor, submodules or [None])
+        executor.shutdown(wait=False, cancel_futures=True)
 
-        if not self._doFetchLogs(executor, submodules or [None]):
+        if not done:
             logger.debug("Fetch logs cancelled")
             span.setStatus(False, "cancelled")
             span.end()
