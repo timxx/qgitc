@@ -237,6 +237,12 @@ class MainWindow(StateWindow):
         if not Git.available():
             return
 
+        app = ApplicationBase.instance()
+        isCompositeMode = app.settings().isCompositeMode()
+
+        span = app.telemetry().startTrace("reloadRepo")
+        span.addTag("compositeMode", isCompositeMode)
+
         topLevelDir = Git.repoTopLevelDir(repoDir)
         if not topLevelDir:
             msg = self.tr("'{0}' is not a git repository")
@@ -246,16 +252,21 @@ class MainWindow(StateWindow):
             # let gitview clear the old branches
             repoDir = None
             # clear
-            ApplicationBase.instance().updateRepoDir(None)
+            app.updateRepoDir(None)
             self._repoTopDir = None
             if Git.REF_MAP:
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            ApplicationBase.instance().updateRepoDir(topLevelDir)
+            app.updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
-            Git.REF_MAP = Git.refs()
-            Git.REV_HEAD = Git.revHead()
+
+            if not isCompositeMode:
+                Git.REF_MAP = Git.refs()
+                Git.REV_HEAD = Git.revHead()
+            else:
+                Git.REF_MAP = {}
+                Git.REV_HEAD = None
 
         self.cancel()
         if repoDir:
@@ -274,16 +285,21 @@ class MainWindow(StateWindow):
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
             branch = "remotes/" + branch
+
+        span.addEvent("reloadBranches.begin")
         self.ui.gitViewA.reloadBranches(self.ui.gitViewA.currentBranch())
         if self.gitViewB:
             self.gitViewB.reloadBranches(
                 branch or self.gitViewB.currentBranch())
+        span.addEvent("reloadBranches.end")
 
         if self.mergeWidget:
             # cache in case changed later
             self.mergeWidget.setBranches(
                 self.ui.gitViewA.currentBranch(),
                 self.gitViewB.currentBranch())
+
+        span.end()
 
     def __onAcPreferencesTriggered(self):
         settings = ApplicationBase.instance().settings()
@@ -335,6 +351,10 @@ class MainWindow(StateWindow):
             newRepo = os.path.join(
                 self._repoTopDir, self.ui.cbSubmodule.currentText())
             ApplicationBase.instance().updateRepoDir(newRepo)
+
+        if not checked and not Git.REF_MAP:
+            Git.REF_MAP = Git.refs()
+            Git.REV_HEAD = Git.revHead()
 
         self.ui.cbSubmodule.setEnabled(not checked)
         ApplicationBase.instance().settings().setCompositeMode(checked)
