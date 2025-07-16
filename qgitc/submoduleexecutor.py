@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 from concurrent.futures import (
     Executor,
     ProcessPoolExecutor,
@@ -101,7 +102,7 @@ class SubmoduleThread(QThread):
                 for task in as_completed(tasks, 0.01):
                     if self.isInterruptionRequested():
                         logger.debug("Submodule executor cancelled")
-                        executor.shutdown(wait=False, cancel_futures=True)
+                        SubmoduleThread.shutdown(executor)
                         return
                     tasks.remove(task)
                     result = task.result()
@@ -113,7 +114,14 @@ class SubmoduleThread(QThread):
                 pass
         if self.isInterruptionRequested():
             logger.debug("Submodule executor cancelled")
-        executor.shutdown(wait=False, cancel_futures=True)
+        SubmoduleThread.shutdown(executor)
+
+    @staticmethod
+    def shutdown(executor: Executor):
+        if sys.version_info >= (3, 9):
+            executor.shutdown(wait=False, cancel_futures=True)
+        else:
+            executor.shutdown(wait=False)
 
 
 class SubmoduleExecutor(QObject):
