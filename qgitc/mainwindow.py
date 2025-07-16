@@ -460,7 +460,15 @@ class MainWindow(StateWindow):
         if not isCacheValid and submodules:
             self.submoduleAvailable.emit(False)
 
-        ApplicationBase.instance().settings().setSubmodulesCache(Git.REPO_DIR, submodules)
+        settings = ApplicationBase.instance().settings()
+        settings.setSubmodulesCache(Git.REPO_DIR, submodules)
+
+        if settings.isCompositeMode() and not hasSubmodule and not Git.REF_MAP:
+            Git.REF_MAP = Git.refs()
+            Git.REV_HEAD = Git.revHead()
+            self.ui.gitViewA.logView.update()
+            if self.gitViewB:
+                self.gitViewB.logView.update()
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()
