@@ -209,6 +209,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         for submodule in submodules:
             if self.isInterruptionRequested():
                 self._clearFetcher()
+                self._eventLoop = None
                 return
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
@@ -225,6 +226,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             for submodule in submodules:
                 if self.isInterruptionRequested():
                     self._clearFetcher()
+                    self._eventLoop = None
                     return
 
                 fetcher = LocalChangesFetcher(
@@ -246,6 +248,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             logger.debug("Logs fetcher cancelled")
             span.setStatus(False, "cancelled")
             span.end()
+            self._eventLoop = None
             return
 
         self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
