@@ -97,6 +97,7 @@ class Watchdog(QObject):
     def stop(self):
         if self._worker:
             self._worker.stop()
+            self._worker.deleteLater()
 
         if self._thread:
             self._thread.quit()

@@ -9,6 +9,8 @@ import time
 from collections import defaultdict
 from typing import Dict, List, Union
 
+from PySide6.QtCore import QCoreApplication, QEventLoop, QProcess, QThread
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +42,64 @@ class GitProcess():
 
     def communicate(self):
         return self._process.communicate()
+
+
+class QGitProcess():
+
+    def __init__(self, repoDir, args, text=None):
+        logger.debug(f"run {args} in {repoDir}")
+
+        self._text = text
+        self._eventLoop = None
+
+        process = QProcess()
+        process.setWorkingDirectory(repoDir)
+        process.start(GitProcess.GIT_BIN, args)
+
+        self._process = process
+
+    @property
+    def returncode(self):
+        return self._process.exitCode()
+
+    def isCrashed(self):
+        return self._process.exitStatus() == QProcess.CrashExit
+
+    def communicate(self):
+        if self._process.state() == QProcess.Running:
+            # QEventLoop seems not working in ThreadPoolExecutor
+            if QCoreApplication.instance() is None or QCoreApplication.instance().thread() != QThread.currentThread():
+                self._process.waitForFinished()
+            else:
+                assert (self._eventLoop is None)
+                self._eventLoop = QEventLoop()
+                self._process.finished.connect(self._eventLoop.quit)
+                self._eventLoop.exec()
+
+                # user cancelled
+                if self._eventLoop is None:
+                    return None, None
+
+                self._eventLoop = None
+
+        output = self._process.readAllStandardOutput().data()
+        error = self._process.readAllStandardError().data()
+        if self._text:
+            output = output.decode("utf-8")
+            error = error.decode("utf-8")
+        return output, error
+
+    def terminate(self):
+        if not self._eventLoop:
+            return
+
+        self._eventLoop.quit()
+        self._eventLoop = None
+
+        self._process.close()
+        self._process.waitForFinished(50)
+        self._process.kill()
+        logger.warning("Git process killed")
 
 
 class Ref():
@@ -131,12 +191,14 @@ class Git():
         return GitProcess.GIT_BIN is not None
 
     @staticmethod
-    def run(args, text=None, repoDir=None):
+    def run(args, text=None, repoDir=None, useQProcess=False):
+        if useQProcess:
+            return QGitProcess(repoDir or Git.REPO_DIR, args, text)
         return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None, repoDir=None, reportError=True) -> Union[bytes, str, None]:
-        process = Git.run(args, text, repoDir)
+    def checkOutput(args, text=None, repoDir=None, reportError=True, useQProcess=False) -> Union[bytes, str, None]:
+        process = Git.run(args, text, repoDir, useQProcess)
         data, error = process.communicate()
         if process.returncode != 0:
             if reportError:
@@ -161,7 +223,7 @@ class Git():
             return None
 
         args = ["rev-parse", "--show-toplevel"]
-        process = GitProcess(directory, args)
+        process = QGitProcess(directory, args)
         realDir = process.communicate()[0]
         if process.returncode != 0:
             return None
@@ -171,7 +233,7 @@ class Git():
     @staticmethod
     def refs():
         args = ["show-ref", "-d"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, useQProcess=True)
         if not data:
             return None
         lines = data.decode("utf-8").split('\n')
@@ -190,7 +252,7 @@ class Git():
     @staticmethod
     def revHead():
         args = ["rev-parse", "HEAD"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, useQProcess=True)
         if not data:
             return None
 
@@ -199,7 +261,7 @@ class Git():
     @staticmethod
     def branches():
         args = ["branch", "-a"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, useQProcess=True)
         if not data:
             return None
 
@@ -235,7 +297,7 @@ class Git():
     @staticmethod
     def commitSubject(sha1, repoDir=None):
         args = ["show", "-s", "--pretty=format:%s", sha1]
-        data = Git.checkOutput(args, repoDir=repoDir)
+        data = Git.checkOutput(args, repoDir=repoDir, useQProcess=True)
 
         return data
 
@@ -394,7 +456,7 @@ class Git():
             return Git.REPO_DIR
 
         args = ["worktree", "list"]
-        data = Git.checkOutput(args, repoDir=repoDir)
+        data = Git.checkOutput(args, repoDir=repoDir, useQProcess=True)
         if not data:
             return ""
 
@@ -581,7 +643,7 @@ class Git():
         GitProcess.GIT_BIN = gitBin
 
         begin = time.time()
-        version: bytes = Git.checkOutput(["version"])
+        version: bytes = Git.checkOutput(["version"], useQProcess=True)
         ms = int((time.time() - begin) * 1000)
 
         # only latest Win11 takes more than 60ms
