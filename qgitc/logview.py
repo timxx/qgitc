@@ -555,6 +555,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.fetcher.fetch(branch, args, branchDir=self._branchDir)
         self.beginFetch.emit()
+        self.viewport().update()
 
     def clear(self):
         self.data.clear()
@@ -959,11 +960,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.setCurrentIndex(0)
 
         self.endFetch.emit()
+        self.viewport().update()
+
         if exitCode != 0 and self.fetcher.errorData:
             QMessageBox.critical(self, self.window().windowTitle(),
                                  self.fetcher.errorData.decode("utf-8"))
-        else:
-            self.viewport().update()
 
     def __onLocalChangesAvailable(self, lccCommit: Commit, lucCommit: Commit):
         parent_sha1 = self.data[0].sha1 if self.data else None
@@ -1649,12 +1650,33 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.updateGeometries()
 
-    def paintEvent(self, event):
-        if not self.data:
+    def _drawNoDataTips(self, painter: QPainter):
+        if not Git.REPO_DIR:
             return
 
+        settings = ApplicationBase.instance().settings()
+        if self.fetcher.isLoading():
+            tips = self.tr("Loading commits, please wait...")
+        elif self.args:
+            tips = self.tr(
+                "No commits found for the current filter. Try adjusting your filter criteria.")
+        elif settings.isCompositeMode() and \
+                settings.maxCompositeCommitsSince() != 0 and \
+                self.fetcher._submodules:
+            tips = self.tr(
+                'No commits found. You may need to increase the "Max Commits" setting or disable "Composite Mode".')
+        else:
+            return
+
+        painter.drawText(self.viewport().rect(), Qt.AlignCenter, tips)
+
+    def paintEvent(self, event):
         painter = QPainter(self.viewport())
         painter.setClipRect(event.rect())
+
+        if not self.data:
+            self._drawNoDataTips(painter)
+            return
 
         eventRect = event.rect()
 
