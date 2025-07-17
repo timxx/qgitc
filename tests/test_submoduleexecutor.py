@@ -20,6 +20,10 @@ class Dummy:
         pass
 
 
+def _dummyAction(submodule, data, cancelEvent: CancelEvent):
+    return submodule, "Hello, World!"
+
+
 class TestSubmoduleExecutor(TestBase):
     def doCreateRepo(self):
         pass
@@ -114,3 +118,19 @@ class TestSubmoduleExecutor(TestBase):
         executor.cancel(True)
         self.assertEqual(0, len(executor._threads))
         self.processEvents()
+
+    def testMultiThreading(self):
+        executor = SubmoduleExecutor()
+        dummy = Dummy()
+        with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            executor.submit([None, None], _dummyAction, dummy.dummyResult, True)
+            self.wait(1000, executor.isRunning)
+            mock.assert_any_call(None, "Hello, World!")
+
+    def testMultiProcess(self):
+        executor = SubmoduleExecutor()
+        dummy = Dummy()
+        with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            executor.submit(None, _dummyAction, dummy.dummyResult, False)
+            self.wait(1000, executor.isRunning)
+            mock.assert_any_call(None, "Hello, World!")

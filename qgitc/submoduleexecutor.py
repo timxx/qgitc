@@ -121,7 +121,10 @@ class SubmoduleThread(QThread):
         if sys.version_info >= (3, 9):
             executor.shutdown(wait=False, cancel_futures=True)
         else:
-            executor.shutdown(wait=False)
+            if isinstance(executor, ProcessPoolExecutor):
+                executor.shutdown(wait=True)
+            else:
+                executor.shutdown(wait=False)
 
 
 class SubmoduleExecutor(QObject):
