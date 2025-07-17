@@ -255,11 +255,11 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
         checkLocalChanges = self.needLocalChanges()
         branch = self._args[0].encode("utf-8") if self._args[0] else None
 
+        since = None
         if len(submodules) > 1:
             days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
-            since = (datetime.today() - timedelta(days)).timestamp()
-        else:
-            since = None
+            if days > 0:
+                since = (datetime.today() - timedelta(days)).timestamp()
 
         for submodule in submodules:
             task = executor.submit(
