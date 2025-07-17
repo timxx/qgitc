@@ -2,7 +2,7 @@
 import time
 from unittest.mock import patch
 
-from PySide6.QtTest import QSignalSpy, QTest
+from PySide6.QtTest import QSignalSpy
 
 from qgitc.cancelevent import CancelEvent
 from qgitc.submoduleexecutor import SubmoduleExecutor
