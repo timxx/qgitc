@@ -259,11 +259,19 @@ class AiChatWidget(QWidget):
         return QSize(800, 600)
 
     def _onButtonSend(self, clicked):
+        chatMode: AiChatMode = self.cbChatMode.currentData()
         self._doRequest(
             self.usrInput.toPlainText(),
-            self.cbChatMode.currentData(),
+            chatMode,
             self.cbLang.currentText(),
             self.sysInput.toPlainText())
+
+        app = ApplicationBase.instance()
+        model = self.currentChatModel()
+        app.trackFeatureUsage("aichat_send", {
+            "chat_mode": chatMode.name,
+            "model": model.modelId or model.name,
+        })
 
     def _doRequest(self, prompt: str, chatMode: AiChatMode, language="", sysPrompt: str = None):
         params = AiParameters()
