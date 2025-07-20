@@ -190,7 +190,7 @@ class GithubCopilot(AiModelBase):
     def _makeMessage(self, role, prompt):
         return {"role": role, "content": prompt}
 
-    def updateToken(self):
+    def updateToken(self, retry=False):
         settings = Settings(testing=ApplicationBase.instance().testing)
         accessToken = settings.githubCopilotAccessToken()
         if not accessToken:
@@ -215,6 +215,11 @@ class GithubCopilot(AiModelBase):
         if self._eventLoop is None:
             return False
         self._eventLoop = None
+
+        if reply.error() == QNetworkReply.AuthenticationRequiredError and not retry:
+            # clear the token and retry
+            settings.setGithubCopilotAccessToken("")
+            return self.updateToken(retry=True)
 
         if reply.error() != QNetworkReply.NoError:
             return False
