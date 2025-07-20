@@ -107,7 +107,7 @@
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="295"/>
+        <location filename="../../aichatwindow.py" line="303"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -115,7 +115,7 @@
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="449"/>
+        <location filename="../../aichatwindow.py" line="457"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -141,6 +141,14 @@
         <location filename="../../aichatbot.py" line="129"/>
         <source>System:</source>
         <translation>系统：</translation>
+    </message>
+</context>
+<context>
+    <name>AiCommitMessage</name>
+    <message>
+        <location filename="../../aicommitmessage.py" line="259"/>
+        <source>&lt;AI service unavailable&gt;</source>
+        <translation>&lt;AI服务不可用&gt;</translation>
     </message>
 </context>
 <context>
@@ -335,6 +343,14 @@
         <location filename="../../blameview.py" line="73"/>
         <source>Previous: </source>
         <translation>前一条记录： </translation>
+    </message>
+</context>
+<context>
+    <name>CommitMessageHighlighter</name>
+    <message>
+        <location filename="../../commitmessageedit.py" line="29"/>
+        <source>&lt;AI service unavailable&gt;</source>
+        <translation>&lt;AI服务不可用&gt;</translation>
     </message>
 </context>
 <context>

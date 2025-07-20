@@ -19,10 +19,15 @@ class CommitMessageHighlighter(QSyntaxHighlighter):
         self._bugPatterns = []
         self.reloadBugPattern()
 
-    def highlightBlock(self, text):
+    def highlightBlock(self, text: str):
         if ApplicationBase.instance().settings().ignoreCommentLine() and text.startswith("#"):
             self.setFormat(
                 0, len(text), ApplicationBase.instance().colorSchema().Comment)
+            return
+
+        if text == self.tr("<AI service unavailable>"):
+            self.setFormat(
+                0, len(text), ApplicationBase.instance().colorSchema().ErrorText)
             return
 
         inlineFmt = QTextCharFormat()

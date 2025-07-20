@@ -135,6 +135,7 @@ class AiCommitMessage(QObject):
 
         self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
+        self._aiModel.serviceUnavailable.connect(self._onAiServiceUnavailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
         self._aiModel.queryAsync(params)
 
@@ -144,6 +145,8 @@ class AiCommitMessage(QObject):
             self._aiModel.responseAvailable.disconnect(
                 self._onAiResponseAvailable)
             self._aiModel.finished.disconnect(self._onAiResponseFinished)
+            self._aiModel.serviceUnavailable.disconnect(
+                self._onAiServiceUnavailable)
             self._aiModel.requestInterruption()
             self._aiModel = None
 
@@ -216,6 +219,7 @@ class AiCommitMessage(QObject):
 
         self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
+        self._aiModel.serviceUnavailable.connect(self._onAiServiceUnavailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
         self._aiModel.queryAsync(params)
 
@@ -249,6 +253,10 @@ class AiCommitMessage(QObject):
     def _onAiResponseAvailable(self, response: AiResponse):
         if response.message:
             self._message += response.message
+
+    def _onAiServiceUnavailable(self):
+        message = self.tr("<AI service unavailable>")
+        self.messageAvailable.emit(message)
 
     def _onAiResponseFinished(self):
         stripMessage = ""
