@@ -70,6 +70,7 @@ class LogsFetcher(QObject):
                 self._onLocalChangesAvailable)
             self._worker.requestInterruption()
             self._worker.deleteLater()
+            self._worker = None
 
         if self._thread and self._thread.isRunning():
             self._thread.quit()
