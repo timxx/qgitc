@@ -51,6 +51,7 @@ class MainWindow(StateWindow):
         self._delayTimer.setSingleShot(True)
 
         self._repoTopDir = None
+        self._reloadingRepo = False
 
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
@@ -630,8 +631,14 @@ class MainWindow(StateWindow):
             self.gitViewB.ui.logView.switchToCommit(sha1, True)
 
     def reloadRepo(self):
-        repoDir = self.ui.leRepo.text()
-        self.__onRepoChanged(repoDir)
+        if self._reloadingRepo:
+            return
+        self._reloadingRepo = True
+        try:
+            repoDir = self.ui.leRepo.text()
+            self.__onRepoChanged(repoDir)
+        finally:
+            self._reloadingRepo = False
 
     def closeFindWidget(self):
         if self.ui.gitViewA.closeFindWidget():
