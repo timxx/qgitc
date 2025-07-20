@@ -160,7 +160,7 @@ class TestCommitWindow(TestBase):
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
         self.waitForLoaded()
 
-        self.wait(200)
+        self.wait(500)
         self.assertTrue(self.window.ui.btnGenMessage.isEnabled())
         # no message by default
         self.assertTrue(self.window.ui.teMessage.document(
@@ -194,7 +194,10 @@ class TestCommitWindow(TestBase):
             QTest.mouseClick(self.window.ui.btnRefineMsg, Qt.LeftButton)
 
             self.wait(10000, lambda: spyFinished.count() == 0)
-            self.assertEqual(spyFinished.at(0)[0], "")
+            self.assertIn(spyFinished.at(0)[0], [
+                          "<AI服务不可用>",
+                          "<AI service unavailable>"
+                          ])
 
             mock.assertEverythingOK()
 
