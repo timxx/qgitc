@@ -203,7 +203,7 @@ class Git():
         return GitProcess(repoDir or Git.REPO_DIR, args, text)
 
     @staticmethod
-    def checkOutput(args, text=None, repoDir=None, reportError=True, useQProcess=False) -> Union[bytes, str, None]:
+    def checkOutput(args, text=None, repoDir=None, reportError=False, useQProcess=False) -> Union[bytes, str, None]:
         process = Git.run(args, text, repoDir, useQProcess)
         data, error = process.communicate()
         if process.returncode != 0:
@@ -303,7 +303,8 @@ class Git():
     @staticmethod
     def commitSubject(sha1, repoDir=None):
         args = ["show", "-s", "--pretty=format:%s", sha1]
-        data = Git.checkOutput(args, repoDir=repoDir, useQProcess=True)
+        data = Git.checkOutput(args, repoDir=repoDir,
+                               useQProcess=True, reportError=True)
 
         return data
 
@@ -326,7 +327,7 @@ class Git():
             args.append("--")
             args.extend(files)
 
-        data = Git.checkOutput(args, repoDir=repoDir)
+        data = Git.checkOutput(args, repoDir=repoDir, reportError=True)
         if not data:
             return None
 
