@@ -167,7 +167,7 @@ class TestCommitWindow(TestBase):
         ).isEmpty() or self.window.ui.btnRefineMsg.isEnabled())
 
         with MockGithubCopilot(self) as mock:
-            spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
+            spyError = QSignalSpy(self.window._aiMessage.messageAvailable)
             QTest.mouseClick(self.window.ui.btnGenMessage, Qt.LeftButton)
             self.processEvents()
             self.assertTrue(self.window.ui.btnCancelGen.isVisible())
@@ -175,8 +175,8 @@ class TestCommitWindow(TestBase):
             self.assertFalse(self.window.ui.btnRefineMsg.isEnabled())
             self.assertTrue(self.window.ui.btnRefineMsg.isVisible())
 
-            self.wait(10000, lambda: spyFinished.count() == 0)
-            self.assertEqual(spyFinished.at(0)[0], "This is a mock response")
+            self.wait(10000, lambda: spyError.count() == 0)
+            self.assertEqual(spyError.at(0)[0], "This is a mock response")
             self.assertEqual(
                 self.window.ui.teMessage.toPlainText(), "This is a mock response")
             self.assertTrue(self.window.ui.btnRefineMsg.isEnabled())
@@ -190,15 +190,13 @@ class TestCommitWindow(TestBase):
         self.app.settings().setGithubCopilotToken("")
 
         with MockGithubCopilot(self, MockGithubCopilotStep.LoginAccessDenied) as mock:
-            spyFinished = QSignalSpy(self.window._aiMessage.messageAvailable)
-            QTest.mouseClick(self.window.ui.btnRefineMsg, Qt.LeftButton)
+            spyError = QSignalSpy(self.window._aiMessage.errorOccurred)
 
-            self.wait(10000, lambda: spyFinished.count() == 0)
-            self.assertIn(spyFinished.at(0)[0], [
-                          "<AI服务不可用>",
-                          "<AI service unavailable>"
-                          ])
-
+            # mock QMessageBox.critical
+            with patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:
+                QTest.mouseClick(self.window.ui.btnRefineMsg, Qt.LeftButton)
+                self.wait(10000, lambda: spyError.count() == 0)
+                mock_critical.assert_called_once()
             mock.assertEverythingOK()
 
         self.wait(50)

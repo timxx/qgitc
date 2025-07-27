@@ -426,6 +426,8 @@ class CommitWindow(StateWindow):
         self._aiMessage = AiCommitMessage(self)
         self._aiMessage.messageAvailable.connect(
             self._onAiMessageAvailable)
+        self._aiMessage.errorOccurred.connect(
+            self._onAiMessageError)
 
         icon = QIcon(iconsPath + "/reviews.svg")
         self.ui.btnCodeReview.setIcon(icon)
@@ -1392,6 +1394,15 @@ class CommitWindow(StateWindow):
             return
 
         self._replaceMessage(message)
+
+    def _onAiMessageError(self, message: str):
+        self._restoreAiMessageButtons()
+        QMessageBox.critical(
+            self,
+            self.tr("AI Message Generation Error"),
+            message,
+            QMessageBox.Ok
+        )
 
     def _replaceMessage(self, message: str):
         cursor = self.ui.teMessage.textCursor()

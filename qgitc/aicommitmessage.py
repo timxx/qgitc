@@ -82,6 +82,7 @@ class CommitInfoEvent(QEvent):
 
 class AiCommitMessage(QObject):
     messageAvailable = Signal(str)
+    errorOccurred = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -200,8 +201,8 @@ class AiCommitMessage(QObject):
 
     def _onFetchCommitInfoFinished(self):
         if not self._diffs:
-            logger.warning(
-                "No code changes found, skipping AI commit message generation")
+            self.errorOccurred.emit(
+                self.tr("No changes found, please make sure you have staged your changes."))
             return
 
         params = AiParameters()
@@ -255,8 +256,8 @@ class AiCommitMessage(QObject):
             self._message += response.message
 
     def _onAiServiceUnavailable(self):
-        message = self.tr("<AI service unavailable>")
-        self.messageAvailable.emit(message)
+        message = self.tr("AI service unavailable, please try again later.")
+        self.errorOccurred.emit(message)
 
     def _onAiResponseFinished(self):
         stripMessage = ""
