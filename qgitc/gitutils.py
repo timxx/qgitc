@@ -304,7 +304,7 @@ class Git():
     def commitSubject(sha1, repoDir=None):
         args = ["show", "-s", "--pretty=format:%s", sha1]
         data = Git.checkOutput(args, repoDir=repoDir,
-                               useQProcess=True, reportError=True)
+                               useQProcess=False, reportError=True)
 
         return data
 
