@@ -1235,6 +1235,10 @@ class CommitWindow(StateWindow):
             self.ui.lbStatus.setText(self.tr("Commit aborted"))
         else:
             self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
+            self.ui.teMessage.setFocus()
+            btnCommit = self.ui.btnCommit
+            if not btnCommit.isEnabled():
+                btnCommit.setAttribute(Qt.WA_UnderMouse, False)
 
     def _runCommitAction(self, submodule: str, action: CommitAction, cancelEvent: CancelEvent):
         if action.condition == ActionCondition.MainRepoOnly:
