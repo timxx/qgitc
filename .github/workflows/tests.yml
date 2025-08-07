@@ -31,6 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt coverage
+          sudo apt update
           sudo apt install -y libegl1
 
       - name: Build
