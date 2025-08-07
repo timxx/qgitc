@@ -212,8 +212,9 @@ class Git():
                     msg = error.decode("utf-8", errors="replace")
                 else:
                     msg = error
-                logger.warning("git %s (%s)(%s)", " ".join(args),
-                               msg.rstrip(), repoDir or Git.REPO_DIR)
+                logger.warning("(%s.%s.%s) git %s (%s)(%s)",
+                               Git.VERSION_MAJOR, Git.VERSION_MINOR, Git.VERSION_PATCH,
+                               " ".join(args), msg.rstrip(), repoDir or Git.REPO_DIR)
             return None
 
         return data
