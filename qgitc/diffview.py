@@ -578,7 +578,8 @@ class DiffView(QWidget):
                 subject = commit.comments.split('\n')[0]
             else:
                 repoDir = fullRepoDir(repoDir, self.branchDir)
-                subject = Git.commitSubject(sha1, repoDir).decode("utf-8")
+                data = Git.commitSubject(sha1, repoDir)
+                subject = data.decode("utf-8") if data else ""
             fm = QFontMetricsF(self.viewer._font)
             subject = fm.elidedText(subject, Qt.ElideRight, 700)
 
