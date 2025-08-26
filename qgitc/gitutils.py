@@ -310,6 +310,10 @@ class Git():
         return data
 
     @staticmethod
+    def supportsCC():
+        return not Git.versionEQ(2, 33, 0)
+
+    @staticmethod
     def commitRawDiff(sha1, files=None, gitArgs=None, repoDir=None):
         if sha1 == Git.LCC_SHA1:
             args = ["diff-index", "--cached", "HEAD"]
@@ -319,7 +323,9 @@ class Git():
             args = ["diff-tree", "-r", "--root", sha1]
 
         args.extend(["-p", "--textconv", "--submodule",
-                     "-C", "--cc", "--no-commit-id", "-U3"])
+                     "-C", "--no-commit-id", "-U3"])
+        if Git.supportsCC():
+            args.append("--cc")
 
         if gitArgs:
             args.extend(gitArgs)
@@ -684,6 +690,12 @@ class Git():
             return False
 
         return Git.VERSION_PATCH >= patch
+
+    @staticmethod
+    def versionEQ(major: int, minor: int, patch: int):
+        return (Git.VERSION_MAJOR == major and
+                Git.VERSION_MINOR == minor and
+                Git.VERSION_PATCH == patch)
 
     @staticmethod
     def restoreStagedFiles(repoDir, files):

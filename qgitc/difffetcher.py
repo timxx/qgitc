@@ -161,7 +161,9 @@ class DiffFetcher(DataFetcher):
 
         if sha1 is not None:
             git_args.extend(["-p", "--textconv", "--submodule",
-                             "-C", "--cc", "--no-commit-id", "-U3"])
+                             "-C", "--no-commit-id", "-U3"])
+            if Git.supportsCC():
+                git_args.append("--cc")
 
         if gitArgs:
             git_args.extend(gitArgs)
