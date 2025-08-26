@@ -54,6 +54,7 @@ class LocalChangesFetcher(QObject):
         process = QProcess()
         process.setWorkingDirectory(self._repoDir or Git.REPO_DIR)
         process.finished.connect(self._onFinished)
+        process.errorOccurred.connect(self._onError)
 
         process.start(GitProcess.GIT_BIN, args)
 
@@ -82,6 +83,11 @@ class LocalChangesFetcher(QObject):
 
         if not self._lccProcess and not self._lucProcess:
             self.finished.emit()
+
+    def _onError(self, error: QProcess.ProcessError):
+        process: QProcess = self.sender()
+        if error == QProcess.FailedToStart:
+            self._onFinished(process, process.exitStatus())
 
 
 class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
