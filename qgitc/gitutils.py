@@ -477,6 +477,7 @@ class Git():
         worktree_re = re.compile(
             r"(\S+)\s+[a-f0-9]+\s+(\[(\S+)\]|\(detached HEAD\))$")
         worktrees = data.rstrip(b'\n').decode("utf8").split('\n')
+        detached_head_dir = ""
 
         for wt in worktrees:
             m = worktree_re.fullmatch(wt)
@@ -484,8 +485,11 @@ class Git():
                 logger.warning("Oops! Wrong format for worktree: %s", wt)
             elif m.group(3) == branch:
                 return m.group(1)
+            elif m.group(2) == "(detached HEAD)":
+                detached_head_dir = m.group(1)
 
-        return ""
+        # treat detached HEAD as a regular branch
+        return detached_head_dir
 
     @staticmethod
     def generateDiff(sha1, filePath, repoDir=None):
