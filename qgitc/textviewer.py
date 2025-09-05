@@ -153,10 +153,10 @@ class TextViewer(QAbstractScrollArea):
         if textLine.useBuiltinPatterns and self._bugPatterns:
             textLine.setCustomLinkPatterns(self._bugPatterns)
 
-    def appendLine(self, line):
+    def appendLine(self, line: str):
         self.appendLines([line])
 
-    def appendLines(self, lines):
+    def appendLines(self, lines: List[str]):
         if self._lines:
             self._lines.extend(lines)
         elif self._inReading:
@@ -171,7 +171,7 @@ class TextViewer(QAbstractScrollArea):
 
         self.viewport().update()
 
-    def appendTextLine(self, textLine):
+    def appendTextLine(self, textLine: TextLine):
         lineNo = self.textLineCount()
         self.initTextLine(textLine, lineNo)
         if self._lines is None:
@@ -460,7 +460,7 @@ class TextViewer(QAbstractScrollArea):
         if needUpdate:
             self.viewport().update()
 
-    def findAll(self, text, flags=0):
+    def findAll(self, text: str, flags: FindFlags = 0) -> List[TextCursor]:
         if not text or not self.hasTextLines():
             return []
 
@@ -730,15 +730,15 @@ class TextViewer(QAbstractScrollArea):
         exp_flags = re.IGNORECASE
 
         if not (flags & FindFlags.UseRegExp):
-            exp = re.escape(text)
+            exp = re.escape(exp)
         if flags & FindFlags.CaseSenitively:
             exp_flags = 0
         if flags & FindFlags.WholeWords:
-            exp = r'\b' + text + r'\b'
+            exp = r'\b' + exp + r'\b'
 
         return re.compile(exp, exp_flags)
 
-    def _findInRange(self, pattern, low, high):
+    def _findInRange(self, pattern, low, high) -> List[TextCursor]:
         result = []
         for i in range(low, high):
             text = self.textLineAt(i).text()

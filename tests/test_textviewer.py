@@ -2,6 +2,7 @@
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
+from qgitc.findconstants import FindFlags
 from qgitc.textline import SourceTextLineBase, TextLine
 from qgitc.textviewer import TextViewer
 from tests.base import TestBase
@@ -62,7 +63,7 @@ class TestTextViewer(TestBase):
 
         pos = QPointF(x1 + (x2 - x1) / 3, br.top() + br.height() / 2)
         QTest.mouseDClick(self.viewer.viewport(),
-                         Qt.LeftButton, pos=pos.toPoint())
+                          Qt.LeftButton, pos=pos.toPoint())
 
         cursor = self.viewer.textCursor
         self.assertTrue(cursor.hasSelection())
@@ -189,3 +190,59 @@ class TestTextViewer(TestBase):
         self.assertEqual(len(findWidget._findResult), 1)
 
         self.viewer.closeFindWidget()
+
+    def testFindAll(self):
+        self.viewer.appendLine("hello, world")
+
+        result = self.viewer.findAll("l")
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result[0].beginLine(), 0)
+        self.assertEqual(result[0].beginPos(), 2)
+        self.assertEqual(result[1].beginLine(), 0)
+        self.assertEqual(result[1].beginPos(), 3)
+        self.assertEqual(result[2].beginLine(), 0)
+        self.assertEqual(result[2].beginPos(), 10)
+
+        result2 = self.viewer.findAll("l", flags=FindFlags.CaseSenitively)
+        self.assertEqual(result, result2)
+
+        result2 = self.viewer.findAll(
+            "l", flags=FindFlags.CaseSenitively | FindFlags.UseRegExp)
+        self.assertEqual(result, result2)
+
+        result2 = self.viewer.findAll("L")
+        self.assertEqual(result, result2)
+
+        result2 = self.viewer.findAll("L", flags=FindFlags.CaseSenitively)
+        self.assertEqual(len(result2), 0)
+
+        result = self.viewer.findAll("l", flags=FindFlags.WholeWords)
+        self.assertEqual(len(result), 0)
+
+        result = self.viewer.findAll("hel.o")
+        self.assertEqual(len(result), 0)
+
+        result = self.viewer.findAll("hel.o", flags=FindFlags.WholeWords)
+        self.assertEqual(len(result), 0)
+
+        result = self.viewer.findAll("hel.o", flags=FindFlags.UseRegExp)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].beginLine(), 0)
+        self.assertEqual(result[0].beginPos(), 0)
+        self.assertEqual(result[0].endPos(), 5)
+
+        result = self.viewer.findAll("wOrlD")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].beginLine(), 0)
+        self.assertEqual(result[0].beginPos(), 7)
+        self.assertEqual(result[0].endPos(), 12)
+
+        result2 = self.viewer.findAll("wOrlD", flags=FindFlags.WholeWords)
+        self.assertEqual(result, result2)
+
+        result2 = self.viewer.findAll("wOrlD", flags=FindFlags.CaseSenitively)
+        self.assertEqual(len(result2), 0)
+
+        result2 = self.viewer.findAll(
+            "w.*d", flags=FindFlags.UseRegExp | FindFlags.CaseSenitively | FindFlags.WholeWords)
+        self.assertEqual(result2, result)
