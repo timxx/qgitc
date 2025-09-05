@@ -10,7 +10,6 @@ from PySide6.QtCore import (
     QPropertyAnimation,
     QRect,
     QSize,
-    Qt,
     QTimer,
     Signal,
 )
@@ -19,18 +18,15 @@ from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QStyle,
-    QToolButton,
     QToolTip,
     QWidget,
-    QWidgetAction,
 )
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
 from qgitc.findconstants import FindFlags, FindPart
+from qgitc.searchlineedit import SearchLineEdit
 from qgitc.textcursor import TextCursor
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
 
@@ -67,8 +63,7 @@ class FindWidget(QWidget):
             self._doFind)
 
     def _setupUi(self):
-        self._leFind = QLineEdit(self)
-        self._leFind.setTextMargins(1, 1, 2, 2)
+        self._leFind = SearchLineEdit(self)
 
         def _newColoredButton(svg):
             fullPath = dataDirPath() + "/icons/" + svg
@@ -106,34 +101,7 @@ class FindWidget(QWidget):
         hlayout.addWidget(self._tbNext)
         hlayout.addWidget(self._tbClose)
 
-        self._setupFindEdit()
         self.resize(self._getShowSize())
-
-    def _setupFindEdit(self):
-        width = self.style().pixelMetric(QStyle.PM_LineEditIconSize)
-        size = QSize(width, width)
-
-        def _addAction(iconPath, tooltip):
-            icon = QIcon(iconPath)
-            button = ColoredIconToolButton(icon, size, self._leFind)
-            button.setToolTip(tooltip)
-            button.setCheckable(True)
-            button.setCursor(Qt.PointingHandCursor)
-            action = QWidgetAction(self._leFind)
-            action.setDefaultWidget(button)
-            self._leFind.addAction(action, QLineEdit.TrailingPosition)
-            return button
-
-        iconPath = dataDirPath() + "/icons"
-        self._matchRegexSwitch = _addAction(
-            iconPath + "/find-regex.svg",
-            self.tr("Use Regular Expression"))
-        self._matchWholeWordSwitch = _addAction(
-            iconPath + "/find-whole-words.svg",
-            self.tr("Match Whole Word"))
-        self._matchCaseSwitch = _addAction(
-            iconPath + "/find-case-senitively.svg",
-            self.tr("Match Case"))
 
     def _setupSignals(self):
         self._leFind.textChanged.connect(self._onDelayFind)
@@ -143,9 +111,7 @@ class FindWidget(QWidget):
         self._tbNext.clicked.connect(self._onNextClicked)
         self._tbClose.clicked.connect(self.hideAnimate)
 
-        self._matchCaseSwitch.toggled.connect(self._onFindFlagsChanged)
-        self._matchWholeWordSwitch.toggled.connect(self._onFindFlagsChanged)
-        self._matchRegexSwitch.toggled.connect(self._onFindFlagsChanged)
+        self._leFind.findFlagsChanged.connect(self._onFindFlagsChanged)
 
     def _updateButtons(self, enable):
         self._tbNext.setEnabled(enable)
@@ -204,14 +170,9 @@ class FindWidget(QWidget):
         self._updateStatus()
         self.cursorChanged.emit(self._findResult[self._curIndex])
 
-    def _onFindFlagsChanged(self, checked):
-        self._flags = 0
-        if self._matchCaseSwitch.isChecked():
-            self._flags |= FindFlags.CaseSenitively
-        if self._matchWholeWordSwitch.isChecked():
-            self._flags |= FindFlags.WholeWords
-        if self._matchRegexSwitch.isChecked():
-            self._flags |= FindFlags.UseRegExp
+    def _onFindFlagsChanged(self, flags: FindFlags):
+        self._flags = flags
+        if self._flags & FindFlags.UseRegExp:
             if not self._verifyPattern(self._leFind.text()):
                 return
         self._doFind()
