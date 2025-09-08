@@ -159,7 +159,7 @@ class TestTextViewer(TestBase):
         self.viewer.findPrevious()
         self.assertEqual(cursor.beginLine(), 0)
 
-        QTest.mouseClick(findWidget._matchCaseSwitch, Qt.LeftButton)
+        QTest.mouseClick(findWidget._leFind.matchCaseSwitch, Qt.LeftButton)
         self.assertEqual(len(findWidget._findResult), 0)
 
         findWidget.findPrevious()
@@ -171,10 +171,10 @@ class TestTextViewer(TestBase):
         self.wait(250)
         self.assertEqual(len(findWidget._findResult), 3)
 
-        QTest.mouseClick(findWidget._matchWholeWordSwitch, Qt.LeftButton)
+        QTest.mouseClick(findWidget._leFind.matchWholeWordSwitch, Qt.LeftButton)
         self.assertEqual(len(findWidget._findResult), 0)
 
-        QTest.mouseClick(findWidget._matchRegexSwitch, Qt.LeftButton)
+        QTest.mouseClick(findWidget._leFind.matchRegexSwitch, Qt.LeftButton)
         self.assertEqual(len(findWidget._findResult), 0)
 
         findWidget._leFind.setText("L.*1")
