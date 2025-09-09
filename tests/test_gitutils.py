@@ -26,3 +26,19 @@ class TestGitUtils(TestBase):
         repoFiles = {".": ["foo.md"]}
         error = Git.restoreRepoFiles(repoFiles, staged=True)
         self.assertIsNone(error)
+
+    def testRawDiff(self):
+        with open("test.dot", "w", encoding="utf-8") as f:
+            pass
+        with open("README.md", "a", encoding="utf-8") as f:
+            f.write("# test")
+        files = ["test.dot", "README.md"]
+        self.assertIsNone(Git.addFiles(None, files))
+        # git dosen't support *.dot, but we can still get the diff for README.md
+        diff = Git.commitRawDiff(Git.LCC_SHA1, files)
+        self.assertIsNotNone(diff)
+
+        lines = diff.decode("utf-8").splitlines()
+        self.assertIn("diff --git a/README.md b/README.md", lines)
+        self.assertIn("+# test", lines)
+        self.assertIn("diff --git a/test.dot b/test.dot", lines)

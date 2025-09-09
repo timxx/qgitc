@@ -215,7 +215,7 @@ class Git():
                 logger.warning("(%s.%s.%s) git %s (%s)(%s)",
                                Git.VERSION_MAJOR, Git.VERSION_MINOR, Git.VERSION_PATCH,
                                " ".join(args), msg.rstrip(), repoDir or Git.REPO_DIR)
-            return None
+            return data
 
         return data
 
