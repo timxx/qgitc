@@ -7,7 +7,7 @@ __all__ = [
     "loadGoData", "loadVData", "loadSQLData", "loadJSONData", "loadCSSData",
     "loadTypeScriptData", "loadVexData", "loadCMakeData", "loadMakeData",
     "loadYAMLData", "loadNixData", "loadForthData", "loadSystemVerilogData",
-    "loadGDScriptData", "loadTOMLData"
+    "loadGDScriptData", "loadTOMLData", "loadSwiftData", "loadObjCData"
 ]
 
 cpp_keywords = {
@@ -473,3 +473,114 @@ def loadGDScriptData():
 
 def loadTOMLData():
     return {}, {}, {}, {}, {}
+
+
+# Swift language keywords and types
+swift_keywords = {
+    'a': ["as", "associatedtype", "async", "await"],
+    'b': ["break"],
+    'c': ["case", "catch", "class", "continue"],
+    'd': ["default", "defer", "deinit", "do"],
+    'e': ["else", "enum", "extension"],
+    'f': ["fallthrough", "false", "fileprivate", "for", "func"],
+    'g': ["guard"],
+    'i': ["if", "import", "in", "indirect", "infix", "init", "inout", "internal", "is"],
+    'l': ["lazy", "let"],
+    'n': ["nil"],
+    'o': ["open", "operator"],
+    'p': ["postfix", "precedencegroup", "prefix", "private", "protocol", "public"],
+    'r': ["repeat", "rethrows", "return"],
+    's': ["self", "static", "struct", "subscript", "super", "switch"],
+    't': ["throw", "throws", "true", "try", "typealias"],
+    'u': ["unowned"],
+    'v': ["var"],
+    'w': ["weak", "where", "while"],
+    'y': ["yield"]
+}
+
+swift_types = {
+    'a': ["Any"],
+    'b': ["Bool"],
+    'c': ["Character"],
+    'd': ["Double", "Dictionary"],
+    'f': ["Float"],
+    'i': ["Int", "Int8", "Int16", "Int32", "Int64"],
+    'n': ["Never"],
+    's': ["String", "Set"],
+    'u': ["UInt", "UInt8", "UInt16", "UInt32", "UInt64"],
+    'v': ["Void"]
+}
+
+swift_builtin = {
+    'p': ["print"],
+    'a': ["abs", "assert"],
+    'm': ["max", "min"]
+}
+
+swift_literals = {
+    't': ["true"],
+    'f': ["false"],
+    'n': ["nil"]
+}
+
+swift_other = {
+    '#': ["#if", "#else", "#elseif", "#endif", "#available"]
+}
+
+# Objective-C language keywords and types
+objc_keywords = {
+    'a': ["auto", "atomic", "autoreleasepool"],
+    'b': ["break", "BOOL", "bycopy", "byref"],
+    'c': ["case", "catch", "class", "const", "continue"],
+    'd': ["do", "default"],
+    'e': ["else", "extern", "enum"],
+    'f': ["for", "finally"],
+    'g': ["goto"],
+    'i': ["if", "id", "in", "inline", "inout", "interface", "implementation"],
+    'l': ["long"],
+    'm': ["method"],
+    'n': ["nonatomic", "nil", "NO", "NULL"],
+    'o': ["oneway"],
+    'p': ["private", "protected", "protocol", "public", "property"],
+    'r': ["register", "return", "readonly", "readwrite", "retain"],
+    's': ["self", "static", "struct", "super", "switch", "SEL", "strong", "selector"],
+    't': ["template", "this", "throw", "try", "typedef", "typename"],
+    'u': ["union", "unsigned"],
+    'v': ["volatile", "void"],
+    'w': ["while", "weak"],
+    'y': ["YES"]
+}
+
+objc_types = {
+    'B': ["BOOL"],
+    'c': ["char", "Class"],
+    'd': ["double"],
+    'f': ["float"],
+    'i': ["int", "id", "instancetype"],
+    'l': ["long"],
+    's': ["short", "struct", "size_t", "signed", "SEL"],
+    'u': ["unsigned"],
+    'v': ["void"]
+}
+
+objc_builtin = {
+    'N': ["NSString", "NSArray", "NSDictionary", "NSNumber", "NSObject", "NSData", "NSDate", "NSMutableArray", "NSMutableDictionary", "NSMutableString", "NSNull"],
+    'U': ["UIView", "UIViewController", "UILabel", "UIButton", "UITableView", "UIImage", "UIColor"]
+}
+
+objc_literals = {
+    'Y': ["YES"],
+    'N': ["NO", "NULL", "nil"]
+}
+
+objc_other = {
+    '@': ["@interface", "@implementation", "@protocol", "@end", "@property", "@class", "@selector", "@private", "@protected", "@public", "@try", "@catch", "@finally", "@throw", "@synchronized", "@autoreleasepool", "@encode", "@import"]
+}
+
+
+def loadSwiftData():
+    return swift_types, swift_keywords, swift_builtin, swift_literals, swift_other
+
+
+def loadObjCData():
+    return objc_types, objc_keywords, objc_builtin, objc_literals, objc_other

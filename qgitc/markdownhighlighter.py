@@ -138,6 +138,10 @@ class HighlighterState(IntEnum):
     CodeTOML = 254
     CodeTOMLString = 255
     Diff = 300
+    CodeSwift = 302
+    CodeSwiftComment = 303
+    CodeObjC = 304
+    CodeObjCComment = 305
 
 
 class HighlightingRule:
@@ -692,6 +696,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             "rust": HighlighterState.CodeRust,
             "sh": HighlighterState.CodeBash,
             "sql": HighlighterState.CodeSQL,
+            "swift": HighlighterState.CodeSwift,
+            "objc": HighlighterState.CodeObjC,
+            "objective-c": HighlighterState.CodeObjC,
             "taggerscript": HighlighterState.CodeTaggerScript,
             "ts": HighlighterState.CodeTypeScript,
             "typescript": HighlighterState.CodeTypeScript,
@@ -1066,6 +1073,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         isGDScript = False
         isSQL = False
         isTOML = False
+        isObjC = False
 
         keywords = {}
         others = {}
@@ -1145,6 +1153,19 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         elif state in [HighlighterState.CodeJSON,
                        HighlighterState.CodeJSON + self.tildeOffset]:
             types, keywords, builtin, literals, others = loadJSONData()
+        elif state in [HighlighterState.CodeSwift,
+                       HighlighterState.CodeSwift + self.tildeOffset,
+                       HighlighterState.CodeSwiftComment,
+                       HighlighterState.CodeSwiftComment + self.tildeOffset]:
+            types, keywords, builtin, literals, others = loadSwiftData()
+            comment = '//'
+        elif state in [HighlighterState.CodeObjC,
+                       HighlighterState.CodeObjC + self.tildeOffset,
+                       HighlighterState.CodeObjCComment,
+                       HighlighterState.CodeObjCComment + self.tildeOffset]:
+            types, keywords, builtin, literals, others = loadObjCData()
+            isObjC = True
+            comment = '//'
         elif state in [HighlighterState.CodeXML,
                        HighlighterState.CodeXML + self.tildeOffset]:
             self.xmlHighlighter(text)
@@ -1295,6 +1316,10 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                         elif text[i + 1] == '*':
                             if _handleComment():
                                 return
+                elif comment == '//' and text[i] == '/' and i + 1 < textLen and text[i + 1] == '/':
+                    self.setFormat(i, textLen - i, formatComment)
+                    i = textLen
+                    break
                 elif text[i] == comment:
                     self.setFormat(i, textLen - i, formatComment)
                     i = textLen
@@ -1380,6 +1405,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self.sqlHighlighter(text)
         if isTOML:
             self.tomlHighlighter(text)
+        if isObjC:
+            self.objcHighlighter(text, others)
 
     def highlightStringLiterals(self, strType: str, text: str, i: int):
         """ Highlight string literals in code """
@@ -2640,6 +2667,24 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 return True
 
         return False
+
+    def objcHighlighter(self, text: str, others: Dict[str, List[str]]):
+        """ The Objective-C highlighter for special directives """
+        if not text:
+            return
+
+        textLen = len(text)
+        for i in range(textLen):
+            if i + 1 >= textLen:
+                break
+
+            wordList = others.get(text[i], [])
+            for word in wordList:
+                if text[i:].startswith(word) and (i + len(word) == textLen or
+                                                  not text[i + len(word)].isalnum()):
+                    self.setFormat(
+                        i, len(word), self._formats[HighlighterState.CodeOther])
+                    break
 
     def diffHighlighter(self, text: str):
         if not text:
