@@ -7,9 +7,8 @@ from PySide6.QtCore import QEventLoop, QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters
+from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters, AiRole
 from qgitc.settings import Settings
 
 CODE_REVIEW_PROMPT = """Please review the following code patch. Focus on potential bugs, risks, and improvement suggestions. Please focus only on the modified sections of the code. If you notice any serious issues in the old code that could impact functionality or performance, feel free to mention them. Otherwise, concentrate on providing feedback and suggestions for the changes made.
@@ -167,14 +166,13 @@ class GithubCopilot(AiModelBase):
 
         prompt = params.prompt
         if params.sys_prompt:
-            self.add_history(self._makeMessage(
-                "system", params.sys_prompt))
+            self.addHistory(AiRole.System, params.sys_prompt)
         elif params.chat_mode == AiChatMode.CodeReview:
             prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
                 language=ApplicationBase.instance().uiLanguage())
-        self.add_history(self._makeMessage("user", prompt))
-        payload["messages"] = self._history
+        self.addHistory(AiRole.User, prompt)
+        payload["messages"] = self.toOpenAiMessages()
 
         self._doQuery(payload, stream)
 
@@ -189,9 +187,6 @@ class GithubCopilot(AiModelBase):
             headers=headers,
             data=payload,
             stream=stream)
-
-    def _makeMessage(self, role, prompt):
-        return {"role": role, "content": prompt}
 
     def updateToken(self, retry=False):
         settings = Settings(testing=ApplicationBase.instance().testing)
@@ -321,7 +316,7 @@ class GithubCopilot(AiModelBase):
 
     def _handleFinished(self):
         if self._content:
-            self.add_history(self._makeMessage(self._role, self._content))
+            self.addHistory(self._role, self._content)
 
     def requestInterruption(self):
         if self._eventLoop:

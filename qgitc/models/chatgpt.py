@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from qgitc.llm import AiModelBase, AiParameters
+from qgitc.llm import AiModelBase, AiParameters, AiRole
 
 
 class ChatGPTModel(AiModelBase):
@@ -26,19 +26,15 @@ class ChatGPTModel(AiModelBase):
                 payload["language"] = params.language
         else:
             if params.sys_prompt:
-                self.add_history(self._makeMessage(
-                    "system", params.sys_prompt))
-            self.add_history(self._makeMessage("user", params.prompt))
+                self.addHistory(AiRole.System, params.sys_prompt)
+            self.addHistory(AiRole.User, params.prompt)
 
-            payload["messages"] = self._history
+            payload["messages"] = self.toOpenAiMessages()
 
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
         self._doQuery(payload, params.stream)
-
-    def _makeMessage(self, role, prompt):
-        return {"role": role, "content": prompt}
 
     def _doQuery(self, payload, stream=True):
         headers = {
@@ -48,4 +44,4 @@ class ChatGPTModel(AiModelBase):
 
     def _handleFinished(self):
         if self._content:
-            self.add_history(self._makeMessage(self._role, self._content))
+            self.addHistory(self._role, self._content)

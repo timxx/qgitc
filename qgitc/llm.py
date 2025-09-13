@@ -18,6 +18,12 @@ class AiRole(Enum):
     System = 2
 
 
+class AiChatMessage:
+    def __init__(self, role=AiRole.User, message: str = None):
+        self.role = role
+        self.message = message
+
+
 class AiResponse:
 
     def __init__(self, role=AiRole.Assistant, message: str = None):
@@ -53,6 +59,19 @@ class AiChatMode(Enum):
     CodeExplanation = 5
 
 
+def _aiRoleFromString(role: str) -> AiRole:
+    role = role.lower()
+    if role == "user":
+        return AiRole.User
+    elif role == "assistant":
+        return AiRole.Assistant
+    elif role == "system":
+        return AiRole.System
+    else:
+        logger.warning("Unknown role: %s", role)
+        return AiRole.Assistant
+
+
 class AiModelBase(QObject):
     responseAvailable = Signal(AiResponse)
     serviceUnavailable = Signal()
@@ -61,28 +80,29 @@ class AiModelBase(QObject):
 
     def __init__(self, url, model: str = None, parent=None):
         super().__init__(parent)
-        self._history = []
+        self._history: List[AiChatMessage] = []
         self.url_base = url
-        self._mutex = Lock()
         self.modelId: str = model
         self._reply: QNetworkReply = None
 
         self._data: bytes = b""
         self._isStreaming = False
-        self._role = "assistant"
+        self._role = AiRole.Assistant
         self._content = ""
         self._firstDelta = True
 
     def clear(self):
-        with self._mutex:
-            self._history.clear()
+        self._history.clear()
 
     def queryAsync(self, params: AiParameters):
         pass
 
-    def add_history(self, message):
-        with self._mutex:
-            self._history.append(message)
+    def addHistory(self, role: AiRole, message: str):
+        self._history.append(AiChatMessage(role, message))
+
+    def toOpenAiMessages(self):
+        return [{"role": history.role.name.lower(), "content": history.message}
+                for history in self._history]
 
     @property
     def name(self):
@@ -121,7 +141,7 @@ class AiModelBase(QObject):
     def _initReply(self, reply: QNetworkReply):
         self._data = b""
         self._content = ""
-        self._role = "assistant"
+        self._role = AiRole.Assistant
         self._firstDelta = True
 
         if not reply:
@@ -131,7 +151,7 @@ class AiModelBase(QObject):
         self._reply.readyRead.connect(self._onDataReady)
         self._reply.errorOccurred.connect(self._onError)
         self._reply.finished.connect(self._onFinished)
-    
+
     @staticmethod
     def request(url: str, headers: Dict[bytes, bytes] = None, post=True, data: Dict[str, any] = None):
         mgr = ApplicationBase.instance().networkManager
@@ -224,7 +244,7 @@ class AiModelBase(QObject):
             return
 
         if "role" in delta:
-            self._role = delta["role"]
+            self._role = _aiRoleFromString(delta["role"])
         if "content" in delta:
             if not delta["content"]:
                 return
@@ -254,8 +274,12 @@ class AiModelBase(QObject):
             self.responseAvailable.emit(aiResponse)
             break
 
-        self._role = role
+        self._role = _aiRoleFromString(role)
         self._content = content
+
+    @property
+    def history(self) -> List[AiChatMessage]:
+        return self._history
 
 
 class AiModelFactory:

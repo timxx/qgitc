@@ -603,18 +603,11 @@ class AiChatWidget(QWidget):
         model.clear()
 
         for msg in messages:
-            role = AiRole(msg.get('role', 0))
+            role = AiRole(msg.get('role', AiRole.User))
             content = msg.get('content', '')
 
             if content:
-                # Add to model history
-                if role == AiRole.User:
-                    model.add_history({"role": "user", "content": content})
-                elif role == AiRole.Assistant:
-                    model.add_history(
-                        {"role": "assistant", "content": content})
-
-                # Display in chat
+                model.addHistory(role, content)
                 response = AiResponse(role, content)
                 chatbot.appendResponse(response)
 
@@ -633,33 +626,22 @@ class AiChatWidget(QWidget):
         history = self._chatHistories[self._currentHistoryId]
         model = self.currentChatModel()
 
-        if model and hasattr(model, '_history'):
-            # Convert model history to our format
-            messages = []
-            for msg in model._history:
-                role_str = msg.get('role', 'user')
-                if role_str == 'user':
-                    role = AiRole.User
-                elif role_str == 'assistant':
-                    role = AiRole.Assistant
-                elif role_str == 'system':
-                    role = AiRole.System
-                else:
-                    role = AiRole.User
+        # Convert model history to our format
+        messages = []
+        for message in model.history:
+            messages.append({
+                'role': message.role,
+                'content': message.message
+            })
 
-                messages.append({
-                    'role': role.value,
-                    'content': msg.get('content', '')
-                })
+        history.messages = messages
+        history.modelKey = AiModelFactory.modelKey(model)
+        history.modelId = self.cbModelNames.currentData() or ""
+        history.timestamp = datetime.now().isoformat()
 
-            history.messages = messages
-            history.modelKey = AiModelFactory.modelKey(model)
-            history.modelId = self.cbModelNames.currentData() or ""
-            history.timestamp = datetime.now().isoformat()
-
-            # Save to settings
-            settings = ApplicationBase.instance().settings()
-            settings.saveChatHistory(history.historyId, history.toDict())
+        # Save to settings
+        settings = ApplicationBase.instance().settings()
+        settings.saveChatHistory(history.historyId, history.toDict())
 
     def _generateChatTitle(self, firstMessage: str):
         """Generate a title for the conversation"""
