@@ -71,7 +71,8 @@ class SearchLineEdit(QLineEdit):
     def matchCaseSwitch(self):
         return self._matchCaseSwitch
 
-    def _onFindFlagsChanged(self):
+    @property
+    def findFlags(self):
         flags = 0
         if self._matchRegexSwitch.isChecked():
             flags |= FindFlags.UseRegExp
@@ -79,5 +80,7 @@ class SearchLineEdit(QLineEdit):
             flags |= FindFlags.WholeWords
         if self._matchCaseSwitch.isChecked():
             flags |= FindFlags.CaseSenitively
+        return flags
 
-        self.findFlagsChanged.emit(flags)
+    def _onFindFlagsChanged(self):
+        self.findFlagsChanged.emit(self.findFlags)

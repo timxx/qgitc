@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 from enum import Enum
 from typing import Callable, Dict, List, Tuple
 
@@ -52,6 +53,7 @@ from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView, _makeTextIcon
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
+from qgitc.findconstants import FindFlags
 from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.gitutils import Git
 from qgitc.ntpdatetime import getNtpDateTime
@@ -386,8 +388,12 @@ class CommitWindow(StateWindow):
 
         self.ui.leFilterFiles.textChanged.connect(
             self._onFilterFilesChanged)
+        self.ui.leFilterFiles.findFlagsChanged.connect(
+            self._onFilterFilesFlagsChanged)
         self.ui.leFilterStaged.textChanged.connect(
             self._onFilterStagedChanged)
+        self.ui.leFilterStaged.findFlagsChanged.connect(
+            self._onFilterStagedFlagsChanged)
 
         self.ui.cbAmend.toggled.connect(
             self._onAmendToggled)
@@ -1289,13 +1295,33 @@ class CommitWindow(StateWindow):
                 return
             self._runCommitAction(submodule, action, cancelEvent)
 
+    def _doFilterFiles(self, model: QSortFilterProxyModel, text: str, flags: FindFlags):
+        caseSensitive = Qt.CaseInsensitive
+        if flags & FindFlags.CaseSenitively:
+            caseSensitive = Qt.CaseSensitive
+        model.setFilterCaseSensitivity(caseSensitive)
+
+        if not (flags & FindFlags.UseRegExp):
+            text = re.escape(text)
+        if (flags & FindFlags.WholeWords):
+            text = r"\b" + text + r"\b"
+        model.setFilterRegularExpression(text)
+
     def _onFilterFilesChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvFiles.model()
-        model.setFilterRegularExpression(text)
+        flags = self.ui.leFilterFiles.findFlags
+        self._doFilterFiles(model, text, flags)
+
+    def _onFilterFilesFlagsChanged(self, flags: FindFlags):
+        self._onFilterFilesChanged(self.ui.leFilterFiles.text())
 
     def _onFilterStagedChanged(self, text: str):
         model: QSortFilterProxyModel = self.ui.lvStaged.model()
-        model.setFilterRegularExpression(text)
+        flags = self.ui.leFilterStaged.findFlags
+        self._doFilterFiles(model, text, flags)
+
+    def _onFilterStagedFlagsChanged(self, flags: FindFlags):
+        self._onFilterStagedChanged(self.ui.leFilterStaged.text())
 
     def _onFilesDoubleClicked(self, index: QModelIndex):
         statusCode = index.data(StatusFileListModel.StatusCodeRole)
