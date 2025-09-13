@@ -621,3 +621,34 @@ class Settings(QSettings):
 
     def showFetchSlowAlert(self) -> bool:
         return self.value("showFetchSlowAlert", True, type=bool)
+
+    def recentRepositories(self) -> List[str]:
+        """Get list of recently visited repositories"""
+        return self.value("recentRepositories", [], type=list)
+
+    def setRecentRepositories(self, repos: List[str]):
+        """Set list of recently visited repositories"""
+        self.setValue("recentRepositories", repos)
+
+    def addRecentRepository(self, repoPath: str, maxRecentRepos: int = 10):
+        """Add a repository to the recent list, moving it to front if already exists"""
+        if not repoPath:
+            return
+
+        normalRepoPath = os.path.normpath(os.path.normcase(repoPath))
+        recent = self.recentRepositories()
+
+        # Remove if already exists
+        for repo in recent:
+            if os.path.normpath(os.path.normcase(repo)) == normalRepoPath:
+                recent.remove(repo)
+                break
+
+        # Add to front
+        recent.insert(0, repoPath)
+
+        # Limit to maxRecentRepos
+        if len(recent) > maxRecentRepos:
+            recent = recent[:maxRecentRepos]
+
+        self.setRecentRepositories(recent)

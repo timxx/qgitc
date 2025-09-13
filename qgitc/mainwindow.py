@@ -264,6 +264,7 @@ class MainWindow(StateWindow):
             return
 
         self.ui.leRepo.setText(repoDir)
+        self._updateRecentRepos(repoDir)
 
     def __onRepoChanged(self, repoDir):
         self.ui.cbSubmodule.clear()
@@ -296,6 +297,7 @@ class MainWindow(StateWindow):
         else:
             app.updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
+            self._updateRecentRepos(topLevelDir)
 
             if not isCompositeMode:
                 Git.REF_MAP = Git.refs()
@@ -587,6 +589,7 @@ class MainWindow(StateWindow):
             self.isWindowReady = True
             if Git.REPO_DIR:
                 self.ui.leRepo.setText(Git.REPO_DIR)
+            self._setupRepoPathInput()
 
     def closeEvent(self, event):
         if self.mergeWidget:
@@ -849,3 +852,24 @@ class MainWindow(StateWindow):
             self._aiModel.finished.disconnect(self._onAiFilterFinished)
             self._aiModel.requestInterruption()
             self._aiModel = None
+
+    def _setupRepoPathInput(self):
+        # Load recent repositories from settings
+        settings = ApplicationBase.instance().settings()
+        recentRepos = settings.recentRepositories()
+        self.ui.leRepo.setRecentRepositories(recentRepos)
+        self.ui.leRepo.repositorySelected.connect(self._onRepoSelected)
+
+    def _onRepoSelected(self, repoPath: str):
+        """Handle repository selection from completion"""
+        self._updateRecentRepos(repoPath)
+
+    def _updateRecentRepos(self, repo: str):
+        settings = ApplicationBase.instance().settings()
+        settings.addRecentRepository(repo)
+        recentRepos = settings.recentRepositories()
+        for repo in recentRepos[:]:
+            if not os.path.exists(repo) or not os.path.isdir(repo):
+                recentRepos.remove(repo)
+        settings.setRecentRepositories(recentRepos)
+        self.ui.leRepo.setRecentRepositories(recentRepos)

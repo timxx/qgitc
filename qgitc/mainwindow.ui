@@ -46,7 +46,7 @@
         <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
        </property>
        <item row="0" column="2">
-        <widget class="QLineEdit" name="leRepo"/>
+        <widget class="RepoPathInput" name="leRepo"/>
        </item>
        <item row="2" column="2">
         <widget class="QLineEdit" name="leOpts">
@@ -408,6 +408,11 @@
    <extends>QWidget</extends>
    <header>gitview.h</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>RepoPathInput</class>
+   <extends>QLineEdit</extends>
+   <header>repopathinput.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
