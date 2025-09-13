@@ -1312,6 +1312,12 @@ class CommitWindow(StateWindow):
         flags = self.ui.leFilterFiles.findFlags
         self._doFilterFiles(model, text, flags)
 
+        ApplicationBase.instance().trackFeatureUsage("commit.filter_files", {
+            "caseSensitive": bool(flags & FindFlags.CaseSenitively),
+            "wholeWords": bool(flags & FindFlags.WholeWords),
+            "useRegExp": bool(flags & FindFlags.UseRegExp),
+        })
+
     def _onFilterFilesFlagsChanged(self, flags: FindFlags):
         self._onFilterFilesChanged(self.ui.leFilterFiles.text())
 
@@ -1319,6 +1325,12 @@ class CommitWindow(StateWindow):
         model: QSortFilterProxyModel = self.ui.lvStaged.model()
         flags = self.ui.leFilterStaged.findFlags
         self._doFilterFiles(model, text, flags)
+
+        ApplicationBase.instance().trackFeatureUsage("commit.filter_staged", {
+            "caseSensitive": bool(flags & FindFlags.CaseSenitively),
+            "wholeWords": bool(flags & FindFlags.WholeWords),
+            "useRegExp": bool(flags & FindFlags.UseRegExp),
+        })
 
     def _onFilterStagedFlagsChanged(self, flags: FindFlags):
         self._onFilterStagedChanged(self.ui.leFilterStaged.text())

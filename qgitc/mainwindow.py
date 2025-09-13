@@ -802,6 +802,8 @@ class MainWindow(StateWindow):
 
         self._aiModel.queryAsync(params)
 
+        ApplicationBase.instance().trackFeatureUsage("ai_log_filter")
+
     def _onAiFilterResponse(self, response: AiResponse):
         """Handle AI response for filter options"""
         if response.message:
