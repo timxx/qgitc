@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QSpacerItem,
     QSpinBox,
     QSplitter,
-    QStackedWidget,
     QStatusBar,
     QVBoxLayout,
     QWidget,
@@ -146,8 +145,10 @@ class AiChatWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
-        self.stackWidget = QStackedWidget(self)
-        layout.addWidget(self.stackWidget)
+        self._chatBot = AiChatbot(self)
+        self._chatBot.verticalScrollBar().valueChanged.connect(
+            self._onTextBrowserScrollbarChanged)
+        layout.addWidget(self._chatBot)
 
         self.sysInput = ChatEdit(self)
         self.sysInput.setPlaceholderText(
@@ -199,23 +200,20 @@ class AiChatWidget(QWidget):
         aiModels: List[AiModelBase] = [
             model(parent=self) for model in AiModelProvider.models()]
         defaultModelKey = ApplicationBase.instance().settings().defaultLlmModel()
+        currentModelIndex = -1
 
         for i, model in enumerate(aiModels):
             self.cbBots.addItem(model.name, model)
-            tb = AiChatbot(self)
-            self.stackWidget.addWidget(tb)
-            tb.verticalScrollBar().valueChanged.connect(
-                self._onTextBrowserScrollbarChanged)
             model.responseAvailable.connect(self._onMessageReady)
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
             if AiModelFactory.modelKey(model) == defaultModelKey:
-                self.cbBots.setCurrentIndex(i)
+                currentModelIndex = i
 
-            model.modelsReady.connect(
-                self._onModelsReady)
+            model.modelsReady.connect(self._onModelsReady)
 
-        self.stackWidget.setCurrentIndex(self.cbBots.currentIndex())
+        if currentModelIndex != -1:
+            self.cbBots.setCurrentIndex(currentModelIndex)
 
         hlayout.addWidget(self.cbBots)
 
@@ -378,7 +376,7 @@ class AiChatWidget(QWidget):
         index = self.cbBots.findData(model)
 
         assert (index != -1)
-        messages: AiChatbot = self.stackWidget.widget(index)
+        messages: AiChatbot = self._chatBot
         messages.appendResponse(response)
 
         if not self._disableAutoScroll:
@@ -411,12 +409,10 @@ class AiChatWidget(QWidget):
         model: AiModelBase = self.sender()
         index = self.cbBots.findData(model)
         assert (index != -1)
-        messages: AiChatbot = self.stackWidget.widget(index)
+        messages: AiChatbot = self._chatBot
         messages.appendServiceUnavailable()
 
     def _onModelChanged(self, index: int):
-        self.stackWidget.setCurrentIndex(index)
-
         model = self.currentChatModel()
         enabled = model is None or not model.isRunning()
 
@@ -455,7 +451,7 @@ class AiChatWidget(QWidget):
 
     @property
     def messages(self) -> AiChatbot:
-        return self.stackWidget.currentWidget()
+        return self._chatBot
 
     def currentChatModel(self) -> AiModelBase:
         return self.cbBots.currentData()
