@@ -3,8 +3,10 @@
 import os
 import shlex
 import sys
+from datetime import datetime
+from typing import List
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QSize, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QActionGroup, QIcon
 from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
@@ -18,10 +20,41 @@ from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.findwidget import FindWidget
 from qgitc.gitutils import Git
 from qgitc.gitview import GitView
+from qgitc.llm import AiModelBase, AiParameters, AiResponse
+from qgitc.llmprovider import AiModelProvider
 from qgitc.logview import LogView
 from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_mainwindow import Ui_MainWindow
+
+GIT_LOG_SYSTEM_PROMPT = """You are a Git expert assistant. Convert natural language requests into git log command-line options.
+
+Rules:
+1. Return ONLY the git log options (flags and arguments), no explanations
+2. Use standard git log options like --since, --until, --author, --grep, -n, --oneline, etc.
+3. For date/time queries, use --since and --until with formats like '1 week ago', '2022-01-01', etc.
+4. For limiting results, use -n <number> or --max-count=<number>
+5. For author searches, use --author=<name>
+6. For commit message searches, use --grep=<pattern>
+7. For file filtering, use -- <filepath> at the end
+8. If the request is unclear, return the most reasonable interpretation
+9. If the option contains a space, wrap it in quotes
+
+Current date: {current_date}
+Current author: {current_author}
+
+Examples:
+- "show last 10 commits" → "-n 10"
+- "commits from last week" → "--since='1 week ago'"
+- "commits by John" → "--author=John"
+- "commits about bug fixes" → "--grep=bug"
+- "commits since January" → "--since='2025-09-13'"
+- "last 5 commits with changes to main.py" → "-n 5 -- main.py"
+- "my commits" → "--author='{current_author}'"
+
+User query: {query}
+
+Git log options:"""
 
 
 class MainWindow(StateWindow):
@@ -43,7 +76,7 @@ class MainWindow(StateWindow):
 
         self.isWindowReady = False
         self.findSubmoduleThread = None
-        self._threads = []
+        self._threads: List[QThread] = []
 
         self.mergeWidget = None
 
@@ -52,6 +85,8 @@ class MainWindow(StateWindow):
 
         self._repoTopDir = None
         self._reloadingRepo = False
+
+        self._aiModel: AiModelBase = None
 
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
@@ -362,6 +397,15 @@ class MainWindow(StateWindow):
 
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
+
+        self._cancelAiFilter()
+
+        # Check if this is an AI query
+        if opts.lower().startswith("@ai "):
+            self._handleAiFilterQuery(opts)
+            return
+
+        # Regular git log filter processing
         self.filterOpts(opts, self.ui.gitViewA)
         self.filterOpts(opts, self.gitViewB)
 
@@ -515,12 +559,12 @@ class MainWindow(StateWindow):
 
         return True
 
-    def filterOpts(self, opts, gitView):
+    def filterOpts(self, opts: str, gitView: GitView):
         if not gitView:
             return
 
         # don't knonw if cygwin works or not
-        args = shlex.split(opts, posix=sys.platform != "win32")
+        args = shlex.split(opts, posix=True)
         if self.ui.cbSelfCommits.isChecked():
             args.insert(0, f"--author={Git.userName()}")
         gitView.filterLog(args)
@@ -703,6 +747,14 @@ class MainWindow(StateWindow):
     def cancel(self, force=False):
         self._delayTimer.stop()
 
+        # Cancel AI processing if active
+        if self._aiModel and self._aiModel.isRunning():
+            self._aiModel.responseAvailable.disconnect(self._onAiFilterResponse)
+            self._aiModel.serviceUnavailable.disconnect(self._onAiServiceUnavailable)
+            self._aiModel.finished.disconnect(self._onAiFilterFinished)
+            self._aiModel.requestInterruption()
+            self._aiModel = None
+
         if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
             self.findSubmoduleThread.finished.disconnect(
                 self.__onFindSubmoduleFinished)
@@ -725,3 +777,73 @@ class MainWindow(StateWindow):
         thread = self.sender()
         if thread in self._threads:
             self._threads.remove(thread)
+
+    def _handleAiFilterQuery(self, query: str):
+        """Handle AI query for git log filtering"""
+        self.showMessage(self.tr("Processing AI query..."))
+
+        # remove @ai prefix
+        aiQuery = query[3:].strip()
+
+        self._aiModel = AiModelProvider.createModel(self)
+        self._aiModel.responseAvailable.connect(self._onAiFilterResponse)
+        self._aiModel.serviceUnavailable.connect(self._onAiServiceUnavailable)
+        self._aiModel.finished.connect(self._onAiFilterFinished)
+
+        params = AiParameters()
+        params.sys_prompt = GIT_LOG_SYSTEM_PROMPT.format(
+            current_date=datetime.now().strftime("%Y-%m-%d"),
+            current_author=Git.userName(),
+            query=aiQuery)
+        params.prompt = aiQuery
+        params.temperature = 0.1
+        params.max_tokens = 512
+        params.stream = False
+
+        self._aiModel.queryAsync(params)
+
+    def _onAiFilterResponse(self, response: AiResponse):
+        """Handle AI response for filter options"""
+        if response.message:
+            # Clean up the response
+            filterOptions = response.message.strip()
+
+            # Remove any markdown formatting
+            if filterOptions.startswith("```"):
+                lines = filterOptions.split('\n')
+                filterOptions = '\n'.join(
+                    lines[1:-1] if len(lines) > 2 else lines[1:])
+
+            filterOptions = filterOptions.strip()
+
+            # Apply the AI-generated filter options
+            if filterOptions:
+                leOpts = self.ui.leOpts
+                leOpts.selectAll()
+                leOpts.insert(filterOptions)
+                self.filterOpts(filterOptions, self.ui.gitViewA)
+                self.filterOpts(filterOptions, self.gitViewB)
+                self.showMessage(
+                    self.tr("Applied AI-generated filter: {0}").format(filterOptions))
+            else:
+                self.showMessage(
+                    self.tr("AI could not generate valid filter options"))
+
+    def _onAiServiceUnavailable(self):
+        QMessageBox.warning(
+            self, self.windowTitle(),
+            self.tr("AI service is currently unavailable. Please check your settings or try again later."))
+
+    def _onAiFilterFinished(self):
+        self._aiModel = None
+
+    def _cancelAiFilter(self):
+        """Cancel any ongoing AI filter processing"""
+        if self._aiModel:
+            self._aiModel.responseAvailable.disconnect(
+                self._onAiFilterResponse)
+            self._aiModel.serviceUnavailable.disconnect(
+                self._onAiServiceUnavailable)
+            self._aiModel.finished.disconnect(self._onAiFilterFinished)
+            self._aiModel.requestInterruption()
+            self._aiModel = None

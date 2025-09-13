@@ -54,7 +54,7 @@
           <string>See the GIT-LOG options for more information.</string>
          </property>
          <property name="placeholderText">
-          <string>Type the log options here and press Enter to filter</string>
+          <string>Git log options (e.g., --since='1 week ago') or '@ai your question in natural language'</string>
          </property>
         </widget>
        </item>

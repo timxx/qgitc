@@ -20,7 +20,7 @@ class AiRole(Enum):
 
 class AiResponse:
 
-    def __init__(self, role=AiRole.Assistant, message=None):
+    def __init__(self, role=AiRole.Assistant, message: str = None):
         self.role = role
         self.message = message
         self.total_tokens = None

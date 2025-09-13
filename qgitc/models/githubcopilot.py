@@ -142,7 +142,10 @@ class GithubCopilot(AiModelBase):
         id = params.model or self.modelId or "gpt-4.1"
         caps: AiModelCapabilities = GithubCopilot._capabilities.get(
             id, AiModelCapabilities())
-        stream = caps.streaming
+
+        stream = params.stream
+        if stream and not caps.streaming:
+            stream = False
 
         if params.max_tokens > caps.max_output_tokens:
             params.max_tokens = caps.max_output_tokens
