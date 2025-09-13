@@ -652,3 +652,45 @@ class Settings(QSettings):
             recent = recent[:maxRecentRepos]
 
         self.setRecentRepositories(recent)
+
+    def chatHistories(self):
+        """Get saved chat histories"""
+        self.beginGroup("AiChat")
+        self.beginGroup("histories")
+        histories = []
+        for key in self.allKeys():
+            value = self.value(key)
+            if value:
+                histories.append(value)
+        self.endGroup()
+        self.endGroup()
+        return histories
+
+    def saveChatHistory(self, historyId: str, historyData: dict):
+        """Save a chat history session"""
+        self.beginGroup("AiChat")
+        self.beginGroup("histories")
+        self.setValue(historyId, historyData)
+        self.endGroup()
+        self.endGroup()
+
+    def removeChatHistory(self, historyId: str):
+        """Remove a chat history session"""
+        self.beginGroup("AiChat")
+        self.beginGroup("histories")
+        self.remove(historyId)
+        self.endGroup()
+        self.endGroup()
+
+    def currentChatHistoryId(self):
+        """Get the currently selected chat history ID"""
+        self.beginGroup("AiChat")
+        value = self.value("currentHistoryId", "")
+        self.endGroup()
+        return value
+
+    def setCurrentChatHistoryId(self, historyId: str):
+        """Set the currently selected chat history ID"""
+        self.beginGroup("AiChat")
+        self.setValue("currentHistoryId", historyId)
+        self.endGroup()
