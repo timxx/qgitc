@@ -1,5 +1,4 @@
 import queue as queue
-from datetime import datetime
 from typing import Dict, List, Union
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
@@ -124,11 +123,7 @@ class AiChatWidget(QWidget):
         self._setupHistoryPanel()
         self._setupChatPanel()
 
-        # Initialize chat histories
-        self._chatHistories: Dict[str, AiChatHistory] = {}
-        self._currentHistoryId = None
         self._titleGenerator: AiChatTitleGenerator = None
-        self._isNewConversation = False
 
         QTimer.singleShot(100, self._loadChatHistories)
 
@@ -283,9 +278,6 @@ class AiChatWidget(QWidget):
         return strings[mode]
 
     def queryClose(self):
-        # Save current conversation before closing
-        self._saveCurrentConversation()
-
         if self._titleGenerator:
             self._titleGenerator.cancel()
 
@@ -303,10 +295,12 @@ class AiChatWidget(QWidget):
         if not prompt:
             return
 
+        model = self.currentChatModel()
+
         # If this is a new conversation and first message, generate title
-        if self._isNewConversation and self._currentHistoryId:
-            self._generateChatTitle(prompt)
-            self._isNewConversation = False
+        if not model.history:
+            self._generateChatTitle(
+                self._historyPanel.currentHistory().historyId, prompt)
 
         chatMode: AiChatMode = self.cbChatMode.currentData()
         self._doRequest(
@@ -316,7 +310,6 @@ class AiChatWidget(QWidget):
             self.sysInput.toPlainText())
 
         app = ApplicationBase.instance()
-        model = self.currentChatModel()
         app.trackFeatureUsage("aichat_send", {
             "chat_mode": chatMode.name,
             "model": model.modelId or model.name,
@@ -356,9 +349,6 @@ class AiChatWidget(QWidget):
         self.usrInput.setFocus()
 
     def _onButtonClear(self, clicked):
-        # Save current conversation before clearing
-        self._saveCurrentConversation()
-
         # Clear current chat
         self._clearCurrentChat()
 
@@ -398,6 +388,13 @@ class AiChatWidget(QWidget):
                 break
 
         model = self.currentChatModel()
+        chatHistory = self._historyPanel.updateCurrentHistory(model)
+        if chatHistory:
+            # Save to settings
+            settings = ApplicationBase.instance().settings()
+            settings.saveChatHistory(
+                chatHistory.historyId, chatHistory.toDict())
+
         enabled = model is None or not model.isRunning()
         self.btnSend.setEnabled(enabled)
         self.btnClear.setEnabled(enabled)
@@ -497,31 +494,18 @@ class AiChatWidget(QWidget):
 
     def _loadChatHistories(self):
         """Load chat histories from settings"""
-        try:
-            settings = ApplicationBase.instance().settings()
-            histories = settings.chatHistories()
+        settings = ApplicationBase.instance().settings()
+        histories = settings.chatHistories()
+        chatHistories: List[AiChatHistory] = []
 
-            for historyData in histories:
-                if isinstance(historyData, dict):
-                    history = AiChatHistory.fromDict(historyData)
-                    self._chatHistories[history.historyId] = history
+        for historyData in histories:
+            if isinstance(historyData, dict):
+                history = AiChatHistory.fromDict(historyData)
+                chatHistories.append(history)
 
-            self._refreshHistoryList()
-
-            # Load the last used conversation or create a new one
-            currentId = settings.currentChatHistoryId()
-            if currentId and currentId in self._chatHistories:
-                self._loadChatHistory(currentId)
-            else:
-                self._createNewConversation()
-
-        except Exception as e:
-            logger.warning(f"Failed to load chat histories: {e}")
-            self._createNewConversation()
-
-    def _refreshHistoryList(self):
-        """Refresh the history list widget"""
-        self._historyPanel.refreshHistories(self._chatHistories.values())
+        self._historyPanel.loadHistories(chatHistories)
+        # always create a new conversation at start
+        self._createNewConversation()
 
     def _onNewChatRequested(self):
         """Create a new chat conversation"""
@@ -529,50 +513,38 @@ class AiChatWidget(QWidget):
 
     def _createNewConversation(self):
         """Create and switch to a new conversation"""
+        model = self.currentChatModel()
         history = AiChatHistory()
-        history.modelKey = AiModelFactory.modelKey(self.currentChatModel())
-        history.modelId = self.cbModelNames.currentData() or ""
-
-        self._chatHistories[history.historyId] = history
-        self._currentHistoryId = history.historyId
-        self._isNewConversation = True
+        history.modelKey = AiModelFactory.modelKey(model)
+        history.modelId = model.modelId or model.name
+        self._historyPanel.insertHistoryAtTop(history)
 
         # Clear current chat
         self._clearCurrentChat()
-
-        # Update UI
-        self._refreshHistoryList()
-        self._historyPanel.setCurrentHistory(history.historyId)
 
         # Save to settings
         settings = ApplicationBase.instance().settings()
         settings.setCurrentChatHistoryId(history.historyId)
 
-    def _onHistorySelectionChanged(self, historyId: str):
+    def _onHistorySelectionChanged(self, chatHistory: AiChatHistory):
         """Handle history selection change"""
-        if historyId != self._currentHistoryId:
-            self._saveCurrentConversation()
-            self._loadChatHistory(historyId)
+        self._loadChatHistory(chatHistory)
 
-    def _loadChatHistory(self, historyId: str):
+    def _loadChatHistory(self, chatHistory: AiChatHistory):
         """Load a specific chat history"""
-        if historyId not in self._chatHistories:
-            return
-
-        history = self._chatHistories[historyId]
-        self._currentHistoryId = historyId
-        self._isNewConversation = False
-
         # Switch to the correct model if different
-        self._switchToModel(history.modelKey, history.modelId)
+        self._switchToModel(chatHistory.modelKey, chatHistory.modelId)
 
         # Clear and load messages
         self._clearCurrentChat()
-        self._loadMessagesFromHistory(history.messages)
+        if not chatHistory.messages:
+            return
+
+        self._loadMessagesFromHistory(chatHistory.messages)
 
         # Update settings
         settings = ApplicationBase.instance().settings()
-        settings.setCurrentChatHistoryId(historyId)
+        settings.setCurrentChatHistoryId(chatHistory.historyId)
 
     def _switchToModel(self, modelKey: str, modelId: str):
         """Switch to the specified model"""
@@ -618,53 +590,26 @@ class AiChatWidget(QWidget):
             model.clear()
         self.messages.clear()
 
-    def _saveCurrentConversation(self):
-        """Save the current conversation to history"""
-        if not self._currentHistoryId or self._currentHistoryId not in self._chatHistories:
-            return
-
-        history = self._chatHistories[self._currentHistoryId]
-        model = self.currentChatModel()
-
-        # Convert model history to our format
-        messages = []
-        for message in model.history:
-            messages.append({
-                'role': message.role,
-                'content': message.message
-            })
-
-        history.messages = messages
-        history.modelKey = AiModelFactory.modelKey(model)
-        history.modelId = self.cbModelNames.currentData() or ""
-        history.timestamp = datetime.now().isoformat()
-
-        # Save to settings
-        settings = ApplicationBase.instance().settings()
-        settings.saveChatHistory(history.historyId, history.toDict())
-
-    def _generateChatTitle(self, firstMessage: str):
+    def _generateChatTitle(self, historyId: str, firstMessage: str):
         """Generate a title for the conversation"""
-        if not firstMessage.strip() or not self._currentHistoryId:
+        if not firstMessage.strip():
             return
 
         if not self._titleGenerator:
             self._titleGenerator = AiChatTitleGenerator(self)
             self._titleGenerator.titleReady.connect(self._onChatTitleReady)
         self._titleGenerator.startGenerate(
-            self._currentHistoryId, firstMessage)
+            historyId, firstMessage)
 
     def _onChatTitleReady(self, historyId: str, title: str):
         """Handle generated title"""
-        if historyId in self._chatHistories:
-            history = self._chatHistories[historyId]
-            history.title = title
+        chatHistory = self._historyPanel.updateTitle(historyId, title)
+        if not chatHistory:
+            return
 
-            self._historyPanel.updateTitle(historyId, title)
-
-            # Save to settings
-            settings = ApplicationBase.instance().settings()
-            settings.saveChatHistory(historyId, history.toDict())
+        # Save to settings
+        settings = ApplicationBase.instance().settings()
+        settings.saveChatHistory(historyId, chatHistory.toDict())
 
 
 class DiffAvailableEvent(QEvent):

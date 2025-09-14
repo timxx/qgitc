@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
 from typing import List
 
 from PySide6.QtCore import Qt, Signal
@@ -14,12 +15,13 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.aichathistory import AiChatHistory
+from qgitc.llm import AiModelBase, AiModelFactory
 
 
 class AiChatHistoryPanel(QWidget):
 
     requestNewChat = Signal()
-    historySelectionChanged = Signal(str)  # historyId
+    historySelectionChanged = Signal(AiChatHistory)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -49,14 +51,14 @@ class AiChatHistoryPanel(QWidget):
 
     def _onHistorySelectionChanged(self, current: QListWidgetItem, previous: QListWidgetItem):
         """Handle history selection change"""
-        if current:
-            historyId = current.data(Qt.UserRole)
-            self.historySelectionChanged.emit(historyId)
+        if current and current != previous:
+            chatHistory = current.data(Qt.UserRole)
+            self.historySelectionChanged.emit(chatHistory)
 
     def clear(self):
         self._historyList.clear()
 
-    def refreshHistories(self, histories: List[AiChatHistory]):
+    def loadHistories(self, histories: List[AiChatHistory]):
         self.clear()
 
         # Sort histories by timestamp (newest first)
@@ -66,30 +68,70 @@ class AiChatHistoryPanel(QWidget):
             reverse=True
         )
 
-        modelStr = self.tr("Model: ")
-        createdStr = self.tr("Created: ")
-
-        defaultTitle = self.tr("New Conversation")
         for history in sorted_histories:
-            item = QListWidgetItem(history.title or defaultTitle)
-            item.setData(Qt.UserRole, history.historyId)
-
-            item.setToolTip(
-                f"{modelStr}{history.modelKey}\n{createdStr}{history.timestamp[:19]}")
+            item = self._makeItem(history)
             self._historyList.addItem(item)
+
+    def currentHistory(self) -> AiChatHistory:
+        """Get the currently selected history item"""
+        currentItem = self._historyList.currentItem()
+        if currentItem:
+            return currentItem.data(Qt.UserRole)
+        return None
 
     def updateTitle(self, historyId: str, newTitle: str):
         """Update the title of a history item"""
         for index in range(self._historyList.count()):
             item = self._historyList.item(index)
-            if item.data(Qt.UserRole) == historyId:
+            chatHistory: AiChatHistory = item.data(Qt.UserRole)
+            if chatHistory.historyId == historyId:
                 item.setText(newTitle)
-                break
+                chatHistory.title = newTitle
+                item.setData(Qt.UserRole, chatHistory)
+                return chatHistory
+        return None
+
+    def updateCurrentHistory(self, model: AiModelBase):
+        """Update the current selected history item"""
+        currentItem = self._historyList.currentItem()
+        if not currentItem:
+            return None
+
+        messages = []
+        for message in model.history:
+            messages.append({
+                'role': message.role,
+                'content': message.message
+            })
+
+        chatHistory: AiChatHistory = currentItem.data(Qt.UserRole)
+        chatHistory.messages = messages
+        chatHistory.modelKey = AiModelFactory.modelKey(model)
+        chatHistory.modelId = model.modelId or model.name
+        chatHistory.timestamp = datetime.now().isoformat()
+        currentItem.setData(Qt.UserRole, chatHistory)
+        return chatHistory
 
     def setCurrentHistory(self, historyId: str):
         """Set the current selected history by ID"""
         for index in range(self._historyList.count()):
             item = self._historyList.item(index)
-            if item.data(Qt.UserRole) == historyId:
+            chatHistory: AiChatHistory = item.data(Qt.UserRole)
+            if chatHistory.historyId == historyId:
                 self._historyList.setCurrentItem(item)
                 break
+
+    def insertHistoryAtTop(self, history: AiChatHistory, select: bool = True):
+        item = self._makeItem(history)
+        self._historyList.insertItem(0, item)
+        if select:
+            self._historyList.setCurrentItem(item)
+
+    def _makeItem(self, history: AiChatHistory) -> QListWidgetItem:
+        item = QListWidgetItem(history.title or self.tr("New Conversation"))
+        item.setData(Qt.UserRole, history)
+        modelStr = self.tr("Model: ")
+        createdStr = self.tr("Created: ")
+        item.setToolTip(
+            f"{modelStr}{history.modelKey}\n{createdStr}{history.timestamp[:19]}")
+        return item
