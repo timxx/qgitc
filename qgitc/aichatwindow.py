@@ -522,10 +522,6 @@ class AiChatWidget(QWidget):
         # Clear current chat
         self._clearCurrentChat()
 
-        # Save to settings
-        settings = ApplicationBase.instance().settings()
-        settings.setCurrentChatHistoryId(history.historyId)
-
     def _onHistorySelectionChanged(self, chatHistory: AiChatHistory):
         """Handle history selection change"""
         self._loadChatHistory(chatHistory)
@@ -541,10 +537,6 @@ class AiChatWidget(QWidget):
             return
 
         self._loadMessagesFromHistory(chatHistory.messages)
-
-        # Update settings
-        settings = ApplicationBase.instance().settings()
-        settings.setCurrentChatHistoryId(chatHistory.historyId)
 
     def _switchToModel(self, modelKey: str, modelId: str):
         """Switch to the specified model"""

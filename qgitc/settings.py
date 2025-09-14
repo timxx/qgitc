@@ -681,16 +681,3 @@ class Settings(QSettings):
         self.remove(historyId)
         self.endGroup()
         self.endGroup()
-
-    def currentChatHistoryId(self):
-        """Get the currently selected chat history ID"""
-        self.beginGroup("AiChat")
-        value = self.value("currentHistoryId", "")
-        self.endGroup()
-        return value
-
-    def setCurrentChatHistoryId(self, historyId: str):
-        """Set the currently selected chat history ID"""
-        self.beginGroup("AiChat")
-        self.setValue("currentHistoryId", historyId)
-        self.endGroup()
