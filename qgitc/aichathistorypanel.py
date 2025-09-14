@@ -110,7 +110,29 @@ class AiChatHistoryPanel(QWidget):
         chatHistory.modelId = model.modelId or model.name
         chatHistory.timestamp = datetime.now().isoformat()
         currentItem.setData(Qt.UserRole, chatHistory)
+
+        self._moveItemToTop(currentItem)
+
         return chatHistory
+
+    def _moveItemToTop(self, item: QListWidgetItem):
+        row = self._historyList.row(item)
+        if row == 0:
+            return
+
+        newRow = 0
+        if self._historyList.count() > 1:
+            firstHistory: AiChatHistory = self._historyList.item(0).data(Qt.UserRole)
+            # keep new conversation at top
+            if not firstHistory.messages and firstHistory.title in ['', self.tr("New Conversation")]:
+                newRow = 1
+
+        if newRow != row:
+            self.blockSignals(True)
+            item = self._historyList.takeItem(row)
+            self._historyList.insertItem(newRow, item)
+            self._historyList.setCurrentItem(item)
+            self.blockSignals(False)
 
     def setCurrentHistory(self, historyId: str):
         """Set the current selected history by ID"""
