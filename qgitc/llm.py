@@ -2,7 +2,6 @@
 
 import json
 from enum import Enum
-from threading import Lock
 from typing import Dict, List, Tuple
 
 from PySide6.QtCore import QObject, Signal
@@ -16,6 +15,17 @@ class AiRole(Enum):
     User = 0
     Assistant = 1
     System = 2
+
+    @staticmethod
+    def fromString(role: str) -> 'AiRole':
+        role = role.lower()
+        if role == "user":
+            return AiRole.User
+        if role == "assistant":
+            return AiRole.Assistant
+        if role == "system":
+            return AiRole.System
+        return AiRole.Assistant
 
 
 class AiChatMessage:

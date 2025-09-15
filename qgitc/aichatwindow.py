@@ -136,6 +136,7 @@ class AiChatWidget(QWidget):
         self._historyPanel.requestNewChat.connect(self._onNewChatRequested)
         self._historyPanel.historySelectionChanged.connect(
             self._onHistorySelectionChanged)
+        self._historyPanel.historyRemoved.connect(self._onHistoryRemoved)
         self.splitter.addWidget(self._historyPanel)
 
     def _setupChatPanel(self):
@@ -530,6 +531,17 @@ class AiChatWidget(QWidget):
         """Handle history selection change"""
         self._loadChatHistory(chatHistory)
 
+    def _onHistoryRemoved(self, historyId: str):
+        """Handle history removal"""
+        # Remove from persistent storage
+        settings = ApplicationBase.instance().settings()
+        settings.removeChatHistory(historyId)
+        
+        # If the removed history was currently selected, create a new conversation
+        currentHistory = self._historyPanel.currentHistory()
+        if not currentHistory or currentHistory.historyId == historyId:
+            self._createNewConversation()
+
     def _loadChatHistory(self, chatHistory: AiChatHistory):
         """Load a specific chat history"""
         # Switch to the correct model if different
@@ -571,7 +583,7 @@ class AiChatWidget(QWidget):
         model.clear()
 
         for msg in messages:
-            role = AiRole(msg.get('role', AiRole.User))
+            role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
 
             if content:

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 from datetime import datetime
 from typing import List
 
@@ -11,10 +12,13 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListView,
+    QMenu,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -148,6 +152,7 @@ class AiChatHistoryPanel(QWidget):
 
     requestNewChat = Signal()
     historySelectionChanged = Signal(AiChatHistory)
+    historyRemoved = Signal(str)  # historyId
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -183,6 +188,9 @@ class AiChatHistoryPanel(QWidget):
         self._historyList = QListView(self)
         self._historyList.setModel(self._filterModel)
         self._historyList.setMinimumWidth(150)
+        self._historyList.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._historyList.customContextMenuRequested.connect(
+            self._showContextMenu)
         self._historyList.selectionModel().currentChanged.connect(
             self._onHistorySelectionChanged)
         mainLayout.addWidget(self._historyList)
@@ -249,7 +257,7 @@ class AiChatHistoryPanel(QWidget):
         messages = []
         for message in model.history:
             messages.append({
-                'role': message.role,
+                'role': message.role.name.lower(),
                 'content': message.message
             })
 
@@ -290,3 +298,76 @@ class AiChatHistoryPanel(QWidget):
             filterIndex = self._filterModel.mapFromSource(sourceIndex)
             if filterIndex.isValid():
                 self._historyList.setCurrentIndex(filterIndex)
+
+    def _showContextMenu(self, position):
+        """Show context menu for history list"""
+        index = self._historyList.indexAt(position)
+        if not index.isValid():
+            return
+
+        chatHistory = self._filterModel.data(index, Qt.UserRole)
+        if not chatHistory:
+            return
+
+        menu = QMenu(self)
+        exportAction = menu.addAction(self.tr("Export Conversation"))
+        exportAction.triggered.connect(
+            lambda: self._exportHistory(chatHistory))
+
+        menu.addSeparator()
+
+        removeAction = menu.addAction(self.tr("Remove Conversation"))
+        removeAction.triggered.connect(
+            lambda: self._removeHistory(index, chatHistory))
+
+        menu.exec(self._historyList.mapToGlobal(position))
+
+    def _exportHistory(self, chatHistory: AiChatHistory):
+        """Export a chat history to JSON file"""
+        try:
+            # Create a safe filename from the title
+            safe_title = "".join(
+                c for c in chatHistory.title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            if not safe_title:
+                safe_title = "conversation"
+
+            suggested_filename = f"{safe_title}_{chatHistory.timestamp[:10]}.json"
+
+            filename, _ = QFileDialog.getSaveFileName(
+                self,
+                self.tr("Export Conversation"),
+                suggested_filename,
+                self.tr("JSON Files (*.json);;All Files (*)")
+            )
+
+            if filename:
+                data = chatHistory.toDict()
+                del data['historyId']
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            QMessageBox.warning(
+                self,
+                self.tr("Export Error"),
+                self.tr("Failed to export conversation:\n{}").format(str(e))
+            )
+
+    def _removeHistory(self, filterIndex: QModelIndex, chatHistory: AiChatHistory):
+        """Remove a chat history item"""
+        reply = QMessageBox.question(
+            self,
+            self.tr("Remove Conversation"),
+            self.tr("Are you sure you want to remove the conversation '{}'?\n\nThis action cannot be undone.").format(
+                chatHistory.title or self.tr("Untitled")),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            # Map filter index to source index
+            sourceIndex = self._filterModel.mapToSource(filterIndex)
+            if sourceIndex.isValid():
+                # Remove from model
+                self._historyModel.removeHistory(sourceIndex.row())
+                # Emit signal for external handling (e.g., delete from storage)
+                self.historyRemoved.emit(chatHistory.historyId)
