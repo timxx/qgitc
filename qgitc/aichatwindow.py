@@ -70,6 +70,7 @@ class ChatEdit(QWidget):
         self.edit.textChanged.connect(self.textChanged)
 
         self._adjustHeight()
+        self.edit.installEventFilter(self)
 
     def toPlainText(self):
         return self.edit.toPlainText()
@@ -100,12 +101,15 @@ class ChatEdit(QWidget):
             self.edit.setMinimumHeight(maxHeight + margin * 2)
             self.setFixedHeight(maxHeight + margin * 2 + verticalMarin)
 
-    def keyPressEvent(self, event):
-        if event.modifiers() == Qt.ControlModifier and event.key() in [
-                Qt.Key_Enter, Qt.Key_Return]:
-            self.enterPressed.emit()
-
-        return super().keyPressEvent(event)
+    def eventFilter(self, watched, event):
+        if watched == self.edit and event.type() == QEvent.KeyPress:
+            if event.key() in [Qt.Key_Enter, Qt.Key_Return]:
+                if event.modifiers() == Qt.NoModifier:
+                    self.enterPressed.emit()
+                    return True
+                elif event.modifiers() == Qt.ShiftModifier:
+                    return False
+        return super().eventFilter(watched, event)
 
 
 class AiChatWidget(QWidget):
