@@ -30,84 +30,160 @@
     </message>
 </context>
 <context>
+    <name>AiChatHistoryModel</name>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="49"/>
+        <location filename="../../aichathistorypanel.py" line="104"/>
+        <source>New Conversation</source>
+        <translation>新对话</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="53"/>
+        <source>Model: </source>
+        <translation>模型：</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="54"/>
+        <source>Created: </source>
+        <translation>创建日期：</translation>
+    </message>
+</context>
+<context>
+    <name>AiChatHistoryPanel</name>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="168"/>
+        <source>New Conversation</source>
+        <translation>新对话</translation>
+    </message>
+
+    <message>
+        <location filename="../../aichathistorypanel.py" line="175"/>
+        <source>Start a new conversation ({})</source>
+        <translation>开始新对话（{}）</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="179"/>
+        <source>Search conversations...</source>
+        <translation>搜索对话…</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="314"/>
+        <location filename="../../aichathistorypanel.py" line="339"/>
+        <source>Export Conversation</source>
+        <translation>导出对话</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="320"/>
+        <location filename="../../aichathistorypanel.py" line="360"/>
+        <source>Remove Conversation</source>
+        <translation>移除对话</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="342"/>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="352"/>
+        <source>Export Error</source>
+        <translation>导出错误</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="353"/>
+        <source>Failed to export conversation:
+{}</source>
+        <translation>导出对话失败：
+{}</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="361"/>
+        <source>Are you sure you want to remove the conversation &apos;{}&apos;?
+
+This action cannot be undone.</source>
+        <translation>您确定要移除对话“{}”吗？
+
+此操作无法撤销。</translation>
+    </message>
+    <message>
+        <location filename="../../aichathistorypanel.py" line="362"/>
+        <source>Untitled</source>
+        <translation>未命名</translation>
+    </message>
+</context>
+<context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwindow.py" line="125"/>
+        <location filename="../../aichatwindow.py" line="159"/>
         <source>Enter the query prompt here</source>
         <translation>请在此输入请求提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="134"/>
+        <location filename="../../aichatwindow.py" line="168"/>
         <source>System</source>
         <translation>系统</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="136"/>
+        <location filename="../../aichatwindow.py" line="170"/>
         <source>User</source>
         <translation>用户</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="146"/>
+        <location filename="../../aichatwindow.py" line="180"/>
         <source>Max Tokens</source>
         <translation>最大Token数</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="151"/>
+        <location filename="../../aichatwindow.py" line="185"/>
         <source>Max tokens to generate</source>
         <translation>生成的最大Token数量</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="155"/>
+        <location filename="../../aichatwindow.py" line="189"/>
         <source>Temperature</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="242"/>
+        <location filename="../../aichatwindow.py" line="272"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="243"/>
+        <location filename="../../aichatwindow.py" line="273"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="244"/>
+        <location filename="../../aichatwindow.py" line="274"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="245"/>
+        <location filename="../../aichatwindow.py" line="275"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="246"/>
+        <location filename="../../aichatwindow.py" line="276"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="247"/>
+        <location filename="../../aichatwindow.py" line="277"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="210"/>
+        <location filename="../../aichatwindow.py" line="241"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="121"/>
+        <location filename="../../aichatwindow.py" line="155"/>
         <source>Enter the system prompt here</source>
         <translation>请在此输入系统提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="212"/>
-        <source>Clear</source>
-        <translation>清除</translation>
-    </message>
-    <message>
-        <location filename="../../aichatwindow.py" line="303"/>
+        <location filename="../../aichatwindow.py" line="348"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -115,7 +191,7 @@
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="457"/>
+        <location filename="../../aichatwindow.py" line="622"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -145,10 +221,6 @@
 </context>
 <context>
     <name>AiCommitMessage</name>
-    <message>
-        <source>&lt;AI service unavailable&gt;</source>
-        <translation type="vanished">&lt;AI服务不可用&gt;</translation>
-    </message>
     <message>
         <location filename="../../aicommitmessage.py" line="205"/>
         <source>No changes found, please make sure you have staged your changes.</source>
@@ -498,43 +570,43 @@
         <translation>提交已中断</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1367"/>
+        <location filename="../../commitwindow.py" line="1379"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1432"/>
+        <location filename="../../commitwindow.py" line="1444"/>
         <source>AI Message Generation Error</source>
         <translation>AI 消息生成错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1507"/>
+        <location filename="../../commitwindow.py" line="1519"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1509"/>
-        <location filename="../../commitwindow.py" line="1516"/>
+        <location filename="../../commitwindow.py" line="1521"/>
+        <location filename="../../commitwindow.py" line="1528"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1519"/>
+        <location filename="../../commitwindow.py" line="1531"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1522"/>
+        <location filename="../../commitwindow.py" line="1534"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1564"/>
+        <location filename="../../commitwindow.py" line="1576"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1722"/>
+        <location filename="../../commitwindow.py" line="1734"/>
         <source>Local time is not synchronized with the network time</source>
         <translation>本地时间与标准时间不同步</translation>
     </message>
@@ -731,18 +803,6 @@
 </context>
 <context>
     <name>FindWidget</name>
-    <message>
-        <source>Use Regular Expression</source>
-        <translation type="vanished">使用正则表达式</translation>
-    </message>
-    <message>
-        <source>Match Whole Word</source>
-        <translation type="vanished">全字匹配</translation>
-    </message>
-    <message>
-        <source>Match Case</source>
-        <translation type="vanished">匹配大小写</translation>
-    </message>
     <message>
         <location filename="../../findwidget.py" line="187"/>
         <location filename="../../findwidget.py" line="209"/>
@@ -1341,42 +1401,42 @@ Settings → Commit → Detect Local Changes</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="285"/>
+        <location filename="../../mainwindow.py" line="286"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="634"/>
+        <location filename="../../mainwindow.py" line="637"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="635"/>
+        <location filename="../../mainwindow.py" line="638"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="783"/>
+        <location filename="../../mainwindow.py" line="786"/>
         <source>Processing AI query...</source>
         <translation>正在处理 AI 查询…</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="827"/>
+        <location filename="../../mainwindow.py" line="832"/>
         <source>Applied AI-generated filter: {0}</source>
         <translation>已应用 AI 生成的过滤器：{0}</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="830"/>
+        <location filename="../../mainwindow.py" line="835"/>
         <source>AI could not generate valid filter options</source>
         <translation>AI 无法生成有效的过滤选项</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="835"/>
+        <location filename="../../mainwindow.py" line="840"/>
         <source>AI service is currently unavailable. Please check your settings or try again later.</source>
         <translation>AI 服务当前不可用。请检查您的设置或稍后再试。</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="623"/>
+        <location filename="../../mainwindow.py" line="626"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
@@ -1394,10 +1454,6 @@ Settings → Commit → Detect Local Changes</source>
         <location filename="../../mainwindow.ui" line="54"/>
         <source>See the GIT-LOG options for more information.</source>
         <translation>查看GIT-LOG的选项以获取更多信息。</translation>
-    </message>
-    <message>
-        <source>Type the log options here and press Enter to filter</source>
-        <translation type="vanished">在此输入log选项，按回车来过滤</translation>
     </message>
     <message>
         <location filename="../../mainwindow.ui" line="64"/>

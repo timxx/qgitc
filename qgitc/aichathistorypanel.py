@@ -172,7 +172,7 @@ class AiChatHistoryPanel(QWidget):
         self._btnNewChat.setShortcut(QKeySequence.New)
         shortcut = self._btnNewChat.shortcut().toString(QKeySequence.NativeText)
         self._btnNewChat.setToolTip(
-            self.tr(f"Start a new conversation ({shortcut})"))
+            self.tr("Start a new conversation ({})").format(shortcut))
 
         # Search bar
         self._searchEdit = QLineEdit(self)
