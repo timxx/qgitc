@@ -11,10 +11,9 @@ from PySide6.QtCore import (
     Qt,
     Signal,
 )
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QFileDialog,
-    QHBoxLayout,
-    QLabel,
     QLineEdit,
     QListView,
     QMenu,
@@ -25,6 +24,8 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.aichathistory import AiChatHistory
+from qgitc.colorediconbutton import ColoredIconButton
+from qgitc.common import dataDirPath
 from qgitc.llm import AiModelBase, AiModelFactory
 
 
@@ -163,15 +164,10 @@ class AiChatHistoryPanel(QWidget):
         mainLayout.setContentsMargins(0, 0, 0, 0)
         mainLayout.setSpacing(4)
 
-        # History header with new chat button
-        headerLayout = QHBoxLayout()
-
-        headerLayout.addWidget(QLabel(self.tr("Chat History")))
-        self._btnNewChat = QPushButton(self.tr("New Conversation"), self)
+        icon = QIcon(dataDirPath() + "/icons/chat-add-on.svg")
+        self._btnNewChat = ColoredIconButton(icon, self.tr("New Conversation"), self)
         self._btnNewChat.clicked.connect(self.requestNewChat)
-        headerLayout.addWidget(self._btnNewChat)
-
-        mainLayout.addLayout(headerLayout)
+        mainLayout.addWidget(self._btnNewChat)
 
         # Search bar
         self._searchEdit = QLineEdit(self)
