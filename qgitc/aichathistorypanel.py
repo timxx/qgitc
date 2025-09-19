@@ -11,14 +11,13 @@ from PySide6.QtCore import (
     Qt,
     Signal,
 )
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QFileDialog,
     QLineEdit,
     QListView,
     QMenu,
     QMessageBox,
-    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -165,9 +164,15 @@ class AiChatHistoryPanel(QWidget):
         mainLayout.setSpacing(4)
 
         icon = QIcon(dataDirPath() + "/icons/chat-add-on.svg")
-        self._btnNewChat = ColoredIconButton(icon, self.tr("New Conversation"), self)
+        self._btnNewChat = ColoredIconButton(
+            icon, self.tr("New Conversation"), self)
         self._btnNewChat.clicked.connect(self.requestNewChat)
         mainLayout.addWidget(self._btnNewChat)
+
+        self._btnNewChat.setShortcut(QKeySequence.New)
+        shortcut = self._btnNewChat.shortcut().toString(QKeySequence.NativeText)
+        self._btnNewChat.setToolTip(
+            self.tr(f"Start a new conversation ({shortcut})"))
 
         # Search bar
         self._searchEdit = QLineEdit(self)
