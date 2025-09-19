@@ -240,8 +240,6 @@ class AiChatWidget(QWidget):
 
         self.btnSend = QPushButton(self.tr("Send"), self)
         hlayout.addWidget(self.btnSend)
-        self.btnClear = QPushButton(self.tr("Clear"), self)
-        hlayout.addWidget(self.btnClear)
 
         hlayout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding))
 
@@ -252,7 +250,6 @@ class AiChatWidget(QWidget):
         self.statusBar.addPermanentWidget(self.lbTokens)
 
         self.btnSend.clicked.connect(self._onButtonSend)
-        self.btnClear.clicked.connect(self._onButtonClear)
 
         self.cbBots.currentIndexChanged.connect(
             self._onModelChanged)
@@ -262,8 +259,7 @@ class AiChatWidget(QWidget):
         self._onModelChanged(self.cbBots.currentIndex())
 
         QWidget.setTabOrder(self.usrInput, self.btnSend)
-        QWidget.setTabOrder(self.btnSend, self.btnClear)
-        QWidget.setTabOrder(self.btnClear, self.usrInput)
+        QWidget.setTabOrder(self.btnSend, self.usrInput)
 
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
@@ -348,17 +344,9 @@ class AiChatWidget(QWidget):
         model.queryAsync(params)
 
         self.btnSend.setEnabled(False)
-        self.btnClear.setEnabled(False)
 
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
-
-    def _onButtonClear(self, clicked):
-        # Clear current chat
-        self._clearCurrentChat()
-
-        # Create a new conversation
-        self._createNewConversation()
 
     def _onMessageReady(self, response: AiResponse):
         if response.message is None:
@@ -402,7 +390,6 @@ class AiChatWidget(QWidget):
 
         enabled = model is None or not model.isRunning()
         self.btnSend.setEnabled(enabled)
-        self.btnClear.setEnabled(enabled)
         if clear:
             self.statusBar.clearMessage()
         self.usrInput.setFocus()
@@ -419,7 +406,6 @@ class AiChatWidget(QWidget):
         enabled = model is None or not model.isRunning()
 
         self.btnSend.setEnabled(enabled)
-        self.btnClear.setEnabled(enabled)
         self.usrInput.setFocus()
 
         self._initChatMode(model)
