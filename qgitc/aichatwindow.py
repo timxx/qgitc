@@ -348,6 +348,8 @@ class AiChatWidget(QWidget):
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
 
+        self._updateChatHistoryModel(model)
+
     def _onMessageReady(self, response: AiResponse):
         if response.message is None:
             return
@@ -482,6 +484,10 @@ class AiChatWidget(QWidget):
         model: AiModelBase = self.sender()
         if model == self.currentChatModel():
             self._updateModelNames(model)
+            self._updateChatHistoryModel(model)
+
+    def _updateChatHistoryModel(self, model: AiModelBase):
+        self._historyPanel.updateCurrentModelId(model.modelId)
 
     def _loadChatHistories(self):
         """Load chat histories from settings"""

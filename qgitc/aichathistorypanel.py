@@ -51,7 +51,7 @@ class AiChatHistoryModel(QAbstractListModel):
         elif role == Qt.ToolTipRole:
             modelStr = self.tr("Model: ")
             createdStr = self.tr("Created: ")
-            return f"{modelStr}{history.modelKey}\n{createdStr}{history.timestamp[:19]}"
+            return f"{modelStr}{history.modelId}\n{createdStr}{history.timestamp[:19]}"
 
         return None
 
@@ -242,6 +242,24 @@ class AiChatHistoryPanel(QWidget):
                 self._historyModel.setData(
                     sourceIndex, chatHistory, Qt.UserRole)
                 return chatHistory
+        return None
+
+    def updateCurrentModelId(self, modelId: str):
+        current = self._historyList.currentIndex()
+        if not current.isValid():
+            return None
+
+        sourceIndex = self._filterModel.mapToSource(current)
+        if not sourceIndex.isValid():
+            return None
+
+        chatHistory: AiChatHistory = self._historyModel.data(
+            sourceIndex, Qt.UserRole)
+        if chatHistory and chatHistory.modelId != modelId:
+            chatHistory.modelId = modelId
+            self._historyModel.setData(sourceIndex, chatHistory, Qt.UserRole)
+            return chatHistory
+
         return None
 
     def updateCurrentHistory(self, model: AiModelBase):
