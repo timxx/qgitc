@@ -339,6 +339,7 @@ class AiChatWidget(QWidget):
         model.queryAsync(params)
 
         self.btnSend.setEnabled(False)
+        self._historyPanel.setEnabled(False)
 
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
@@ -394,6 +395,7 @@ class AiChatWidget(QWidget):
 
         enabled = model is None or not model.isRunning()
         self.btnSend.setEnabled(enabled)
+        self._historyPanel.setEnabled(enabled)
         if clear:
             self.statusBar.clearMessage()
         self.usrInput.setFocus()
