@@ -87,6 +87,11 @@ def _setup_argument(prog):
         help="Show chat window.")
     chat_parser.set_defaults(func=_do_chat)
 
+    branch_compare_parser = subparsers.add_parser(
+        "branch-compare",
+        help="Compare changes between branches across repositories.")
+    branch_compare_parser.set_defaults(func=_do_branch_compare)
+
     setup_shell_args(subparsers)
 
     return parser.parse_args()
@@ -272,6 +277,20 @@ def _do_chat(args):
     app = _init_gui(args.cmd)
 
     window = app.getWindow(WindowType.AiAssistant)
+    _move_center(window)
+
+    if window.restoreState():
+        window.show()
+    else:
+        window.showMaximized()
+
+    return _do_exec(app)
+
+
+def _do_branch_compare(args):
+    app = _init_gui(args.cmd)
+
+    window = app.getWindow(WindowType.BranchCompareWindow)
     _move_center(window)
 
     if window.restoreState():
