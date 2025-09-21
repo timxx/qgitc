@@ -33,6 +33,16 @@
             ]
         },
         {
+            "name": "Branch Compare",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "console": "integratedTerminal",
+            "args": [
+                "bcompare"
+            ]
+        },
+        {
             "name": "Chat",
             "type": "debugpy",
             "request": "launch",

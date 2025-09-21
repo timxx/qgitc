@@ -8,3 +8,4 @@ class WindowType(Enum):
     BlameWindow = auto()
     AiAssistant = auto()
     CommitWindow = auto()
+    BranchCompareWindow = auto()

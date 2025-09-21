@@ -24,6 +24,7 @@ from PySide6.QtWidgets import QMessageBox
 from qgitc.aichatwindow import AiChatWindow
 from qgitc.applicationbase import ApplicationBase
 from qgitc.blamewindow import BlameWindow
+from qgitc.branchcomparewindow import BranchCompareWindow
 from qgitc.colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
 from qgitc.commitwindow import CommitWindow
 from qgitc.common import dataDirPath
@@ -85,6 +86,7 @@ class Application(ApplicationBase):
         self._blameWindow = None
         self._aiChatWindow = None
         self._commitWindow = None
+        self._branchCompareWindow = None
 
         gitBin = self._settings.gitBinPath() or shutil.which("git")
         if not gitBin or not os.path.exists(gitBin):
@@ -161,6 +163,12 @@ class Application(ApplicationBase):
                 self._commitWindow.destroyed.connect(
                     self._onCommitWindowDestroyed)
             window = self._commitWindow
+        elif type == WindowType.BranchCompareWindow:
+            if not self._branchCompareWindow and ensureCreated:
+                self._branchCompareWindow = BranchCompareWindow()
+                self._branchCompareWindow.destroyed.connect(
+                    self._onBranchCompareWindowDestroyed)
+            window = self._branchCompareWindow
 
         return window
 
@@ -261,6 +269,9 @@ class Application(ApplicationBase):
 
     def _onCommitWindowDestroyed(self, obj):
         self._commitWindow = None
+
+    def _onBranchCompareWindowDestroyed(self, obj):
+        self._branchCompareWindow = None
 
     def _onNewVersionAvailable(self, version):
         ignoredVersion = self.settings().ignoredVersion()
