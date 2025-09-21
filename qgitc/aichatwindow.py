@@ -323,7 +323,7 @@ class AiChatWidget(QWidget):
             return
 
         model.requestInterruption()
-        self.statusBar.showMessage(self.tr("Stopping..."))
+        self.statusBar.clearMessage()
 
         chatHistory = self._historyPanel.updateCurrentHistory(model)
         if chatHistory:
@@ -411,6 +411,7 @@ class AiChatWidget(QWidget):
         self._historyPanel.setEnabled(True)
         self.cbBots.setEnabled(True)
         self.usrInput.setFocus()
+        self.statusBar.clearMessage()
 
     def _onServiceUnavailable(self):
         model: AiModelBase = self.sender()

@@ -55,7 +55,6 @@
         <source>New Conversation</source>
         <translation>新对话</translation>
     </message>
-
     <message>
         <location filename="../../aichathistorypanel.py" line="175"/>
         <source>Start a new conversation ({})</source>
@@ -67,36 +66,36 @@
         <translation>搜索对话…</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="314"/>
-        <location filename="../../aichathistorypanel.py" line="339"/>
+        <location filename="../../aichathistorypanel.py" line="332"/>
+        <location filename="../../aichathistorypanel.py" line="357"/>
         <source>Export Conversation</source>
         <translation>导出对话</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="320"/>
-        <location filename="../../aichathistorypanel.py" line="360"/>
+        <location filename="../../aichathistorypanel.py" line="338"/>
+        <location filename="../../aichathistorypanel.py" line="378"/>
         <source>Remove Conversation</source>
         <translation>移除对话</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="342"/>
+        <location filename="../../aichathistorypanel.py" line="360"/>
         <source>JSON Files (*.json);;All Files (*)</source>
         <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="352"/>
+        <location filename="../../aichathistorypanel.py" line="370"/>
         <source>Export Error</source>
         <translation>导出错误</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="353"/>
+        <location filename="../../aichathistorypanel.py" line="371"/>
         <source>Failed to export conversation:
 {}</source>
         <translation>导出对话失败：
 {}</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="361"/>
+        <location filename="../../aichathistorypanel.py" line="379"/>
         <source>Are you sure you want to remove the conversation &apos;{}&apos;?
 
 This action cannot be undone.</source>
@@ -105,7 +104,7 @@ This action cannot be undone.</source>
 此操作无法撤销。</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="362"/>
+        <location filename="../../aichathistorypanel.py" line="380"/>
         <source>Untitled</source>
         <translation>未命名</translation>
     </message>
@@ -143,32 +142,37 @@ This action cannot be undone.</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="272"/>
+        <location filename="../../aichatwindow.py" line="242"/>
+        <source>Stop</source>
+        <translation>停止</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="276"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="273"/>
+        <location filename="../../aichatwindow.py" line="277"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="274"/>
+        <location filename="../../aichatwindow.py" line="278"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="275"/>
+        <location filename="../../aichatwindow.py" line="279"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="276"/>
+        <location filename="../../aichatwindow.py" line="280"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="277"/>
+        <location filename="../../aichatwindow.py" line="281"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
@@ -183,7 +187,7 @@ This action cannot be undone.</source>
         <translation>请在此输入系统提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="348"/>
+        <location filename="../../aichatwindow.py" line="364"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -191,7 +195,7 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="622"/>
+        <location filename="../../aichatwindow.py" line="663"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
