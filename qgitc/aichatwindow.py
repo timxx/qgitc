@@ -239,7 +239,10 @@ class AiChatWidget(QWidget):
         self.cbLang.setCurrentIndex(1)
 
         self.btnSend = QPushButton(self.tr("Send"), self)
+        self.btnStop = QPushButton(self.tr("Stop"), self)
+        self.btnStop.setVisible(False)
         hlayout.addWidget(self.btnSend)
+        hlayout.addWidget(self.btnStop)
 
         hlayout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding))
 
@@ -250,6 +253,7 @@ class AiChatWidget(QWidget):
         self.statusBar.addPermanentWidget(self.lbTokens)
 
         self.btnSend.clicked.connect(self._onButtonSend)
+        self.btnStop.clicked.connect(self._onButtonStop)
 
         self.cbBots.currentIndexChanged.connect(
             self._onModelChanged)
@@ -313,6 +317,20 @@ class AiChatWidget(QWidget):
         # Clear input after sending
         self.usrInput.clear()
 
+    def _onButtonStop(self):
+        model = self.currentChatModel()
+        if not model.isRunning():
+            return
+
+        model.requestInterruption()
+        self.statusBar.showMessage(self.tr("Stopping..."))
+
+        chatHistory = self._historyPanel.updateCurrentHistory(model)
+        if chatHistory:
+            settings = ApplicationBase.instance().settings()
+            settings.saveChatHistory(
+                chatHistory.historyId, chatHistory.toDict())
+
     def _doRequest(self, prompt: str, chatMode: AiChatMode, language="", sysPrompt: str = None):
         params = AiParameters()
         params.prompt = prompt
@@ -338,7 +356,8 @@ class AiChatWidget(QWidget):
 
         model.queryAsync(params)
 
-        self.btnSend.setEnabled(False)
+        self.btnSend.setVisible(False)
+        self.btnStop.setVisible(True)
         self._historyPanel.setEnabled(False)
         self.cbBots.setEnabled(False)
 
@@ -379,13 +398,6 @@ class AiChatWidget(QWidget):
                 f"Totoal tokens {response.total_tokens}")
 
     def _onResponseFinish(self):
-        clear = True
-        for i in range(self.cbBots.count()):
-            model: AiModelBase = self.cbBots.itemData(i)
-            if model.isRunning():
-                clear = False
-                break
-
         model = self.currentChatModel()
         chatHistory = self._historyPanel.updateCurrentHistory(model)
         if chatHistory:
@@ -394,12 +406,10 @@ class AiChatWidget(QWidget):
             settings.saveChatHistory(
                 chatHistory.historyId, chatHistory.toDict())
 
-        enabled = model is None or not model.isRunning()
-        self.btnSend.setEnabled(enabled)
-        self._historyPanel.setEnabled(enabled)
-        self.cbBots.setEnabled(enabled)
-        if clear:
-            self.statusBar.clearMessage()
+        self.btnSend.setVisible(True)
+        self.btnStop.setVisible(False)
+        self._historyPanel.setEnabled(True)
+        self.cbBots.setEnabled(True)
         self.usrInput.setFocus()
 
     def _onServiceUnavailable(self):
