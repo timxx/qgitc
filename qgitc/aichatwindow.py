@@ -340,6 +340,7 @@ class AiChatWidget(QWidget):
 
         self.btnSend.setEnabled(False)
         self._historyPanel.setEnabled(False)
+        self.cbBots.setEnabled(False)
 
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
@@ -396,6 +397,7 @@ class AiChatWidget(QWidget):
         enabled = model is None or not model.isRunning()
         self.btnSend.setEnabled(enabled)
         self._historyPanel.setEnabled(enabled)
+        self.cbBots.setEnabled(enabled)
         if clear:
             self.statusBar.clearMessage()
         self.usrInput.setFocus()
@@ -409,15 +411,16 @@ class AiChatWidget(QWidget):
 
     def _onModelChanged(self, index: int):
         model = self.currentChatModel()
-        enabled = model is None or not model.isRunning()
-
-        self.btnSend.setEnabled(enabled)
         self.usrInput.setFocus()
 
         self._initChatMode(model)
         self._onChatModeChanged(self.cbChatMode.currentIndex())
 
         self._updateModelNames(model)
+
+        chatHistory = self._historyPanel.currentHistory()
+        if chatHistory:
+            self._loadMessagesFromHistory(chatHistory.messages, False)
 
     def _initChatMode(self, model: AiModelBase):
         modes = model.supportedChatModes()
@@ -581,7 +584,7 @@ class AiChatWidget(QWidget):
                             break
                 break
 
-    def _loadMessagesFromHistory(self, messages: List[Dict]):
+    def _loadMessagesFromHistory(self, messages: List[Dict], addToChatBot = True):
         """Load messages from history into the chat"""
         if not messages:
             return
@@ -598,8 +601,9 @@ class AiChatWidget(QWidget):
 
             if content:
                 model.addHistory(role, content)
-                response = AiResponse(role, content)
-                chatbot.appendResponse(response)
+                if addToChatBot:
+                    response = AiResponse(role, content)
+                    chatbot.appendResponse(response)
 
     def _clearCurrentChat(self):
         """Clear the current chat display and model history"""
