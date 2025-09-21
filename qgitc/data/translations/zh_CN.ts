@@ -1285,109 +1285,124 @@ Settings → Commit → Detect Local Changes</source>
         <translation>编辑(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="225"/>
+        <location filename="../../mainwindow.ui" line="202"/>
+        <source>&amp;Assistant</source>
+        <translation>助手(&amp;A)</translation>
+    </message>
+    <message>
+        <location filename="../../mainwindow.ui" line="233"/>
         <source>&amp;About QGitc</source>
         <translation>关于QGitc(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="233"/>
+        <location filename="../../mainwindow.ui" line="241"/>
         <source>&amp;Preferences...</source>
         <translation>首选项(&amp;P)...</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="238"/>
+        <location filename="../../mainwindow.ui" line="246"/>
         <source>Ignore whitespace changes</source>
         <translation>忽略空白改动</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="246"/>
+        <location filename="../../mainwindow.ui" line="254"/>
         <source>&amp;Visualize whitespace</source>
         <translation>显示空白字符(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="254"/>
+        <location filename="../../mainwindow.ui" line="262"/>
         <source>At &amp;end of line</source>
         <translation>行末(&amp;E)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="262"/>
+        <location filename="../../mainwindow.ui" line="270"/>
         <source>&amp;All</source>
         <translation>全部(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="270"/>
+        <location filename="../../mainwindow.ui" line="278"/>
         <source>&amp;None</source>
         <translation>无(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="278"/>
+        <location filename="../../mainwindow.ui" line="286"/>
         <source>&amp;Copy</source>
         <translation>复制(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="289"/>
+        <location filename="../../mainwindow.ui" line="297"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="300"/>
+        <location filename="../../mainwindow.ui" line="308"/>
         <source>&amp;Find</source>
         <translation>查找(&amp;F)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="311"/>
+        <location filename="../../mainwindow.ui" line="319"/>
         <source>&amp;Compare Mode</source>
         <translation>比较模式(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="356"/>
+        <location filename="../../mainwindow.ui" line="364"/>
         <source>&amp;Reload Repository</source>
         <translation>重新加载仓库(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="359"/>
+        <location filename="../../mainwindow.ui" line="367"/>
         <source>F5</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="367"/>
+        <location filename="../../mainwindow.ui" line="375"/>
         <source>Full Commit &amp;Message</source>
         <translation>完整的记录消息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="372"/>
+        <location filename="../../mainwindow.ui" line="380"/>
         <source>Find &amp;Next</source>
         <translation>查找下一个(&amp;N)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="375"/>
+        <location filename="../../mainwindow.ui" line="383"/>
         <source>F3</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="380"/>
+        <location filename="../../mainwindow.ui" line="388"/>
         <source>Find &amp;Previous</source>
         <translation>查找上一个(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="383"/>
+        <location filename="../../mainwindow.ui" line="391"/>
         <source>Shift+F3</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="388"/>
+        <location filename="../../mainwindow.ui" line="396"/>
         <source>Copy Plain &amp;Text</source>
         <translation>复制纯文本(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="396"/>
+        <location filename="../../mainwindow.ui" line="404"/>
         <source>Com&amp;posite Mode</source>
         <translation>聚合模式(&amp;P)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="401"/>
+        <location filename="../../mainwindow.ui" line="409"/>
         <source>&amp;Commit</source>
         <translation>提交(&amp;C)</translation>
+    </message>
+    <message>
+        <location filename="../../mainwindow.ui" line="414"/>
+        <source>Show AI &amp;Assistant</source>
+        <translation>显示&amp;AI助手</translation>
+    </message>
+    <message>
+        <location filename="../../mainwindow.ui" line="419"/>
+        <source>Code &amp;Review</source>
+        <translation>代码审查(&amp;R)</translation>
     </message>
     <message>
         <location filename="../../mainwindow.py" line="110"/>
@@ -1395,62 +1410,62 @@ Settings → Commit → Detect Local Changes</source>
         <translation>显示AI助手</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="254"/>
+        <location filename="../../mainwindow.py" line="259"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="263"/>
+        <location filename="../../mainwindow.py" line="268"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="286"/>
+        <location filename="../../mainwindow.py" line="291"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="637"/>
+        <location filename="../../mainwindow.py" line="642"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="638"/>
+        <location filename="../../mainwindow.py" line="643"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="786"/>
+        <location filename="../../mainwindow.py" line="791"/>
         <source>Processing AI query...</source>
         <translation>正在处理 AI 查询…</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="832"/>
+        <location filename="../../mainwindow.py" line="837"/>
         <source>Applied AI-generated filter: {0}</source>
         <translation>已应用 AI 生成的过滤器：{0}</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="835"/>
+        <location filename="../../mainwindow.py" line="840"/>
         <source>AI could not generate valid filter options</source>
         <translation>AI 无法生成有效的过滤选项</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="840"/>
+        <location filename="../../mainwindow.py" line="845"/>
         <source>AI service is currently unavailable. Please check your settings or try again later.</source>
         <translation>AI 服务当前不可用。请检查您的设置或稍后再试。</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="626"/>
+        <location filename="../../mainwindow.py" line="631"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="322"/>
+        <location filename="../../mainwindow.ui" line="330"/>
         <source>Show &amp;graph</source>
         <translation>显示分支图(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="327"/>
+        <location filename="../../mainwindow.ui" line="335"/>
         <source>About &amp;Qt</source>
         <translation>关于&amp;Qt</translation>
     </message>
@@ -1475,22 +1490,22 @@ Settings → Commit → Detect Local Changes</source>
         <translation>子仓库：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="281"/>
+        <location filename="../../mainwindow.ui" line="289"/>
         <source>Ctrl+C</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="292"/>
+        <location filename="../../mainwindow.ui" line="300"/>
         <source>Ctrl+A</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="303"/>
+        <location filename="../../mainwindow.ui" line="311"/>
         <source>Ctrl+F</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="214"/>
+        <location filename="../../mainwindow.ui" line="222"/>
         <source>Close &amp;Window</source>
         <translation>关闭窗口(&amp;W)</translation>
     </message>
@@ -1500,7 +1515,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>复制到冲突记录(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="335"/>
+        <location filename="../../mainwindow.ui" line="343"/>
         <source>Ctrl+D</source>
         <translation></translation>
     </message>
@@ -1520,27 +1535,27 @@ Settings → Commit → Detect Local Changes</source>
         <translation>Git(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="332"/>
+        <location filename="../../mainwindow.ui" line="340"/>
         <source>From Current &amp;View</source>
         <translation>当前Log视图(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="340"/>
+        <location filename="../../mainwindow.ui" line="348"/>
         <source>From &amp;A</source>
         <translation>&amp;A分支</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="343"/>
+        <location filename="../../mainwindow.ui" line="351"/>
         <source>Ctrl+1</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="348"/>
+        <location filename="../../mainwindow.ui" line="356"/>
         <source>From &amp;B</source>
         <translation>&amp;B分支</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="351"/>
+        <location filename="../../mainwindow.ui" line="359"/>
         <source>Ctrl+2</source>
         <translation></translation>
     </message>

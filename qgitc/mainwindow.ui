@@ -197,9 +197,17 @@
     </property>
     <addaction name="acCommit"/>
    </widget>
+   <widget class="QMenu" name="menu_Assistant">
+    <property name="title">
+     <string>&amp;Assistant</string>
+    </property>
+    <addaction name="acShowAIAssistant"/>
+    <addaction name="acCodeReview"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_Edit"/>
    <addaction name="menu_Git"/>
+   <addaction name="menu_Assistant"/>
    <addaction name="menu_View"/>
    <addaction name="menu_Merge"/>
    <addaction name="menu_Settings"/>
@@ -399,6 +407,16 @@
   <action name="acCommit">
    <property name="text">
     <string>&amp;Commit</string>
+   </property>
+  </action>
+  <action name="acShowAIAssistant">
+   <property name="text">
+    <string>Show AI &amp;Assistant</string>
+   </property>
+  </action>
+  <action name="acCodeReview">
+   <property name="text">
+    <string>Code &amp;Review</string>
    </property>
   </action>
  </widget>

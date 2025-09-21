@@ -201,6 +201,11 @@ class MainWindow(StateWindow):
         self.ui.acCommit.triggered.connect(
             self.__onCommitTriggered)
 
+        self.ui.acShowAIAssistant.triggered.connect(
+            self._onShowAiAssistant)
+        self.ui.acCodeReview.triggered.connect(
+            self._onCodeReview)
+
     def __setupMenus(self):
         acGroup = QActionGroup(self)
         acGroup.addAction(self.ui.acIgnoreNone)
@@ -873,3 +878,10 @@ class MainWindow(StateWindow):
                 recentRepos.remove(repo)
         settings.setRecentRepositories(recentRepos)
         self.ui.leRepo.setRecentRepositories(recentRepos)
+
+    def _onCodeReview(self):
+        fw = ApplicationBase.instance().focusWidget()
+        if isinstance(fw, LogView):
+            fw.codeReviewOnCurrent()
+        else:
+            self.ui.gitViewA.logView.codeReviewOnCurrent()

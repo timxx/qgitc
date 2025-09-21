@@ -1934,3 +1934,6 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setEditable(self, editable: bool):
         self._editable = editable
+
+    def codeReviewOnCurrent(self):
+        self.__onCodeReview()
