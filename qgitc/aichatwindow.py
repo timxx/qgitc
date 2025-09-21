@@ -531,7 +531,9 @@ class AiChatWidget(QWidget):
 
         # if there is a new conversation from code review, keep it
         if curHistory and not curHistory.messages:
+            self._historyPanel.blockSignals(True)
             self._historyPanel.insertHistoryAtTop(curHistory)
+            self._historyPanel.blockSignals(False)
         else:
             self._createNewConversation()
 
