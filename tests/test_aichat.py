@@ -17,6 +17,9 @@ class TestAiChat(TestBase):
         self.window = self.app.getWindow(WindowType.AiAssistant)
         self.chatWidget: AiChatWidget = self.window.centralWidget()
         self.window.show()
+        QTest.qWaitForWindowExposed(self.window)
+        # wait for creating new conversation
+        self.wait(200, lambda:self.chatWidget._historyPanel.currentHistory() is None)
 
     def tearDown(self):
         self.window.close()
@@ -29,6 +32,8 @@ class TestAiChat(TestBase):
         self.assertEqual(2, self.chatWidget.cbBots.count())
 
     def testLocalLLM(self):
+        self.assertIsNotNone(self.chatWidget._historyPanel.currentHistory())
+
         for i in range(self.chatWidget.cbBots.count()):
             model: AiModelBase = self.chatWidget.cbBots.itemData(i)
             if model.isLocal():
@@ -48,8 +53,7 @@ class TestAiChat(TestBase):
             QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)
             self.assertEqual(2, chatbot.blockCount())
 
-            self.assertFalse(self.chatWidget.btnSend.isEnabled())
-            self.assertFalse(self.chatWidget.btnClear.isEnabled())
+            self.assertFalse(self.chatWidget.btnSend.isVisible())
 
             self.wait(10000, lambda: spy.count() == 0)
             self.wait(50)
@@ -57,14 +61,16 @@ class TestAiChat(TestBase):
             self.assertEqual(4, chatbot.blockCount())
 
             self.wait(100)
-            self.assertTrue(self.chatWidget.btnClear.isEnabled())
-            QTest.mouseClick(self.chatWidget.btnClear, Qt.LeftButton)
+            self.chatWidget._clearCurrentChat()
             self.processEvents()
 
             self.assertEqual(1, chatbot.blockCount())
 
             self.wait(100)
 
+        self.chatWidget._clearCurrentChat()
+
+        self.chatWidget.usrInput.edit.setPlainText("Hello")
         with MockLocalLLM(True) as mock:
             spy = QSignalSpy(model.responseAvailable)
             QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)

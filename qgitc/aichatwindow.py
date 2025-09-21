@@ -364,7 +364,7 @@ class AiChatWidget(QWidget):
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
 
-        if isNewConversation:
+        if isNewConversation and not ApplicationBase.instance().testing:
             message = model.history[0].message
             if model.history[0].role == AiRole.System and len(model.history) > 1:
                 message += "\n" + model.history[1].message
