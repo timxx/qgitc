@@ -297,12 +297,6 @@ class AiChatWidget(QWidget):
             return
 
         model = self.currentChatModel()
-
-        # If this is a new conversation and first message, generate title
-        if not model.history:
-            self._generateChatTitle(
-                self._historyPanel.currentHistory().historyId, prompt)
-
         chatMode: AiChatMode = self.cbChatMode.currentData()
         self._doRequest(
             prompt,
@@ -336,6 +330,7 @@ class AiChatWidget(QWidget):
         self._disableAutoScroll = False
 
         model = self.currentChatModel()
+        isNewConversation = not model.history
         prompt = params.prompt
         if chatMode == AiChatMode.CodeReview:
             prompt = f"```diff\n{prompt}\n```"
@@ -347,6 +342,13 @@ class AiChatWidget(QWidget):
 
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
+
+        if isNewConversation:
+            message = model.history[0].message
+            if model.history[0].role == AiRole.System and len(model.history) > 1:
+                message += "\n" + model.history[1].message
+            self._generateChatTitle(
+                self._historyPanel.currentHistory().historyId, message)
 
         self._updateChatHistoryModel(model)
 
@@ -464,9 +466,17 @@ class AiChatWidget(QWidget):
                 data += b"\n" + subData
 
         diff = data.decode("utf-8", errors="replace")
+
+        # create a new conversation if current one is not empty
+        curHistory = self._historyPanel.currentHistory()
+        if not curHistory or curHistory.messages:
+            self._createNewConversation()
         self._doRequest(diff, AiChatMode.CodeReview)
 
     def codeReviewForDiff(self, diff: str):
+        curHistory = self._historyPanel.currentHistory()
+        if not curHistory or curHistory.messages:
+            self._createNewConversation()
         self._doRequest(diff, AiChatMode.CodeReview)
 
     def _updateModelNames(self, model: AiModelBase):
@@ -500,9 +510,15 @@ class AiChatWidget(QWidget):
                 history = AiChatHistory.fromDict(historyData)
                 chatHistories.append(history)
 
+        curHistory = self._historyPanel.currentHistory()
+
         self._historyPanel.loadHistories(chatHistories)
-        # always create a new conversation at start
-        self._createNewConversation()
+
+        # if there is a new conversation from code review, keep it
+        if curHistory and not curHistory.messages:
+            self._historyPanel.insertHistoryAtTop(curHistory)
+        else:
+            self._createNewConversation()
 
     def _onNewChatRequested(self):
         """Create a new chat conversation"""
