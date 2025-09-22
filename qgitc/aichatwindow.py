@@ -168,6 +168,8 @@ class AiChatWidget(QWidget):
 
         self.usrInput.enterPressed.connect(
             self._onEnterKeyPressed)
+        self.usrInput.textChanged.connect(
+            lambda: self.btnSend.setEnabled(bool(self.usrInput.toPlainText().strip())))
 
         gridLayout = QGridLayout()
         gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -253,6 +255,7 @@ class AiChatWidget(QWidget):
         self.btnStop.setVisible(False)
         hlayout.addWidget(self.btnSend)
         hlayout.addWidget(self.btnStop)
+        self.btnSend.setEnabled(False)
 
         hlayout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding))
 
