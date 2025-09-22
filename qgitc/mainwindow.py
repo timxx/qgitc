@@ -570,11 +570,16 @@ class MainWindow(StateWindow):
         if not gitView:
             return
 
-        # don't knonw if cygwin works or not
-        args = shlex.split(opts, posix=True)
+        args = shlex.split(self._fixSeparator(opts), posix=True)
         if self.ui.cbSelfCommits.isChecked():
             args.insert(0, f"--author={Git.userName()}")
         gitView.filterLog(args)
+
+    @staticmethod
+    def _fixSeparator(opts: str):
+        if os.name == "nt":
+            return opts.replace("\\", "\\\\")
+        return opts
 
     def showMessage(self, msg, timeout=5000):
         self.ui.statusbar.showMessage(msg, timeout)
