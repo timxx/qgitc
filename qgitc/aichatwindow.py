@@ -2,6 +2,7 @@ import queue as queue
 from typing import Dict, List, Union
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -9,7 +10,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
-    QPushButton,
     QScrollBar,
     QSizePolicy,
     QSpacerItem,
@@ -26,7 +26,14 @@ from qgitc.aichathistorypanel import AiChatHistoryPanel
 from qgitc.aichattitlegenerator import AiChatTitleGenerator
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
-from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
+from qgitc.colorediconbutton import ColoredIconButton
+from qgitc.common import (
+    commitRepoDir,
+    dataDirPath,
+    fullRepoDir,
+    logger,
+    toSubmodulePath,
+)
 from qgitc.gitutils import Git
 from qgitc.llm import (
     AiChatMode,
@@ -238,8 +245,11 @@ class AiChatWidget(QWidget):
         self.cbLang.setEnabled(False)
         self.cbLang.setCurrentIndex(1)
 
-        self.btnSend = QPushButton(self.tr("Send"), self)
-        self.btnStop = QPushButton(self.tr("Stop"), self)
+        sendIcon = QIcon(dataDirPath() + "/icons/send.svg")
+        stopIcon = QIcon(dataDirPath() + "/icons/stop.svg")
+
+        self.btnSend = ColoredIconButton(sendIcon, self.tr("Send"), self)
+        self.btnStop = ColoredIconButton(stopIcon, self.tr("Stop"), self)
         self.btnStop.setVisible(False)
         hlayout.addWidget(self.btnSend)
         hlayout.addWidget(self.btnStop)
