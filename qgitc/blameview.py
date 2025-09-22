@@ -22,15 +22,14 @@ from qgitc.blamefetcher import BlameFetcher
 from qgitc.blameline import BlameLine
 from qgitc.blamesourceviewer import BlameSourceViewer
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
-from qgitc.common import Commit, dataDirPath
+from qgitc.commitdetailpanel import CommitDetailPanel
+from qgitc.common import dataDirPath
 from qgitc.events import OpenLinkEvent
 from qgitc.gitutils import Git
 from qgitc.logview import LogView
 from qgitc.namefetcher import NameFetcher
-from qgitc.patchviewer import SummaryTextLine
 from qgitc.revisionpanel import RevisionPanel
-from qgitc.textline import Link, LinkTextLine
-from qgitc.textviewer import TextViewer
+from qgitc.textline import Link
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
 
 __all__ = ["BlameView"]
@@ -42,54 +41,6 @@ class BlameHistory:
         self.file = file
         self.rev = rev
         self.lineNo = lineNo
-
-
-class CommitDetailPanel(TextViewer):
-
-    def __init__(self, viewer: BlameSourceViewer, parent=None):
-        super().__init__(parent)
-        self._viewer = viewer
-
-        settings = ApplicationBase.instance().settings()
-        settings.diffViewFontChanged.connect(self.delayUpdateSettings)
-
-    def showCommit(self, commit: Commit, previous: str = None):
-        super().clear()
-
-        text = self.tr("Commit: ") + commit.sha1
-        textLine = LinkTextLine(text, self._font, Link.Sha1)
-        self.appendTextLine(textLine)
-
-        text = self.tr("Author: ") + commit.author + " " + commit.authorDate
-        textLine = LinkTextLine(text, self._font, Link.Email)
-        self.appendTextLine(textLine)
-
-        text = self.tr("Committer: ") + commit.committer + \
-            " " + commit.committerDate
-        textLine = LinkTextLine(text, self._font, Link.Email)
-        self.appendTextLine(textLine)
-
-        if previous:
-            text = self.tr("Previous: ") + previous
-            textLine = LinkTextLine(text, self._font, Link.Sha1)
-            self.appendTextLine(textLine)
-
-        if commit.comments:
-            self.appendLine("")
-            for line in commit.comments.splitlines():
-                textLine = SummaryTextLine(line, self._font, self._option, 0)
-                self.appendTextLine(textLine)
-
-    def clear(self):
-        super().clear()
-
-    def reloadSettings(self):
-        super().reloadSettings()
-        self.updateFont(ApplicationBase.instance().settings().diffViewFont())
-
-    def _reloadTextLine(self, textLine):
-        super()._reloadTextLine(textLine)
-        textLine.setFont(self._font)
 
 
 class CommitPanel(QSplitter):
@@ -112,7 +63,7 @@ class CommitPanel(QSplitter):
         self.logView.setFrameStyle(QFrame.Shape.StyledPanel)
         self.logView.setEditable(False)
 
-        self.detailPanel = CommitDetailPanel(viewer, self)
+        self.detailPanel = CommitDetailPanel(self)
 
         self.addWidget(self.logView)
         self.addWidget(self.detailPanel)
