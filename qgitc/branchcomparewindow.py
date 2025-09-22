@@ -10,3 +10,7 @@ class BranchCompareWindow(StateWindow):
 
         self.ui = Ui_BranchCompareWindow()
         self.ui.setupUi(self)
+
+        width = self.ui.splitterChanges.sizeHint().width()
+        sizes = [width * 1 / 5, width * 4 / 5]
+        self.ui.splitterChanges.setSizes(sizes)
