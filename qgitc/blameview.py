@@ -43,7 +43,7 @@ class BlameHistory:
         self.lineNo = lineNo
 
 
-class CommitPanel(QSplitter):
+class BlameCommitPanel(QSplitter):
 
     linkActivated = Signal(Link)
     requestBlame = Signal(str, str)
@@ -336,7 +336,7 @@ class BlameView(QWidget):
         self._viewer = BlameSourceViewer(self)
         layout.addWidget(self._viewer)
 
-        self._commitPanel = CommitPanel(self._viewer, self)
+        self._commitPanel = BlameCommitPanel(self._viewer, self)
         self._commitPanel.requestBlame.connect(
             self._onRequestBlame)
 

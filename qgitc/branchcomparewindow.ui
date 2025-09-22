@@ -200,12 +200,10 @@
         </layout>
        </widget>
       </widget>
-      <widget class="QSplitter" name="splitterCommit">
+      <widget class="CommitPanel" name="splitterCommit">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
        </property>
-       <widget class="QWidget" name="logView" native="true"/>
-       <widget class="QWidget" name="commitPanel" native="true"/>
       </widget>
      </widget>
     </item>
@@ -234,6 +232,12 @@
    <class>QtWaitingSpinner</class>
    <extends>QWidget</extends>
    <header>waitingspinnerwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CommitPanel</class>
+   <extends>QSplitter</extends>
+   <header>commitpanel.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
