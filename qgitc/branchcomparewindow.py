@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 from typing import Tuple
 
 from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt
@@ -7,7 +8,7 @@ from PySide6.QtWidgets import QAbstractItemView
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
-from qgitc.common import fullRepoDir
+from qgitc.common import fullRepoDir, toSubmodulePath
 from qgitc.events import ShowCommitEvent
 from qgitc.filestatus import StatusFileListModel
 from qgitc.gitutils import Git
@@ -178,9 +179,11 @@ class BranchCompareWindow(StateWindow):
 
             status = parts[0]
             file = parts[1]
+            repoFile = os.path.normpath(os.path.join(
+                submodule, file) if submodule and submodule != '.' else file)
             oldFile = parts[2] if len(parts) >= 3 else None
             app.postEvent(self, FileStatusEvent(
-                file, repoDir, status, oldFile))
+                repoFile, submodule, status, oldFile))
 
     def _onFetchStarted(self):
         self.ui.spinnerFiles.start()
@@ -205,9 +208,9 @@ class BranchCompareWindow(StateWindow):
         if not baseBranch or not targetBranch:
             return
 
-        file = self._filesModel.data(current, Qt.DisplayRole)
-        repoDir = self._filesModel.data(
-            current, StatusFileListModel.RepoDirRole)
+        repoFile = current.data(Qt.DisplayRole)
+        repoDir = current.data(StatusFileListModel.RepoDirRole)
+        file = toSubmodulePath(repoDir, repoFile)
         args = [f"{baseBranch}..{targetBranch}"]
         self.ui.splitterCommit.showLogs(repoDir, file, args=args)
 
