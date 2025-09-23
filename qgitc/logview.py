@@ -465,14 +465,13 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.updateSettings()
 
-        ApplicationBase.instance().settings().logViewFontChanged.connect(
-            self.updateSettings)
-        ApplicationBase.instance().settings().compositeModeChanged.connect(
-            self.__onCompositeModeChanged)
+        app = ApplicationBase.instance()
+        app.settings().logViewFontChanged.connect(self.updateSettings)
+        app.settings().compositeModeChanged.connect(self.__onCompositeModeChanged)
 
         logWindow = self.logWindow()
         if logWindow:
-            logWindow.submoduleAvailable.connect(self.__onSubmoduleAvailable)
+            app.submoduleAvailable.connect(self.__onSubmoduleAvailable)
 
         self._finder.resultAvailable.connect(
             self.__onFindResultAvailable)
@@ -549,8 +548,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._branchDir = branchDir
 
         submodules = []
-        if ApplicationBase.instance().settings().isCompositeMode():
-            submodules = self.submodules()
+        app = ApplicationBase.instance()
+        if app.settings().isCompositeMode():
+            submodules = app.submodules
         self.fetcher.setSubmodules(submodules)
 
         self.fetcher.fetch(branch, args, branchDir=self._branchDir)
@@ -677,9 +677,10 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.acRevert.setEnabled(enabled)
 
             # to avoid bad reset on each repo
-            if enabled and ApplicationBase.instance().settings().isCompositeMode():
+            app = ApplicationBase.instance()
+            if enabled and app.settings().isCompositeMode():
                 # disable only if have submodules
-                enabled = not self.submodules()
+                enabled = not app.submodules
             self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
@@ -1905,7 +1906,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.cancelFindCommit()
 
     def __onCompositeModeChanged(self):
-        submodules = self.submodules()
+        submodules = ApplicationBase.instance().submodules
         if not submodules:
             return
 
@@ -1913,7 +1914,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._branchDir = Git.branchDir(self.curBranch)
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
-    def __onSubmoduleAvailable(self, isCache):
+    def __onSubmoduleAvailable(self, submodules, isCache):
         # ignore cache, we will reload in later
         if isCache:
             return
@@ -1927,10 +1928,6 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def logWindow(self):
         return ApplicationBase.instance().getWindow(WindowType.LogWindow, False)
-    
-    def submodules(self):
-        window = self.logWindow()
-        return window.submodules() if window else []
 
     def setEditable(self, editable: bool):
         self._editable = editable

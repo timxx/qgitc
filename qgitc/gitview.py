@@ -103,9 +103,10 @@ class GitView(QWidget):
         self.ui.diffView.localChangeRestored.connect(
             self.ui.logView.reloadLogs)
 
-        ApplicationBase.instance().settings().compositeModeChanged.connect(
+        app = ApplicationBase.instance()
+        app.settings().compositeModeChanged.connect(
             self.__onCompositeModeChanged)
-        self.window().submoduleAvailable.connect(self.__onSubmoduleAvailable)
+        app.submoduleAvailable.connect(self.__onSubmoduleAvailable)
 
     def __updateBranches(self, activeBranch=None):
         if self._delayTimer.isActive():
@@ -395,13 +396,13 @@ class GitView(QWidget):
         branchDir = Git.branchDir(branch)
         self.ui.diffView.setBranchDir(branchDir)
 
-        if checked and self.window().submodules():
+        if checked and ApplicationBase.instance().submodules:
             self._logWidgetSizes = self.ui.logWidget.sizes()
             self.ui.logWidget.setSizes([0, 100])
         elif self._logWidgetSizes:
             self.ui.logWidget.setSizes(self._logWidgetSizes)
 
-    def __onSubmoduleAvailable(self, isCache):
+    def __onSubmoduleAvailable(self, submodules: List[str], fromCache: bool):
         self._logWidgetSizes = self.ui.logWidget.sizes()
         if ApplicationBase.instance().settings().isCompositeMode():
             self.ui.logWidget.setSizes([0, 100])

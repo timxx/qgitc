@@ -6,17 +6,16 @@ import sys
 from datetime import datetime
 from typing import List
 
-from PySide6.QtCore import QEvent, QSize, Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import QActionGroup, QIcon
 from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
 from qgitc.aboutdialog import AboutDialog
 from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
-from qgitc.common import dataDirPath, logger
+from qgitc.common import dataDirPath
 from qgitc.diffview import PatchViewer
 from qgitc.events import RequestCommitEvent, ShowAiAssistantEvent
-from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.findwidget import FindWidget
 from qgitc.gitutils import Git
 from qgitc.gitview import GitView
@@ -62,8 +61,6 @@ class MainWindow(StateWindow):
     CompareMode = 2
     MergeMode = 3
 
-    submoduleAvailable = Signal(bool)
-
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -75,8 +72,6 @@ class MainWindow(StateWindow):
         self.gitViewB = None
 
         self.isWindowReady = False
-        self.findSubmoduleThread = None
-        self._threads: List[QThread] = []
 
         self.mergeWidget = None
 
@@ -187,7 +182,10 @@ class MainWindow(StateWindow):
             self.ui.acVisualizeWhitespace.setChecked)
 
         # application
-        ApplicationBase.instance().focusChanged.connect(self.__updateEditMenu)
+        app = ApplicationBase.instance()
+        app.focusChanged.connect(self.__updateEditMenu)
+        app.submoduleAvailable.connect(self._onSubmoduleAvailable)
+        app.submoduleSearchCompleted.connect(self._onSubmoduleSearchCompleted)
 
         self.ui.cbSubmodule.currentIndexChanged.connect(
             self.__onSubmoduleChanged)
@@ -294,13 +292,13 @@ class MainWindow(StateWindow):
             # let gitview clear the old branches
             repoDir = None
             # clear
-            app.updateRepoDir(None)
+            repoChanged = app.updateRepoDir(None)
             self._repoTopDir = None
             if Git.REF_MAP:
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            app.updateRepoDir(topLevelDir)
+            repoChanged = app.updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
             self._updateRecentRepos(topLevelDir)
 
@@ -312,18 +310,9 @@ class MainWindow(StateWindow):
                 Git.REV_HEAD = None
 
         self.cancel()
-        if repoDir:
+        if repoDir and repoChanged:
             self.ui.leRepo.setReadOnly(True)
             self.ui.btnRepoBrowse.setDisabled(True)
-            self.findSubmoduleThread = FindSubmoduleThread(topLevelDir, self)
-            self.findSubmoduleThread.finished.connect(
-                self.__onFindSubmoduleFinished)
-            self.findSubmoduleThread.finished.connect(
-                self.__onThreadFinished)
-            self._threads.append(self.findSubmoduleThread)
-            self.findSubmoduleThread.start()
-
-            self.initSubmodulesFromCache()
 
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
@@ -469,6 +458,9 @@ class MainWindow(StateWindow):
         self.setFilterFile(filePath)
 
     def __onSubmoduleChanged(self, index):
+        if not Git.REPO_DIR or not self._repoTopDir:
+            return
+
         newRepo = self._repoTopDir
         if index > 0:
             newRepo = os.path.join(
@@ -483,44 +475,28 @@ class MainWindow(StateWindow):
             self.gitViewB.reloadBranches(
                 self.gitViewB.currentBranch())
 
-    def __onFindSubmoduleFinished(self):
-        submodules = self.findSubmoduleThread.submodules
+    def _onSubmoduleAvailable(self, submodules: List[str], fromCache: bool):
+        self.ui.cbSubmodule.blockSignals(True)
+        for submodule in submodules:
+            self.ui.cbSubmodule.addItem(submodule)
+        self.ui.cbSubmodule.blockSignals(False)
 
-        # check if the cache is reusable
-        caches = []
-        for i in range(self.ui.cbSubmodule.count()):
-            caches.append(self.ui.cbSubmodule.itemText(i))
-
-        isCacheValid = len(submodules) == len(caches)
-        if isCacheValid:
-            for i in range(len(submodules)):
-                if submodules[i] not in caches:
-                    isCacheValid = False
-                    break
-
-        if not isCacheValid:
-            self.ui.cbSubmodule.clear()
-            for submodule in submodules:
-                self.ui.cbSubmodule.addItem(submodule)
-
-        if not self.mergeWidget:
-            self.ui.leRepo.setReadOnly(False)
-            self.ui.btnRepoBrowse.setEnabled(True)
-        hasSubmodule = len(submodules) > 0
+        hasSubmodule = self.ui.cbSubmodule.count() > 0
         self.ui.cbSubmodule.setVisible(hasSubmodule)
         self.ui.lbSubmodule.setVisible(hasSubmodule)
-        if not isCacheValid and submodules:
-            self.submoduleAvailable.emit(False)
 
         settings = ApplicationBase.instance().settings()
-        settings.setSubmodulesCache(Git.REPO_DIR, submodules)
-
         if settings.isCompositeMode() and not hasSubmodule and not Git.REF_MAP:
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
             self.ui.gitViewA.logView.update()
             if self.gitViewB:
                 self.gitViewB.logView.update()
+
+    def _onSubmoduleSearchCompleted(self):
+        if not self.mergeWidget:
+            self.ui.leRepo.setReadOnly(False)
+            self.ui.btnRepoBrowse.setEnabled(True)
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()
@@ -714,35 +690,6 @@ class MainWindow(StateWindow):
                 QTimer.singleShot(150, obj.showPopup)
         return super().eventFilter(obj, event)
 
-    def submodules(self):
-        if not self.ui.cbSubmodule.isVisible():
-            return []
-
-        submodules = []
-        count = self.ui.cbSubmodule.count()
-        for i in range(count):
-            submodules.append(self.ui.cbSubmodule.itemText(i))
-
-        return submodules
-
-    def initSubmodulesFromCache(self):
-        submodules = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
-        if not submodules:
-            return
-
-        # first, check if cache is valid
-        for submodule in submodules:
-            if not os.path.exists(os.path.join(Git.REPO_DIR, submodule)):
-                ApplicationBase.instance().settings().setSubmodulesCache(Git.REPO_DIR, [])
-                return
-
-        for submodule in submodules:
-            self.ui.cbSubmodule.addItem(submodule)
-
-        self.ui.cbSubmodule.setVisible(True)
-        self.ui.lbSubmodule.setVisible(True)
-        self.submoduleAvailable.emit(True)
-
     def __onCommitTriggered(self):
         # we can't import application here, because it will cause circular import
         ApplicationBase.instance().postEvent(
@@ -767,29 +714,6 @@ class MainWindow(StateWindow):
             self._aiModel.finished.disconnect(self._onAiFilterFinished)
             self._aiModel.requestInterruption()
             self._aiModel = None
-
-        if self.findSubmoduleThread and self.findSubmoduleThread.isRunning():
-            self.findSubmoduleThread.finished.disconnect(
-                self.__onFindSubmoduleFinished)
-            self.findSubmoduleThread.requestInterruption()
-            if force and ApplicationBase.instance().terminateThread(self.findSubmoduleThread):
-                self._threads.remove(self.findSubmoduleThread)
-                self.findSubmoduleThread.finished.disconnect(self.__onThreadFinished)
-                logger.warning("Terminating find submodule thread")
-            self.findSubmoduleThread = None
-
-        if not force:
-            return
-
-        for thread in self._threads:
-            thread.finished.disconnect(self.__onThreadFinished)
-            ApplicationBase.instance().terminateThread(thread)
-        self._threads.clear()
-
-    def __onThreadFinished(self):
-        thread = self.sender()
-        if thread in self._threads:
-            self._threads.remove(thread)
 
     def _handleAiFilterQuery(self, query: str):
         """Handle AI query for git log filtering"""

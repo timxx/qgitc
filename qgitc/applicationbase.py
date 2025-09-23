@@ -17,6 +17,11 @@ from qgitc.windowtype import WindowType
 class ApplicationBase(QApplication):
 
     repoDirChanged = Signal()
+    # list of submodule paths
+    # True if is loaded from cache
+    # only newly loaded submodules are emitted if False
+    submoduleAvailable = Signal(list, bool)
+    submoduleSearchCompleted = Signal()
 
     def __init__(self, argv: List[str]):
         super().__init__(argv)
@@ -53,3 +58,7 @@ class ApplicationBase(QApplication):
     @property
     @abc.abstractmethod
     def networkManager(self) -> QNetworkAccessManager: ...
+
+    @property
+    @abc.abstractmethod
+    def submodules(self) -> List[str]: ...

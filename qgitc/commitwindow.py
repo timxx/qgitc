@@ -6,7 +6,6 @@ from enum import Enum
 from typing import Callable, Dict, List, Tuple
 
 from PySide6.QtCore import (
-    SIGNAL,
     QAbstractListModel,
     QDateTime,
     QElapsedTimer,
@@ -14,7 +13,6 @@ from PySide6.QtCore import (
     QEventLoop,
     QFileInfo,
     QModelIndex,
-    QObject,
     QProcess,
     QSize,
     QSortFilterProxyModel,
@@ -54,7 +52,6 @@ from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView, _makeTextIcon
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
 from qgitc.findconstants import FindFlags
-from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.gitutils import Git
 from qgitc.ntpdatetime import getNtpDateTime
 from qgitc.preferences import Preferences
@@ -339,7 +336,6 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
         self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
 
-        self._findSubmoduleThread = None
         self._threads: List[QThread] = []
 
         self._curFile: str = None
@@ -454,10 +450,10 @@ class CommitWindow(StateWindow):
         self._ntpDateTime = None
         self._ntpElapsed = None
 
-        ApplicationBase.instance().repoDirChanged.connect(
-            self._onRepoDirChanged)
-        ApplicationBase.instance().settings().useNtpTimeChanged.connect(
-            self._onUseNtpTimeChanged)
+        app = ApplicationBase.instance()
+        app.repoDirChanged.connect(self._onRepoDirChanged)
+        app.settings().useNtpTimeChanged.connect(self._onUseNtpTimeChanged)
+        app.submoduleAvailable.connect(self._onSubmoduleAvailable)
 
         if Git.REPO_DIR:
             self._onRepoDirChanged()
@@ -489,32 +485,21 @@ class CommitWindow(StateWindow):
         self._curFile = None
         self._curFileStatus = None
 
-    def _onFindSubmoduleFinished(self):
-        thread: FindSubmoduleThread = self.sender()
-        if thread == self._findSubmoduleThread:
-            self._findSubmoduleThread = None
-
-        submodules = thread.submodules
-        caches = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
-
-        newSubmodules = list(set(submodules) - set(caches))
-        # no new submodules, no need to fetch
-        if not newSubmodules:
+    def _onSubmoduleAvailable(self, submodules: List[str], fromCache: bool):
+        if fromCache:
             return
 
-        ApplicationBase.instance().settings().setSubmodulesCache(Git.REPO_DIR, submodules)
-
-        if not caches and "." in newSubmodules:
+        if "." in submodules:
             # do not reload for main repo
-            newSubmodules.remove(".")
+            submodules.remove(".")
 
-        if not newSubmodules:
+        if not submodules:
             return
 
         if self._statusFetcher.isRunning():
-            self._statusFetcher.addTask(newSubmodules)
+            self._statusFetcher.addTask(submodules)
         else:
-            self._statusFetcher.fetch(newSubmodules)
+            self._statusFetcher.fetch(submodules)
 
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str, str]]):
         logger.debug("Status available %s -> %s", repoDir, fileList)
@@ -1478,17 +1463,6 @@ class CommitWindow(StateWindow):
         self._commitExecutor.cancel(force)
         self._statusFetcher.cancel(force)
         self._infoFetcher.cancel(force)
-        if self._findSubmoduleThread:
-            QObject.disconnect(self._findSubmoduleThread,
-                               SIGNAL("finished"),
-                               self._onFindSubmoduleFinished)
-            self._findSubmoduleThread.requestInterruption()
-            if force and ApplicationBase.instance().terminateThread(self._findSubmoduleThread):
-                self._threads.remove(self._findSubmoduleThread)
-                self._findSubmoduleThread.finished.disconnect(
-                    self._onThreadFinished)
-                logger.warning("Terminate find submodule thread")
-            self._findSubmoduleThread = None
 
         if force:
             for thread in self._threads:
@@ -1662,16 +1636,6 @@ class CommitWindow(StateWindow):
             return
 
         self._infoFetcher.submit(None, self._fetchRepoInfo)
-
-        self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
-        self._findSubmoduleThread.finished.connect(
-            self._onFindSubmoduleFinished)
-        self._findSubmoduleThread.finished.connect(
-            self._onThreadFinished)
-        self._findSubmoduleThread.setRepoDir(Git.REPO_DIR)
-        self._threads.append(self._findSubmoduleThread)
-
-        self._findSubmoduleThread.start()
         self._loadLocalChanges()
 
     def _onMessageChanged(self):

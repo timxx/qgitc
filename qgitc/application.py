@@ -3,13 +3,15 @@
 import os
 import shutil
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
 from PySide6.QtCore import (
+    SIGNAL,
     QElapsedTimer,
     QEvent,
     QLibraryInfo,
     QLocale,
+    QObject,
     Qt,
     QThread,
     QTimer,
@@ -27,7 +29,7 @@ from qgitc.blamewindow import BlameWindow
 from qgitc.branchcomparewindow import BranchCompareWindow
 from qgitc.colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
 from qgitc.commitwindow import CommitWindow
-from qgitc.common import dataDirPath
+from qgitc.common import dataDirPath, logger
 from qgitc.events import (
     BlameEvent,
     CodeReviewEvent,
@@ -40,6 +42,7 @@ from qgitc.events import (
     ShowAiAssistantEvent,
     ShowCommitEvent,
 )
+from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.findwidget import FindWidget
 from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.gitutils import Git
@@ -88,6 +91,10 @@ class Application(ApplicationBase):
         self._commitWindow = None
         self._branchCompareWindow = None
 
+        self._threads: List[QThread] = []
+        self._findSubmoduleThread: FindSubmoduleThread = None
+        self._submodules: List[str] = []
+
         gitBin = self._settings.gitBinPath() or shutil.which("git")
         if not gitBin or not os.path.exists(gitBin):
             QTimer.singleShot(0, self._warnGitMissing)
@@ -111,7 +118,7 @@ class Application(ApplicationBase):
         self._watchDog = Watchdog(self)
         self._watchDog.start()
 
-        self.aboutToQuit.connect(self._watchDog.stop)
+        self.aboutToQuit.connect(self._onAboutToQuit)
 
     def settings(self):
         return self._settings
@@ -352,16 +359,19 @@ class Application(ApplicationBase):
 
     def updateRepoDir(self, repoDir: str):
         if Git.REPO_DIR == repoDir:
-            return
+            return False
 
         if repoDir is not None and Git.REPO_DIR is not None:
             newDir = os.path.normpath(os.path.normcase(repoDir))
             oldDir = os.path.normpath(os.path.normcase(Git.REPO_DIR))
             if newDir == oldDir:
-                return
+                return False
 
         Git.REPO_DIR = repoDir
+        self._updateSubmodules()
         self.repoDirChanged.emit()
+
+        return True
 
     def isDarkTheme(self):
         return self._isDarkTheme
@@ -502,3 +512,79 @@ class Application(ApplicationBase):
     @property
     def networkManager(self) -> QNetworkAccessManager:
         return self._manager
+
+    def _updateSubmodules(self):
+        self._submodules.clear()
+        if not Git.available() or not Git.REPO_DIR:
+            return
+
+        self._findSubmodules()
+
+        submodules = self._settings.submodulesCache(Git.REPO_DIR)
+        if not submodules:
+            return
+
+        # first, check if cache is valid
+        for submodule in submodules:
+            if not os.path.exists(os.path.join(Git.REPO_DIR, submodule)):
+                self._settings.setSubmodulesCache(Git.REPO_DIR, [])
+                return
+
+        self.submoduleAvailable.emit(submodules, True)
+        self._submodules = submodules
+
+    def _findSubmodules(self):
+        self._cancelFindSubmodules()
+
+        self._findSubmoduleThread = FindSubmoduleThread(Git.REPO_DIR, self)
+        self._findSubmoduleThread.finished.connect(
+            self._onFindSubmoduleFinished)
+        self._findSubmoduleThread.finished.connect(
+            self._onThreadFinished)
+        self._threads.append(self._findSubmoduleThread)
+
+        self._findSubmoduleThread.start()
+
+    def _cancelFindSubmodules(self, force=False):
+        if not self._findSubmoduleThread:
+            return
+
+        QObject.disconnect(self._findSubmoduleThread,
+                           SIGNAL("finished"),
+                           self._onFindSubmoduleFinished)
+        self._findSubmoduleThread.requestInterruption()
+        if force and self.terminateThread(self._findSubmoduleThread):
+            self._threads.remove(self._findSubmoduleThread)
+            self._findSubmoduleThread.finished.disconnect(
+                self._onThreadFinished)
+            logger.warning("Terminate find submodule thread")
+        self._findSubmoduleThread = None
+
+    def _onFindSubmoduleFinished(self):
+        thread: FindSubmoduleThread = self.sender()
+        if thread == self._findSubmoduleThread:
+            self._findSubmoduleThread = None
+
+        self._submodules = thread.submodules
+        caches = self._settings.submodulesCache(Git.REPO_DIR)
+
+        newSubmodules = list(set(self._submodules) - set(caches))
+        # no new submodules
+        if newSubmodules:
+            self._settings.setSubmodulesCache(Git.REPO_DIR, self._submodules)
+            self.submoduleAvailable.emit(newSubmodules, False)
+
+        self.submoduleSearchCompleted.emit()
+
+    def _onThreadFinished(self):
+        thread = self.sender()
+        if thread in self._threads:
+            self._threads.remove(thread)
+
+    @property
+    def submodules(self) -> List[str]:
+        return self._submodules
+
+    def _onAboutToQuit(self):
+        self._watchDog.stop()
+        self._cancelFindSubmodules(True)
