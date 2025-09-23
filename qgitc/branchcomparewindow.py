@@ -2,15 +2,30 @@
 
 from typing import Tuple
 
+from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt
+from PySide6.QtWidgets import QAbstractItemView
+
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir
 from qgitc.events import ShowCommitEvent
+from qgitc.filestatus import StatusFileListModel
 from qgitc.gitutils import Git
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
 from qgitc.ui_branchcomparewindow import Ui_BranchCompareWindow
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
+
+
+class FileStatusEvent(QEvent):
+    EventType = QEvent.Type(QEvent.User + 1)
+
+    def __init__(self, file: str, repoDir: str, statusCode: str, oldFile: str = None):
+        super().__init__(FileStatusEvent.EventType)
+        self.file = file
+        self.repoDir = repoDir
+        self.statusCode = statusCode
+        self.oldFile = oldFile
 
 
 class BranchCompareWindow(StateWindow):
@@ -20,6 +35,7 @@ class BranchCompareWindow(StateWindow):
 
         self.ui = Ui_BranchCompareWindow()
         self.ui.setupUi(self)
+        self._setupUi()
 
         width = self.ui.splitterChanges.sizeHint().width()
         sizes = [width * 1 / 5, width * 4 / 5]
@@ -34,6 +50,22 @@ class BranchCompareWindow(StateWindow):
 
         self._setupSignals()
         self._setupSpinner(self.ui.spinnerFiles)
+
+    def _setupUi(self):
+        self._filesModel = StatusFileListModel(self)
+        filesProxyModel = QSortFilterProxyModel(self)
+        filesProxyModel.setSourceModel(self._filesModel)
+        self.ui.lvFiles.setModel(filesProxyModel)
+        self.ui.lvFiles.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ui.lvFiles.selectionModel().currentRowChanged.connect(
+            self._onSelectFileChanged)
+        self.ui.lvFiles.clicked.connect(
+            self._onFileClicked)
+        self.ui.lvFiles.setEmptyStateText(
+            self.tr("Please select base and target branches to see changes"))
+        self.ui.lvFiles.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ui.lvFiles.customContextMenuRequested.connect(
+            self._onFilesContextMenuRequested)
 
     def _setupSignals(self):
         # TODO: delayed loading
@@ -98,6 +130,9 @@ class BranchCompareWindow(StateWindow):
         self._loadChanges()
 
     def _loadChanges(self):
+        self._filesModel.clear()
+        self.ui.diffViewer.clear()
+
         baseBranch = self.ui.cbBaseBranch.currentText()
         if not baseBranch:
             return
@@ -130,7 +165,20 @@ class BranchCompareWindow(StateWindow):
         if cancelEvent.isSet() or not data:
             return None
 
+        app = ApplicationBase.instance()
         lines = data.rstrip().splitlines()
+        for line in lines:
+            if cancelEvent.isSet():
+                return None
+
+            parts = line.split("\t")
+            if len(parts) < 2:
+                continue
+
+            status = parts[0]
+            file = parts[1]
+            oldFile = parts[2] if len(parts) >= 3 else None
+            app.postEvent(self, FileStatusEvent(file, repoDir, status, oldFile))
 
     def _onFetchStarted(self):
         self.ui.spinnerFiles.start()
@@ -143,3 +191,23 @@ class BranchCompareWindow(StateWindow):
         spinner.setLineLength(height)
         spinner.setInnerRadius(height)
         spinner.setNumberOfLines(14)
+
+    def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
+        pass
+
+    def _onFileClicked(self, index: QModelIndex):
+        pass
+
+    def _onFilesContextMenuRequested(self, point):
+        pass
+
+    def event(self, event: QEvent):
+        if event.type() == FileStatusEvent.EventType:
+            self._handleFileStatusEvent(event)
+            return True
+
+        return super().event(event)
+
+    def _handleFileStatusEvent(self, event: FileStatusEvent):
+        self._filesModel.addFile(
+            event.file, event.repoDir, event.statusCode, event.oldFile)

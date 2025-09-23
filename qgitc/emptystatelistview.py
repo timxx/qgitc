@@ -31,5 +31,5 @@ class EmptyStateListView(QListView):
             QPalette.Disabled, QPalette.Text))
         painter.drawText(
             self.viewport().rect(),
-            Qt.AlignLeft,
+            Qt.AlignLeft | Qt.TextWordWrap,
             self._emptyStateText)
