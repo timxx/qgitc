@@ -23,7 +23,7 @@ class TestLogWindow(TestBase):
         return True
 
     def waitForLoaded(self):
-        spySubmodule = QSignalSpy(self.window.submoduleAvailable)
+        spySubmodule = QSignalSpy(self.app.submoduleSearchCompleted)
 
         self.window.show()
         QTest.qWaitForWindowExposed(self.window)
@@ -104,23 +104,29 @@ class TestLogWindow(TestBase):
         logView = self.window.ui.gitViewA.ui.logView
 
         self.window.ui.leOpts.clear()
+        spyBegin = QSignalSpy(logView.beginFetch)
         QTest.keyClick(self.window.ui.leOpts, Qt.Key_Enter)
-        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(100, lambda: spyBegin.count() == 0)
+        self.wait(1000, logView.fetcher.isLoading)
         self.wait(50)
 
         self.assertEqual(4, logView.getCount())
         self.assertEqual(Git.LCC_SHA1, logView.getCommit(0).sha1)
-
         self.assertEqual(2, self.window.ui.cbSubmodule.count())
+
+        spyBegin = QSignalSpy(self.app.submoduleSearchCompleted)
         self.window.ui.cbSubmodule.setCurrentIndex(1)
-        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(100, lambda: spyBegin.count() == 0)
+        self.wait(1000, logView.fetcher.isLoading)
         self.wait(50)
 
         self.assertEqual(3, logView.getCount())
         self.assertEqual(Git.LUC_SHA1, logView.getCommit(0).sha1)
 
+        spyBegin = QSignalSpy(logView.beginFetch)
         self.window.ui.acCompositeMode.trigger()
-        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(100, lambda: spyBegin.count() == 0)
+        self.wait(1000, logView.fetcher.isLoading)
         self.wait(50)
 
         self.assertEqual(5, logView.getCount())

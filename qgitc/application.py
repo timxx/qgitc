@@ -530,8 +530,8 @@ class Application(ApplicationBase):
                 self._settings.setSubmodulesCache(Git.REPO_DIR, [])
                 return
 
-        self.submoduleAvailable.emit(submodules, True)
-        self._submodules = submodules
+        self._submodules = submodules[:]
+        self.submoduleAvailable.emit(self._submodules, True)
 
     def _findSubmodules(self):
         self._cancelFindSubmodules()
@@ -564,8 +564,11 @@ class Application(ApplicationBase):
         thread: FindSubmoduleThread = self.sender()
         if thread == self._findSubmoduleThread:
             self._findSubmoduleThread = None
+        else:
+            # already cancelled, but signal already in queue
+            return
 
-        self._submodules = thread.submodules
+        self._submodules = thread.submodules[:]
         caches = self._settings.submodulesCache(Git.REPO_DIR)
 
         newSubmodules = list(set(self._submodules) - set(caches))

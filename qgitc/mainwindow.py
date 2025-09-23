@@ -270,11 +270,13 @@ class MainWindow(StateWindow):
         self._updateRecentRepos(repoDir)
 
     def __onRepoChanged(self, repoDir):
-        self.ui.cbSubmodule.clear()
-        self.ui.cbSubmodule.setVisible(False)
-        self.ui.lbSubmodule.setVisible(False)
+        def _clearSubmodules():
+            self.ui.cbSubmodule.clear()
+            self.ui.cbSubmodule.setVisible(False)
+            self.ui.lbSubmodule.setVisible(False)
 
         if not Git.available():
+            _clearSubmodules()
             return
 
         app = ApplicationBase.instance()
@@ -311,6 +313,7 @@ class MainWindow(StateWindow):
 
         self.cancel()
         if repoDir and repoChanged:
+            _clearSubmodules()
             self.ui.leRepo.setReadOnly(True)
             self.ui.btnRepoBrowse.setDisabled(True)
 
@@ -479,6 +482,11 @@ class MainWindow(StateWindow):
         self.ui.cbSubmodule.blockSignals(True)
         for submodule in submodules:
             self.ui.cbSubmodule.addItem(submodule)
+        index = self.ui.cbSubmodule.findText(".")
+        if index > 0:
+            self.ui.cbSubmodule.removeItem(index)
+            self.ui.cbSubmodule.insertItem(0, ".")
+            self.ui.cbSubmodule.setCurrentIndex(0)
         self.ui.cbSubmodule.blockSignals(False)
 
         hasSubmodule = self.ui.cbSubmodule.count() > 0

@@ -29,9 +29,6 @@ class TestCommitWindow(TestBase):
         return True
 
     def waitForLoaded(self):
-        thread = self.window._findSubmoduleThread
-        if thread:
-            self.wait(10000, thread.isRunning)
         self.wait(10000, self.window._statusFetcher.isRunning)
         self.wait(10000, self.window._infoFetcher.isRunning)
         self.wait(10000, self.window._submoduleExecutor.isRunning)
