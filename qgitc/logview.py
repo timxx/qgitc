@@ -447,6 +447,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self._editable = True
         self._showNoDataTips = True
+        self._selectOnFetch = True
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -949,7 +950,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                     self.setCurrentIndex(idx)
                     # might not visible at the time
                     self.delayVisible = True
-            else:
+            elif self._selectOnFetch:
                 self.setCurrentIndex(0)
 
         self.updateGeometries()
@@ -958,7 +959,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if self.delayVisible:
             self.ensureVisible()
             self.delayVisible = False
-        elif self.curIdx == -1 and self.data:
+        elif self.curIdx == -1 and self.data and self._selectOnFetch:
             self.setCurrentIndex(0)
 
         self.endFetch.emit()
@@ -1944,3 +1945,6 @@ class LogView(QAbstractScrollArea, CommitSource):
     def setShowNoDataTips(self, show: bool):
         self._showNoDataTips = show
         self.viewport().update()
+
+    def setAllowSelectOnFetch(self, allow: bool):
+        self._selectOnFetch = allow

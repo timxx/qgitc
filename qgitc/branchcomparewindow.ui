@@ -174,7 +174,7 @@
         </layout>
        </widget>
       </widget>
-      <widget class="CommitPanel" name="splitterCommit">
+      <widget class="CommitPanel" name="commitPanel">
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
        </property>

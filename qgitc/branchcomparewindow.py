@@ -3,12 +3,13 @@
 import os
 from typing import Tuple
 
-from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt
+from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer
 from PySide6.QtWidgets import QAbstractItemView
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, toSubmodulePath
+from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
 from qgitc.filestatus import StatusFileListModel
 from qgitc.gitutils import Git
@@ -48,6 +49,21 @@ class BranchCompareWindow(StateWindow):
 
         self._isFirstShow = True
         self._filesFetcher = SubmoduleExecutor(self)
+        self._isBranchDiff = True
+
+        self._diffFetcher = DiffFetcher(self)
+        self._diffFetcher.diffAvailable.connect(
+            self._onDiffAvailable)
+        self._diffFetcher.fetchFinished.connect(
+            self._onDiffFetchFinished)
+
+        self._diffSpinnerDelayTimer = QTimer(self)
+        self._diffSpinnerDelayTimer.setSingleShot(True)
+        self._diffSpinnerDelayTimer.timeout.connect(self.ui.spinnerDiff.start)
+
+        self._fileSpinnerDelayTimer = QTimer(self)
+        self._fileSpinnerDelayTimer.setSingleShot(True)
+        self._fileSpinnerDelayTimer.timeout.connect(self.ui.spinnerFiles.start)
 
         self._setupSignals()
         self._setupSpinner(self.ui.spinnerFiles)
@@ -67,6 +83,7 @@ class BranchCompareWindow(StateWindow):
         self.ui.lvFiles.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.lvFiles.customContextMenuRequested.connect(
             self._onFilesContextMenuRequested)
+        self.ui.commitPanel.logView.setAllowSelectOnFetch(False)
 
     def _setupSignals(self):
         # TODO: delayed loading
@@ -75,6 +92,9 @@ class BranchCompareWindow(StateWindow):
         self.ui.btnShowLogWindow.clicked.connect(self._showLogWindow)
         self._filesFetcher.started.connect(self._onFetchStarted)
         self._filesFetcher.finished.connect(self._onFetchFinished)
+
+        self.ui.commitPanel.logView.currentIndexChanged.connect(
+            self._onSha1Changed)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -133,7 +153,7 @@ class BranchCompareWindow(StateWindow):
     def _loadChanges(self):
         self._filesModel.clear()
         self.ui.diffViewer.clear()
-        self.ui.splitterCommit.logView.clear()
+        self.ui.commitPanel.logView.clear()
 
         baseBranch = self.ui.cbBaseBranch.currentText()
         if not baseBranch:
@@ -186,10 +206,12 @@ class BranchCompareWindow(StateWindow):
                 repoFile, submodule, status, oldFile))
 
     def _onFetchStarted(self):
-        self.ui.spinnerFiles.start()
+        if not self.ui.spinnerFiles.isSpinning():
+            self._fileSpinnerDelayTimer.start(500)
 
     def _onFetchFinished(self):
         self.ui.spinnerFiles.stop()
+        self._fileSpinnerDelayTimer.stop()
 
     def _setupSpinner(self, spinner: QtWaitingSpinner):
         height = self.ui.leFileFilter.height() // 7
@@ -198,7 +220,7 @@ class BranchCompareWindow(StateWindow):
         spinner.setNumberOfLines(14)
 
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
-        self.ui.splitterCommit.logView.clear()
+        self.ui.commitPanel.logView.clear()
         self.ui.diffViewer.clear()
         if not current.isValid():
             return
@@ -211,11 +233,17 @@ class BranchCompareWindow(StateWindow):
         repoFile = current.data(Qt.DisplayRole)
         repoDir = current.data(StatusFileListModel.RepoDirRole)
         file = toSubmodulePath(repoDir, repoFile)
-        args = [f"{baseBranch}..{targetBranch}"]
-        self.ui.splitterCommit.showLogs(repoDir, file, args=args)
+        arg = f"{baseBranch}..{targetBranch}"
+
+        self.ui.commitPanel.showLogs(repoDir, file, args=[arg])
+        self.ui.commitPanel.logView.setCurrentIndex(-1)
+
+        self._isBranchDiff = True
+        self._showDiff(file, repoDir, arg)
 
     def _onFileClicked(self, index: QModelIndex):
-        pass
+        if not self._isBranchDiff:
+            self._onSelectFileChanged(index, index)
 
     def _onFilesContextMenuRequested(self, point):
         pass
@@ -230,3 +258,47 @@ class BranchCompareWindow(StateWindow):
     def _handleFileStatusEvent(self, event: FileStatusEvent):
         self._filesModel.addFile(
             event.file, event.repoDir, event.statusCode, event.oldFile)
+
+    def _onDiffAvailable(self, lineItems, fileItems):
+        self.ui.diffViewer.appendLines(lineItems)
+
+    def _onDiffFetchFinished(self, exitCode):
+        self._diffSpinnerDelayTimer.stop()
+        self.ui.spinnerDiff.stop()
+
+    def _showDiff(self, file: str, repoDir: str, sha1: str):
+        self.ui.diffViewer.clear()
+        self._diffFetcher.resetRow(0)
+
+        if repoDir and repoDir != ".":
+            self._diffFetcher.cwd = os.path.join(Git.REPO_DIR, repoDir)
+            self._diffFetcher.repoDir = repoDir
+        else:
+            self._diffFetcher.cwd = Git.REPO_DIR
+            self._diffFetcher.repoDir = None
+
+        self._diffFetcher.fetch(sha1, [file], None)
+        self._diffSpinnerDelayTimer.start(1000)
+
+    def _onSha1Changed(self, index: int):
+        self.ui.diffViewer.clear()
+        if index == -1:
+            return
+
+        commit = self.ui.commitPanel.logView.getCommit(index)
+        if not commit:
+            return
+
+        selModel = self.ui.lvFiles.selectionModel()
+        if not selModel or not selModel.hasSelection():
+            return
+
+        selIndex = selModel.currentIndex()
+        if not selIndex.isValid():
+            return
+
+        self._isBranchDiff = False
+        repoFile = selIndex.data(Qt.DisplayRole)
+        repoDir = selIndex.data(StatusFileListModel.RepoDirRole)
+        file = toSubmodulePath(repoDir, repoFile)
+        self._showDiff(file, repoDir, commit.sha1)
