@@ -106,6 +106,12 @@ class BranchCompareWindow(StateWindow):
 
         self._isFirstShow = False
 
+    def closeEvent(self, event):
+        self._filesFetcher.cancel()
+        self._diffFetcher.cancel()
+        self.ui.commitPanel.logView.queryClose()
+        super().closeEvent(event)
+
     def _reloadBranches(self):
         branches = Git.branches()
 
