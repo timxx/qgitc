@@ -132,6 +132,7 @@ class BranchCompareWindow(StateWindow):
     def _loadChanges(self):
         self._filesModel.clear()
         self.ui.diffViewer.clear()
+        self.ui.splitterCommit.logView.clear()
 
         baseBranch = self.ui.cbBaseBranch.currentText()
         if not baseBranch:
@@ -178,7 +179,8 @@ class BranchCompareWindow(StateWindow):
             status = parts[0]
             file = parts[1]
             oldFile = parts[2] if len(parts) >= 3 else None
-            app.postEvent(self, FileStatusEvent(file, repoDir, status, oldFile))
+            app.postEvent(self, FileStatusEvent(
+                file, repoDir, status, oldFile))
 
     def _onFetchStarted(self):
         self.ui.spinnerFiles.start()
@@ -193,7 +195,21 @@ class BranchCompareWindow(StateWindow):
         spinner.setNumberOfLines(14)
 
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
-        pass
+        self.ui.splitterCommit.logView.clear()
+        self.ui.diffViewer.clear()
+        if not current.isValid():
+            return
+
+        baseBranch = self.ui.cbBaseBranch.currentText()
+        targetBranch = self.ui.cbTargetBranch.currentText()
+        if not baseBranch or not targetBranch:
+            return
+
+        file = self._filesModel.data(current, Qt.DisplayRole)
+        repoDir = self._filesModel.data(
+            current, StatusFileListModel.RepoDirRole)
+        args = [f"{baseBranch}..{targetBranch}"]
+        self.ui.splitterCommit.showLogs(repoDir, file, args=args)
 
     def _onFileClicked(self, index: QModelIndex):
         pass

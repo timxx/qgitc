@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from typing import List
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QFrame, QSplitter
 
@@ -37,9 +39,9 @@ class CommitPanel(QSplitter):
         self._detailPanel.clear()
         self._logView.setCurrentIndex(-1)
 
-
-    def showLogs(self, repoDir: str, file: str, rev: str = None):
-        args = ["--follow", "--", file] if file else []
+    def showLogs(self, repoDir: str, file: str, rev: str = None, args: List[str] = None):
+        args = args or []
+        args += ["--follow", "--", file] if file else []
         self._logView.clear()
         self._logView.preferSha1 = rev
         self._logView.showLogs(branch=None, branchDir=repoDir, args=args)
@@ -57,4 +59,14 @@ class CommitPanel(QSplitter):
         self._detailPanel.showCommit(commit)
 
     def _onLogFetchFinished(self):
-        pass
+        if self._detailPanel.textLineCount() > 0:
+            return
+
+        index = self._logView.currentIndex()
+        if index != -1:
+            commit = self._logView.getCommit(index)
+            self._detailPanel.showCommit(commit)
+
+    @property
+    def logView(self) -> LogView:
+        return self._logView
