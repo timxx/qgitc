@@ -35,6 +35,8 @@ class CommitPanel(QSplitter):
         self._detailPanel.linkActivated.connect(
             self.linkActivated)
 
+        self._logView.setShowNoDataTips(False)
+
     def clear(self):
         self._detailPanel.clear()
         self._logView.setCurrentIndex(-1)

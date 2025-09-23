@@ -446,6 +446,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._branchDir = None
 
         self._editable = True
+        self._showNoDataTips = True
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -1044,7 +1045,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         text += self.tr("This feature checks for uncommitted changes, which can be slow in large repositories.")
         text += "\n\n" + self.tr("Would you like to disable this feature now?")
         msgBox.setText(text)
-        
+
         details = self.tr(
             "About this setting:\n"
             "- When enabled, Git checks for local changes that haven't been committed\n"
@@ -1054,12 +1055,12 @@ class LogView(QAbstractScrollArea, CommitSource):
             "Settings → Commit → Detect Local Changes"
         )
         msgBox.setDetailedText(details)
-        
+
         cb = QCheckBox(self.tr("Don't show this message again"), self)
         msgBox.setCheckBox(cb)
         msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         msgBox.setDefaultButton(QMessageBox.No)
-        
+
         r = msgBox.exec()
         if r == QMessageBox.Yes:
             settings.setDetectLocalChanges(False)
@@ -1144,7 +1145,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __linesPerPage(self):
         return int(self.__linesPerPageF())
 
-    def __itemRect(self, index, needMargin = True):
+    def __itemRect(self, index, needMargin=True):
         """@index the index of data"""
 
         # the row number in viewport
@@ -1652,6 +1653,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.updateGeometries()
 
     def _drawNoDataTips(self, painter: QPainter):
+        if not self._showNoDataTips:
+            return
+
         if not Git.REPO_DIR:
             return
 
@@ -1739,12 +1743,14 @@ class LogView(QAbstractScrollArea, CommitSource):
                 # author
                 text = self.authorRe.sub("\\1", commit.author)
                 color = colorSchema.AuthorTagBg
-                self.__drawTag(painter, rect, color, text, textColor=colorSchema.AuthorTagFg)
+                self.__drawTag(painter, rect, color, text,
+                               textColor=colorSchema.AuthorTagFg)
 
                 # date
                 text = commit.authorDate.split(' ')[0]
                 color = colorSchema.DateTagBg
-                self.__drawTag(painter, rect, color, text, textColor=colorSchema.DateTagFg)
+                self.__drawTag(painter, rect, color, text,
+                               textColor=colorSchema.DateTagFg)
                 needMargin = True
 
             if needMargin:
@@ -1934,3 +1940,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def codeReviewOnCurrent(self):
         self.__onCodeReview()
+
+    def setShowNoDataTips(self, show: bool):
+        self._showNoDataTips = show
+        self.viewport().update()
