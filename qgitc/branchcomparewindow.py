@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 from typing import Tuple
 
 from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer
@@ -12,6 +13,7 @@ from qgitc.common import fullRepoDir, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
 from qgitc.filestatus import StatusFileListModel
+from qgitc.findconstants import FindFlags
 from qgitc.gitutils import Git
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
@@ -95,6 +97,11 @@ class BranchCompareWindow(StateWindow):
 
         self.ui.commitPanel.logView.currentIndexChanged.connect(
             self._onSha1Changed)
+
+        self.ui.leFileFilter.textChanged.connect(
+            self._onFilterTextChanged)
+        self.ui.leFileFilter.findFlagsChanged.connect(
+            self._onFilterFlagsChanged)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -308,3 +315,29 @@ class BranchCompareWindow(StateWindow):
         repoDir = selIndex.data(StatusFileListModel.RepoDirRole)
         file = toSubmodulePath(repoDir, repoFile)
         self._showDiff(file, repoDir, commit.sha1)
+
+    def _onFilterTextChanged(self, text: str):
+        model: QSortFilterProxyModel = self.ui.lvFiles.model()
+        flags = self.ui.leFileFilter.findFlags
+        self._doFilterFiles(model, text, flags)
+
+        ApplicationBase.instance().trackFeatureUsage("bc.filter_files", {
+            "caseSensitive": bool(flags & FindFlags.CaseSenitively),
+            "wholeWords": bool(flags & FindFlags.WholeWords),
+            "useRegExp": bool(flags & FindFlags.UseRegExp),
+        })
+
+    def _doFilterFiles(self, model: QSortFilterProxyModel, text: str, flags: FindFlags):
+        caseSensitive = Qt.CaseInsensitive
+        if flags & FindFlags.CaseSenitively:
+            caseSensitive = Qt.CaseSensitive
+        model.setFilterCaseSensitivity(caseSensitive)
+
+        if not (flags & FindFlags.UseRegExp):
+            text = re.escape(text)
+        if (flags & FindFlags.WholeWords):
+            text = r"\b" + text + r"\b"
+        model.setFilterRegularExpression(text)
+
+    def _onFilterFlagsChanged(self, flags: FindFlags):
+        self._onFilterTextChanged(self.ui.leFileFilter.text())
