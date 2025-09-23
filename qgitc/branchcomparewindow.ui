@@ -97,20 +97,15 @@
          <enum>QFrame::Shadow::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
-         <property name="leftMargin">
-          <number>4</number>
-         </property>
-         <property name="topMargin">
-          <number>4</number>
-         </property>
-         <property name="rightMargin">
-          <number>4</number>
-         </property>
-         <property name="bottomMargin">
-          <number>4</number>
-         </property>
          <item>
-          <widget class="SearchLineEdit" name="leFileFilter"/>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="QtWaitingSpinner" name="spinnerFiles" native="true"/>
+           </item>
+           <item>
+            <widget class="SearchLineEdit" name="leFileFilter"/>
+           </item>
+          </layout>
          </item>
          <item>
           <widget class="QListView" name="lvFiles"/>
