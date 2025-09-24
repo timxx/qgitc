@@ -5,7 +5,7 @@ import re
 from typing import Tuple
 
 from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer
-from PySide6.QtWidgets import QAbstractItemView
+from PySide6.QtWidgets import QAbstractItemView, QComboBox, QCompleter
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
@@ -68,6 +68,10 @@ class BranchCompareWindow(StateWindow):
         self._fileSpinnerDelayTimer.setSingleShot(True)
         self._fileSpinnerDelayTimer.timeout.connect(self.ui.spinnerFiles.start)
 
+        self._loadChangesDelayTimer = QTimer(self)
+        self._loadChangesDelayTimer.setSingleShot(True)
+        self._loadChangesDelayTimer.timeout.connect(self._loadChanges)
+
         self._setupSignals()
         self._setupSpinner(self.ui.spinnerFiles)
 
@@ -88,10 +92,33 @@ class BranchCompareWindow(StateWindow):
             self._onFilesContextMenuRequested)
         self.ui.commitPanel.logView.setAllowSelectOnFetch(False)
 
+        self._setupBranchComboboxes()
+
+    def _setupBranchComboboxes(self):
+        self._setupBranchCombobox(self.ui.cbBaseBranch)
+        self._setupBranchCombobox(self.ui.cbTargetBranch)
+
+    def _setupBranchCombobox(self, comboBox: QComboBox):
+        comboBox.setInsertPolicy(QComboBox.NoInsert)
+        comboBox.setEditable(True)
+
+        comboBox.completer().setFilterMode(Qt.MatchContains)
+        comboBox.completer().setCompletionMode(
+            QCompleter.PopupCompletion)
+
+    def _delayLoadChanges(self):
+        self._loadChangesDelayTimer.start(300)
+
     def _setupSignals(self):
-        # TODO: delayed loading
-        self.ui.cbBaseBranch.currentIndexChanged.connect(self._loadChanges)
-        self.ui.cbTargetBranch.currentIndexChanged.connect(self._loadChanges)
+        self.ui.cbBaseBranch.currentIndexChanged.connect(
+            self._delayLoadChanges)
+        self.ui.cbTargetBranch.currentIndexChanged.connect(
+            self._delayLoadChanges)
+        self.ui.cbBaseBranch.editTextChanged.connect(
+            self._delayLoadChanges)
+        self.ui.cbTargetBranch.editTextChanged.connect(
+            self._delayLoadChanges)
+
         self.ui.btnShowLogWindow.clicked.connect(self._showLogWindow)
         self._filesFetcher.started.connect(self._onFetchStarted)
         self._filesFetcher.finished.connect(self._onFetchFinished)
