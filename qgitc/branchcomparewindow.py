@@ -52,6 +52,7 @@ class BranchCompareWindow(StateWindow):
         self._isFirstShow = True
         self._filesFetcher = SubmoduleExecutor(self)
         self._isBranchDiff = True
+        self._tryRenamedIndex = -1
 
         self._diffFetcher = DiffFetcher(self)
         self._diffFetcher.diffAvailable.connect(
@@ -217,7 +218,12 @@ class BranchCompareWindow(StateWindow):
             file = parts[1]
             repoFile = os.path.normpath(os.path.join(
                 submodule, file) if submodule and submodule != '.' else file)
-            oldFile = parts[2] if len(parts) >= 3 else None
+            oldFile = None
+            if status.startswith("R"):
+                status = "R"
+                newRepoFile = os.path.normpath(os.path.join(
+                    submodule, parts[2]) if submodule and submodule != '.' else parts[2])
+                repoFile, oldFile = newRepoFile, repoFile
             app.postEvent(self, FileStatusEvent(
                 repoFile, submodule, status, oldFile))
 
@@ -238,6 +244,7 @@ class BranchCompareWindow(StateWindow):
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
         self.ui.commitPanel.logView.clear()
         self.ui.diffViewer.clear()
+        self._tryRenamedIndex = -1
         if not current.isValid():
             return
 
@@ -282,6 +289,15 @@ class BranchCompareWindow(StateWindow):
         self._diffSpinnerDelayTimer.stop()
         self.ui.spinnerDiff.stop()
 
+        if self._isBranchDiff or self.ui.diffViewer.textLineCount() > 0:
+            return
+
+        if self._tryRenamedIndex != -1:
+            return
+
+        self._tryRenamedIndex = self.ui.commitPanel.logView.currentIndex()
+        self._showDiffForCommit(self._tryRenamedIndex, useOldFile=True)
+
     def _showDiff(self, file: str, repoDir: str, sha1: str):
         self.ui.diffViewer.clear()
         self._diffFetcher.resetRow(0)
@@ -297,6 +313,10 @@ class BranchCompareWindow(StateWindow):
         self._diffSpinnerDelayTimer.start(1000)
 
     def _onSha1Changed(self, index: int):
+        self._tryRenamedIndex = -1
+        self._showDiffForCommit(index, useOldFile=False)
+
+    def _showDiffForCommit(self, index: int, useOldFile: bool = False):
         self.ui.diffViewer.clear()
         if index == -1:
             return
@@ -314,7 +334,11 @@ class BranchCompareWindow(StateWindow):
             return
 
         self._isBranchDiff = False
-        repoFile = selIndex.data(Qt.DisplayRole)
+        repoFile = selIndex.data(
+            StatusFileListModel.OldFileRole if useOldFile else Qt.DisplayRole)
+        if not repoFile:
+            return
+
         repoDir = selIndex.data(StatusFileListModel.RepoDirRole)
         file = toSubmodulePath(repoDir, repoFile)
         self._showDiff(file, repoDir, commit.sha1)
