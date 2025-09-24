@@ -103,6 +103,9 @@ class BranchCompareWindow(StateWindow):
         self.ui.leFileFilter.findFlagsChanged.connect(
             self._onFilterFlagsChanged)
 
+        app = ApplicationBase.instance()
+        app.repoDirChanged.connect(self._reloadBranches)
+
     def showEvent(self, event):
         super().showEvent(event)
 
