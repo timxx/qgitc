@@ -15,7 +15,11 @@ from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
 from qgitc.diffview import PatchViewer
-from qgitc.events import RequestCommitEvent, ShowAiAssistantEvent
+from qgitc.events import (
+    RequestCommitEvent,
+    ShowAiAssistantEvent,
+    ShowBranchCompareEvent,
+)
 from qgitc.findwidget import FindWidget
 from qgitc.gitutils import Git
 from qgitc.gitview import GitView
@@ -198,6 +202,8 @@ class MainWindow(StateWindow):
 
         self.ui.acCommit.triggered.connect(
             self.__onCommitTriggered)
+        self.ui.acBranchCompare.triggered.connect(
+            self._onBranchCompareTriggered)
 
         self.ui.acShowAIAssistant.triggered.connect(
             self._onShowAiAssistant)
@@ -717,8 +723,10 @@ class MainWindow(StateWindow):
 
         # Cancel AI processing if active
         if self._aiModel and self._aiModel.isRunning():
-            self._aiModel.responseAvailable.disconnect(self._onAiFilterResponse)
-            self._aiModel.serviceUnavailable.disconnect(self._onAiServiceUnavailable)
+            self._aiModel.responseAvailable.disconnect(
+                self._onAiFilterResponse)
+            self._aiModel.serviceUnavailable.disconnect(
+                self._onAiServiceUnavailable)
             self._aiModel.finished.disconnect(self._onAiFilterFinished)
             self._aiModel.requestInterruption()
             self._aiModel = None
@@ -822,3 +830,16 @@ class MainWindow(StateWindow):
             fw.codeReviewOnCurrent()
         else:
             self.ui.gitViewA.logView.codeReviewOnCurrent()
+
+    def _onBranchCompareTriggered(self):
+        targetBranch = None
+        baseBranch = None
+
+        if self.gitViewB:
+            targetBranch = self.gitViewB.currentBranch()
+            baseBranch = self.ui.gitViewA.currentBranch()
+        else:
+            targetBranch = self.ui.gitViewA.currentBranch()
+
+        app = ApplicationBase.instance()
+        app.postEvent(app, ShowBranchCompareEvent(targetBranch, baseBranch))

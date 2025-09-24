@@ -395,3 +395,20 @@ class BranchCompareWindow(StateWindow):
 
     def _onFilterFlagsChanged(self, flags: FindFlags):
         self._onFilterTextChanged(self.ui.leFileFilter.text())
+
+    def compareBranches(self, targetBranch: str = None, baseBranch: str = None):
+        if targetBranch:
+            self._setBranch(self.ui.cbTargetBranch, targetBranch)
+
+        if baseBranch:
+            self._setBranch(self.ui.cbBaseBranch, baseBranch)
+
+    def _setBranch(self, comboBox: QComboBox, branch: str):
+        if branch.startswith("remotes/"):
+            branch = branch.replace("remotes/", "")
+
+        idx = comboBox.findText(branch)
+        if idx != -1:
+            comboBox.setCurrentIndex(idx)
+        else:
+            comboBox.setEditText(branch)

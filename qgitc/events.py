@@ -113,3 +113,12 @@ class ShowAiAssistantEvent(QEvent):
 
     def __init__(self):
         super().__init__(QEvent.Type(ShowAiAssistantEvent.Type))
+
+
+class ShowBranchCompareEvent(QEvent):
+    Type = QEvent.User + 12
+
+    def __init__(self, targetBranch: str = None, baseBranch: str = None):
+        super().__init__(QEvent.Type(ShowBranchCompareEvent.Type))
+        self.targetBranch = targetBranch
+        self.baseBranch = baseBranch

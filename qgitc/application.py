@@ -40,6 +40,7 @@ from qgitc.events import (
     RequestCommitEvent,
     RequestLoginGithubCopilot,
     ShowAiAssistantEvent,
+    ShowBranchCompareEvent,
     ShowCommitEvent,
 )
 from qgitc.findsubmodules import FindSubmoduleThread
@@ -258,6 +259,13 @@ class Application(ApplicationBase):
             dialog.exec()
             self.postEvent(event.requestor, LoginFinished(
                 dialog.isLoginSuccessful()))
+            return True
+
+        if type == ShowBranchCompareEvent.Type:
+            window = self.getWindow(WindowType.BranchCompareWindow)
+            self._ensureVisible(window)
+            if event.targetBranch or event.baseBranch:
+                window.compareBranches(event.targetBranch, event.baseBranch)
             return True
 
         if type == QEvent.ApplicationPaletteChange:
