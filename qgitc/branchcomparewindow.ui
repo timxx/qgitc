@@ -50,7 +50,7 @@
          <item>
           <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>Base Branch:</string>
+            <string>&amp;Base Branch:</string>
            </property>
            <property name="buddy">
             <cstring>cbBaseBranch</cstring>
@@ -70,7 +70,7 @@
          <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
-            <string>Target Branch:</string>
+            <string>&amp;Target Branch:</string>
            </property>
            <property name="buddy">
             <cstring>cbTargetBranch</cstring>
@@ -90,7 +90,7 @@
          <item>
           <widget class="QPushButton" name="btnShowLogWindow">
            <property name="text">
-            <string>Change Repository...</string>
+            <string>Change &amp;Repository...</string>
            </property>
           </widget>
          </item>
@@ -101,7 +101,7 @@
          <item>
           <widget class="QCheckBox" name="cbMergeBase">
            <property name="text">
-            <string>Use Merge Base</string>
+            <string>Use &amp;Merge Base</string>
            </property>
            <property name="checked">
             <bool>true</bool>
