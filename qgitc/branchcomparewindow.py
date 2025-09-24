@@ -24,12 +24,13 @@ from qgitc.waitingspinnerwidget import QtWaitingSpinner
 class FileStatusEvent(QEvent):
     EventType = QEvent.Type(QEvent.User + 1)
 
-    def __init__(self, file: str, repoDir: str, statusCode: str, oldFile: str = None):
+    def __init__(self, file: str, repoDir: str, statusCode: str, oldFile: str = None, mergeBase: str = None):
         super().__init__(FileStatusEvent.EventType)
         self.file = file
         self.repoDir = repoDir
         self.statusCode = statusCode
         self.oldFile = oldFile
+        self.mergeBase = mergeBase
 
 
 class BranchCompareWindow(StateWindow):
@@ -53,6 +54,7 @@ class BranchCompareWindow(StateWindow):
         self._filesFetcher = SubmoduleExecutor(self)
         self._isBranchDiff = True
         self._tryRenamedIndex = -1
+        self._repoMergeBase = {}
 
         self._diffFetcher = DiffFetcher(self)
         self._diffFetcher.diffAvailable.connect(
@@ -118,6 +120,8 @@ class BranchCompareWindow(StateWindow):
             self._delayLoadChanges)
         self.ui.cbTargetBranch.editTextChanged.connect(
             self._delayLoadChanges)
+        self.ui.cbMergeBase.toggled.connect(
+            self._delayLoadChanges)
 
         self.ui.btnShowLogWindow.clicked.connect(self._showLogWindow)
         self._filesFetcher.started.connect(self._onFetchStarted)
@@ -160,6 +164,7 @@ class BranchCompareWindow(StateWindow):
 
         self.ui.cbBaseBranch.clear()
         self.ui.cbTargetBranch.clear()
+        self._repoMergeBase.clear()
 
         for branch in branches:
             branch = branch.strip()
@@ -209,8 +214,9 @@ class BranchCompareWindow(StateWindow):
 
         submodules = ApplicationBase.instance().submodules or [None]
         repoData = {}
+        useMergeBase = self.ui.cbMergeBase.isChecked()
         for submodule in submodules:
-            repoData[submodule] = (baseBranch, targetBranch)
+            repoData[submodule] = (baseBranch, targetBranch, useMergeBase)
 
         self._filesFetcher.submit(repoData, self._fetchChanges)
 
@@ -218,15 +224,24 @@ class BranchCompareWindow(StateWindow):
         app = ApplicationBase.instance()
         app.postEvent(app, ShowCommitEvent(None))
 
-    def _fetchChanges(self, submodule: str, branches: Tuple[str, str], cancelEvent: CancelEvent):
+    def _fetchChanges(self, submodule: str, branches: Tuple[str, str, bool], cancelEvent: CancelEvent):
         baseBranch = branches[0]
         targetBranch = branches[1]
+        useMergeBase = branches[2]
 
         if cancelEvent.isSet():
             return None
 
         repoDir = fullRepoDir(submodule)
-        args = ["diff", "--name-status", f"{baseBranch}..{targetBranch}"]
+        merbeBase = None
+        if useMergeBase:
+            args = ["merge-base", baseBranch, targetBranch]
+            merbeBase = Git.checkOutput(args, True, repoDir).strip()
+            if cancelEvent.isSet():
+                return None
+
+        args = ["diff", "--name-status",
+                f"{merbeBase or baseBranch}..{targetBranch}"]
         data = Git.checkOutput(args, text=True, repoDir=repoDir)
         if cancelEvent.isSet() or not data:
             return None
@@ -252,7 +267,7 @@ class BranchCompareWindow(StateWindow):
                     submodule, parts[2]) if submodule and submodule != '.' else parts[2])
                 repoFile, oldFile = newRepoFile, repoFile
             app.postEvent(self, FileStatusEvent(
-                repoFile, submodule, status, oldFile))
+                repoFile, submodule, status, oldFile, merbeBase))
 
     def _onFetchStarted(self):
         if not self.ui.spinnerFiles.isSpinning():
@@ -283,7 +298,9 @@ class BranchCompareWindow(StateWindow):
         repoFile = current.data(Qt.DisplayRole)
         repoDir = current.data(StatusFileListModel.RepoDirRole)
         file = toSubmodulePath(repoDir, repoFile)
-        arg = f"{baseBranch}..{targetBranch}"
+
+        mergeBase = self._repoMergeBase.get(repoDir)
+        arg = f"{mergeBase or baseBranch}..{targetBranch}"
 
         self.ui.commitPanel.showLogs(repoDir, file, args=[arg])
         self.ui.commitPanel.logView.setCurrentIndex(-1)
@@ -308,6 +325,7 @@ class BranchCompareWindow(StateWindow):
     def _handleFileStatusEvent(self, event: FileStatusEvent):
         self._filesModel.addFile(
             event.file, event.repoDir, event.statusCode, event.oldFile)
+        self._repoMergeBase[event.repoDir] = event.mergeBase
 
     def _onDiffAvailable(self, lineItems, fileItems):
         self.ui.diffViewer.appendLines(lineItems)
