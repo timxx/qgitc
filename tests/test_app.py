@@ -21,6 +21,7 @@ class TestApp(TestBase):
             WindowType.BlameWindow,
             WindowType.AiAssistant,
             WindowType.CommitWindow,
+            WindowType.BranchCompareWindow,
         ]
 
         for winType in winTypes:
