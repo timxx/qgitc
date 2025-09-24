@@ -430,3 +430,29 @@ class BranchCompareWindow(StateWindow):
             comboBox.setCurrentIndex(idx)
         else:
             comboBox.setEditText(branch)
+
+    def restoreState(self):
+        if not super().restoreState():
+            return False
+
+        sett = ApplicationBase.instance().settings()
+        state = sett.getSplitterState("bc.splitter")
+        if state:
+            self.ui.splitter.restoreState(state)
+
+        state = sett.getSplitterState("bc.splitterChanges")
+        if state:
+            self.ui.splitterChanges.restoreState(state)
+
+        return True
+
+    def saveState(self):
+        if not super().saveState():
+            return False
+
+        sett = ApplicationBase.instance().settings()
+        sett.saveSplitterState("bc.splitter", self.ui.splitter.saveState())
+        sett.saveSplitterState("bc.splitterChanges",
+                              self.ui.splitterChanges.saveState())
+
+        return True
