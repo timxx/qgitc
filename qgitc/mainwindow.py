@@ -191,6 +191,10 @@ class MainWindow(StateWindow):
         app.submoduleAvailable.connect(self._onSubmoduleAvailable)
         app.submoduleSearchCompleted.connect(self._onSubmoduleSearchCompleted)
 
+        submodules = app.submodules
+        if submodules:
+            self._onSubmoduleAvailable(submodules, True)
+
         self.ui.cbSubmodule.currentIndexChanged.connect(
             self.__onSubmoduleChanged)
 
@@ -387,11 +391,11 @@ class MainWindow(StateWindow):
     def __onAcCompositeModeTriggered(self, checked):
         if checked:
             # use top level repo dir
-            ApplicationBase.instance().updateRepoDir(self._repoTopDir)
+            ApplicationBase.instance().updateRepoDir(self._repoTopDir, False)
         elif self.ui.cbSubmodule.count() > 0 and self.ui.cbSubmodule.currentIndex() > 0:
             newRepo = os.path.join(
                 self._repoTopDir, self.ui.cbSubmodule.currentText())
-            ApplicationBase.instance().updateRepoDir(newRepo)
+            ApplicationBase.instance().updateRepoDir(newRepo, False)
 
         if not checked and not Git.REF_MAP:
             Git.REF_MAP = Git.refs()
@@ -477,7 +481,7 @@ class MainWindow(StateWindow):
         if os.path.normcase(os.path.normpath(newRepo)) == os.path.normcase(os.path.normpath(Git.REPO_DIR)):
             return
 
-        ApplicationBase.instance().updateRepoDir(newRepo)
+        ApplicationBase.instance().updateRepoDir(newRepo, False)
         self.ui.gitViewA.reloadBranches(
             self.ui.gitViewA.currentBranch())
         if self.gitViewB:

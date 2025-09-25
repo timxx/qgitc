@@ -365,7 +365,7 @@ class Application(ApplicationBase):
         repoDir = Git.repoTopLevelDir(cwd)
         self.updateRepoDir(repoDir or cwd)
 
-    def updateRepoDir(self, repoDir: str):
+    def updateRepoDir(self, repoDir: str, reloadSubmodules=True):
         if Git.REPO_DIR == repoDir:
             return False
 
@@ -376,7 +376,8 @@ class Application(ApplicationBase):
                 return False
 
         Git.REPO_DIR = repoDir
-        self._updateSubmodules()
+        if reloadSubmodules:
+            self._updateSubmodules()
         self.repoDirChanged.emit()
 
         return True
