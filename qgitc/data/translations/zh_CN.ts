@@ -339,11 +339,16 @@ This action cannot be undone.</source>
     </message>
     <message>
         <location filename="../../branchcomparewindow.ui" line="104"/>
+        <source>Only useful when the target branch has not been merged into the base</source>
+        <translation>仅当目标分支尚未合并到基线分支时才有用</translation>
+    </message>
+    <message>
+        <location filename="../../branchcomparewindow.ui" line="107"/>
         <source>Use &amp;Merge Base</source>
         <translation>使用最近共同祖先(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../branchcomparewindow.ui" line="191"/>
+        <location filename="../../branchcomparewindow.ui" line="194"/>
         <source>Diff</source>
         <translation>Diff</translation>
     </message>
@@ -479,176 +484,176 @@ This action cannot be undone.</source>
 <context>
     <name>CommitWindow</name>
     <message>
-        <location filename="../../commitwindow.py" line="154"/>
+        <location filename="../../commitwindow.py" line="153"/>
         <location filename="../../commitwindow.ui" line="14"/>
         <source>QGitc Commit</source>
         <translation>QGitc提交</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="180"/>
+        <location filename="../../commitwindow.py" line="179"/>
         <source>There are no unstaged changes</source>
         <translation>所有改动已被暂存或工作区无修改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="195"/>
+        <location filename="../../commitwindow.py" line="194"/>
         <source>There are no staged changes</source>
         <translation>没有已暂存的更改</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="212"/>
+        <location filename="../../commitwindow.py" line="211"/>
         <source>Unstage all</source>
         <translation>取消全部暂存</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="221"/>
+        <location filename="../../commitwindow.py" line="220"/>
         <source>Stage all</source>
         <translation>暂存全部</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="226"/>
+        <location filename="../../commitwindow.py" line="225"/>
         <source>Refresh</source>
         <translation>刷新</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="242"/>
+        <location filename="../../commitwindow.py" line="241"/>
         <source>Enter commit message here...</source>
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="416"/>
+        <location filename="../../commitwindow.py" line="415"/>
         <source>Inconsistent branches</source>
         <translation>分支不一致</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="420"/>
+        <location filename="../../commitwindow.py" line="419"/>
         <source>You have different branches in submodules:</source>
         <translation>各仓库的分支不完全一致：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="524"/>
+        <location filename="../../commitwindow.py" line="523"/>
         <source>Confirm commit</source>
         <translation>确认提交</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="526"/>
+        <location filename="../../commitwindow.py" line="525"/>
         <source>You did not edit the message template. Do you want to use the template as commit message?</source>
         <translation>您尚未编辑消息模板。是否要使用该模板作为提交消息？</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="598"/>
+        <location filename="../../commitwindow.py" line="597"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="602"/>
+        <location filename="../../commitwindow.py" line="601"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="604"/>
+        <location filename="../../commitwindow.py" line="603"/>
         <source>Invalid commit message</source>
         <translation>无效提交信息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="814"/>
+        <location filename="../../commitwindow.py" line="813"/>
         <source>Git Error</source>
         <translation>Git错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="879"/>
+        <location filename="../../commitwindow.py" line="878"/>
         <source>Action: </source>
         <translation>动作：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="881"/>
+        <location filename="../../commitwindow.py" line="880"/>
         <source>Repo: </source>
         <translation>仓库：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="928"/>
+        <location filename="../../commitwindow.py" line="927"/>
         <source>Show untracked files</source>
         <translation>显示未跟踪文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="938"/>
+        <location filename="../../commitwindow.py" line="937"/>
         <source>Show ignored files</source>
         <translation>显示被忽略的文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1009"/>
+        <location filename="../../commitwindow.py" line="1008"/>
         <source>Committer:</source>
         <translation>提交者：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1018"/>
+        <location filename="../../commitwindow.py" line="1017"/>
         <source>Branch:</source>
         <translation>分支：</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1104"/>
+        <location filename="../../commitwindow.py" line="1103"/>
         <location filename="../../commitwindow.ui" line="592"/>
         <source>&amp;Abort</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1105"/>
+        <location filename="../../commitwindow.py" line="1104"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1107"/>
+        <location filename="../../commitwindow.py" line="1106"/>
         <location filename="../../commitwindow.ui" line="553"/>
         <source>Working on commit...</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1109"/>
+        <location filename="../../commitwindow.py" line="1108"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1116"/>
+        <location filename="../../commitwindow.py" line="1115"/>
         <source>Commit aborted</source>
         <translation>提交已中断</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1254"/>
+        <location filename="../../commitwindow.py" line="1253"/>
         <source>Run External Diff Tool Error</source>
         <translation>运行外部Diff工具错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1319"/>
+        <location filename="../../commitwindow.py" line="1318"/>
         <source>AI Message Generation Error</source>
         <translation>AI 消息生成错误</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1383"/>
+        <location filename="../../commitwindow.py" line="1382"/>
         <source>&amp;Restore these files</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1385"/>
-        <location filename="../../commitwindow.py" line="1392"/>
+        <location filename="../../commitwindow.py" line="1384"/>
+        <location filename="../../commitwindow.py" line="1391"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1395"/>
+        <location filename="../../commitwindow.py" line="1394"/>
         <source>External &amp;diff</source>
         <translation>外部工具查看diff(&amp;d)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1398"/>
+        <location filename="../../commitwindow.py" line="1397"/>
         <source>&amp;Open Containing Folder</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1440"/>
+        <location filename="../../commitwindow.py" line="1439"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1588"/>
+        <location filename="../../commitwindow.py" line="1587"/>
         <source>Local time is not synchronized with the network time</source>
         <translation>本地时间与标准时间不同步</translation>
     </message>
@@ -1104,112 +1109,112 @@ This action cannot be undone.</source>
 <context>
     <name>LogView</name>
     <message>
-        <location filename="../../logview.py" line="490"/>
+        <location filename="../../logview.py" line="491"/>
         <source>&amp;Copy commit summary</source>
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="500"/>
+        <location filename="../../logview.py" line="501"/>
         <source>&amp;Mark this commit</source>
         <translation>标记此记录(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="502"/>
+        <location filename="../../logview.py" line="503"/>
         <source>Mark &amp;to this commit</source>
         <translation>标记到此记录(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="504"/>
+        <location filename="../../logview.py" line="505"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="982"/>
+        <location filename="../../logview.py" line="983"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1006"/>
+        <location filename="../../logview.py" line="1007"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="509"/>
+        <location filename="../../logview.py" line="510"/>
         <source>Generate &amp;patch</source>
         <translation>生成&amp;patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="512"/>
+        <location filename="../../logview.py" line="513"/>
         <source>Generate &amp;diff</source>
         <translation>生成&amp;diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="518"/>
+        <location filename="../../logview.py" line="519"/>
         <source>Re&amp;vert this commit</source>
         <translation>回滚此记录(&amp;V)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="520"/>
+        <location filename="../../logview.py" line="521"/>
         <source>Re&amp;set to here</source>
         <translation>重置HEAD为此记录(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="522"/>
+        <location filename="../../logview.py" line="523"/>
         <source>&amp;Soft</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="525"/>
+        <location filename="../../logview.py" line="526"/>
         <source>&amp;Mixed</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="528"/>
+        <location filename="../../logview.py" line="529"/>
         <source>&amp;Hard</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="533"/>
+        <location filename="../../logview.py" line="534"/>
         <source>&amp;Code Review</source>
         <translation>代码审查(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="815"/>
+        <location filename="../../logview.py" line="816"/>
         <source>Save Patch</source>
         <translation>保存Patch</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="841"/>
+        <location filename="../../logview.py" line="842"/>
         <source>Save Diff</source>
         <translation>保存Diff</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1041"/>
+        <location filename="../../logview.py" line="1042"/>
         <source>Performance Issue Detected</source>
         <translation>检测到性能问题</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1043"/>
+        <location filename="../../logview.py" line="1044"/>
         <source>Git log retrieval is taking longer than expected ({0} seconds).</source>
         <translation>Git日志检索耗时超过预期（{0} 秒）。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1046"/>
+        <location filename="../../logview.py" line="1047"/>
         <source>Disabling &apos;Detect Local Changes&apos; can significantly improve performance. </source>
         <translation>禁用“检测本地更改”可以显著提高性能。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1047"/>
+        <location filename="../../logview.py" line="1048"/>
         <source>This feature checks for uncommitted changes, which can be slow in large repositories.</source>
         <translation>此功能会检查未提交的更改，在大型仓库中可能会很慢。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1048"/>
+        <location filename="../../logview.py" line="1049"/>
         <source>Would you like to disable this feature now?</source>
         <translation>您想现在禁用此功能吗？</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1058"/>
+        <location filename="../../logview.py" line="1059"/>
         <source>About this setting:
 - When enabled, Git checks for local changes that haven&apos;t been committed
 - This allows you to see uncommitted changes in the log view
@@ -1226,32 +1231,32 @@ Settings → Commit → Detect Local Changes</source>
 设置 → 提交 → 检测本地更改</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1060"/>
+        <location filename="../../logview.py" line="1061"/>
         <source>Don&apos;t show this message again</source>
         <translation>不再显示此消息</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1666"/>
+        <location filename="../../logview.py" line="1667"/>
         <source>Loading commits, please wait...</source>
         <translation>正在加载记录，请稍候…</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1669"/>
+        <location filename="../../logview.py" line="1670"/>
         <source>No commits found for the current filter. Try adjusting your filter criteria.</source>
         <translation>未找到符合当前筛选条件的提交，请尝试调整筛选条件。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1674"/>
+        <location filename="../../logview.py" line="1675"/>
         <source>No commits found. You may need to increase the &quot;Max Commits&quot; setting or disable &quot;Composite Mode&quot;.</source>
         <translation>未找到记录。您可能需要增加“最大记录数”设置或禁用“聚合模式”。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="493"/>
+        <location filename="../../logview.py" line="494"/>
         <source>Copy &amp;abbrev commit</source>
         <translation>复制短SHA-1(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="496"/>
+        <location filename="../../logview.py" line="497"/>
         <source>Copy to conflict &amp;log</source>
         <translation>复制到冲突记录(&amp;L)</translation>
     </message>
@@ -1453,52 +1458,52 @@ Settings → Commit → Detect Local Changes</source>
         <translation>显示AI助手</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="263"/>
+        <location filename="../../mainwindow.py" line="267"/>
         <source>Choose repository directory</source>
         <translation>选择仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="272"/>
+        <location filename="../../mainwindow.py" line="276"/>
         <source>The directory you choosen is not a git repository!</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="297"/>
+        <location filename="../../mainwindow.py" line="301"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="637"/>
+        <location filename="../../mainwindow.py" line="641"/>
         <source>Branch A:</source>
         <translation>分支A：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="638"/>
+        <location filename="../../mainwindow.py" line="642"/>
         <source>Branch B:</source>
         <translation>分支B：</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="736"/>
+        <location filename="../../mainwindow.py" line="740"/>
         <source>Processing AI query...</source>
         <translation>正在处理 AI 查询…</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="782"/>
+        <location filename="../../mainwindow.py" line="786"/>
         <source>Applied AI-generated filter: {0}</source>
         <translation>已应用 AI 生成的过滤器：{0}</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="785"/>
+        <location filename="../../mainwindow.py" line="789"/>
         <source>AI could not generate valid filter options</source>
         <translation>AI 无法生成有效的过滤选项</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="790"/>
+        <location filename="../../mainwindow.py" line="794"/>
         <source>AI service is currently unavailable. Please check your settings or try again later.</source>
         <translation>AI 服务当前不可用。请检查您的设置或稍后再试。</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="626"/>
+        <location filename="../../mainwindow.py" line="630"/>
         <source>Branch</source>
         <translation>分支</translation>
     </message>

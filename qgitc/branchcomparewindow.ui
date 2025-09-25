@@ -100,6 +100,9 @@
         <layout class="QHBoxLayout" name="horizontalLayout_4">
          <item>
           <widget class="QCheckBox" name="cbMergeBase">
+           <property name="toolTip">
+            <string>Only useful when the target branch has not been merged into the base</string>
+           </property>
            <property name="text">
             <string>Use &amp;Merge Base</string>
            </property>
