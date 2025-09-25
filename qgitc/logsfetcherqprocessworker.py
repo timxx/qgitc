@@ -122,6 +122,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         fetcher.logsAvailable.connect(
             self.logsAvailable)
         fetcher.fetchFinished.connect(self._onFetchNormalLogsFinished)
+        fetcher.cwd = self._branchDir
         self._fetchers.append(fetcher)
 
         fetcher.fetch(*self._args)

@@ -448,6 +448,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._editable = True
         self._showNoDataTips = True
         self._selectOnFetch = True
+        self._standalone = True
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.showContextMenu)
@@ -551,7 +552,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         submodules = []
         app = ApplicationBase.instance()
-        if app.settings().isCompositeMode():
+        if self._standalone and app.settings().isCompositeMode():
             submodules = app.submodules
         self.fetcher.setSubmodules(submodules)
 
@@ -1913,6 +1914,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.cancelFindCommit()
 
     def __onCompositeModeChanged(self):
+        if not self._standalone:
+            return
+
         submodules = ApplicationBase.instance().submodules
         if not submodules:
             return
@@ -1948,3 +1952,6 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setAllowSelectOnFetch(self, allow: bool):
         self._selectOnFetch = allow
+
+    def setStandalone(self, standalone: bool):
+        self._standalone = standalone

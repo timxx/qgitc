@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QFrame, QSplitter
 
 from qgitc.commitdetailpanel import CommitDetailPanel
+from qgitc.common import fullRepoDir
 from qgitc.logview import LogView
 from qgitc.textline import Link
 
@@ -21,6 +22,8 @@ class CommitPanel(QSplitter):
         self._logView = LogView(self)
         self._logView.setFrameStyle(QFrame.Shape.StyledPanel)
         self._logView.setEditable(False)
+        self._logView.setShowNoDataTips(False)
+        self._logView.setStandalone(False)
 
         self._detailPanel = CommitDetailPanel(self)
 
@@ -35,8 +38,6 @@ class CommitPanel(QSplitter):
         self._detailPanel.linkActivated.connect(
             self.linkActivated)
 
-        self._logView.setShowNoDataTips(False)
-
     def clear(self):
         self._detailPanel.clear()
         self._logView.setCurrentIndex(-1)
@@ -46,6 +47,7 @@ class CommitPanel(QSplitter):
         args += ["--follow", "--", file] if file else []
         self._logView.clear()
         self._logView.preferSha1 = rev
+        repoDir = fullRepoDir(repoDir)
         self._logView.showLogs(branch=None, branchDir=repoDir, args=args)
 
     def _onCommitChanged(self, index: int):

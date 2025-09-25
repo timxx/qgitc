@@ -62,6 +62,8 @@ class BlameCommitPanel(QSplitter):
         self.logView = LogView(self)
         self.logView.setFrameStyle(QFrame.Shape.StyledPanel)
         self.logView.setEditable(False)
+        self.logView.setShowNoDataTips(True)
+        self.logView.setStandalone(False)
 
         self.detailPanel = CommitDetailPanel(self)
 
