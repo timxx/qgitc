@@ -50,7 +50,7 @@ from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
-from qgitc.filestatus import StatusFileListModel
+from qgitc.filestatus import StatusFileItemDelegate, StatusFileListModel
 from qgitc.findconstants import FindFlags
 from qgitc.gitutils import Git
 from qgitc.ntpdatetime import getNtpDateTime
@@ -180,6 +180,7 @@ class CommitWindow(StateWindow):
         self.ui.lvFiles.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.lvFiles.customContextMenuRequested.connect(
             self._onFilesContextMenuRequested)
+        self.ui.lvFiles.setItemDelegate(StatusFileItemDelegate(self))
 
         self._stagedModel = StatusFileListModel(self)
         stagedProxyModel = QSortFilterProxyModel(self)
@@ -195,6 +196,7 @@ class CommitWindow(StateWindow):
         self.ui.lvStaged.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.lvStaged.customContextMenuRequested.connect(
             self._onStagedContextMenuRequested)
+        self.ui.lvStaged.setItemDelegate(StatusFileItemDelegate(self))
 
         self._stagedModel.rowsInserted.connect(self._onStagedFilesChanged)
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)

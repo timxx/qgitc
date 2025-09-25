@@ -2,11 +2,11 @@
 
 from typing import List
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import QAbstractListModel, QModelIndex, QRect, QRectF, Qt
+from PySide6.QtGui import QFont, QPainter, QPen
+from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.diffview import _makeTextIcon
 
 
 class StatusFileInfo():
@@ -16,6 +16,90 @@ class StatusFileInfo():
         self.repoDir = repoDir
         self.statusCode = statusCode
         self.oldFile = oldFile
+
+
+class StatusFileItemDelegate(QStyledItemDelegate):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        option.features |= QStyleOptionViewItem.HasDecoration
+
+        self._drawBackground(painter, option)
+        self._drawDecoration(painter, option, index)
+        self._drawText(painter, option, index)
+
+    def _drawBackground(self, painter: QPainter, option: QStyleOptionViewItem):
+        colorSchema = ApplicationBase.instance().colorSchema()
+
+        borderRect = QRectF(option.rect)
+        borderRect.adjust(0.5, 0.5, -0.5, -0.5)
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(borderRect, colorSchema.SelectedItemBg)
+            if option.state & QStyle.State_HasFocus:
+                oldPen = painter.pen()
+                pen = QPen(colorSchema.FocusItemBorder)
+                pen.setCosmetic(True)
+                painter.setPen(pen)
+                painter.drawRect(borderRect)
+                painter.setPen(oldPen)
+        elif option.state & QStyle.State_MouseOver:
+            painter.fillRect(borderRect, colorSchema.HoverItemBg)
+
+    def _drawDecoration(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        status = index.data(Qt.DecorationRole)
+        assert isinstance(status, str)
+
+        color = self._toStatusColor(status)
+        iconRect = option.widget.style().subElementRect(
+            QStyle.SE_ItemViewItemDecoration, option, option.widget)
+        font = QFont(option.font)
+        font.setBold(True)
+
+        oldFont = painter.font()
+        oldPen = painter.pen()
+        painter.setFont(font)
+        painter.setPen(color)
+        painter.drawText(iconRect, Qt.AlignVCenter | Qt.AlignHCenter, status)
+        painter.setFont(oldFont)
+        painter.setPen(oldPen)
+
+    def _drawText(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        text = index.data(Qt.DisplayRole)
+        if not text:
+            return
+
+        textRect = option.widget.style().subElementRect(
+            QStyle.SE_ItemViewItemText, option, option.widget)
+        repoDir = index.data(StatusFileListModel.RepoDirRole)
+        if repoDir:
+            repoText = text[:len(repoDir)+1]
+            text = text[len(repoDir)+1:]
+            oldPen = painter.pen()
+            painter.setPen(ApplicationBase.instance().colorSchema().RepoTagFg)
+            br = painter.drawText(
+                textRect, Qt.AlignVCenter | Qt.AlignLeft, repoText)
+            painter.setPen(oldPen)
+            textRect.setLeft(br.right())
+
+        painter.drawText(textRect, Qt.AlignVCenter | Qt.AlignLeft, text)
+
+    def _toStatusColor(self, statusCode):
+        if statusCode == "A":
+            return ApplicationBase.instance().colorSchema().Adding
+        elif statusCode == "M":
+            return ApplicationBase.instance().colorSchema().Modified
+        elif statusCode == "D":
+            return ApplicationBase.instance().colorSchema().Deletion
+        elif statusCode == "R":
+            return ApplicationBase.instance().colorSchema().Renamed
+        elif statusCode == "?":
+            return ApplicationBase.instance().colorSchema().Untracked
+        elif statusCode == "!":
+            return ApplicationBase.instance().colorSchema().Ignored
+
+        return ApplicationBase.instance().palette().windowText().color()
 
 
 class StatusFileListModel(QAbstractListModel):
@@ -60,7 +144,7 @@ class StatusFileListModel(QAbstractListModel):
         elif role == StatusFileListModel.RepoDirRole:
             return self._fileList[row].repoDir
         elif role == Qt.DecorationRole:
-            return self._statusIcon(self._fileList[row].statusCode)
+            return self._fileList[row].statusCode
         elif role == Qt.ToolTipRole:
             oldFile = self._fileList[row].oldFile
             if oldFile:
@@ -94,26 +178,3 @@ class StatusFileListModel(QAbstractListModel):
 
     def clear(self):
         self.removeRows(0, self.rowCount())
-
-    def _statusIcon(self, statusCode):
-        icon = self._icons.get(statusCode)
-        if not icon:
-            font: QFont = ApplicationBase.instance().font()
-            font.setBold(True)
-            if statusCode == "A":
-                color = ApplicationBase.instance().colorSchema().Adding
-            elif statusCode == "M":
-                color = ApplicationBase.instance().colorSchema().Modified
-            elif statusCode == "D":
-                color = ApplicationBase.instance().colorSchema().Deletion
-            elif statusCode == "R":
-                color = ApplicationBase.instance().colorSchema().Renamed
-            elif statusCode == "?":
-                color = ApplicationBase.instance().colorSchema().Untracked
-            elif statusCode == "!":
-                color = ApplicationBase.instance().colorSchema().Ignored
-            else:
-                color = ApplicationBase.instance().palette().windowText().color()
-            icon = _makeTextIcon(statusCode, color, font)
-            self._icons[statusCode] = icon
-        return icon

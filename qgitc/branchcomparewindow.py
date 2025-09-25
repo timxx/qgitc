@@ -12,7 +12,7 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
-from qgitc.filestatus import StatusFileListModel
+from qgitc.filestatus import StatusFileItemDelegate, StatusFileListModel
 from qgitc.findconstants import FindFlags
 from qgitc.gitutils import Git
 from qgitc.statewindow import StateWindow
@@ -92,6 +92,7 @@ class BranchCompareWindow(StateWindow):
         self.ui.lvFiles.setContextMenuPolicy(Qt.CustomContextMenu)
         self.ui.lvFiles.customContextMenuRequested.connect(
             self._onFilesContextMenuRequested)
+        self.ui.lvFiles.setItemDelegate(StatusFileItemDelegate(self))
         self.ui.commitPanel.logView.setAllowSelectOnFetch(False)
 
         self._setupBranchComboboxes()
