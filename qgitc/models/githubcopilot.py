@@ -128,16 +128,19 @@ class GithubCopilot(AiModelBase):
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model, parent)
         self._token = ApplicationBase.instance().settings().githubCopilotToken()
+        self._updateUrlPrefix()
+
+        self._eventLoop = None
+        self._modelFetcher: ModelsFetcher = None
+        self._updateModels()
+
+    def _updateUrlPrefix(self):
         isIndividual = GithubCopilot.isIndividualToken(self._token)
         self._url_prefix = "https://api.{}.githubcopilot.com".format(
             "individual" if isIndividual else "business"
         )
         if self._token and isIndividual and "individual.githubcopilot" not in self._token:
             logger.warning("GitHub individual url may changed, please check!")
-
-        self._eventLoop = None
-        self._modelFetcher: ModelsFetcher = None
-        self._updateModels()
 
     def queryAsync(self, params: AiParameters):
         if not self._token or not GithubCopilot.isTokenValid(self._token):
@@ -234,6 +237,7 @@ class GithubCopilot(AiModelBase):
         self._token = data.get("token")
         if not self._token:
             return False
+        self._updateUrlPrefix()
         settings.setGithubCopilotToken(self._token)
         self._updateModels()
         return True
