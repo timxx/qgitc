@@ -189,7 +189,6 @@ class MainWindow(StateWindow):
         app = ApplicationBase.instance()
         app.focusChanged.connect(self.__updateEditMenu)
         app.submoduleAvailable.connect(self._onSubmoduleAvailable)
-        app.submoduleSearchCompleted.connect(self._onSubmoduleSearchCompleted)
 
         submodules = app.submodules
         if submodules:
@@ -304,13 +303,13 @@ class MainWindow(StateWindow):
             # let gitview clear the old branches
             repoDir = None
             # clear
-            repoChanged = app.updateRepoDir(None)
+            app.updateRepoDir(None)
             self._repoTopDir = None
             if Git.REF_MAP:
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            repoChanged = app.updateRepoDir(topLevelDir)
+            app.updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
             self._updateRecentRepos(topLevelDir)
 
@@ -322,10 +321,6 @@ class MainWindow(StateWindow):
                 Git.REV_HEAD = None
 
         self.cancel()
-        if repoDir and repoChanged:
-            _clearSubmodules()
-            self.ui.leRepo.setReadOnly(True)
-            self.ui.btnRepoBrowse.setDisabled(True)
 
         branch = Git.mergeBranchName() if self.mergeWidget else None
         if branch and branch.startswith("origin/"):
@@ -490,6 +485,9 @@ class MainWindow(StateWindow):
 
     def _onSubmoduleAvailable(self, submodules: List[str], fromCache: bool):
         self.ui.cbSubmodule.blockSignals(True)
+        if fromCache:
+            self.ui.cbSubmodule.clear()
+
         for submodule in submodules:
             self.ui.cbSubmodule.addItem(submodule)
         index = self.ui.cbSubmodule.findText(".")
@@ -510,11 +508,6 @@ class MainWindow(StateWindow):
             self.ui.gitViewA.logView.update()
             if self.gitViewB:
                 self.gitViewB.logView.update()
-
-    def _onSubmoduleSearchCompleted(self):
-        if not self.mergeWidget:
-            self.ui.leRepo.setReadOnly(False)
-            self.ui.btnRepoBrowse.setEnabled(True)
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()

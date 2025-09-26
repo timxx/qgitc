@@ -159,3 +159,20 @@ class TestLogWindow(TestBase):
 
         self.assertEqual(0, logView.getCount())
         self.assertEqual(-1, logView.currentIndex())
+
+    def testSubmodules(self):
+        self.waitForLoaded()
+
+        self.assertEqual(2, self.window.ui.cbSubmodule.count())
+
+        # change to subRepo
+        subRepo = os.path.join(self.gitDir.name, "subRepo")
+        self.window.ui.leRepo.setText(subRepo)
+        self.waitForLoaded()
+
+        self.assertEqual(0, self.window.ui.cbSubmodule.count())
+
+        self.window.ui.leRepo.setText(self.gitDir.name)
+        self.waitForLoaded()
+
+        self.assertEqual(2, self.window.ui.cbSubmodule.count())

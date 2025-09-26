@@ -530,9 +530,6 @@ class Application(ApplicationBase):
         self._findSubmodules()
 
         submodules = self._settings.submodulesCache(Git.REPO_DIR)
-        if not submodules:
-            return
-
         # first, check if cache is valid
         for submodule in submodules:
             if not os.path.exists(os.path.join(Git.REPO_DIR, submodule)):
