@@ -73,7 +73,7 @@ class StatusFileItemDelegate(QStyledItemDelegate):
         textRect = option.widget.style().subElementRect(
             QStyle.SE_ItemViewItemText, option, option.widget)
         repoDir = index.data(StatusFileListModel.RepoDirRole)
-        if repoDir:
+        if repoDir and repoDir != ".":
             repoText = text[:len(repoDir)+1]
             text = text[len(repoDir)+1:]
             oldPen = painter.pen()
