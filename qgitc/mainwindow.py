@@ -12,8 +12,6 @@ from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMe
 
 from qgitc.aboutdialog import AboutDialog
 from qgitc.applicationbase import ApplicationBase
-from qgitc.coloredicontoolbutton import ColoredIconToolButton
-from qgitc.common import dataDirPath
 from qgitc.diffview import PatchViewer
 from qgitc.events import (
     RequestCommitEvent,
@@ -100,15 +98,6 @@ class MainWindow(StateWindow):
 
         self.__setupSignals()
         self.__setupMenus()
-
-        icon = QIcon(dataDirPath() + "/icons/assistant.svg")
-        assistantButton = ColoredIconToolButton(icon, QSize(16, 16), self)
-        assistantButton.setIcon(icon)
-        assistantButton.clicked.connect(
-            self._onShowAiAssistant)
-        assistantButton.setToolTip(self.tr("Show AI Assistant"))
-
-        self.statusBar().addPermanentWidget(assistantButton)
 
     def __setupSignals(self):
         self.ui.acReload.triggered.connect(self.reloadRepo)
