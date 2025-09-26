@@ -270,7 +270,11 @@ class AiModelBase(QObject):
             logger.warning(b"Invalid delta: %s", delta)
 
     def handleNonStreamResponse(self, response: bytes):
-        data = json.loads(response)
+        try:
+            data = json.loads(response)
+        except json.JSONDecodeError as e:
+            logger.error("Failed to decode JSON response: %s", e)
+            return
         usage = data["usage"]
         aiResponse = AiResponse()
         aiResponse.total_tokens = usage["total_tokens"]

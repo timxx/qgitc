@@ -7,6 +7,7 @@ from PySide6.QtCore import QEventLoop, QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
 from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters, AiRole
 from qgitc.settings import Settings
@@ -46,16 +47,17 @@ class ModelsFetcher(QObject):
 
     finished = Signal()
 
-    def __init__(self, token: str, parent=None):
+    def __init__(self, token: str, url_prefix: str, parent=None):
         super().__init__(parent)
         self.models = []
         self.capabilities = {}
         self.defaultModel = None
         self._token = token
         self._reply: QNetworkReply = None
+        self._url_prefix = url_prefix
 
     def start(self):
-        url = "https://api.business.githubcopilot.com/models"
+        url = f"{self._url_prefix}/models"
         headers = _makeHeaders(self._token, b"model-access")
 
         mgr = ApplicationBase.instance().networkManager
@@ -126,6 +128,12 @@ class GithubCopilot(AiModelBase):
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model, parent)
         self._token = ApplicationBase.instance().settings().githubCopilotToken()
+        isIndividual = GithubCopilot.isIndividualToken(self._token)
+        self._url_prefix = "https://api.{}.githubcopilot.com".format(
+            "individual" if isIndividual else "business"
+        )
+        if self._token and isIndividual and "individual.githubcopilot" not in self._token:
+            logger.warning("GitHub individual url may changed, please check!")
 
         self._eventLoop = None
         self._modelFetcher: ModelsFetcher = None
@@ -183,7 +191,7 @@ class GithubCopilot(AiModelBase):
     def _doQuery(self, payload, stream=True):
         headers = _makeHeaders(self._token)
         self.post(
-            "https://api.business.githubcopilot.com/chat/completions",
+            f"{self._url_prefix}/chat/completions",
             headers=headers,
             data=payload,
             stream=stream)
@@ -246,6 +254,23 @@ class GithubCopilot(AiModelBase):
                 return int(value.strip())
         return None
 
+    @staticmethod
+    def isIndividualToken(token: str):
+        if not token:
+            return False
+
+        pairs = token.split(';')
+        individual = False
+        for pair in pairs:
+            key, value = pair.split('=')
+            key = key.strip()
+            if key == "sku":
+                return value.strip() == "free_limited_copilot"
+            if key == "proxy-ep":
+                individual = "individual" in value
+
+        return individual
+
     def _requestAccessToken(self):
         if self._eventLoop:
             return None
@@ -287,7 +312,7 @@ class GithubCopilot(AiModelBase):
 
         GithubCopilot._models = []
 
-        self._modelFetcher = ModelsFetcher(self._token, self)
+        self._modelFetcher = ModelsFetcher(self._token, self._url_prefix, self)
         self._modelFetcher.finished.connect(self._onModelsAvailable)
         self._modelFetcher.start()
 
