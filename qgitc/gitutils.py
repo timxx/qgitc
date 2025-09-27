@@ -23,6 +23,12 @@ class GitProcess():
         logger.debug(f"run {args} in {repoDir}")
         if os.name == "nt":
             creationflags = subprocess.CREATE_NO_WINDOW
+
+        if not env or "LANGUAGE" not in env:
+            if not env:
+                env = os.environ.copy()
+            env["LANGUAGE"] = "en_US"
+
         self._process = subprocess.Popen(
             [GitProcess.GIT_BIN] + args,
             cwd=repoDir,

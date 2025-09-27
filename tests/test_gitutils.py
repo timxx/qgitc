@@ -42,3 +42,11 @@ class TestGitUtils(TestBase):
         self.assertIn("diff --git a/README.md b/README.md", lines)
         self.assertIn("+# test", lines)
         self.assertIn("diff --git a/test.dot b/test.dot", lines)
+
+    def testRestoreFiles(self):
+        with open("newfile.txt", "w", encoding="utf-8") as f:
+            f.write("test")
+        self.assertIsNone(Git.addFiles(None, ["newfile.txt"]))
+
+        error = Git.restoreFiles(None, ["newfile.txt"], staged=True)
+        self.assertTrue(error.startswith("error: pathspec "))
