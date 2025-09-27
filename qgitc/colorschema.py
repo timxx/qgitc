@@ -82,6 +82,9 @@ class ColorSchema:
     SystemBlockBg = QColor()
     SystemBlockFg = QColor()
 
+    ConflictFg = QColor()
+    ResolvedFg = QColor()
+
 
 class ColorSchemaLight(ColorSchema):
 
@@ -180,6 +183,9 @@ class ColorSchemaLight(ColorSchema):
     SystemBlockBg = QColor(0xF3E8FD)
     SystemBlockFg = QColor(0x673AB7)
 
+    ConflictFg = QColor(0xe57373)
+    ResolvedFg = QColor(0x81c784)
+
 
 class ColorSchemaDark(ColorSchema):
 
@@ -277,3 +283,6 @@ class ColorSchemaDark(ColorSchema):
     SystemBlockBorder = QColor(0xB39DDB)
     SystemBlockBg = QColor(0x362B4F)
     SystemBlockFg = QColor(0xB39DDB)
+
+    ConflictFg = QColor(0xff5555)
+    ResolvedFg = QColor(0x50fa7b)

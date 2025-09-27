@@ -72,8 +72,9 @@ class MergeWidget(QWidget):
         self.setWindowTitle(self.tr("Conflict List"))
 
         self.resolvedCount = 0
-        self.iconResolved = self.__makeTextIcon(chr(0x2714), Qt.green)
-        self.iconConflict = self.__makeTextIcon('!', Qt.red)
+        schema = ApplicationBase.instance().colorSchema()
+        self.iconResolved = self.__makeTextIcon(chr(0x2714), schema.ResolvedFg)
+        self.iconConflict = self.__makeTextIcon('!', schema.ConflictFg)
 
         self.resolveIndex = -1
         self.process = None
