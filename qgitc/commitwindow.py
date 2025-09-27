@@ -1415,6 +1415,7 @@ class CommitWindow(StateWindow):
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(repoFiles, self._doRestoreStaged)
+        self.clearModels()
         self._curFile = None
         self._curFileStatus = None
 
@@ -1431,6 +1432,11 @@ class CommitWindow(StateWindow):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
         error = Git.restoreFiles(repoDir, repoFiles, isStaged)
+
+        self._statusFetcher.fetchStatus(submodule, cancelEvent)
+
+        if error and error.startswith("error: pathspec "):
+            error = None
         ApplicationBase.instance().postEvent(
             self, FileRestoreEvent(submodule, files, error))
 
@@ -1442,10 +1448,6 @@ class CommitWindow(StateWindow):
                 error,
                 QMessageBox.Ok)
             return
-
-        for file in files:
-            self._stagedModel.removeFile(file, submodule)
-            self._filesModel.removeFile(file, submodule)
 
     def _onAmendToggled(self, checked: bool):
         self._updateCommitButtonState()
