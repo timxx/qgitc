@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer
-from PySide6.QtGui import QActionGroup, QIcon
+from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
 from qgitc.aboutdialog import AboutDialog
