@@ -22,6 +22,9 @@ A cross-platform Git GUI tool designed to simplify commit history exploration, b
 ### Commit Window
 ![Commit](./screenshots/commit.png)
 
+### Branch Compare Window
+![Branch Compare](./screenshots/bcompare.png)
+
 ### AI Assistant
 ![AI Assistant](./screenshots/assistant.png)
 
@@ -45,6 +48,7 @@ A cross-platform Git GUI tool designed to simplify commit history exploration, b
 - [x] Composite mode
 - [x] AI-based commit
 - [x] AI-based code review
+- [x] Branch compare, to show full changes for two branches
 
 
 ## Requirements
