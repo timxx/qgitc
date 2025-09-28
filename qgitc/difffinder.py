@@ -205,6 +205,9 @@ class DiffFinder(QObject):
         return FIND_NOTFOUND
 
     def _onResultAvailable(self, result: List[str]):
+        if not self._sha1IndexMap:
+            return
+
         for sha1 in result:
             index = self._sha1IndexMap[sha1]
             bisect.insort(self._result, index)

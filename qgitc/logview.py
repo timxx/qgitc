@@ -1570,6 +1570,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def findCommitSync(self, findPattern, findRange, findField):
         # only use for finding in comments, as it should pretty fast
         assert findField == FindField.Comments
+        self.cancelFindCommit()
 
         def findInCommit(commit):
             if findPattern.search(commit.comments):

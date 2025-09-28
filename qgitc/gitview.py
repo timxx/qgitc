@@ -217,7 +217,7 @@ class GitView(QWidget):
             self.ui.diffSpinner.stop()
 
     def __doFindCommit(self, beginCommit=0, findNext=True):
-        findWhat = self.ui.leFindWhat.text().strip()
+        findWhat = self.ui.leFindWhat.text()
         self.findField = self.ui.cbFindWhat.currentIndex()
         findType = self.ui.cbFindType.currentIndex()
         self.findNext = findNext
@@ -225,6 +225,7 @@ class GitView(QWidget):
         if not findWhat:
             self.ui.logView.highlightKeyword(None)
             self.ui.diffView.highlightKeyword(None)
+            self.ui.logView.cancelFindCommit()
             self.ui.logView.clearFindData()
             return
 
