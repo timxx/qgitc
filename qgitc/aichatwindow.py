@@ -137,6 +137,7 @@ class AiChatWidget(QWidget):
         self._titleGenerator: AiChatTitleGenerator = None
 
         QTimer.singleShot(100, self._loadChatHistories)
+        self.usrInput.setFocus()
 
     def _setupHistoryPanel(self):
         self._historyPanel = AiChatHistoryPanel(self)
@@ -554,6 +555,7 @@ class AiChatWidget(QWidget):
     def _onNewChatRequested(self):
         """Create a new chat conversation"""
         self._createNewConversation()
+        self.usrInput.setFocus()
 
     def _createNewConversation(self):
         """Create and switch to a new conversation"""
