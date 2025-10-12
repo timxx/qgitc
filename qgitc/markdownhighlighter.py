@@ -385,7 +385,7 @@ def isValidEmail(email: str):
         return False
 
     # Check for at least one character before and after '@'
-    if atIndex == 0 or atIndex == email.length() - 1:
+    if atIndex == 0 or atIndex == len(email) - 1:
         return False
 
     # Split email into local part and domain
