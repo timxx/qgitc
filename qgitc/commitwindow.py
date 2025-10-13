@@ -1385,19 +1385,21 @@ class CommitWindow(StateWindow):
             indexes) > 1 else self.tr("&Restore this file")
         self._acRestoreFiles.setText(text)
         self._acRestoreFiles.setData(listView)
-        self._contexMenu.exec(listView.mapToGlobal(pos))
+        self._contextMenu.exec(listView.mapToGlobal(pos))
 
     def _setupContextMenu(self):
-        self._contexMenu = QMenu(self)
-        self._acRestoreFiles = self._contexMenu.addAction(
+        self._contextMenu = QMenu(self)
+        self._acRestoreFiles = self._contextMenu.addAction(
             self.tr("&Restore this file"),
             self._onRestoreFiles)
-        self._contexMenu.addSeparator()
-        self._contexMenu.addAction(self.tr("External &diff"),
+        self._contextMenu.addSeparator()
+        self._contextMenu.addAction(self.tr("External &diff"),
                                    self._onExternalDiff)
-        self._contexMenu.addSeparator()
-        self._contexMenu.addAction(self.tr("&Open Containing Folder"),
+        self._contextMenu.addSeparator()
+        self._contextMenu.addAction(self.tr("&Open Containing Folder"),
                                    self._onOpenContainingFolder)
+        self._contextMenu.addAction(self.tr("&Copy File Path"),
+                                    self._onCopyFilePath)
 
     @staticmethod
     def _filterUntrackedFiles(model: QAbstractListModel, index: QModelIndex):
@@ -1520,6 +1522,17 @@ class CommitWindow(StateWindow):
         else:
             dir = QFileInfo(fullPath).absolutePath()
             QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
+
+    def _onCopyFilePath(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.copy_file_path")
+        listView: QListView = self._acRestoreFiles.data()
+        index = listView.currentIndex()
+        if not index.isValid():
+            return
+
+        fullPath = os.path.normpath(os.path.join(Git.REPO_DIR, index.data()))
+        clipboard = ApplicationBase.instance().clipboard()
+        clipboard.setText(fullPath)
 
     def _onRepoDirChanged(self):
         self.clear()
