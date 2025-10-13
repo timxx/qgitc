@@ -1920,6 +1920,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         submodules = ApplicationBase.instance().submodules
         if not submodules:
+            self.viewport().update()
             return
 
         self.clear()
