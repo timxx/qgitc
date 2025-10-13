@@ -4,13 +4,28 @@ import os
 import re
 from typing import Tuple
 
-from PySide6.QtCore import QEvent, QModelIndex, QSortFilterProxyModel, Qt, QTimer
-from PySide6.QtWidgets import QAbstractItemView, QComboBox, QCompleter
+from PySide6.QtCore import (
+    QEvent,
+    QModelIndex,
+    QProcess,
+    QSortFilterProxyModel,
+    Qt,
+    QTimer,
+)
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QCompleter,
+    QMenu,
+    QMessageBox,
+    QStyle,
+)
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import fullRepoDir, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
+from qgitc.diffview import DiffView
 from qgitc.events import ShowCommitEvent
 from qgitc.filestatus import StatusFileItemDelegate, StatusFileListModel
 from qgitc.findconstants import FindFlags
@@ -55,6 +70,8 @@ class BranchCompareWindow(StateWindow):
         self._isBranchDiff = True
         self._tryRenamedIndex = -1
         self._repoMergeBase = {}
+
+        self._contextMenu: QMenu = None
 
         self._diffFetcher = DiffFetcher(self)
         self._diffFetcher.diffAvailable.connect(
@@ -138,6 +155,13 @@ class BranchCompareWindow(StateWindow):
 
         app = ApplicationBase.instance()
         app.repoDirChanged.connect(self._reloadBranches)
+
+        if not ApplicationBase.instance().style().styleHint(QStyle.SH_ItemView_ActivateItemOnSingleClick):
+            self.ui.lvFiles.activated.connect(
+                self._onFileDoubleClicked)
+        else:
+            self.ui.lvFiles.doubleClicked.connect(
+                self._onFileDoubleClicked)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -314,7 +338,12 @@ class BranchCompareWindow(StateWindow):
             self._onSelectFileChanged(index, index)
 
     def _onFilesContextMenuRequested(self, point):
-        pass
+        curIndex = self.ui.lvFiles.indexAt(point)
+        if not curIndex.isValid():
+            return
+
+        self._setupContextMenu()
+        self._contextMenu.exec(self.ui.lvFiles.mapToGlobal(point))
 
     def event(self, event: QEvent):
         if event.type() == FileStatusEvent.EventType:
@@ -457,3 +486,88 @@ class BranchCompareWindow(StateWindow):
                               self.ui.splitterChanges.saveState())
 
         return True
+
+    def _setupContextMenu(self):
+        if self._contextMenu:
+            return
+
+        self._contextMenu = QMenu(self)
+        self._contextMenu.addAction(self.tr("External &diff"),
+                                   self._onExternalDiff)
+        self._contextMenu.addSeparator()
+        self._contextMenu.addAction(self.tr("&Open Containing Folder"),
+                                   self._onOpenContainingFolder)
+        self._contextMenu.addAction(self.tr("&Copy File Path"),
+                                    self._onCopyFilePath)
+
+    def _onExternalDiff(self):
+        ApplicationBase.instance().trackFeatureUsage("bc.external_diff")
+        index = self.ui.lvFiles.currentIndex()
+        if not index.isValid():
+            return
+
+        self._onFileDoubleClicked(index)
+
+    def _onOpenContainingFolder(self):
+        index = self.ui.lvFiles.currentIndex()
+        if not index.isValid():
+            return
+
+        fullPath = os.path.join(Git.REPO_DIR, index.data())
+        if os.name == "nt":
+            args = ["/select,", fullPath.replace("/", "\\")]
+            QProcess.startDetached("explorer", args)
+        else:
+            dir = QFileInfo(fullPath).absolutePath()
+            QDesktopServices.openUrl(QUrl.fromLocalFile(dir))
+
+    def _onCopyFilePath(self):
+        ApplicationBase.instance().trackFeatureUsage("bc.copy_file_path")
+        index = self.ui.lvFiles.currentIndex()
+        if not index.isValid():
+            return
+
+        fullPath = os.path.normpath(os.path.join(Git.REPO_DIR, index.data()))
+        clipboard = ApplicationBase.instance().clipboard()
+        clipboard.setText(fullPath)
+
+    def _onFileDoubleClicked(self, index: QModelIndex):
+        self._runDiffTool(index)
+
+    def _runDiffTool(self, index: QModelIndex):
+        if not index.isValid():
+            return
+
+        baseBranch = self.ui.cbBaseBranch.currentText()
+        if not baseBranch:
+            return
+
+        targetBranch = self.ui.cbTargetBranch.currentText()
+        if not targetBranch:
+            return
+
+        submodule = index.data(StatusFileListModel.RepoDirRole)
+        repoDir = index.data(StatusFileListModel.RepoDirRole)
+        file = toSubmodulePath(submodule, index.data(Qt.DisplayRole))
+
+        tool = DiffView.diffToolForFile(file)
+
+        mergeBase = self._repoMergeBase.get(repoDir)
+        arg = f"{mergeBase or baseBranch}..{targetBranch}"
+
+        args = ["difftool", "--no-prompt", arg]
+        if tool:
+            args.append("--tool={}".format(tool))
+
+        args.append("--")
+        args.append(file)
+
+        repoDir = fullRepoDir(submodule)
+        try:
+            process = Git.run(args, repoDir=repoDir)
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                self.tr("Run External Diff Tool Error"),
+                str(e),
+                QMessageBox.Ok)
