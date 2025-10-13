@@ -200,12 +200,19 @@ class AiChatHistoryPanel(QWidget):
         """Handle search text change"""
         self._filterModel.setSearchText(text)
 
+        if (
+            self._historyModel.rowCount() > 0
+            and not self._historyList.currentIndex().isValid()
+        ):
+            self._historyList.setCurrentIndex(self._filterModel.index(0, 0))
+
     def _onHistorySelectionChanged(self, current: QModelIndex, previous: QModelIndex):
         """Handle history selection change"""
+        chatHistory = None
         if current.isValid() and current != previous:
             chatHistory = self._filterModel.data(current, Qt.UserRole)
-            if chatHistory:
-                self.historySelectionChanged.emit(chatHistory)
+
+        self.historySelectionChanged.emit(chatHistory)
 
     def clear(self):
         self._historyModel.clear()

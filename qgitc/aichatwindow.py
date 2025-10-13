@@ -170,7 +170,7 @@ class AiChatWidget(QWidget):
         self.usrInput.enterPressed.connect(
             self._onEnterKeyPressed)
         self.usrInput.textChanged.connect(
-            lambda: self.btnSend.setEnabled(bool(self.usrInput.toPlainText().strip())))
+            self._onUsrInputTextChanged)
 
         gridLayout = QGridLayout()
         gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -462,6 +462,11 @@ class AiChatWidget(QWidget):
     def _onEnterKeyPressed(self):
         self._onButtonSend(False)
 
+    def _onUsrInputTextChanged(self):
+        curChat = self._historyPanel.currentHistory()
+        enabled = curChat is not None and self.usrInput.toPlainText().strip() != ""
+        self.btnSend.setEnabled(enabled)
+
     def _onTextBrowserScrollbarChanged(self, value):
         if self._adjustingSccrollbar:
             return
@@ -570,6 +575,7 @@ class AiChatWidget(QWidget):
 
     def _onHistorySelectionChanged(self, chatHistory: AiChatHistory):
         """Handle history selection change"""
+        self._onUsrInputTextChanged()
         self._loadChatHistory(chatHistory)
 
     def _onHistoryRemoved(self, historyId: str):
@@ -585,6 +591,10 @@ class AiChatWidget(QWidget):
 
     def _loadChatHistory(self, chatHistory: AiChatHistory):
         """Load a specific chat history"""
+        if not chatHistory:
+            self._clearCurrentChat()
+            return
+
         # Switch to the correct model if different
         self._switchToModel(chatHistory.modelKey, chatHistory.modelId)
 
