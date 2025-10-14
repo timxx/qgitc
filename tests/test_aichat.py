@@ -83,6 +83,19 @@ class TestAiChat(TestBase):
             self.assertEqual("This is a mock response",
                              chatbot.document().lastBlock().text())
 
+    def test_sendButtonState(self):
+        self.assertFalse(self.chatWidget.btnSend.isEnabled())
+        self.chatWidget.usrInput.edit.setPlainText("hello")
+        self.assertTrue(self.chatWidget.btnSend.isEnabled())
+        curChat = self.chatWidget._historyPanel.currentHistory()
+        self.assertIsNotNone(curChat)
+
+        spy = QSignalSpy(self.chatWidget._historyPanel.historySelectionChanged)
+        self.chatWidget._historyPanel._searchEdit.setText("should not match")
+        self.assertEqual(1, spy.count())
+
+        self.assertFalse(self.chatWidget.btnSend.isEnabled())
+        self.assertIsNone(self.chatWidget._historyPanel.currentHistory())
 
 class TestAiChatFetchModels(TestBase):
 
