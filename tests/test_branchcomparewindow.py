@@ -1,4 +1,4 @@
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, QPoint
 
 from qgitc.branchcomparewindow import FileStatusEvent
 from qgitc.windowtype import WindowType
@@ -61,7 +61,7 @@ class TestBranchCompareWindow(TestBase):
 
     def test_onFilesContextMenuRequested_does_nothing(self):
         # Should not raise
-        self.window._onFilesContextMenuRequested(None)
+        self.window._onFilesContextMenuRequested(QPoint())
 
     def test_event_handles_FileStatusEvent(self):
         event = FileStatusEvent("file.txt", "repo", "M")
