@@ -24,6 +24,7 @@ class ChatGPTModel(AiModelBase):
             payload["suffix"] = params.prompt[params.fill_point:]
             if params.language is not None and params.language != "None":
                 payload["language"] = params.language
+            self.addHistory(AiRole.User, params.prompt)
         else:
             if params.sys_prompt:
                 self.addHistory(AiRole.System, params.sys_prompt)
