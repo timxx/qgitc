@@ -66,36 +66,36 @@
         <translation>搜索对话…</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="332"/>
-        <location filename="../../aichathistorypanel.py" line="357"/>
+        <location filename="../../aichathistorypanel.py" line="339"/>
+        <location filename="../../aichathistorypanel.py" line="364"/>
         <source>Export Conversation</source>
         <translation>导出对话</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="338"/>
-        <location filename="../../aichathistorypanel.py" line="378"/>
+        <location filename="../../aichathistorypanel.py" line="345"/>
+        <location filename="../../aichathistorypanel.py" line="385"/>
         <source>Remove Conversation</source>
         <translation>移除对话</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="360"/>
+        <location filename="../../aichathistorypanel.py" line="367"/>
         <source>JSON Files (*.json);;All Files (*)</source>
         <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="370"/>
+        <location filename="../../aichathistorypanel.py" line="377"/>
         <source>Export Error</source>
         <translation>导出错误</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="371"/>
+        <location filename="../../aichathistorypanel.py" line="378"/>
         <source>Failed to export conversation:
 {}</source>
         <translation>导出对话失败：
 {}</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="379"/>
+        <location filename="../../aichathistorypanel.py" line="386"/>
         <source>Are you sure you want to remove the conversation &apos;{}&apos;?
 
 This action cannot be undone.</source>
@@ -104,7 +104,7 @@ This action cannot be undone.</source>
 此操作无法撤销。</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="380"/>
+        <location filename="../../aichathistorypanel.py" line="387"/>
         <source>Untitled</source>
         <translation>未命名</translation>
     </message>
@@ -112,82 +112,82 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwindow.py" line="166"/>
+        <location filename="../../aichatwindow.py" line="167"/>
         <source>Enter the query prompt here</source>
         <translation>请在此输入请求提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="177"/>
+        <location filename="../../aichatwindow.py" line="178"/>
         <source>System</source>
         <translation>系统</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="179"/>
+        <location filename="../../aichatwindow.py" line="180"/>
         <source>User</source>
         <translation>用户</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="189"/>
+        <location filename="../../aichatwindow.py" line="190"/>
         <source>Max Tokens</source>
         <translation>最大Token数</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="194"/>
+        <location filename="../../aichatwindow.py" line="195"/>
         <source>Max tokens to generate</source>
         <translation>生成的最大Token数量</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="198"/>
+        <location filename="../../aichatwindow.py" line="199"/>
         <source>Temperature</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="254"/>
+        <location filename="../../aichatwindow.py" line="255"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="289"/>
+        <location filename="../../aichatwindow.py" line="290"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="290"/>
+        <location filename="../../aichatwindow.py" line="291"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="291"/>
+        <location filename="../../aichatwindow.py" line="292"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="292"/>
+        <location filename="../../aichatwindow.py" line="293"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="293"/>
+        <location filename="../../aichatwindow.py" line="294"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="294"/>
+        <location filename="../../aichatwindow.py" line="295"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="253"/>
+        <location filename="../../aichatwindow.py" line="254"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="162"/>
+        <location filename="../../aichatwindow.py" line="163"/>
         <source>Enter the system prompt here</source>
         <translation>请在此输入系统提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="377"/>
+        <location filename="../../aichatwindow.py" line="378"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -195,7 +195,7 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="676"/>
+        <location filename="../../aichatwindow.py" line="688"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -313,9 +313,29 @@ This action cannot be undone.</source>
 <context>
     <name>BranchCompareWindow</name>
     <message>
-        <location filename="../../branchcomparewindow.py" line="91"/>
+        <location filename="../../branchcomparewindow.py" line="108"/>
         <source>Please select base and target branches to see changes</source>
         <translation>请选择基线分支和目标分支以查看更改</translation>
+    </message>
+    <message>
+        <location filename="../../branchcomparewindow.py" line="495"/>
+        <source>External &amp;diff</source>
+        <translation>外部工具查看diff(&amp;d)</translation>
+    </message>
+    <message>
+        <location filename="../../branchcomparewindow.py" line="498"/>
+        <source>&amp;Open Containing Folder</source>
+        <translation>打开所在目录(&amp;O)</translation>
+    </message>
+    <message>
+        <location filename="../../branchcomparewindow.py" line="500"/>
+        <source>&amp;Copy File Path</source>
+        <translation>复制路径(&amp;C)</translation>
+    </message>
+    <message>
+        <location filename="../../branchcomparewindow.py" line="571"/>
+        <source>Run External Diff Tool Error</source>
+        <translation>运行外部Diff工具错误</translation>
     </message>
     <message>
         <location filename="../../branchcomparewindow.ui" line="14"/>
@@ -648,12 +668,17 @@ This action cannot be undone.</source>
         <translation>打开所在目录(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1447"/>
+        <location filename="../../commitwindow.py" line="1401"/>
+        <source>&amp;Copy File Path</source>
+        <translation>复制路径(&amp;C)</translation>
+    </message>
+    <message>
+        <location filename="../../commitwindow.py" line="1449"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1591"/>
+        <location filename="../../commitwindow.py" line="1604"/>
         <source>Local time is not synchronized with the network time</source>
         <translation>本地时间与标准时间不同步</translation>
     </message>
@@ -966,17 +991,17 @@ This action cannot be undone.</source>
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="267"/>
+        <location filename="../../gitview.py" line="268"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="298"/>
+        <location filename="../../gitview.py" line="299"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="301"/>
+        <location filename="../../gitview.py" line="302"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -1236,17 +1261,17 @@ Settings → Commit → Detect Local Changes</source>
         <translation>不再显示此消息</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1667"/>
+        <location filename="../../logview.py" line="1668"/>
         <source>Loading commits, please wait...</source>
         <translation>正在加载记录，请稍候…</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1670"/>
+        <location filename="../../logview.py" line="1671"/>
         <source>No commits found for the current filter. Try adjusting your filter criteria.</source>
         <translation>未找到符合当前筛选条件的提交，请尝试调整筛选条件。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1675"/>
+        <location filename="../../logview.py" line="1676"/>
         <source>No commits found. You may need to increase the &quot;Max Commits&quot; setting or disable &quot;Composite Mode&quot;.</source>
         <translation>未找到记录。您可能需要增加“最大记录数”设置或禁用“聚合模式”。</translation>
     </message>
