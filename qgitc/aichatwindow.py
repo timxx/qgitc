@@ -136,7 +136,7 @@ class AiChatWidget(QWidget):
 
         self._titleGenerator: AiChatTitleGenerator = None
 
-        QTimer.singleShot(100, self._loadChatHistories)
+        QTimer.singleShot(100, self._onDelayInit)
         self.usrInput.setFocus()
 
     def _setupHistoryPanel(self):
@@ -146,6 +146,9 @@ class AiChatWidget(QWidget):
             self._onHistorySelectionChanged)
         self._historyPanel.historyRemoved.connect(self._onHistoryRemoved)
         self.splitter.addWidget(self._historyPanel)
+
+        # wait until history loaded
+        self._historyPanel.setEnabled(False)
 
     def _setupChatPanel(self):
         chatWidget = QWidget(self)
@@ -206,25 +209,6 @@ class AiChatWidget(QWidget):
         self.cbBots = QComboBox(self)
         self.cbBots.setEditable(False)
         self.cbBots.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-
-        aiModels: List[AiModelBase] = [
-            model(parent=self) for model in AiModelProvider.models()]
-        defaultModelKey = ApplicationBase.instance().settings().defaultLlmModel()
-        currentModelIndex = -1
-
-        for i, model in enumerate(aiModels):
-            self.cbBots.addItem(model.name, model)
-            model.responseAvailable.connect(self._onMessageReady)
-            model.finished.connect(self._onResponseFinish)
-            model.serviceUnavailable.connect(self._onServiceUnavailable)
-            if AiModelFactory.modelKey(model) == defaultModelKey:
-                currentModelIndex = i
-
-            model.modelsReady.connect(self._onModelsReady)
-
-        if currentModelIndex != -1:
-            self.cbBots.setCurrentIndex(currentModelIndex)
-
         hlayout.addWidget(self.cbBots)
 
         self.cbModelNames = QComboBox(self)
@@ -274,8 +258,6 @@ class AiChatWidget(QWidget):
         self.cbChatMode.currentIndexChanged.connect(
             self._onChatModeChanged)
 
-        self._onModelChanged(self.cbBots.currentIndex())
-
         QWidget.setTabOrder(self.usrInput, self.btnSend)
         QWidget.setTabOrder(self.btnSend, self.usrInput)
 
@@ -284,6 +266,27 @@ class AiChatWidget(QWidget):
 
         self.splitter.addWidget(chatWidget)
         self.splitter.setSizes([200, 600])
+
+    def _setupModels(self):
+        aiModels: List[AiModelBase] = [
+            model(parent=self) for model in AiModelProvider.models()]
+        defaultModelKey = ApplicationBase.instance().settings().defaultLlmModel()
+        currentModelIndex = -1
+
+        for i, model in enumerate(aiModels):
+            self.cbBots.addItem(model.name, model)
+            model.responseAvailable.connect(self._onMessageReady)
+            model.finished.connect(self._onResponseFinish)
+            model.serviceUnavailable.connect(self._onServiceUnavailable)
+            if AiModelFactory.modelKey(model) == defaultModelKey:
+                currentModelIndex = i
+
+            model.modelsReady.connect(self._onModelsReady)
+
+        if currentModelIndex != -1:
+            self.cbBots.setCurrentIndex(currentModelIndex)
+
+        self._onModelChanged(self.cbBots.currentIndex())
 
     def _chatModeStr(self, mode: AiChatMode):
         strings = {
@@ -368,8 +371,6 @@ class AiChatWidget(QWidget):
             prompt = f"```diff\n{prompt}\n```"
         self._doMessageReady(model, AiResponse(AiRole.User, prompt))
 
-        model.queryAsync(params)
-
         self.btnSend.setVisible(False)
         self.btnStop.setVisible(True)
         self._historyPanel.setEnabled(False)
@@ -378,7 +379,9 @@ class AiChatWidget(QWidget):
         self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
 
-        if isNewConversation and not ApplicationBase.instance().testing:
+        model.queryAsync(params)
+
+        if isNewConversation and not ApplicationBase.instance().testing and model.history:
             message = model.history[0].message
             if model.history[0].role == AiRole.System and len(model.history) > 1:
                 message += "\n" + model.history[1].message
@@ -420,6 +423,9 @@ class AiChatWidget(QWidget):
             settings.saveChatHistory(
                 chatHistory.historyId, chatHistory.toDict())
 
+        self._updateStatus()
+
+    def _updateStatus(self):
         self.btnSend.setVisible(True)
         self.btnStop.setVisible(False)
         self._historyPanel.setEnabled(True)
@@ -433,6 +439,7 @@ class AiChatWidget(QWidget):
         assert (index != -1)
         messages: AiChatbot = self._chatBot
         messages.appendServiceUnavailable()
+        self._updateStatus()
 
     def _onModelChanged(self, index: int):
         model = self.currentChatModel()
@@ -534,8 +541,8 @@ class AiChatWidget(QWidget):
     def _updateChatHistoryModel(self, model: AiModelBase):
         self._historyPanel.updateCurrentModelId(model.modelId)
 
-    def _loadChatHistories(self):
-        """Load chat histories from settings"""
+    def _onDelayInit(self):
+        # Load chat histories from settings
         settings = ApplicationBase.instance().settings()
         histories = settings.chatHistories()
         chatHistories: List[AiChatHistory] = []
@@ -549,6 +556,11 @@ class AiChatWidget(QWidget):
 
         self._historyPanel.loadHistories(chatHistories)
 
+        # required model to init
+        self.statusBar.showMessage(self.tr("Initializing models..."))
+        self._setupModels()
+        self.statusBar.clearMessage()
+
         # if there is a new conversation from code review, keep it
         if curHistory and not curHistory.messages:
             self._historyPanel.blockSignals(True)
@@ -556,6 +568,8 @@ class AiChatWidget(QWidget):
             self._historyPanel.blockSignals(False)
         else:
             self._createNewConversation()
+
+        self._historyPanel.setEnabled(True)
 
     def _onNewChatRequested(self):
         """Create a new chat conversation"""

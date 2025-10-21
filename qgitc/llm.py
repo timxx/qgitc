@@ -163,10 +163,12 @@ class AiModelBase(QObject):
         self._reply.finished.connect(self._onFinished)
 
     @staticmethod
-    def request(url: str, headers: Dict[bytes, bytes] = None, post=True, data: Dict[str, any] = None):
+    def request(url: str, headers: Dict[bytes, bytes] = None, post=True, data: Dict[str, any] = None, timeout=None):
         mgr = ApplicationBase.instance().networkManager
         request = QNetworkRequest()
         request.setUrl(url)
+        if timeout:
+            request.setTransferTimeout(timeout)
 
         if headers:
             for key, value in headers.items():

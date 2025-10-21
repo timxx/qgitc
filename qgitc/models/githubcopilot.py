@@ -214,7 +214,7 @@ class GithubCopilot(AiModelBase):
                 b"editor-plugin-version": b"copilot-chat/0.24.1",
                 b"editor-version": b"vscode/1.97.2",
                 b"user-agent": b"GithubCopilotChat/0.24.1",
-            }, post=False)
+            }, post=False, timeout=1500)
 
         self._eventLoop = QEventLoop()
         reply.finished.connect(self._eventLoop.quit)
