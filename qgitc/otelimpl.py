@@ -77,9 +77,9 @@ class OTelService(TelemetryBase):
             "os.arch": arch,
         })
 
-        headers = {"Content-Type": "application/json"}
+        headers = None
         if auth:
-            headers["Authorization"] = auth
+            headers = {"Authorization": auth}
 
         self._setupTracer(resource, serviceName,
                           f"{endPoint}/v1/traces", headers)
