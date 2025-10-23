@@ -368,6 +368,9 @@ class Settings(QSettings):
             self.colorSchemaModeChanged.emit(mode)
 
     def submodulesCache(self, repoDir):
+        if not repoDir:
+            return []
+
         key = os.path.normpath(os.path.normcase(repoDir))
         self.beginGroup("submodulesCache")
         cache = self.value(key, [])
