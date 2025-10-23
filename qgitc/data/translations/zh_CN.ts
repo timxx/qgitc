@@ -19,12 +19,12 @@
         <translation>许可证(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="33"/>
+        <location filename="../../aboutdialog.py" line="32"/>
         <source>A cross-platform Git GUI tool designed to simplify commit history exploration, blame tracking, committing changes, and resolving conflicts. Leverage AI for generating commit messages and performing code reviews.</source>
         <translation>跨平台 Git 图形界面工具，旨在简化提交历史记录探索、代码责任追溯、提交更改和冲突解决。利用人工智能生成提交信息并执行代码审查。</translation>
     </message>
     <message>
-        <location filename="../../aboutdialog.py" line="36"/>
+        <location filename="../../aboutdialog.py" line="35"/>
         <source>Visit project host</source>
         <translation>访问项目主页</translation>
     </message>
@@ -32,18 +32,18 @@
 <context>
     <name>AiChatHistoryModel</name>
     <message>
-        <location filename="../../aichathistorypanel.py" line="49"/>
-        <location filename="../../aichathistorypanel.py" line="104"/>
+        <location filename="../../aichathistorypanel.py" line="48"/>
+        <location filename="../../aichathistorypanel.py" line="103"/>
         <source>New Conversation</source>
         <translation>新对话</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="53"/>
+        <location filename="../../aichathistorypanel.py" line="52"/>
         <source>Model: </source>
         <translation>模型：</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="54"/>
+        <location filename="../../aichathistorypanel.py" line="53"/>
         <source>Created: </source>
         <translation>创建日期：</translation>
     </message>
@@ -78,7 +78,7 @@
         <translation>移除对话</translation>
     </message>
     <message>
-        <location filename="../../aichathistorypanel.py" line="367"/>
+        <location filename="../../aichathistorypanel.py" line="366"/>
         <source>JSON Files (*.json);;All Files (*)</source>
         <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
     </message>
@@ -112,82 +112,87 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwindow.py" line="167"/>
+        <location filename="../../aichatwindow.py" line="170"/>
         <source>Enter the query prompt here</source>
         <translation>请在此输入请求提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="178"/>
+        <location filename="../../aichatwindow.py" line="181"/>
         <source>System</source>
         <translation>系统</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="180"/>
+        <location filename="../../aichatwindow.py" line="183"/>
         <source>User</source>
         <translation>用户</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="190"/>
+        <location filename="../../aichatwindow.py" line="193"/>
         <source>Max Tokens</source>
         <translation>最大Token数</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="195"/>
+        <location filename="../../aichatwindow.py" line="198"/>
         <source>Max tokens to generate</source>
         <translation>生成的最大Token数量</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="199"/>
+        <location filename="../../aichatwindow.py" line="202"/>
         <source>Temperature</source>
         <translation>温度</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="255"/>
+        <location filename="../../aichatwindow.py" line="239"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="290"/>
+        <location filename="../../aichatwindow.py" line="293"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="291"/>
+        <location filename="../../aichatwindow.py" line="294"/>
         <source>Completion</source>
         <translation>补全</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="292"/>
+        <location filename="../../aichatwindow.py" line="295"/>
         <source>Infilling</source>
         <translation>填充</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="293"/>
+        <location filename="../../aichatwindow.py" line="296"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="294"/>
+        <location filename="../../aichatwindow.py" line="297"/>
         <source>Code Fix</source>
         <translation>代码修复</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="295"/>
+        <location filename="../../aichatwindow.py" line="298"/>
         <source>Code Explanation</source>
         <translation>代码解释</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="254"/>
+        <location filename="../../aichatwindow.py" line="560"/>
+        <source>Initializing models...</source>
+        <translation>正在初始化模型...</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwindow.py" line="238"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="163"/>
+        <location filename="../../aichatwindow.py" line="166"/>
         <source>Enter the system prompt here</source>
         <translation>请在此输入系统提示词</translation>
     </message>
     <message>
-        <location filename="../../aichatwindow.py" line="378"/>
+        <location filename="../../aichatwindow.py" line="379"/>
         <source>Work in progress...</source>
         <translation>正在请求中……</translation>
     </message>
@@ -195,7 +200,7 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="688"/>
+        <location filename="../../aichatwindow.py" line="702"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -208,17 +213,17 @@ This action cannot be undone.</source>
         <translation>服务不可用</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="124"/>
+        <location filename="../../aichatbot.py" line="123"/>
         <source>User:</source>
         <translation>用户：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="127"/>
+        <location filename="../../aichatbot.py" line="125"/>
         <source>Assistant:</source>
         <translation>助手：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="129"/>
+        <location filename="../../aichatbot.py" line="127"/>
         <source>System:</source>
         <translation>系统：</translation>
     </message>
@@ -231,7 +236,7 @@ This action cannot be undone.</source>
         <translation>未发现更改，请确保您已暂存您的更改。</translation>
     </message>
     <message>
-        <location filename="../../aicommitmessage.py" line="260"/>
+        <location filename="../../aicommitmessage.py" line="259"/>
         <source>AI service unavailable, please try again later.</source>
         <translation>AI服务不可用，请稍后再试。</translation>
     </message>
@@ -376,12 +381,12 @@ This action cannot be undone.</source>
 <context>
     <name>BugPatternModel</name>
     <message>
-        <location filename="../../linkeditwidget.py" line="51"/>
+        <location filename="../../linkeditwidget.py" line="50"/>
         <source>Bug Pattern</source>
         <translation>Bug模式</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="54"/>
+        <location filename="../../linkeditwidget.py" line="52"/>
         <source>Bug Url</source>
         <translation></translation>
     </message>
@@ -412,7 +417,7 @@ This action cannot be undone.</source>
         <translation>每个仓库</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="44"/>
+        <location filename="../../commitactiontablemodel.py" line="41"/>
         <source>All Committed</source>
         <translation>全部提交后</translation>
     </message>
@@ -422,27 +427,27 @@ This action cannot be undone.</source>
         <translation>启用</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="49"/>
+        <location filename="../../commitactiontablemodel.py" line="46"/>
         <source>Disabled</source>
         <translation>禁用</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="63"/>
+        <location filename="../../commitactiontablemodel.py" line="62"/>
         <source>Command</source>
         <translation>命令</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="65"/>
+        <location filename="../../commitactiontablemodel.py" line="64"/>
         <source>Arguments</source>
         <translation>参数</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="67"/>
+        <location filename="../../commitactiontablemodel.py" line="66"/>
         <source>Condition</source>
         <translation>条件</translation>
     </message>
     <message>
-        <location filename="../../commitactiontablemodel.py" line="70"/>
+        <location filename="../../commitactiontablemodel.py" line="68"/>
         <source>Status</source>
         <translation>状态</translation>
     </message>
@@ -455,7 +460,7 @@ This action cannot be undone.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../commitactionwidget.py" line="69"/>
+        <location filename="../../commitactionwidget.py" line="68"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
@@ -496,7 +501,7 @@ This action cannot be undone.</source>
 <context>
     <name>CommitMessageHighlighter</name>
     <message>
-        <location filename="../../commitmessageedit.py" line="29"/>
+        <location filename="../../commitmessageedit.py" line="28"/>
         <source>&lt;AI service unavailable&gt;</source>
         <translation>&lt;AI服务不可用&gt;</translation>
     </message>
@@ -540,12 +545,12 @@ This action cannot be undone.</source>
         <translation>在此处输入提交信息...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="417"/>
+        <location filename="../../commitwindow.py" line="416"/>
         <source>Inconsistent branches</source>
         <translation>分支不一致</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="421"/>
+        <location filename="../../commitwindow.py" line="420"/>
         <source>You have different branches in submodules:</source>
         <translation>各仓库的分支不完全一致：</translation>
     </message>
@@ -560,12 +565,12 @@ This action cannot be undone.</source>
         <translation>您尚未编辑消息模板。是否要使用该模板作为提交消息？</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="599"/>
+        <location filename="../../commitwindow.py" line="598"/>
         <source>Please enter a valid commit message.</source>
         <translation>请输入有效的提交信息。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="603"/>
+        <location filename="../../commitwindow.py" line="602"/>
         <source>Commit message cannot be empty.</source>
         <translation>提交信息不能为空。</translation>
     </message>
@@ -616,7 +621,7 @@ This action cannot be undone.</source>
         <translation>终止(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1106"/>
+        <location filename="../../commitwindow.py" line="1105"/>
         <source>&amp;Back</source>
         <translation>返回(&amp;B)</translation>
     </message>
@@ -627,7 +632,7 @@ This action cannot be undone.</source>
         <translation>正在提交...</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1110"/>
+        <location filename="../../commitwindow.py" line="1109"/>
         <source>Commit finished</source>
         <translation>提交完毕</translation>
     </message>
@@ -652,7 +657,7 @@ This action cannot be undone.</source>
         <translation>还原选中文件(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1386"/>
+        <location filename="../../commitwindow.py" line="1385"/>
         <location filename="../../commitwindow.py" line="1393"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
@@ -787,7 +792,7 @@ This action cannot be undone.</source>
     </message>
     <message>
         <location filename="../../diffview.py" line="218"/>
-        <location filename="../../diffview.py" line="523"/>
+        <location filename="../../diffview.py" line="522"/>
         <source>&amp;Restore this file</source>
         <translation>还原此文件(&amp;R)</translation>
     </message>
@@ -828,12 +833,12 @@ This action cannot be undone.</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="573"/>
+        <location filename="../../diffview.py" line="572"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
     <message>
-        <location filename="../../diffview.py" line="576"/>
+        <location filename="../../diffview.py" line="575"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
@@ -882,7 +887,7 @@ This action cannot be undone.</source>
         <translation>无查找结果</translation>
     </message>
     <message>
-        <location filename="../../findwidget.py" line="195"/>
+        <location filename="../../findwidget.py" line="194"/>
         <source>Invalid regular expression: </source>
         <translation>无效的正则表达式：</translation>
     </message>
@@ -991,17 +996,17 @@ This action cannot be undone.</source>
         <translation>获取分支失败</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="268"/>
+        <location filename="../../gitview.py" line="267"/>
         <source>Revision &apos;{0}&apos; is not known</source>
         <translation>找不到&apos;{0}&apos;记录</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="299"/>
+        <location filename="../../gitview.py" line="298"/>
         <source>Find reached the end of logs.</source>
         <translation>已查找到记录末尾。</translation>
     </message>
     <message>
-        <location filename="../../gitview.py" line="302"/>
+        <location filename="../../gitview.py" line="300"/>
         <source>Find reached the beginning of logs.</source>
         <translation>已查找到记录首。</translation>
     </message>
@@ -1024,7 +1029,7 @@ This action cannot be undone.</source>
         <translation>登录失败：{}</translation>
     </message>
     <message>
-        <location filename="../../githubcopilotlogindialog.py" line="204"/>
+        <location filename="../../githubcopilotlogindialog.py" line="203"/>
         <source>Please open the following URL in your browser and enter the code to authenticate...</source>
         <translation>请在浏览器中打开以下网址并输入代码进行身份验证...</translation>
     </message>
@@ -1108,7 +1113,7 @@ This action cannot be undone.</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../linkeditwidget.py" line="239"/>
+        <location filename="../../linkeditwidget.py" line="238"/>
         <source>You have selected more than one row, do you really want remove all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
@@ -1126,7 +1131,7 @@ This action cannot be undone.</source>
 <context>
     <name>LocalLLM</name>
     <message>
-        <location filename="../../models/localllm.py" line="98"/>
+        <location filename="../../models/localllm.py" line="96"/>
         <source>Local LLM</source>
         <translation>本地大语言模型</translation>
     </message>
@@ -1154,12 +1159,12 @@ This action cannot be undone.</source>
         <translation>清除标记(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="983"/>
+        <location filename="../../logview.py" line="982"/>
         <source>Local changes checked in to index but not committed</source>
         <translation>已检入到索引但未提交的本地改动</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1007"/>
+        <location filename="../../logview.py" line="1006"/>
         <source>Local uncommitted changes, not checked in to index</source>
         <translation>本地未提交的改动，未检入索引</translation>
     </message>
@@ -1224,22 +1229,22 @@ This action cannot be undone.</source>
         <translation>Git日志检索耗时超过预期（{0} 秒）。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1047"/>
+        <location filename="../../logview.py" line="1046"/>
         <source>Disabling &apos;Detect Local Changes&apos; can significantly improve performance. </source>
         <translation>禁用“检测本地更改”可以显著提高性能。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1048"/>
+        <location filename="../../logview.py" line="1047"/>
         <source>This feature checks for uncommitted changes, which can be slow in large repositories.</source>
         <translation>此功能会检查未提交的更改，在大型仓库中可能会很慢。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1049"/>
+        <location filename="../../logview.py" line="1048"/>
         <source>Would you like to disable this feature now?</source>
         <translation>您想现在禁用此功能吗？</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1059"/>
+        <location filename="../../logview.py" line="1052"/>
         <source>About this setting:
 - When enabled, Git checks for local changes that haven&apos;t been committed
 - This allows you to see uncommitted changes in the log view
@@ -1261,17 +1266,17 @@ Settings → Commit → Detect Local Changes</source>
         <translation>不再显示此消息</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1668"/>
+        <location filename="../../logview.py" line="1667"/>
         <source>Loading commits, please wait...</source>
         <translation>正在加载记录，请稍候…</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1671"/>
+        <location filename="../../logview.py" line="1670"/>
         <source>No commits found for the current filter. Try adjusting your filter criteria.</source>
         <translation>未找到符合当前筛选条件的提交，请尝试调整筛选条件。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="1676"/>
+        <location filename="../../logview.py" line="1675"/>
         <source>No commits found. You may need to increase the &quot;Max Commits&quot; setting or disable &quot;Composite Mode&quot;.</source>
         <translation>未找到记录。您可能需要增加“最大记录数”设置或禁用“聚合模式”。</translation>
     </message>
@@ -1488,7 +1493,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>您选择的目录不是一个有效的Git仓库！</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.py" line="289"/>
+        <location filename="../../mainwindow.py" line="288"/>
         <source>&apos;{0}&apos; is not a git repository</source>
         <translation>&apos;{0}&apos;不是一个有效的Git仓库</translation>
     </message>
@@ -1666,7 +1671,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>使用他们的(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="248"/>
+        <location filename="../../mergewidget.py" line="247"/>
         <source>You are resolving this file, please close it first.</source>
         <translation>您正在处理此文件的冲突，请先关闭它。</translation>
     </message>
@@ -1706,7 +1711,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="482"/>
+        <location filename="../../mergewidget.py" line="481"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
@@ -1721,7 +1726,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>请先处理完当前文件冲突再处理新文件的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="476"/>
+        <location filename="../../mergewidget.py" line="475"/>
         <source>All filter conflicts are resolved, please clear the filter to resolve the rest.</source>
         <translation>已解决掉过滤的全部冲突，请清除过滤以解决其它的冲突。</translation>
     </message>
@@ -1794,7 +1799,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>QGitc 有新版本（{0}）可用！</translation>
     </message>
     <message>
-        <location filename="../../newversiondialog.py" line="26"/>
+        <location filename="../../newversiondialog.py" line="25"/>
         <source>To update, run: pip install qgitc --upgrade</source>
         <translation>要更新，请运行：pip install qgitc --upgrade</translation>
     </message>
@@ -2009,13 +2014,13 @@ Settings → Commit → Detect Local Changes</source>
     </message>
     <message>
         <location filename="../../preferences.py" line="501"/>
-        <location filename="../../preferences.py" line="593"/>
+        <location filename="../../preferences.py" line="592"/>
         <location filename="../../preferences.py" line="600"/>
         <source>Logout</source>
         <translation>注销</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="502"/>
+        <location filename="../../preferences.py" line="501"/>
         <location filename="../../preferences.py" line="595"/>
         <source>Login</source>
         <translation>登录</translation>
@@ -2047,7 +2052,7 @@ Settings → Commit → Detect Local Changes</source>
         <translation>请至少选择一行来删除。</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="123"/>
+        <location filename="../../preferences.py" line="122"/>
         <source>You have selected more than one record, do you really want delete all of them?</source>
         <translation>您选择超过了一条记录，是否全部都要删除？</translation>
     </message>
@@ -2374,12 +2379,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>ToolTableModel</name>
     <message>
-        <location filename="../../tooltablemodel.py" line="50"/>
+        <location filename="../../tooltablemodel.py" line="49"/>
         <source>Suffix</source>
         <translation>后缀</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="53"/>
+        <location filename="../../tooltablemodel.py" line="51"/>
         <source>Tool</source>
         <translation>工具</translation>
     </message>
@@ -2399,12 +2404,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>合并</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="24"/>
+        <location filename="../../tooltablemodel.py" line="22"/>
         <source>Both</source>
         <translation>Diff和合并</translation>
     </message>
     <message>
-        <location filename="../../tooltablemodel.py" line="48"/>
+        <location filename="../../tooltablemodel.py" line="47"/>
         <source>Scenes</source>
         <translation>场景</translation>
     </message>
