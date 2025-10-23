@@ -1267,6 +1267,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         i = 0
 
         def _handleComment():
+            nonlocal i
             next = text.find("*/", i)
             if next == -1:
                 # we didn't find a comment end.
