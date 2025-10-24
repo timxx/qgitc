@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+import os
+from unittest.mock import patch
 from PySide6.QtTest import QSignalSpy, QTest
 
-from qgitc.gitutils import Git
+from qgitc.gitutils import Git, GitProcess
 from qgitc.windowtype import WindowType
-from tests.base import TestBase
+from tests.base import TemporaryDirectory, TestBase
 
 
 class TestApp(TestBase):
@@ -56,3 +58,18 @@ class TestApp(TestBase):
 
         self.app.updateRepoDir(oldRepoDir)
         self.assertEqual(spy.count(), 2)
+
+
+class TestAppNoRepo(TestBase):
+    def doCreateRepo(self):
+        self.gitDir = TemporaryDirectory()
+        self.submoduleDir = None
+
+    def testNoRepo(self):
+        os.chdir(self.gitDir.name)
+        with patch.object(self.app, "_findSubmodules", return_value=None) as mock:
+            self.app._initGit(GitProcess.GIT_BIN)
+            self.assertIsNone(Git.REPO_DIR)
+            name = self.app.repoName()
+            self.assertEqual(len(name), 0)
+            mock.assert_not_called()

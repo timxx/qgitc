@@ -363,7 +363,7 @@ class Application(ApplicationBase):
         Git.initGit(gitBin)
         cwd = os.getcwd()
         repoDir = Git.repoTopLevelDir(cwd)
-        self.updateRepoDir(repoDir or cwd)
+        self.updateRepoDir(repoDir)
 
     def updateRepoDir(self, repoDir: str, reloadSubmodules=True):
         if Git.REPO_DIR == repoDir:
