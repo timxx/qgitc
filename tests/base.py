@@ -116,8 +116,7 @@ class TemporaryDirectory:
                 else:
                     shutil.rmtree(self.name, onexc=removeReadonly)
         except:
-            logger.warning(
-                "Failed to remove temporary directory %s", self.name)
+            pass
 
 
 _setup_logging()

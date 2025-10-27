@@ -996,8 +996,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self.previousBlockState() == HighlighterState.NoState):
             currentMaskedFormat = QTextCharFormat(maskedFormat)
             # set the font size from the current rule's font format
-            currentMaskedFormat.setFontPointSize(
-                self._formats[state].fontPointSize())
+            fontSize = self._formats[state].fontPointSize()
+            if fontSize > 0:
+                currentMaskedFormat.setFontPointSize(fontSize)
 
             self.setFormat(0, len(text), currentMaskedFormat)
             self.setCurrentBlockState(HighlighterState.HeadlineEnd)
@@ -2474,8 +2475,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         maskedSyntax = QTextCharFormat(
             self._formats[HighlighterState.MaskedSyntax])
-        maskedSyntax.setFontPointSize(
-            self.format(beginningText).fontPointSize())
+        fontSize = self.format(beginningText).fontPointSize()
+        if fontSize > 0:
+            maskedSyntax.setFontPointSize(fontSize)
 
         # highlight before the link
         self.setFormat(beginningText, formatBegin -
@@ -2486,8 +2488,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self.setFormat(formatBegin, formatLength, format)
 
         # highlight after the link
-        maskedSyntax.setFontPointSize(
-            self.format(afterFormat).fontPointSize())
+        fontSize = self.format(afterFormat).fontPointSize()
+        if fontSize > 0:
+            maskedSyntax.setFontPointSize(fontSize)
         self.setFormat(afterFormat, endText - afterFormat, maskedSyntax)
 
         self._ranges.setdefault(self.currentBlock().blockNumber(), []).append(
