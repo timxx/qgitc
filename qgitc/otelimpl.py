@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os
 import platform
 import sys
 from typing import Dict
@@ -8,7 +9,12 @@ from typing import Dict
 from opentelemetry import _logs, trace
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import (
+    LogData,
+    LoggerProvider,
+    LoggingHandler,
+    LogRecordProcessor,
+)
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -16,6 +22,26 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from qgitc.common import logger
 from qgitc.telemetry import TelemetryBase, TraceSpanBase
+
+
+class LogFilterProcessor(LogRecordProcessor):
+    """Processor that removes sensitive information from log records."""
+
+    def emit(self, log_data: LogData):
+        if log_data.log_record.attributes and "code.file.path" in log_data.log_record.attributes:
+            try:
+                file_path = log_data.log_record.attributes["code.file.path"]
+                log_data.log_record.attributes["code.file.path"] = os.path.basename(
+                    file_path)
+            except:
+                pass
+
+    def shutdown(self):
+        """No-op shutdown."""
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        return True
 
 
 class OTelTraceSpan(TraceSpanBase):
@@ -110,6 +136,9 @@ class OTelService(TelemetryBase):
             endpoint=otelEndpoint,
             timeout=1,
             headers=headers)
+
+        provider.add_log_record_processor(LogFilterProcessor())
+
         processor = BatchLogRecordProcessor(
             exporter, 3000, export_timeout_millis=500)
         provider.add_log_record_processor(processor)
