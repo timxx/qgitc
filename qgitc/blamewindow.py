@@ -8,7 +8,6 @@ from qgitc.applicationbase import ApplicationBase
 from qgitc.blameview import BlameView
 from qgitc.gotodialog import GotoDialog
 from qgitc.statewindow import StateWindow
-from qgitc.textviewer import FindPart
 
 __all__ = ["BlameWindow"]
 
