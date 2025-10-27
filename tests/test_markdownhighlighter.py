@@ -661,10 +661,6 @@ SELECT id /* inline comment */ FROM users;
         if untested:
             self.fail(f"Untested languages found: {untested}")
 
-        print(
-            f"Successfully tested {len(tested_languages)} language highlighters")
-        print(f"Supported languages: {sorted(supported_languages)}")
-
     def test_language_case_sensitivity(self):
         """Test that language names are handled correctly regardless of case"""
         # The mapping should be case-insensitive ideally, but let's test current behavior
@@ -1617,78 +1613,3 @@ Line break above.
 """
         self._test_markdown_highlighting(
             comprehensive_doc, "comprehensive markdown document")
-
-    def test_markdown_feature_coverage_summary(self):
-        """Summary test to verify we're testing all major markdown features"""
-        # This test doesn't actually test highlighting, but documents what we cover
-        covered_features = {
-            # Core Markdown Features
-            "ATX Headers": ["# ## ### #### ##### ######"],
-            "Setext Headers": ["Header\\n======", "Header\\n------"],
-            "Unordered Lists": ["- * +"],
-            "Ordered Lists": ["1. 2. 3.", "1) 2) 3)"],
-            "Checkboxes": ["- [ ]", "- [x]", "- [X]", "- [-]"],
-            "Emphasis": ["*italic*", "_italic_"],
-            "Strong": ["**bold**", "__bold__"],
-            "Emphasis + Strong": ["***both***", "___both___"],
-            "Inline Code": ["`code`", "``code with ` tick``"],
-            "Strikethrough": ["~~deleted~~"],
-            "Blockquotes": ["> quote", "> > nested"],
-            "Horizontal Rules": ["---", "***", "___"],
-            "Links": ["[text](url)", "[text][ref]", "<url>"],
-            "Images": ["![alt](img)", "![alt][ref]"],
-            "Tables": ["| col | col |"],
-            "Fenced Code Blocks": ["```", "~~~"],
-            "Indented Code Blocks": ["    code"],
-            "HTML Comments": ["<!-- comment -->"],
-            "Markdown Comments": ["[//]: # (comment)"],
-            "Frontmatter": ["---\\nkey: value\\n---"],
-            "Trailing Spaces": ["line  \\n"],
-
-            # Language Highlighting (42 languages)
-            "Language Highlighting": [
-                "bash", "c", "cpp", "c#", "python", "javascript", "java",
-                "go", "rust", "php", "swift", "objc", "sql", "json", "xml",
-                "html", "css", "typescript", "yaml", "toml", "ini", "cmake",
-                "make", "nix", "v", "qml", "vex", "forth", "systemverilog",
-                "gdscript", "taggerscript", "diff", "and more..."
-            ],
-
-            # Edge Cases
-            "Edge Cases": [
-                "Malformed syntax", "Unicode characters", "Nested structures",
-                "Escaped characters", "Empty elements", "Boundary conditions",
-                "Performance with large documents", "Mixed features"
-            ]
-        }
-
-        total_features = sum(len(examples)
-                             for examples in covered_features.values())
-        total_categories = len(covered_features)
-
-        print(f"\\nMarkdown Highlighter Test Coverage Summary:")
-        print(f"- {total_categories} feature categories covered")
-        print(f"- {total_features} specific feature examples")
-        print(f"- 42 programming languages supported")
-        print(f"- Comprehensive edge case testing")
-        print(f"- Performance testing with large documents")
-
-        # Just verify that the feature list is reasonable
-        self.assertGreaterEqual(total_categories, 20,
-                                "Should cover at least 20 feature categories")
-        self.assertGreaterEqual(
-            total_features, 50, "Should cover at least 50 specific features")
-
-        # Verify we have tests for all major markdown elements
-        required_features = [
-            "ATX Headers", "Unordered Lists", "Ordered Lists", "Checkboxes",
-            "Emphasis", "Strong", "Inline Code", "Blockquotes", "Links",
-            "Tables", "Fenced Code Blocks", "Language Highlighting"
-        ]
-
-        for feature in required_features:
-            self.assertIn(feature, covered_features,
-                          f"Missing tests for {feature}")
-
-        print(
-            f"✓ All {len(required_features)} critical markdown features are tested")
