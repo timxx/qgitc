@@ -5,7 +5,7 @@ import logging
 import os
 import platform
 import uuid
-from typing import List
+from typing import List, Tuple
 
 from PySide6.QtCore import QSettings, Signal
 from PySide6.QtGui import QColor, QFont, QFontInfo
@@ -59,7 +59,7 @@ class Settings(QSettings):
     ignoreWhitespaceChanged = Signal(int)
     logViewFontChanged = Signal(QFont)
     diffViewFontChanged = Signal(QFont)
-    bugPatternChanged = Signal(str)
+    bugPatternChanged = Signal()
     fallbackGlobalChanged = Signal(bool)
     tabSizeChanged = Signal(int)
     compositeModeChanged = Signal(bool)
@@ -156,9 +156,9 @@ class Settings(QSettings):
     def setCommitUrl(self, repoName, url):
         self.setLinkValue(repoName, "commitUrl", url)
 
-    def setBugPatterns(self, repoName, patterns):
+    def setBugPatterns(self, repoName: str, patterns: List[Tuple[str, str]]):
         self.setLinkValue(repoName, "bugPatterns", patterns)
-        self.bugPatternChanged.emit(patterns)
+        self.bugPatternChanged.emit()
 
     def bugPatterns(self, repoName):
         patterns = self.getLinkValue(repoName, "bugPatterns", None)
