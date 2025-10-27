@@ -1,7 +1,7 @@
 import queue as queue
 from typing import Dict, List, Union
 
-from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QEventLoop, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QComboBox,
@@ -121,6 +121,8 @@ class ChatEdit(QWidget):
 
 class AiChatWidget(QWidget):
 
+    initialized = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -136,6 +138,7 @@ class AiChatWidget(QWidget):
 
         self._titleGenerator: AiChatTitleGenerator = None
 
+        self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
         self.usrInput.setFocus()
 
@@ -509,6 +512,7 @@ class AiChatWidget(QWidget):
 
         diff = data.decode("utf-8", errors="replace")
 
+        self._waitForInitialization()
         # create a new conversation if current one is not empty
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
@@ -516,10 +520,24 @@ class AiChatWidget(QWidget):
         self._doRequest(diff, AiChatMode.CodeReview)
 
     def codeReviewForDiff(self, diff: str):
+        self._waitForInitialization()
+
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
             self._createNewConversation()
         self._doRequest(diff, AiChatMode.CodeReview)
+
+    def _waitForInitialization(self, timeout_ms: int = 5000) -> bool:
+        if self._isInitialized:
+            return
+
+        loop = QEventLoop()
+        timer = QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        timer.start(timeout_ms)
+        self.initialized.connect(loop.quit)
+        loop.exec()
 
     def _updateModelNames(self, model: AiModelBase):
         self.cbModelNames.clear()
@@ -560,6 +578,9 @@ class AiChatWidget(QWidget):
         self.statusBar.showMessage(self.tr("Initializing models..."))
         self._setupModels()
         self.statusBar.clearMessage()
+
+        self._isInitialized = True
+        self.initialized.emit()
 
         # if there is a new conversation from code review, keep it
         if curHistory and not curHistory.messages:
