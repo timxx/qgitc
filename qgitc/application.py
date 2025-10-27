@@ -17,14 +17,13 @@ from PySide6.QtCore import (
     QTimer,
     QTranslator,
     QUrl,
-    qVersion,
 )
 from PySide6.QtGui import QDesktopServices, QIcon, QPalette
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QMessageBox
 
 from qgitc.aichatwindow import AiChatWindow
-from qgitc.applicationbase import ApplicationBase
+from qgitc.applicationbase import ApplicationBase, qtVersion
 from qgitc.blamewindow import BlameWindow
 from qgitc.branchcomparewindow import BranchCompareWindow
 from qgitc.colorschema import ColorSchemaDark, ColorSchemaLight, ColorSchemaMode
@@ -62,9 +61,6 @@ try:
 except ImportError:
     OTEL_ENDPOINT = None
 
-
-def qtVersion():
-    return tuple(map(int, qVersion().split('.')))
 
 
 class Application(ApplicationBase):

@@ -3,7 +3,7 @@
 import abc
 from typing import Dict, List, cast
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, qVersion
 from PySide6.QtNetwork import QNetworkAccessManager
 from PySide6.QtWidgets import QApplication
 
@@ -11,6 +11,10 @@ from qgitc.colorschema import ColorSchema
 from qgitc.settings import Settings
 from qgitc.telemetry import TelemetryBase
 from qgitc.windowtype import WindowType
+
+
+def qtVersion():
+    return tuple(map(int, qVersion().split('.')))
 
 
 # no inherit from abc.ABC here, avoid performance and `metaclass conflict`

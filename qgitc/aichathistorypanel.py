@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.aichathistory import AiChatHistory
+from qgitc.applicationbase import qtVersion
 from qgitc.colorediconbutton import ColoredIconButton
 from qgitc.common import dataDirPath
 from qgitc.llm import AiModelBase, AiModelFactory
@@ -123,7 +124,11 @@ class AiChatHistoryFilterModel(QSortFilterProxyModel):
 
     def setSearchText(self, text: str):
         self._searchText = text.strip().lower()
-        self.invalidateFilter()
+        if qtVersion() >= (6, 9, 0):
+            self.beginFilterChange()
+            self.endFilterChange()
+        else:
+            self.invalidateFilter()
 
     def filterAcceptsRow(self, sourceRow, sourceParent):
         if not self._searchText:
