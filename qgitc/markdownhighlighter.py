@@ -1188,7 +1188,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             types, keywords, builtin, literals, others = loadYAMLData()
         elif state in [HighlighterState.CodeINI,
                        HighlighterState.CodeINI + self.tildeOffset]:
-            self.iniHighlighter(types, keywords, builtin, literals, others)
+            self.iniHighlighter(text)
             return
         elif state in [HighlighterState.CodeTaggerScript,
                        HighlighterState.CodeTaggerScript + self.tildeOffset]:
@@ -2331,7 +2331,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     if startingComment > -1:
                         highlightStart = startingComment
 
-                    self.setFormat(highlightStart - i, i + 1,
+                    self.setFormat(highlightStart, i + 2 - highlightStart,
                                    self._formats[HighlighterState.CodeComment])
 
     def tomlHighlighter(self, text: str):
@@ -2440,7 +2440,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                                self._formats[HighlighterState.CodeNumLiteral])
                 i = endOfNumber
 
-            if not text[i].isspace():
+            if i < len(text) and not text[i].isspace():
                 onlyWhitespaceBeforeHeader = False
             i += 1
 

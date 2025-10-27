@@ -35,6 +35,9 @@ def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
     if type == QtMsgType.QtWarningMsg and msg in knownQtWarnings:
         return
 
+    if msg.startswith("QApplication::regClass: Registering window class"):
+        return
+
     print(msg)
 
 
