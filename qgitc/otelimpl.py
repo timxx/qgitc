@@ -36,6 +36,9 @@ class LogFilterProcessor(LogRecordProcessor):
             except:
                 pass
 
+    def on_emit(self, log_data):
+        return self.emit(log_data)
+
     def shutdown(self):
         """No-op shutdown."""
         pass
