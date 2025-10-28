@@ -305,8 +305,9 @@ class Application(ApplicationBase):
                 haveToCheck = True
             else:
                 days = self._settings.checkUpdatesInterval()
-                dt = datetime.fromtimestamp(ts)
-                diff = datetime.now() - dt
+                dt = datetime.fromtimestamp(ts).date()
+                now = datetime.now().date()
+                diff = now - dt
                 haveToCheck = diff.days >= days
 
             if haveToCheck and not self.testing:
