@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +26,21 @@ jobs:
           sed -i 's/setuptools>=77/setuptools/' requirements.txt
           sed -i 's/license = "Apache-2.0"//' pyproject.toml
           sed -i 's/license-files = \[ "LICENSE" \]/license = { file="LICENSE" }/' pyproject.toml
+
+      - name: Update pyside6 version for 3.8
+        if: matrix.python-version == '3.8'
+        run: |
+          sed -i 's/PySide6-Essentials/PySide6-Essentials==6.4.3/' requirements.txt
+
+      - name: Update pyside6 version for 3.9
+        if: matrix.python-version == '3.9'
+        run: |
+          sed -i 's/PySide6-Essentials/PySide6-Essentials==6.7.3/' requirements.txt
+
+      - name: Update pyside6 version for 3.10
+        if: matrix.python-version == '3.10'
+        run: |
+          sed -i 's/PySide6-Essentials/PySide6-Essentials==6.9.3/' requirements.txt
 
       - name: Install dependencies
         run: |
