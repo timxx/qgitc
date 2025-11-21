@@ -22,6 +22,7 @@ class MockQNetworkReply():
         self.finished.connect = lambda slot: QTimer.singleShot(100, slot)
         self.isRunning = MagicMock(return_value=False)
         self.errorOccurred = MagicMock()
+        self.sslErrors = MagicMock()
 
         if len(args) == 1 and isinstance(args[0], QNetworkReply.NetworkError):
             self._mockErrorOccurred(args[0])
