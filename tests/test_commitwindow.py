@@ -140,10 +140,11 @@ class TestCommitWindow(TestBase):
     def testOptions(self):
         self.waitForLoaded()
 
-        with patch("qgitc.preferences.Preferences.exec") as mock:
-            mock.return_value = QDialog.Rejected
+        # Patch exec at class level before dialog is instantiated
+        with patch.object(QDialog, 'exec', return_value=QDialog.Rejected) as mock_exec:
             QTest.mouseClick(self.window.ui.tbOptions, Qt.LeftButton)
-            mock.assert_called_once()
+            self.processEvents()
+            mock_exec.assert_called_once()
 
     def testAiMessage(self):
         self.waitForLoaded()
