@@ -338,7 +338,6 @@ class TestCommitWindow(TestBase):
         mock_model.modelId = "test-model"
 
         # Mock the model factory to return our mock model
-        codeReviewForStagedFiles = AiChatWindow.codeReviewForStagedFiles
         with patch('qgitc.llmprovider.AiModelFactory.models') as mock_factory_models, \
                 patch('qgitc.aichatwindow.AiChatWindow.codeReviewForStagedFiles') as mock_code_review:
 
@@ -363,10 +362,13 @@ class TestCommitWindow(TestBase):
             self.assertIn(".", called_args)
             self.assertIn("test.py", called_args["."])
 
+        with patch('qgitc.llmprovider.AiModelFactory.models') as mock_factory_models:
+            mock_factory_models.return_value = [lambda parent: mock_model]
+
             chatWindow = self.app.getWindow(WindowType.AiAssistant, False)
             self.assertIsNotNone(chatWindow)
 
-            codeReviewForStagedFiles(chatWindow, test_event.submodules)
+            chatWindow.codeReviewForStagedFiles(test_event.submodules)
             spyFinished = QSignalSpy(chatWindow._executor.finished)
 
             chatWidget: AiChatWidget = chatWindow.centralWidget()
