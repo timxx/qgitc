@@ -375,7 +375,7 @@ class TestCommitWindow(TestBase):
             spyInitialized = QSignalSpy(chatWidget.initialized)
             self.assertFalse(chatWidget._isInitialized)
 
-            self.wait(5000, lambda: spyInitialized.count() == 0 and spyFinished.count() == 0)
+            self.wait(5000, lambda: spyInitialized.count() == 0 or spyFinished.count() == 0)
             self.processEvents()
 
             self.assertEqual(spyInitialized.count(), 1)
