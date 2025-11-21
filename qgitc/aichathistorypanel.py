@@ -124,7 +124,7 @@ class AiChatHistoryFilterModel(QSortFilterProxyModel):
 
     def setSearchText(self, text: str):
         self._searchText = text.strip().lower()
-        if qtVersion() >= (6, 9, 0):
+        if qtVersion() >= (6, 10, 0):
             self.beginFilterChange()
             self.endFilterChange()
         else:
