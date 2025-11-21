@@ -131,6 +131,11 @@ class TestSubmoduleExecutor(TestBase):
         executor = SubmoduleExecutor()
         dummy = Dummy()
         with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            spyStarted = QSignalSpy(executor.started)
             executor.submit(None, _dummyAction, dummy.dummyResult, False)
-            self.wait(1000, executor.isRunning)
+            # wait for thread to start
+            self.wait(1000, lambda: spyStarted.count() == 0)
+            self.wait(3000, executor.isRunning)
+            # wait for result
+            self.wait(100)
             mock.assert_any_call(None, "Hello, World!")
