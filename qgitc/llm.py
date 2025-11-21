@@ -161,6 +161,7 @@ class AiModelBase(QObject):
         self._reply.readyRead.connect(self._onDataReady)
         self._reply.errorOccurred.connect(self._onError)
         self._reply.finished.connect(self._onFinished)
+        self._reply.sslErrors.connect(self._onSslErrors)
 
     @staticmethod
     def request(url: str, headers: Dict[bytes, bytes] = None, post=True, data: Dict[str, any] = None, timeout=None):
@@ -190,6 +191,10 @@ class AiModelBase(QObject):
 
     def _onError(self, code: QNetworkReply.NetworkError):
         self._handleError(code)
+
+    def _onSslErrors(self, errors):
+        reply: QNetworkReply = self.sender()
+        reply.ignoreSslErrors()
 
     def _onFinished(self):
         self._handleFinished()
@@ -222,7 +227,7 @@ class AiModelBase(QObject):
         pass
 
     def _handleError(self, code: QNetworkReply.NetworkError):
-        if code == QNetworkReply.ConnectionRefusedError:
+        if code in [QNetworkReply.ConnectionRefusedError, QNetworkReply.HostNotFoundError]:
             self.serviceUnavailable.emit()
 
     def isRunning(self):
@@ -255,7 +260,7 @@ class AiModelBase(QObject):
         if not delta:
             return
 
-        if "role" in delta:
+        if "role" in delta and delta["role"]:
             self._role = _aiRoleFromString(delta["role"])
         if "content" in delta:
             if not delta["content"]:
