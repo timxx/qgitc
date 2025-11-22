@@ -87,7 +87,7 @@ class LocalChangesFetcher(QObject):
     def _onError(self, error: QProcess.ProcessError):
         process: QProcess = self.sender()
         if error == QProcess.FailedToStart:
-            self._onFinished(process, process.exitStatus())
+            self._onFinished(process.exitCode(), process.exitStatus())
 
 
 class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):

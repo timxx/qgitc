@@ -23,3 +23,6 @@ class TestLocalChangesFetcher(TestBase):
 
         self.assertFalse(fetcher.hasLCC)
         self.assertFalse(fetcher.hasLUC)
+
+        # Ensure processes are cleaned up before fetcher is deleted
+        fetcher.cancel()
