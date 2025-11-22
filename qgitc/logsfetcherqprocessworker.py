@@ -27,11 +27,13 @@ class LocalChangesFetcher(QObject):
         self._repoDir = repoDir
         self._lccProcess: QProcess = None
         self._lucProcess: QProcess = None
+        self._failedStart = set()
 
         self.hasLCC = False
         self.hasLUC = False
 
     def fetch(self):
+        self._failedStart.clear()
         self._lccProcess = self._startProcess(True)
         self._lucProcess = self._startProcess(False)
 
@@ -57,6 +59,8 @@ class LocalChangesFetcher(QObject):
         process.errorOccurred.connect(self._onError)
 
         process.start(GitProcess.GIT_BIN, args)
+        if process in self._failedStart:
+            return None
 
         return process
 
@@ -87,7 +91,9 @@ class LocalChangesFetcher(QObject):
     def _onError(self, error: QProcess.ProcessError):
         process: QProcess = self.sender()
         if error == QProcess.FailedToStart:
-            self._onFinished(process.exitCode(), process.exitStatus())
+            self._failedStart.add(process)
+            if len(self._failedStart) == 2:
+                self.finished.emit()
 
 
 class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
