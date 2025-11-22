@@ -44,6 +44,7 @@ from qgitc.llm import (
     AiRole,
 )
 from qgitc.llmprovider import AiModelProvider
+from qgitc.models.prompts import CODE_REVIEW_PROMPT
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
@@ -369,10 +370,11 @@ class AiChatWidget(QWidget):
 
         model = self.currentChatModel()
         isNewConversation = not model.history
-        prompt = params.prompt
         if chatMode == AiChatMode.CodeReview:
-            prompt = f"```diff\n{prompt}\n```"
-        self._doMessageReady(model, AiResponse(AiRole.User, prompt))
+            params.prompt = CODE_REVIEW_PROMPT.format(
+                diff=params.prompt,
+                language=ApplicationBase.instance().uiLanguage())
+        self._doMessageReady(model, AiResponse(AiRole.User, params.prompt))
 
         self.btnSend.setVisible(False)
         self.btnStop.setVisible(True)

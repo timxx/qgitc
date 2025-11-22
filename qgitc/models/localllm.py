@@ -6,8 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import logger
-from qgitc.llm import AiChatMode, AiModelFactory, AiParameters
+from qgitc.llm import AiChatMode, AiModelFactory
 from qgitc.models.chatgpt import ChatGPTModel
 
 
@@ -65,6 +64,7 @@ class LocalLLM(ChatGPTModel):
     def __init__(self, model: str = None, parent=None):
         url = ApplicationBase.instance().settings().localLlmServer()
         super().__init__(url, model, parent)
+        self.url = f"{self.url_base}/chat/completions"
 
         if url not in LocalLLM._models:
             LocalLLM._models[url] = []
@@ -73,23 +73,6 @@ class LocalLLM(ChatGPTModel):
             self.nameFetcher.start()
         else:
             self.nameFetcher = None
-
-    def queryAsync(self, params: AiParameters):
-        if params.chat_mode == AiChatMode.Chat:
-            self.url = f"{self.url_base}/chat/completions"
-        elif params.chat_mode == AiChatMode.Completion:
-            self.url = f"{self.url_base}/code/completion"
-        elif params.chat_mode == AiChatMode.Infilling:
-            self.url = f"{self.url_base}/code/infilling"
-        elif params.chat_mode == AiChatMode.CodeReview:
-            self.url = f"{self.url_base}/code/review"
-        elif params.chat_mode == AiChatMode.CodeFix:
-            self.url = f"{self.url_base}/code/fix"
-        elif params.chat_mode == AiChatMode.CodeExplanation:
-            self.url = f"{self.url_base}/code/explanation"
-        else:
-            self.url = f"{self.url_base}/chat/completions"
-        super().queryAsync(params)
 
     @property
     def name(self):
@@ -106,12 +89,7 @@ class LocalLLM(ChatGPTModel):
 
     def supportedChatModes(self):
         return [AiChatMode.Chat,
-                AiChatMode.Completion,
-                AiChatMode.Infilling,
-                AiChatMode.CodeReview,
-                AiChatMode.CodeFix,
-                AiChatMode.CodeExplanation
-                ]
+                AiChatMode.CodeReview]
 
     def models(self):
         return LocalLLM._models.get(self.url_base, [])
