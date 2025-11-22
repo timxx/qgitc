@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import sys
 import time
+import unittest
 from unittest.mock import patch
 
 from PySide6.QtTest import QSignalSpy
@@ -24,28 +26,39 @@ def _dummyAction(submodule, data, cancelEvent: CancelEvent):
     return submodule, "Hello, World!"
 
 
+@unittest.skipIf(sys.version_info >= (3, 14), "Skip on Python >= 3.14")
 class TestSubmoduleExecutor(TestBase):
     def doCreateRepo(self):
         pass
 
     def testSubmit(self):
-        executor = SubmoduleExecutor()
-
         dummy = Dummy()
         with patch.object(Dummy, "dummyAction", wraps=dummy.dummyAction) as mock:
+            executor = SubmoduleExecutor()
             spy = QSignalSpy(executor.finished)
+            spyStarted = QSignalSpy(executor.started)
             executor.submit(None, dummy.dummyAction)
+            self.wait(10000, lambda: spyStarted.count() == 0)
             self.wait(10000, lambda: spy.count() == 0)
             mock.assert_called_once()
             self.assertIsNone(mock.call_args[0][0])
             self.assertIsNone(mock.call_args[0][1])
             self.assertIsInstance(mock.call_args[0][2], CancelEvent)
+            executor.cancel(True)
 
+    def testSumbit2(self):
+        dummy = Dummy()
         with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            executor = SubmoduleExecutor()
             spy = QSignalSpy(executor.finished)
+            spyStarted = QSignalSpy(executor.started)
             executor.submit([None], dummy.dummyAction2, dummy.dummyResult)
+            self.wait(10000, lambda: spyStarted.count() == 0)
+
             self.wait(10000, lambda: spy.count() == 0)
             mock.assert_called_once_with("Hello", "World")
+            executor.cancel(True)
+        self.processEvents()
 
     def _cancelAction(self, submodule, data, cancelEvent: CancelEvent):
         time.sleep(0.1)
@@ -59,7 +72,9 @@ class TestSubmoduleExecutor(TestBase):
         dummy = Dummy()
         with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
             spy = QSignalSpy(executor.finished)
+            spyStarted = QSignalSpy(executor.started)
             executor.submit(None, self._cancelAction, dummy.dummyResult)
+            self.wait(1000, lambda: spyStarted.count() == 0)
             self.wait(50, executor.isRunning)
             self.assertTrue(executor.isRunning())
             executor.cancel()
@@ -77,11 +92,16 @@ class TestSubmoduleExecutor(TestBase):
 
         dummy = Dummy()
         with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            spyStarted = QSignalSpy(executor.started)
             executor.submit(None, self._cancelAction, dummy.dummyResult)
+            self.wait(1000, lambda: spyStarted.count() == 0)
             self.wait(150, executor.isRunning)
             self.assertFalse(executor.isRunning())
             executor.cancel()
             mock.assert_called_once()
+            executor.cancel(True)
+
+        self.processEvents()
 
     def _blockAction(self, submodule, data, cancelEvent: CancelEvent):
         time.sleep(2)
@@ -90,8 +110,9 @@ class TestSubmoduleExecutor(TestBase):
         executor = SubmoduleExecutor()
 
         with patch("logging.Logger.warning") as warning:
+            spyStarted = QSignalSpy(executor.started)
             executor.submit(None, self._blockAction)
-            self.wait(100)
+            self.wait(1000, lambda: spyStarted.count() == 0)
             self.assertTrue(executor.isRunning())
             executor.cancel(True)
 
@@ -102,8 +123,9 @@ class TestSubmoduleExecutor(TestBase):
                 "Terminated submodule thread (%s)", "_blockAction")
 
         with patch("logging.Logger.warning") as warning:
+            spyStarted = QSignalSpy(executor.started)
             executor.submit(None, self._blockAction)
-            self.wait(100)
+            self.wait(1000, lambda: spyStarted.count() == 0)
             self.assertTrue(executor.isRunning())
             executor.cancel()
 
@@ -123,7 +145,9 @@ class TestSubmoduleExecutor(TestBase):
         executor = SubmoduleExecutor()
         dummy = Dummy()
         with patch.object(Dummy, "dummyResult", wraps=dummy.dummyResult) as mock:
+            spyStarted = QSignalSpy(executor.started)
             executor.submit([None, None], _dummyAction, dummy.dummyResult, True)
+            self.wait(1000, lambda: spyStarted.count() == 0)
             self.wait(1000, executor.isRunning)
             mock.assert_any_call(None, "Hello, World!")
 

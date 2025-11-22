@@ -77,7 +77,10 @@ class SubmoduleThread(QThread):
 
         max_workers = max(2, os.cpu_count())
         if self._useMultiThreading:
-            executor = ThreadPoolExecutor(max_workers=max_workers)
+            if len(submodules) > 1:
+                executor = ThreadPoolExecutor(max_workers=max_workers)
+            else:
+                executor = None
         else:
             executor = ProcessPoolExecutor(max_workers=max_workers)
 
