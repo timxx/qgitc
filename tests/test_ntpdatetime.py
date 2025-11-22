@@ -34,7 +34,7 @@ class TestNtpDateTime(unittest.TestCase):
         self.assertIsInstance(result, QDateTime)
         expected_utc = datetime.fromtimestamp(unix_timestamp, timezone.utc)
         expected_qdt = QDateTime(
-            expected_utc.date(), expected_utc.time(), QTimeZone.UTC).toLocalTime()
+            expected_utc.date(), expected_utc.time(), QTimeZone.utc()).toLocalTime()
         self.assertEqual(result.toSecsSinceEpoch(),
                          expected_qdt.toSecsSinceEpoch())
 

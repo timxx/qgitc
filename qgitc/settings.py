@@ -627,7 +627,7 @@ class Settings(QSettings):
 
     def recentRepositories(self) -> List[str]:
         """Get list of recently visited repositories"""
-        return self.value("recentRepositories", [], type=list)
+        return self.value("recentRepositories", [])
 
     def setRecentRepositories(self, repos: List[str]):
         """Set list of recently visited repositories"""

@@ -22,7 +22,7 @@ def getNtpDateTime():
                 t = struct.unpack("!I", data[40:44])[0]
                 t -= TIME1970
                 utcTime = datetime.fromtimestamp(t, timezone.utc)
-                return QDateTime(utcTime.date(), utcTime.time(), QTimeZone.UTC).toLocalTime()
+                return QDateTime(utcTime.date(), utcTime.time(), QTimeZone.utc()).toLocalTime()
     except:
         pass
     return None
