@@ -29,6 +29,7 @@ class LocalLLMNameFetcher(QObject):
 
         self._reply = mgr.get(request)
         self._reply.finished.connect(self._onFinished)
+        self._reply.sslErrors.connect(self._onSslErrors)
 
     def _onFinished(self):
         reply = self._reply
@@ -47,6 +48,10 @@ class LocalLLMNameFetcher(QObject):
             self.models.append((id, id))
 
         self.finished.emit()
+
+    def _onSslErrors(self, errors):
+        reply: QNetworkReply = self.sender()
+        reply.ignoreSslErrors()
 
     def isRunning(self):
         return self._reply is not None and self._reply.isRunning()
