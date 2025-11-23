@@ -187,15 +187,12 @@ class AiCommitMessage(QObject):
         if cancelEvent.isSet():
             return
 
-        newFiles = set()
+        filesToFetch = []
         if self._fileStatuses:
-            for filePath in repoFiles:
+            for filePath in files:
                 status = self._fileStatuses.get(filePath, '')
-                if status in ('A'):
-                    newFiles.add(filePath)
-
-        # Get files that have history to fetch
-        filesToFetch = [f for f in repoFiles if f not in newFiles]
+                if status not in ['A']:
+                    filesToFetch.append(toSubmodulePath(submodule, filePath))
 
         # Determine commits per file based on filtered file count
         totalFiles = len(filesToFetch)
