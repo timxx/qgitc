@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.changeauthordialog import ChangeAuthorDialog
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffinder import DiffFinder
@@ -529,6 +530,10 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.tr("&Hard"),
                 self.__onResetHard)
             self.resetMenu = resetMenu
+            self.menu.addSeparator()
+            self.acChangeAuthor = self.menu.addAction(
+                self.tr("Change &Author..."),
+                self.__onChangeAuthor)
 
         self.menu.addSeparator()
         self.menu.addAction(self.tr("&Code Review"), self.__onCodeReview)
@@ -907,6 +912,70 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def __onResetHard(self):
         self.__resetToCurCommit("hard")
+
+    def changeAuthor(self):
+        """Change the author of the currently selected commit"""
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        # Don't allow changing author for local changes
+        if commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
+            QMessageBox.warning(
+                self, self.window().windowTitle(),
+                self.tr("Cannot change author for uncommitted changes."))
+            return
+
+        dialog = ChangeAuthorDialog(self)
+        if dialog.exec() != ChangeAuthorDialog.Accepted:
+            return
+
+        authorName = dialog.authorName
+        authorEmail = dialog.authorEmail
+
+        if not authorName or not authorEmail:
+            QMessageBox.warning(
+                self, self.window().windowTitle(),
+                self.tr("Author name and email cannot be empty."))
+            return
+
+        # Confirm the action
+        isHead = self.curIdx == 0 or (self.curIdx == 1 and self.data[0].sha1 in [
+                                      Git.LUC_SHA1, Git.LCC_SHA1])
+        message = self.tr(
+            "Are you sure you want to change the author of this commit to:\n\n"
+            "{0} <{1}>\n\n").format(authorName, authorEmail)
+
+        if not isHead:
+            message += self.tr(
+                "Warning: This will rewrite commit history from this commit onwards.\n"
+                "Make sure you understand the implications before proceeding.")
+
+        reply = QMessageBox.question(
+            self, self.window().windowTitle(),
+            message,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No)
+
+        if reply != QMessageBox.Yes:
+            return
+
+        repoDir = commitRepoDir(commit)
+        ret, error = Git.changeCommitAuthor(
+            self.curBranch, commit.sha1, authorName, authorEmail, repoDir)
+
+        if ret != 0:
+            QMessageBox.critical(
+                self, self.window().windowTitle(),
+                self.tr("Failed to change commit author:\n{0}").format(error))
+        else:
+            # Reload logs to show updated information
+            self.reloadLogs()
+
+    def __onChangeAuthor(self):
+        self.changeAuthor()
 
     def __onCodeReview(self):
         if self.curIdx == -1:

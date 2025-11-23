@@ -201,6 +201,8 @@ class MainWindow(StateWindow):
             self._onShowAiAssistant)
         self.ui.acCodeReview.triggered.connect(
             self._onCodeReview)
+        self.ui.acChangeCommitAuthor.triggered.connect(
+            self._onChangeCommitAuthor)
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -816,6 +818,25 @@ class MainWindow(StateWindow):
             fw.codeReviewOnCurrent()
         else:
             self.ui.gitViewA.logView.codeReviewOnCurrent()
+
+    def _onChangeCommitAuthor(self):
+        """Handle changing commit author from Git menu"""
+        gitView = self.ui.gitViewA
+        if not gitView:
+            return
+
+        logView = gitView.ui.logView
+        if not logView:
+            return
+
+        curIdx = logView.currentIndex()
+        if curIdx == -1:
+            QMessageBox.information(
+                self, self.windowTitle(),
+                self.tr("Please select a commit first."))
+            return
+
+        logView.changeAuthor()
 
     def _onBranchCompareTriggered(self):
         targetBranch = None

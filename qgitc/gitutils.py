@@ -548,6 +548,70 @@ class Git():
         return process.returncode, error
 
     @staticmethod
+    def changeCommitAuthor(branch, sha1, authorName, authorEmail, repoDir=None):
+        """Change the author of a specific commit
+        
+        Args:
+            branch: current branch name
+            sha1: commit sha1 to change author
+            authorName: new author name
+            authorEmail: new author email
+            repoDir: repository directory
+            
+        Returns:
+            tuple: (return_code, error_message)
+        """
+        branchDir = Git.branchDir(branch, repoDir)
+
+        # Check if this is the most recent commit
+        args = ["rev-parse", "HEAD"]
+        process = GitProcess(branchDir, args)
+        headSha1, _ = process.communicate()
+        if process.returncode != 0:
+            return process.returncode, "Failed to get HEAD commit"
+
+        headSha1 = headSha1.decode("utf-8").strip()
+
+        # If it's the HEAD commit, use commit --amend
+        if headSha1.startswith(sha1) or sha1.startswith(headSha1):
+            env = os.environ.copy()
+            env["GIT_COMMITTER_NAME"] = authorName
+            env["GIT_COMMITTER_EMAIL"] = authorEmail
+
+            args = ["commit", "--amend", "--no-edit",
+                    "--author={}".format(f"{authorName} <{authorEmail}>")]
+            process = GitProcess(branchDir, args, env=env)
+            _, error = process.communicate()
+            if process.returncode != 0 and error is not None:
+                error = error.decode("utf-8")
+            return process.returncode, error
+        else:
+            # For non-HEAD commits, use rebase with exec
+            # This is faster than filter-branch
+            env = os.environ.copy()
+            env["GIT_AUTHOR_NAME"] = authorName
+            env["GIT_AUTHOR_EMAIL"] = authorEmail
+            env["GIT_COMMITTER_NAME"] = authorName
+            env["GIT_COMMITTER_EMAIL"] = authorEmail
+
+            # Use rebase with --exec to change the author
+            # The exec command will run after each commit is applied
+            exec_cmd = f'test $(git rev-parse HEAD) = {sha1} && git commit --amend --no-edit --reset-author || true'
+
+            args = ["rebase", "--exec", exec_cmd, f"{sha1}^"]
+            process = GitProcess(branchDir, args, env=env)
+            _, error = process.communicate()
+
+            if process.returncode != 0:
+                if error is not None:
+                    error = error.decode("utf-8")
+                # Try to abort the rebase
+                GitProcess(branchDir, ["rebase", "--abort"]).communicate()
+                return process.returncode, error
+
+            return 0, None
+
+    @staticmethod
     def repoUrl():
         args = ["config", "remote.origin.url"]
         data = Git.checkOutput(args, reportError=False)

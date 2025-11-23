@@ -197,6 +197,8 @@
     </property>
     <addaction name="acCommit"/>
     <addaction name="acBranchCompare"/>
+    <addaction name="separator"/>
+    <addaction name="acChangeCommitAuthor"/>
    </widget>
    <widget class="QMenu" name="menu_Assistant">
     <property name="title">
@@ -423,6 +425,11 @@
   <action name="acBranchCompare">
    <property name="text">
     <string>&amp;Branch Compare</string>
+   </property>
+  </action>
+  <action name="acChangeCommitAuthor">
+   <property name="text">
+    <string>Change Commit &amp;Author...</string>
    </property>
   </action>
  </widget>
