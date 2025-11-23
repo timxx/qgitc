@@ -1262,21 +1262,12 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
-        # Collect file statuses
-        fileStatuses = {}
-        for row in range(self._stagedModel.rowCount()):
-            index = self._stagedModel.index(row, 0)
-            file = self._stagedModel.data(index, Qt.DisplayRole)
-            statusCode = self._stagedModel.data(index, StatusFileListModel.StatusCodeRole)
-            if file and statusCode:
-                fileStatuses[file] = statusCode
-
         ApplicationBase.instance().trackFeatureUsage("commit.ai_gen")
 
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self.ui.btnRefineMsg.setEnabled(False)
-        self._aiMessage.generate(submoduleFiles, fileStatuses)
+        self._aiMessage.generate(submoduleFiles)
         logger.debug("Begin generate commit message")
 
     def _onRefineMessageClicked(self):
