@@ -24,7 +24,7 @@ from qgitc.gitutils import Git, GitProcess
 class FindWorker(QObject):
 
     resultAvailable = Signal(list)
-    finished = Signal(int, int)
+    finished = Signal(int, QProcess.ExitStatus)
 
     def __init__(self, submodule: str, parent=None):
         super().__init__(parent)
