@@ -410,7 +410,7 @@ ApplicationWindow {
     height: 480
     visible: true
     title: "Hello QML"
-    
+
     Text {
         anchors.centerIn: parent
         text: "Hello, World!"
@@ -457,7 +457,7 @@ extends Node
 
 func _ready():
     print("Hello, World!")
-    
+
 func _process(delta):
     pass
 """
@@ -1333,7 +1333,7 @@ Tilde with language
 
     Indented code block
     with multiple lines
-    
+
 Regular text
 
     Another indented block

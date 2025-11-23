@@ -1475,7 +1475,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         @param text the text being scanned
         @param i pos of i in loop
         @return pos of i after the number
-        
+
         @details it doesn't highlight the following yet:
          - 1000'0000
         """
@@ -1550,12 +1550,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
     def taggerScriptHighlighter(self, text: str):
         """
         The Tagger Script highlighter
-        
+
         This function is responsible for taggerscript highlighting.
         It highlights anything between a (inclusive) '$' and a (exclusive) '(' as a
         function. An exception is the '$noop()'function, which get highlighted as a
         comment.
-        
+
         It has basic error detection when there is an unlcosed %Metadata Variable%
         """
         if not text:
@@ -1613,15 +1613,15 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         @param text
         @details This function post processes a line after the main syntax
         highlighter has run for additional highlighting. It does these things
-        
+
         If the current line is a comment, skip it
-        
+
         Highlight all the words that have a colon after them as 'keyword' except:
         If the word is a string, skip it.
         If the colon is in between a path, skip it (C:\\)
-        
+
         Once the colon is found, the function will skip every character except 'h'
-        
+
         If an h letter is found, check the next 4/5 letters for http/https and
         highlight them as a link (underlined)
         """
@@ -1700,15 +1700,15 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         (1) You opened a section but didn't close with bracket e.g [Section
         (2) You wrote an option but it didn't have an '='
         Such errors will be marked with a dotted red underline
-        
+
         It has comment highlighting support. Everything after a ';' will
         be highlighted till the end of the line.
-        
+
         An option value pair will be highlighted regardless of space. Example:
         Option 1 = value
         In this, 'Option 1' will be highlighted completely and not just '1'.
         I am not sure about its correctness but for now its like this.
-        
+
         The loop is unrolled frequently upon a match. Before adding anything
         new be sure to test in debug mode and apply bound checking as required.
         """

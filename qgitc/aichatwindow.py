@@ -620,7 +620,7 @@ class AiChatWidget(QWidget):
         # Remove from persistent storage
         settings = ApplicationBase.instance().settings()
         settings.removeChatHistory(historyId)
-        
+
         # If the removed history was currently selected, create a new conversation
         currentHistory = self._historyPanel.currentHistory()
         if not currentHistory or currentHistory.historyId == historyId:

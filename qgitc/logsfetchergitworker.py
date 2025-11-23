@@ -134,7 +134,7 @@ class LogFilter:
                 return True
 
         return False
-    
+
     def isStop(self, commit: pygit2.Commit) -> bool:
         if self.since is not None and commit.commit_time < self.since:
             return True

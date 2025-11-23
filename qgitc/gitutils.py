@@ -550,14 +550,14 @@ class Git():
     @staticmethod
     def changeCommitAuthor(branch, sha1, authorName, authorEmail, repoDir=None):
         """Change the author of a specific commit
-        
+
         Args:
             branch: current branch name
             sha1: commit sha1 to change author
             authorName: new author name
             authorEmail: new author email
             repoDir: repository directory
-            
+
         Returns:
             tuple: (return_code, error_message)
         """

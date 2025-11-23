@@ -243,7 +243,7 @@ class DiffFinder(QObject):
                 commit = self._source.getCommit(i)
                 self._sha1IndexMap[commit.sha1] = i
                 _consumeCommit(commit)
-                    
+
                 for subCommit in commit.subCommits:
                     self._sha1IndexMap[subCommit.sha1] = i
                     _consumeCommit(subCommit)
