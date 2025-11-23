@@ -26,7 +26,6 @@ def _dummyAction(submodule, data, cancelEvent: CancelEvent):
     return submodule, "Hello, World!"
 
 
-@unittest.skipIf(sys.version_info >= (3, 14), "Skip on Python >= 3.14")
 class TestSubmoduleExecutor(TestBase):
     def doCreateRepo(self):
         pass
@@ -106,6 +105,7 @@ class TestSubmoduleExecutor(TestBase):
     def _blockAction(self, submodule, data, cancelEvent: CancelEvent):
         time.sleep(2)
 
+    @unittest.skipIf(sys.version_info >= (3, 14), "Skip on Python >= 3.14")
     def testAbort(self):
         executor = SubmoduleExecutor()
 
