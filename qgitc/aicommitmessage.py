@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Tuple
 
 from PySide6.QtCore import QEvent, QObject, Signal
@@ -18,7 +19,7 @@ You excel in interpreting the purpose behind code changes to craft succinct, cle
 
 # First, think step-by-step:
 1. Analyze the CODE CHANGES thoroughly to understand what's been modified.
-2. Identify the purpose of the changes to answer the *why* for the commit messages, also considering the optionally provided RECENT USER COMMITS.
+2. Identify the purpose of the changes to answer the *why* for the commit messages, also considering the optionally provided RECENT FILE COMMITS.
 3. Review the provided RECENT REPOSITORY COMMITS to identify established commit message conventions. Focus on the format and style, ignoring commit-specific details like refs, tags, and authors.
 4. Generate a thoughtful and succinct commit message for the given CODE CHANGES. It MUST follow the the established writing conventions.
 5. Remove any meta information like issue references, tags, or author names from the commit message. The developer will add them.
@@ -27,10 +28,10 @@ You excel in interpreting the purpose behind code changes to craft succinct, cle
 
 
 COMMIT_PROMPT = \
-    """<user-commits>
-# RECENT USER COMMITS (For reference only, do not copy!):
-{user_commits}
-</user-commits>
+    """<file-commits>
+# RECENT FILE COMMITS (For reference only, do not copy!):
+{file_commits}
+</file-commits>
 <recent-commits>
 # RECENT REPOSITORY COMMITS (For reference only, do not copy!):
 {recent_commits}
@@ -44,7 +45,7 @@ COMMIT_PROMPT = \
 </changes>
 <reminder>
 Now generate a commit messages that describe the CODE CHANGES.
-Please follow the style of the RECENT USER/REPOSITORY COMMITS, and use SAME LANGUAGE.
+Please follow the style of the RECENT FILE/REPOSITORY COMMITS, and use SAME LANGUAGE.
 DO NOT COPY commits from RECENT COMMITS, but it as reference for the commit style.
 ONLY return a single markdown code block, NO OTHER PROSE!
 ```text
@@ -73,10 +74,11 @@ REFINE_MESSAGE_PROMPT = \
 class CommitInfoEvent(QEvent):
     Type = QEvent.User + 1
 
-    def __init__(self, diff: str, userLogs: List[str], repoLogs: List[str]):
+    def __init__(self, diff: str, fileCommits: Dict[str, List[str]], repoLogs: List[str]):
         super().__init__(QEvent.Type(CommitInfoEvent.Type))
         self.diff = diff
-        self.userLogs = userLogs
+        # Dict[file_path, List[commit_messages]]
+        self.fileCommits = fileCommits
         self.repoLogs = repoLogs
 
 
@@ -90,14 +92,28 @@ class AiCommitMessage(QObject):
         self._executor = SubmoduleExecutor(self)
         self._executor.finished.connect(self._onFetchCommitInfoFinished)
 
-        self._userLogs: List[str] = []
+        # Dict[file_path, List[commit_messages]]
+        self._fileCommits: Dict[str, List[str]] = {}
         self._repoLogs: List[str] = []
         self._diffs: List[str] = []
         self._message = ""
 
         self._aiModel: AiModelBase = None
+        self._fileStatuses: Dict[str, str] = {}  # Dict[file_path, status_code]
 
-    def generate(self, submoduleFiles: Dict[str, str]):
+    def generate(self, submoduleFiles: Dict[str, str], fileStatuses: Dict[str, str] = None):
+        """
+        Generate commit message.
+        
+        Args:
+            submoduleFiles: Dict mapping submodule to list of files
+            fileStatuses: Optional dict mapping file paths to their status codes (e.g., 'M', 'A', 'D')
+        """
+        if fileStatuses:
+            self._fileStatuses = fileStatuses
+        else:
+            self._fileStatuses = {}
+
         if len(submoduleFiles) <= 1:
             commitCount = 5
         elif len(submoduleFiles) < 3:
@@ -114,7 +130,7 @@ class AiCommitMessage(QObject):
 
         self.cancel()
 
-        self._userLogs.clear()
+        self._fileCommits.clear()
         self._repoLogs.clear()
         self._diffs.clear()
         self._message = ""
@@ -171,17 +187,76 @@ class AiCommitMessage(QObject):
         if cancelEvent.isSet():
             return
 
-        author = Git.userName()
-        if author:
-            userLogs = AiCommitMessage._fetchLogs(repoDir, commitCount, author)
+        newFiles = set()
+        if self._fileStatuses:
+            for filePath in repoFiles:
+                status = self._fileStatuses.get(filePath, '')
+                if status in ('A'):
+                    newFiles.add(filePath)
+
+        # Get files that have history to fetch
+        filesToFetch = [f for f in repoFiles if f not in newFiles]
+
+        # Determine commits per file based on filtered file count
+        totalFiles = len(filesToFetch)
+        if totalFiles == 0:
+            # No files with history, skip
+            commitsPerFile = 0
+        elif totalFiles > 20:
+            # Too many files, limit to 15 and reduce commits per file
+            filesToFetch = filesToFetch[:15]
+            commitsPerFile = 2
+        elif totalFiles > 10:
+            commitsPerFile = 2
         else:
-            userLogs = []
+            commitsPerFile = 3
+
+        if cancelEvent.isSet():
+            return
+
+        fileCommits = {}
+        if filesToFetch:
+            with ThreadPoolExecutor(max_workers=min(10, len(filesToFetch))) as executor:
+                future_to_file = {
+                    executor.submit(AiCommitMessage._fetchFileCommits, repoDir, f, commitsPerFile): f
+                    for f in filesToFetch
+                }
+
+                for future in as_completed(future_to_file):
+                    if cancelEvent.isSet():
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        return
+
+                    filePath = future_to_file[future]
+                    try:
+                        commits = future.result()
+                        if commits:
+                            fileCommits[filePath] = commits
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to fetch commits for {filePath}: {e}")
 
         if cancelEvent.isSet():
             return
 
         ApplicationBase.instance().postEvent(
-            self, CommitInfoEvent(diff, userLogs, repoLogs))
+            self, CommitInfoEvent(diff, fileCommits, repoLogs))
+
+    @staticmethod
+    def _fetchFileCommits(repoDir: str, filePath: str, commitCount: int) -> List[str]:
+        """Fetch commit messages for a specific file."""
+        args = ["log", "--pretty=format:%B",
+                "--no-merges", "-z", "-n", str(commitCount),
+                "--", filePath]
+
+        logs = Git.checkOutput(args, repoDir=repoDir)
+        if logs is not None:
+            logs = logs.decode("utf-8", errors="replace").split("\0")
+            logs = [log.rstrip() for log in logs if log.rstrip()]
+        else:
+            logs = []
+
+        return logs
 
     @staticmethod
     def _fetchLogs(repoDir: str, commitCount: int, author=None):
@@ -211,7 +286,7 @@ class AiCommitMessage(QObject):
         params.max_tokens = 4096
 
         params.prompt = COMMIT_PROMPT.format(
-            user_commits=AiCommitMessage._makeLogs(self._userLogs),
+            file_commits=AiCommitMessage._makeFileCommits(self._fileCommits),
             recent_commits=AiCommitMessage._makeLogs(self._repoLogs),
             code_changes="\n".join(self._diffs)
         )
@@ -223,6 +298,39 @@ class AiCommitMessage(QObject):
         self._aiModel.serviceUnavailable.connect(self._onAiServiceUnavailable)
         self._aiModel.finished.connect(self._onAiResponseFinished)
         self._aiModel.queryAsync(params)
+
+    @staticmethod
+    def _makeFileCommits(fileCommits: Dict[str, List[str]]) -> str:
+        """Format file commits by grouping files with identical commit histories."""
+        if not fileCommits:
+            return ""
+
+        # Create a signature for each file's commit history (list of commits)
+        # Group files that share the exact same commit history together
+        # tuple of commits -> list of files
+        commitHistory: Dict[tuple, List[str]] = {}
+
+        for filePath, commits in fileCommits.items():
+            commitsKey = tuple(commits)
+            if commitsKey not in commitHistory:
+                commitHistory[commitsKey] = []
+            commitHistory[commitsKey].append(filePath)
+
+        # Format output: list files, then their commit messages
+        result = ""
+        for commits, files in commitHistory.items():
+            for file in files:
+                result += file + "\n"
+
+            for commit in commits:
+                lines = commit.splitlines()
+                result += "- " + lines[0] + "\n"
+                for line in lines[1:]:
+                    result += "  " + line + "\n"
+
+            result += "\n"
+
+        return result
 
     @staticmethod
     def _makeLogs(logs: List[str]):
@@ -239,11 +347,22 @@ class AiCommitMessage(QObject):
         if evt.type() == CommitInfoEvent.Type:
             if evt.diff:
                 self._diffs.append(evt.diff)
-            AiCommitMessage._appendLogs(self._userLogs, evt.userLogs)
+            AiCommitMessage._mergeFileCommits(
+                self._fileCommits, evt.fileCommits)
             AiCommitMessage._appendLogs(self._repoLogs, evt.repoLogs)
             return True
 
         return super().event(evt)
+
+    @staticmethod
+    def _mergeFileCommits(target: Dict[str, List[str]], source: Dict[str, List[str]]):
+        """Merge file commits from source into target."""
+        for filePath, commits in source.items():
+            if filePath not in target:
+                target[filePath] = []
+            for commit in commits:
+                if commit not in target[filePath]:
+                    target[filePath].append(commit)
 
     @staticmethod
     def _appendLogs(oldLogs: List[str], newLogs: List[str]):
