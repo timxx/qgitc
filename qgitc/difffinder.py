@@ -9,6 +9,7 @@ from PySide6.QtCore import SIGNAL, QObject, QProcess, Signal
 from qgitc.commitsource import CommitSource
 from qgitc.common import (
     FIND_CANCELED,
+    FIND_IGNORECASE,
     FIND_NOTFOUND,
     FIND_REGEXP,
     Commit,
@@ -55,6 +56,9 @@ class FindWorker(QObject):
         else:
             assert param.field == FindField.Changes
             args.append("-G" + param.pattern)
+
+        if param.flag == FIND_IGNORECASE:
+            args.append("-i")
 
         if filterPath:
             args.append("--")
