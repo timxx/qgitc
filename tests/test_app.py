@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from unittest.mock import patch
+
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.gitutils import Git, GitProcess
@@ -58,6 +59,10 @@ class TestApp(TestBase):
 
         self.app.updateRepoDir(oldRepoDir)
         self.assertEqual(spy.count(), 2)
+
+        if self.app._findSubmoduleThread and self.app._findSubmoduleThread.isRunning():
+            self.app._findSubmoduleThread.requestInterruption()
+            self.app._findSubmoduleThread.wait()
 
 
 class TestAppNoRepo(TestBase):
