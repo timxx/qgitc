@@ -642,6 +642,9 @@ class AiChatWidget(QWidget):
 
         self._loadMessagesFromHistory(chatHistory.messages)
 
+        sb = self.messages.verticalScrollBar()
+        sb.setValue(sb.maximum())
+
     def _switchToModel(self, modelKey: str, modelId: str):
         """Switch to the specified model"""
         # Find the correct model
