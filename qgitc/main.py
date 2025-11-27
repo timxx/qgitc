@@ -349,6 +349,7 @@ def _do_commit_ai(app: Application, args):
 
     ai_message.generate(submodule_files)
 
+    app.trackFeatureUsage("commit.ai_gen_console")
     app.exec()
 
     # Wait for progress thread to finish
