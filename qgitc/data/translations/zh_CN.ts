@@ -200,7 +200,7 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="725"/>
+        <location filename="../../aichatwindow.py" line="728"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -208,24 +208,92 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatbot</name>
     <message>
-        <location filename="../../aichatbot.py" line="102"/>
+        <location filename="../../aichatbot.py" line="112"/>
         <source>Service Unavailable</source>
         <translation>服务不可用</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="123"/>
+        <location filename="../../aichatbot.py" line="139"/>
         <source>User:</source>
         <translation>用户：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="125"/>
+        <location filename="../../aichatbot.py" line="141"/>
         <source>Assistant:</source>
         <translation>助手：</translation>
     </message>
     <message>
-        <location filename="../../aichatbot.py" line="127"/>
+        <location filename="../../aichatbot.py" line="143"/>
         <source>System:</source>
         <translation>系统：</translation>
+    </message>
+</context>
+<context>
+    <name>AiCommit</name>
+    <message>
+        <location filename="../../main.py" line="281"/>
+        <source>Not in a git repository</source>
+        <translation>不在 git 仓库中</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="284"/>
+        <source>Collecting staged files...</source>
+        <translation>正在收集已暂存的文件…</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="287"/>
+        <source>No changes detected</source>
+        <translation>未检测到改动</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="302"/>
+        <source>No staged files found. Please stage your changes first.</source>
+        <translation>未找到已暂存的文件。请先暂存您的更改。</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="306"/>
+        <source>Found {0} staged file(s):</source>
+        <translation>找到 {0} 个已暂存的文件：</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="313"/>
+        <source>
+Generating commit message using AI...</source>
+        <translation>
+正在使用 AI 生成提交信息…</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="339"/>
+        <source>Working...</source>
+        <translation>正在生成…</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="358"/>
+        <source>
+Error: {0}</source>
+        <translation>
+错误: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="363"/>
+        <source>
+No commit message generated</source>
+        <translation>
+未生成提交信息</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="381"/>
+        <source>
+Commit successful!</source>
+        <translation>
+提交成功！</translation>
+    </message>
+    <message>
+        <location filename="../../main.py" line="385"/>
+        <source>
+Commit cancelled or failed</source>
+        <translation>
+提交已取消或失败</translation>
     </message>
 </context>
 <context>

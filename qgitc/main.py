@@ -10,7 +10,13 @@ import tempfile
 import threading
 import traceback
 
-from PySide6.QtCore import QMessageLogContext, Qt, QtMsgType, qInstallMessageHandler
+from PySide6.QtCore import (
+    QCoreApplication,
+    QMessageLogContext,
+    Qt,
+    QtMsgType,
+    qInstallMessageHandler,
+)
 from PySide6.QtWidgets import QStyle
 
 from qgitc.application import Application
@@ -272,13 +278,13 @@ def _do_commit_ai(app: Application, args):
     from qgitc.aicommitmessage import AiCommitMessage
 
     if not Git.REPO_DIR:
-        print("Error: Not in a git repository")
+        print(QCoreApplication.translate("AiCommit", "Not in a git repository"))
         return 1
 
-    print("Collecting staged files...")
+    print(QCoreApplication.translate("AiCommit", "Collecting staged files..."))
     status_data = Git.status(Git.REPO_DIR)
     if not status_data:
-        print("No changes detected")
+        print(QCoreApplication.translate("AiCommit", "No changes detected"))
         return 1
 
     staged_files = []
@@ -293,16 +299,19 @@ def _do_commit_ai(app: Application, args):
             staged_files.append(file_path)
 
     if not staged_files:
-        print("No staged files found. Please stage your changes first.")
+        print(QCoreApplication.translate("AiCommit",
+              "No staged files found. Please stage your changes first."))
         return 1
 
-    print(f"Found {len(staged_files)} staged file(s):")
+    print(QCoreApplication.translate("AiCommit",
+          "Found {0} staged file(s):").format(len(staged_files)))
     for f in staged_files:
         print(f"  - {f}")
 
     submodule_files = {None: staged_files}
 
-    print("\nGenerating commit message using AI...")
+    print(QCoreApplication.translate("AiCommit",
+          "\nGenerating commit message using AI..."))
 
     ai_message = AiCommitMessage()
     message_received = [None]
@@ -327,8 +336,9 @@ def _do_commit_ai(app: Application, args):
         ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'])
 
     def show_progress():
+        working_text = QCoreApplication.translate("AiCommit", "Working...")
         while not finished[0]:
-            sys.stdout.write(f'\r{next(progress_chars)} Working...')
+            sys.stdout.write(f'\r{next(progress_chars)} {working_text}')
             sys.stdout.flush()
             time.sleep(0.1)
         sys.stdout.write('\r' + ' ' * 20 + '\r')
@@ -345,11 +355,13 @@ def _do_commit_ai(app: Application, args):
     progress_thread.join(timeout=1.0)
 
     if error_received[0]:
-        print(f"\nError: {error_received[0]}")
+        print(QCoreApplication.translate("AiCommit",
+              "\nError: {0}").format(error_received[0]))
         return 1
 
     if not message_received[0]:
-        print("\nNo commit message generated")
+        print(QCoreApplication.translate(
+            "AiCommit", "\nNo commit message generated"))
         return 1
 
     commit_message = message_received[0]
@@ -366,10 +378,12 @@ def _do_commit_ai(app: Application, args):
         process = subprocess.run(
             [GitProcess.GIT_BIN, "commit", "-e", "-F", temp_file,])
         if process.returncode == 0:
-            print("\nCommit successful!")
+            print(QCoreApplication.translate(
+                "AiCommit", "\nCommit successful!"))
             return 0
         else:
-            print(f"\nCommit cancelled or failed")
+            print(QCoreApplication.translate(
+                "AiCommit", "\nCommit cancelled or failed"))
             return 1
     finally:
         try:
