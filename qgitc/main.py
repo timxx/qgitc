@@ -4,7 +4,9 @@ import argparse
 import logging
 import logging.handlers
 import os
+import subprocess
 import sys
+import tempfile
 import threading
 import traceback
 
@@ -15,7 +17,7 @@ from qgitc.application import Application
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import attachConsole, logger
 from qgitc.excepthandler import ExceptHandler
-from qgitc.gitutils import Git
+from qgitc.gitutils import Git, GitProcess
 from qgitc.mainwindow import MainWindow
 from qgitc.shell import setup_shell_args
 from qgitc.windowtype import WindowType
@@ -80,6 +82,9 @@ def _setup_argument(prog):
     commit_parser = subparsers.add_parser(
         "commit",
         help="Show commit window to commit changes.")
+    commit_parser.add_argument(
+        "--ai", action="store_true",
+        help="Generate commit message using AI in console mode")
     commit_parser.set_defaults(func=_do_commit)
 
     chat_parser = subparsers.add_parser(
@@ -259,8 +264,130 @@ def _do_blame(args):
     return _do_exec(app)
 
 
+def _do_commit_ai(app: Application, args):
+    """Console mode commit with AI-generated message"""
+    import itertools
+    import time
+
+    from qgitc.aicommitmessage import AiCommitMessage
+
+    if not Git.REPO_DIR:
+        print("Error: Not in a git repository")
+        return 1
+
+    print("Collecting staged files...")
+    status_data = Git.status(Git.REPO_DIR)
+    if not status_data:
+        print("No changes detected")
+        return 1
+
+    staged_files = []
+    lines = status_data.decode("utf-8", errors="replace").split("\0")
+    for line in lines:
+        if not line or len(line) < 4:
+            continue
+        status_code = line[:2]
+        file_path = line[3:]
+        # Files with status in the index (first character is not space or ?)
+        if status_code[0] not in (' ', '?'):
+            staged_files.append(file_path)
+
+    if not staged_files:
+        print("No staged files found. Please stage your changes first.")
+        return 1
+
+    print(f"Found {len(staged_files)} staged file(s):")
+    for f in staged_files:
+        print(f"  - {f}")
+
+    submodule_files = {None: staged_files}
+
+    print("\nGenerating commit message using AI...")
+
+    ai_message = AiCommitMessage()
+    message_received = [None]
+    error_received = [None]
+    finished = [False]
+
+    def on_message_available(msg):
+        message_received[0] = msg
+        finished[0] = True
+        app.quit()
+
+    def on_error_occurred(err):
+        error_received[0] = err
+        finished[0] = True
+        app.quit()
+
+    ai_message.messageAvailable.connect(on_message_available)
+    ai_message.errorOccurred.connect(on_error_occurred)
+
+    # Show progress indicator
+    progress_chars = itertools.cycle(
+        ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'])
+
+    def show_progress():
+        while not finished[0]:
+            sys.stdout.write(f'\r{next(progress_chars)} Working...')
+            sys.stdout.flush()
+            time.sleep(0.1)
+        sys.stdout.write('\r' + ' ' * 20 + '\r')
+        sys.stdout.flush()
+
+    progress_thread = threading.Thread(target=show_progress, daemon=True)
+    progress_thread.start()
+
+    ai_message.generate(submodule_files)
+
+    app.exec()
+
+    # Wait for progress thread to finish
+    progress_thread.join(timeout=1.0)
+
+    if error_received[0]:
+        print(f"\nError: {error_received[0]}")
+        return 1
+
+    if not message_received[0]:
+        print("\nNo commit message generated")
+        return 1
+
+    commit_message = message_received[0]
+
+    print("=" * 60)
+    print(commit_message)
+    print("=" * 60)
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as f:
+        f.write(commit_message)
+        temp_file = f.name
+
+    try:
+        process = subprocess.run(
+            [GitProcess.GIT_BIN, "commit", "-e", "-F", temp_file,])
+        if process.returncode == 0:
+            print("\nCommit successful!")
+            return 0
+        else:
+            print(f"\nCommit cancelled or failed")
+            return 1
+    finally:
+        try:
+            os.unlink(temp_file)
+        except:
+            pass
+
+
 def _do_commit(args):
     app = _init_gui(args.cmd)
+
+    if args.ai:
+        ret = _do_commit_ai(app, args)
+        app.quit()
+        # _onAboutToQuit will not be called as event loop may not be started
+        app._onAboutToQuit()
+        app.telemetry().shutdown()
+        return ret
 
     window = app.getWindow(WindowType.CommitWindow)
     _move_center(window)
