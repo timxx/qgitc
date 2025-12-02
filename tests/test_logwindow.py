@@ -196,38 +196,32 @@ class TestLogWindow(TestBase):
         self.assertEqual([], logView.getSelectedIndices())
 
         # Ctrl+Click to toggle selection on item 0
-        logView.mousePressEvent(self._createMouseEvent(
-            logView, 0, Qt.ControlModifier))
+        self._clickItem(logView, 0, Qt.ControlModifier)
         self.assertIn(0, logView.selectedIndices)
         self.assertEqual([0], logView.getSelectedIndices())
         self.assertEqual(0, logView.currentIndex())
 
         # Ctrl+Click on another item to add to selection
-        logView.mousePressEvent(self._createMouseEvent(
-            logView, 1, Qt.ControlModifier))
+        self._clickItem(logView, 1, Qt.ControlModifier)
         self.assertIn(0, logView.selectedIndices)
         self.assertIn(1, logView.selectedIndices)
         self.assertEqual([0, 1], logView.getSelectedIndices())
         self.assertEqual(1, logView.currentIndex())
 
         # Ctrl+Click on already selected item to deselect
-        logView.mousePressEvent(self._createMouseEvent(
-            logView, 0, Qt.ControlModifier))
+        self._clickItem(logView, 0, Qt.ControlModifier)
         self.assertNotIn(0, logView.selectedIndices)
         self.assertIn(1, logView.selectedIndices)
         self.assertEqual([1], logView.getSelectedIndices())
         self.assertEqual(0, logView.currentIndex())
 
         # Shift+Click for range selection from current position (0) to 2
-        logView.mousePressEvent(
-            self._createMouseEvent(logView, 2, Qt.ShiftModifier))
+        self._clickItem(logView, 2, Qt.ShiftModifier)
         self.assertEqual([0, 1, 2], logView.getSelectedIndices())
         self.assertEqual(2, logView.currentIndex())
 
         # Normal click to clear previous selections and select only clicked item
-        event = self._createMouseEvent(logView, 1, Qt.NoModifier)
-        self.assertEqual(Qt.NoModifier, event.modifiers())
-        logView.mousePressEvent(event)
+        self._clickItem(logView, 1, Qt.NoModifier)
         self.processEvents()
         self.assertEqual([1], logView.getSelectedIndices())
         self.assertEqual(1, logView.currentIndex())
@@ -371,7 +365,7 @@ class TestLogWindow(TestBase):
         self.assertEqual([0, 2], logView.getSelectedIndices())
         self.assertEqual(2, logView.currentIndex())
 
-    def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier):
+    def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier, eventType=QEvent.Type.MouseButtonPress):
         """Helper to create a mouse event at a specific line"""
 
         # Calculate y position relative to viewport (account for scroll)
@@ -382,7 +376,7 @@ class TestLogWindow(TestBase):
 
         # Create event with modifiers using the new constructor signature
         event = QMouseEvent(
-            QEvent.Type.MouseButtonPress,
+            eventType,
             pos,
             pos,
             Qt.LeftButton,
@@ -390,3 +384,10 @@ class TestLogWindow(TestBase):
             modifiers
         )
         return event
+
+    def _clickItem(self, widget, line, modifiers=Qt.NoModifier):
+        """Helper to simulate a complete click (press + release) on a specific line"""
+        pressEvent = self._createMouseEvent(widget, line, modifiers, QEvent.Type.MouseButtonPress)
+        releaseEvent = self._createMouseEvent(widget, line, modifiers, QEvent.Type.MouseButtonRelease)
+        widget.mousePressEvent(pressEvent)
+        widget.mouseReleaseEvent(releaseEvent)

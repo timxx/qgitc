@@ -1932,12 +1932,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             del graphPainter
             self.logGraph.render(graphImage)
 
-    def mousePressEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, event: QMouseEvent):
         if not self.data:
             return
 
         index = self.lineForPos(event.position())
-
         mod = event.modifiers()
 
         # Handle multi-selection with keyboard modifiers
