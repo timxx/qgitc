@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEvent, QPointF, Qt
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.gitutils import Git
@@ -372,8 +373,6 @@ class TestLogWindow(TestBase):
 
     def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier):
         """Helper to create a mouse event at a specific line"""
-        from PySide6.QtCore import QEvent, QPointF
-        from PySide6.QtGui import QMouseEvent
 
         # Calculate y position relative to viewport (account for scroll)
         scrollPos = widget.verticalScrollBar().value()

@@ -1807,6 +1807,14 @@ class LogView(QAbstractScrollArea, CommitSource):
         painter.setFont(self.font)
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
         for i in range(startLine, endLine):
+            # Get full item rect without margin for selection background
+            fullRect = self.__itemRect(i, needMargin=False)
+
+            # Distinguish between selected items and active/current item
+            isSelected = i in self.selectedIndices
+            isCurrent = i == self.curIdx
+
+            # Get rect with margin for content drawing
             rect = self.__itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
@@ -1844,40 +1852,43 @@ class LogView(QAbstractScrollArea, CommitSource):
             if needMargin:
                 rect.adjust(4, 0, 0, 0)
 
+            # Draw selection/hover background only after tags
+            selectionRect = QRect(fullRect)
+            selectionRect.setLeft(rect.left())
+            if isSelected:
+                painter.fillRect(selectionRect, colorSchema.SelectedItemBg)
+            elif i == self.hoverIdx:
+                painter.fillRect(selectionRect, colorSchema.HoverItemBg)
+
             # marker
             self.marker.draw(i, painter, rect)
 
             # subject
             painter.save()
 
-            # Distinguish between selected items and active/current item
-            isSelected = i in self.selectedIndices
-            isCurrent = i == self.curIdx
-
+            # Set text color based on selection state
             if isSelected:
-                # Draw selection background for selected items
-                painter.fillRect(rect, colorSchema.SelectedItemBg)
                 painter.setPen(colorSchema.SelectedItemFg)
 
-            # Draw focus/active border for current item (can overlap with selection)
+            # Set text color based on selection state
+            if isSelected:
+                painter.setPen(colorSchema.SelectedItemFg)
+            else:
+                painter.setPen(palette.color(QPalette.WindowText))
+
+            # Draw focus/active border for current item (drawn over selection)
             if isCurrent and self.hasFocus():
                 pen = QPen(colorSchema.FocusItemBorder)
                 pen.setCosmetic(True)
                 painter.setPen(pen)
-                borderRect = QRectF(rect)
+                borderRect = QRectF(selectionRect)
                 borderRect.adjust(0, 0, -0.5, -0.5)
                 painter.drawRect(borderRect)
-                if not isSelected:
-                    # If current but not selected, use normal text color
-                    painter.setPen(palette.color(QPalette.WindowText))
-                else:
-                    # If both current and selected, use selection text color
+                # Restore text color
+                if isSelected:
                     painter.setPen(colorSchema.SelectedItemFg)
-            elif i == self.hoverIdx and not isSelected:
-                painter.fillRect(rect, colorSchema.HoverItemBg)
-                painter.setPen(palette.color(QPalette.WindowText))
-            elif not isSelected:
-                painter.setPen(palette.color(QPalette.WindowText))
+                else:
+                    painter.setPen(palette.color(QPalette.WindowText))
 
             content = makeMessage(commit)
 
