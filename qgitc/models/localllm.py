@@ -39,9 +39,13 @@ class LocalLLMNameFetcher(QObject):
             return
 
         model_list = json.loads(reply.readAll().data())
-        if not model_list or "data" not in model_list:
+        if not model_list:
             return
-        for model in model_list["data"]:
+
+        models = model_list.get("data", [])
+        if not models:
+            return
+        for model in models:
             id = model.get("id")
             if not id:
                 continue
