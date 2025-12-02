@@ -1973,9 +1973,6 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.selectedIndices.clear()
                 self.selectedIndices.update(range(start, end + 1))
 
-                # Keep marker behavior for shift+click
-                self.marker.mark(self.curIdx, index)
-
                 oldIdx = self.curIdx
                 self.curIdx = index
                 self.__ensureChildren(index)
