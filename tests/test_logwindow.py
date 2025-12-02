@@ -176,3 +176,218 @@ class TestLogWindow(TestBase):
         self.waitForLoaded()
 
         self.assertEqual(2, self.window.ui.cbSubmodule.count())
+
+    def testMultipleSelectionMouseClick(self):
+        """Test multiple selection with mouse clicks"""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreaterEqual(logView.getCount(), 3)
+
+        # Ensure we're at the top and items 0-3 are visible
+        logView.verticalScrollBar().setValue(0)
+        logView.setCurrentIndex(0)
+        logView.selectedIndices.clear()
+        self.processEvents()
+
+        # Normal click - should clear selection and set active item
+        self.assertEqual(0, logView.currentIndex())
+        self.assertEqual([], logView.getSelectedIndices())
+
+        # Ctrl+Click to toggle selection on item 0
+        logView.mousePressEvent(self._createMouseEvent(
+            logView, 0, Qt.ControlModifier))
+        self.assertIn(0, logView.selectedIndices)
+        self.assertEqual([0], logView.getSelectedIndices())
+        self.assertEqual(0, logView.currentIndex())
+
+        # Ctrl+Click on another item to add to selection
+        logView.mousePressEvent(self._createMouseEvent(
+            logView, 1, Qt.ControlModifier))
+        self.assertIn(0, logView.selectedIndices)
+        self.assertIn(1, logView.selectedIndices)
+        self.assertEqual([0, 1], logView.getSelectedIndices())
+        self.assertEqual(1, logView.currentIndex())
+
+        # Ctrl+Click on already selected item to deselect
+        logView.mousePressEvent(self._createMouseEvent(
+            logView, 0, Qt.ControlModifier))
+        self.assertNotIn(0, logView.selectedIndices)
+        self.assertIn(1, logView.selectedIndices)
+        self.assertEqual([1], logView.getSelectedIndices())
+        self.assertEqual(0, logView.currentIndex())
+
+        # Shift+Click for range selection from current position (0) to 2
+        logView.mousePressEvent(
+            self._createMouseEvent(logView, 2, Qt.ShiftModifier))
+        self.assertEqual([0, 1, 2], logView.getSelectedIndices())
+        self.assertEqual(2, logView.currentIndex())
+
+        # Normal click to clear previous selections and select only clicked item
+        event = self._createMouseEvent(logView, 1, Qt.NoModifier)
+        self.assertEqual(Qt.NoModifier, event.modifiers())
+        logView.mousePressEvent(event)
+        self.processEvents()
+        self.assertEqual([1], logView.getSelectedIndices())
+        self.assertEqual(1, logView.currentIndex())
+
+    def testMultipleSelectionKeyboard(self):
+        """Test multiple selection with keyboard navigation"""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreaterEqual(logView.getCount(), 3)
+
+        # Set initial position
+        logView.setCurrentIndex(0)
+        self.assertEqual(0, logView.currentIndex())
+        self.assertEqual([], logView.getSelectedIndices())
+
+        # Normal arrow key navigation should not change selection
+        QTest.keyClick(logView, Qt.Key_Down)
+        self.assertEqual(1, logView.currentIndex())
+        self.assertEqual([], logView.getSelectedIndices())
+
+        QTest.keyClick(logView, Qt.Key_Up)
+        self.assertEqual(0, logView.currentIndex())
+        self.assertEqual([], logView.getSelectedIndices())
+
+        # Space to toggle selection of current item
+        QTest.keyClick(logView, Qt.Key_Space)
+        self.assertIn(0, logView.selectedIndices)
+        self.assertEqual([0], logView.getSelectedIndices())
+
+        # Space again to deselect
+        QTest.keyClick(logView, Qt.Key_Space)
+        self.assertNotIn(0, logView.selectedIndices)
+        self.assertEqual([], logView.getSelectedIndices())
+
+        # Shift+Down for range selection
+        logView.setCurrentIndex(1)
+        logView.selectedIndices.clear()
+        QTest.keyClick(logView, Qt.Key_Down, Qt.ShiftModifier)
+        self.assertEqual([1, 2], logView.getSelectedIndices())
+        self.assertEqual(2, logView.currentIndex())
+
+        # Shift+Up for range selection
+        logView.setCurrentIndex(2)
+        logView.selectedIndices.clear()
+        QTest.keyClick(logView, Qt.Key_Up, Qt.ShiftModifier)
+        self.assertEqual([1, 2], logView.getSelectedIndices())
+        self.assertEqual(1, logView.currentIndex())
+
+    def testSelectAll(self):
+        """Test Ctrl+A to select all items"""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        count = logView.getCount()
+        self.assertGreater(count, 0)
+
+        # Give focus to logView
+        logView.setFocus()
+        self.processEvents()
+
+        # Initially no selection
+        self.assertEqual([], logView.getSelectedIndices())
+
+        # Ctrl+A to select all
+        QTest.keyClick(logView, Qt.Key_A, Qt.ControlModifier)
+        self.processEvents()
+        self.assertEqual(count, len(logView.getSelectedIndices()))
+        self.assertEqual(list(range(count)), logView.getSelectedIndices())
+
+        # Clear selection
+        logView.selectedIndices.clear()
+        self.assertEqual([], logView.getSelectedIndices())
+
+    def testGetSelectedCommits(self):
+        """Test getting selected commits"""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreater(logView.getCount(), 2)
+
+        # No selection initially
+        self.assertEqual([], logView.getSelectedCommits())
+
+        # Select some items
+        logView.selectedIndices.add(0)
+        logView.selectedIndices.add(1)
+
+        selected = logView.getSelectedCommits()
+        self.assertEqual(2, len(selected))
+        self.assertEqual(logView.getCommit(0), selected[0])
+        self.assertEqual(logView.getCommit(1), selected[1])
+
+        # Select all
+        logView.selectedIndices.update(range(logView.getCount()))
+        selected = logView.getSelectedCommits()
+        self.assertEqual(logView.getCount(), len(selected))
+
+    def testSelectionClearOnClear(self):
+        """Test that selection is cleared when logView.clear() is called"""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreater(logView.getCount(), 0)
+
+        # Select some items
+        logView.selectedIndices.add(0)
+        logView.selectedIndices.add(1)
+        self.assertEqual([0, 1], logView.getSelectedIndices())
+
+        # Clear should reset selection
+        logView.clear()
+        self.assertEqual([], logView.getSelectedIndices())
+        self.assertEqual(-1, logView.currentIndex())
+
+    def testActiveVsSelected(self):
+        """Test that active item (curIdx) is different from selected items"""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreaterEqual(logView.getCount(), 3)
+
+        # Set active item without selection
+        logView.setCurrentIndex(1)
+        self.assertEqual(1, logView.currentIndex())
+        self.assertEqual([], logView.getSelectedIndices())
+
+        # Select different items (not including active)
+        logView.selectedIndices.add(0)
+        logView.selectedIndices.add(2)
+        self.assertEqual([0, 2], logView.getSelectedIndices())
+        self.assertEqual(1, logView.currentIndex())
+
+        # Navigate to another item - selection should not change
+        logView.setCurrentIndex(2)
+        self.assertEqual([0, 2], logView.getSelectedIndices())
+        self.assertEqual(2, logView.currentIndex())
+
+        # Select the active item too
+        logView.selectedIndices.add(2)
+        self.assertEqual([0, 2], logView.getSelectedIndices())
+        self.assertEqual(2, logView.currentIndex())
+
+    def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier):
+        """Helper to create a mouse event at a specific line"""
+        from PySide6.QtCore import QEvent, QPointF
+        from PySide6.QtGui import QMouseEvent
+
+        # Calculate y position relative to viewport (account for scroll)
+        scrollPos = widget.verticalScrollBar().value()
+        viewportLine = line - scrollPos
+        y = viewportLine * widget.lineHeight + widget.lineHeight // 2
+        pos = QPointF(10, y)
+
+        # Create event with modifiers using the new constructor signature
+        event = QMouseEvent(
+            QEvent.Type.MouseButtonPress,
+            pos,
+            pos,
+            Qt.LeftButton,
+            Qt.LeftButton,
+            modifiers
+        )
+        return event

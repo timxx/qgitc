@@ -418,6 +418,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.fetcher = LogsFetcher(self)
         self.curIdx = -1
         self.hoverIdx = -1
+        self.selectedIndices = set()  # Track multiple selected items
         self.branchA = True
         self.curBranch = ""
         self.args = None
@@ -568,6 +569,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def clear(self):
         self.data.clear()
         self.curIdx = -1
+        self.selectedIndices.clear()
         self.__resetGraphs()
         self.marker.clear()
         self.delayVisible = False
@@ -597,6 +599,15 @@ class LogView(QAbstractScrollArea, CommitSource):
     def currentIndex(self):
         return self.curIdx
 
+    def getSelectedIndices(self):
+        """Get all selected indices as a sorted list"""
+        return sorted(self.selectedIndices)
+
+    def getSelectedCommits(self):
+        """Get all selected commits"""
+        indices = self.getSelectedIndices()
+        return [self.data[i] for i in indices if i < len(self.data)]
+
     def ensureVisible(self):
         if self.curIdx == -1:
             return
@@ -611,12 +622,17 @@ class LogView(QAbstractScrollArea, CommitSource):
             if (endLineF - self.curIdx) < HALF_LINE_PERCENT:
                 self.verticalScrollBar().setValue(startLine + 1)
 
-    def setCurrentIndex(self, index):
+    def setCurrentIndex(self, index, clearSelection=False):
         self.preferSha1 = None
-        if index == self.curIdx:
+        if index == self.curIdx and not clearSelection:
             return
 
         self.curIdx = index
+
+        # Update selection based on clearSelection flag
+        if clearSelection:
+            self.selectedIndices.clear()
+
         if index >= 0 and index < len(self.data):
             self.ensureVisible()
             self.__ensureChildren(index)
@@ -1833,19 +1849,34 @@ class LogView(QAbstractScrollArea, CommitSource):
 
             # subject
             painter.save()
-            if i == self.curIdx:
+
+            # Distinguish between selected items and active/current item
+            isSelected = i in self.selectedIndices
+            isCurrent = i == self.curIdx
+
+            if isSelected:
+                # Draw selection background for selected items
                 painter.fillRect(rect, colorSchema.SelectedItemBg)
-                if self.hasFocus():
-                    pen = QPen(colorSchema.FocusItemBorder)
-                    pen.setCosmetic(True)
-                    painter.setPen(pen)
-                    borderRect = QRectF(rect)
-                    borderRect.adjust(0, 0, -0.5, -0.5)
-                    painter.drawRect(borderRect)
                 painter.setPen(colorSchema.SelectedItemFg)
-            elif i == self.hoverIdx:
+
+            # Draw focus/active border for current item (can overlap with selection)
+            if isCurrent and self.hasFocus():
+                pen = QPen(colorSchema.FocusItemBorder)
+                pen.setCosmetic(True)
+                painter.setPen(pen)
+                borderRect = QRectF(rect)
+                borderRect.adjust(0, 0, -0.5, -0.5)
+                painter.drawRect(borderRect)
+                if not isSelected:
+                    # If current but not selected, use normal text color
+                    painter.setPen(palette.color(QPalette.WindowText))
+                else:
+                    # If both current and selected, use selection text color
+                    painter.setPen(colorSchema.SelectedItemFg)
+            elif i == self.hoverIdx and not isSelected:
                 painter.fillRect(rect, colorSchema.HoverItemBg)
-            else:
+                painter.setPen(palette.color(QPalette.WindowText))
+            elif not isSelected:
                 painter.setPen(palette.color(QPalette.WindowText))
 
             content = makeMessage(commit)
@@ -1870,7 +1901,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                         rect.adjust(br.width(), 0, 0, 0)
 
                     text = content[m.start():m.end()]
-                    if i == self.curIdx:
+                    if isSelected:
                         painter.setPen(colorSchema.HighlightWordSelectedFg)
                     else:
                         br = painter.boundingRect(rect, flags, text)
@@ -1896,13 +1927,56 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         index = self.lineForPos(event.position())
 
-        mod = ApplicationBase.instance().keyboardModifiers()
-        # no OR combination
-        if mod == Qt.ShiftModifier:
-            self.marker.mark(self.curIdx, index)
-            self.viewport().update()
+        mod = event.modifiers()
+
+        # Handle multi-selection with keyboard modifiers
+        if mod == Qt.ControlModifier:
+            # Toggle selection for clicked item
+            if index in self.selectedIndices:
+                self.selectedIndices.remove(index)
+            else:
+                self.selectedIndices.add(index)
+
+            # Update current index but keep other selections
+            oldIdx = self.curIdx
+            self.curIdx = index
+            self.__ensureChildren(index)
+
+            # Update only affected items
+            if oldIdx != -1:
+                self.invalidateItem(oldIdx)
+            self.invalidateItem(index)
+            self.currentIndexChanged.emit(self.curIdx)
+
+        elif mod == Qt.ShiftModifier:
+            # Range selection from curIdx to clicked index
+            if self.curIdx == -1:
+                # No current index, just select clicked item
+                self.selectedIndices.clear()
+                self.selectedIndices.add(index)
+                self.setCurrentIndex(index)
+            else:
+                # Select range
+                start = min(self.curIdx, index)
+                end = max(self.curIdx, index)
+                self.selectedIndices.clear()
+                self.selectedIndices.update(range(start, end + 1))
+
+                # Keep marker behavior for shift+click
+                self.marker.mark(self.curIdx, index)
+
+                oldIdx = self.curIdx
+                self.curIdx = index
+                self.__ensureChildren(index)
+
+                # Redraw all visible items since range may be large
+                self.viewport().update()
+                self.currentIndexChanged.emit(self.curIdx)
         else:
-            self.setCurrentIndex(index)
+            # Normal click - clear previous selections and select clicked item
+            self.selectedIndices.clear()
+            self.selectedIndices.add(index)
+            self.setCurrentIndex(index, clearSelection=False)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         self._updateHover(event.position())
@@ -1927,23 +2001,67 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.invalidateItem(self.hoverIdx)
 
     def keyPressEvent(self, event):
+        mod = ApplicationBase.instance().keyboardModifiers()
+
+        # Handle Ctrl+A for select all
+        if event.key() == Qt.Key_A and mod == Qt.ControlModifier:
+            if self.data:
+                self.selectedIndices.clear()
+                self.selectedIndices.update(range(len(self.data)))
+                self.viewport().update()
+            return
+
+        # Handle Space to toggle selection of current item
+        if event.key() == Qt.Key_Space:
+            if self.curIdx >= 0:
+                if self.curIdx in self.selectedIndices:
+                    self.selectedIndices.remove(self.curIdx)
+                else:
+                    self.selectedIndices.add(self.curIdx)
+                self.invalidateItem(self.curIdx)
+            return
+
         if event.key() == Qt.Key_Up:
             if self.curIdx > 0:
                 startLine = self.verticalScrollBar().value()
+                oldIdx = self.curIdx
                 self.curIdx -= 1
                 self.__ensureChildren(self.curIdx)
+
+                # Handle multi-selection with modifiers
+                if mod == Qt.ShiftModifier:
+                    # Shift+Up: Range selection
+                    start = min(oldIdx, self.curIdx)
+                    end = max(oldIdx, self.curIdx)
+                    self.selectedIndices.clear()
+                    self.selectedIndices.update(range(start, end + 1))
+                # Note: Normal navigation (without modifiers) doesn't change selection
+
                 if self.curIdx >= startLine:
                     self.invalidateItem(self.curIdx + 1)
                     self.invalidateItem(self.curIdx)
                 else:
                     self.verticalScrollBar().setValue(self.curIdx)
+                    self.viewport().update()
 
                 self.currentIndexChanged.emit(self.curIdx)
+
         elif event.key() == Qt.Key_Down:
             if self.curIdx + 1 < len(self.data):
                 endLineF = self.verticalScrollBar().value() + self.__linesPerPageF()
+                oldIdx = self.curIdx
                 self.curIdx += 1
                 self.__ensureChildren(self.curIdx)
+
+                # Handle multi-selection with modifiers
+                if mod == Qt.ShiftModifier:
+                    # Shift+Down: Range selection
+                    start = min(oldIdx, self.curIdx)
+                    end = max(oldIdx, self.curIdx)
+                    self.selectedIndices.clear()
+                    self.selectedIndices.update(range(start, end + 1))
+                # Note: Normal navigation (without modifiers) doesn't change selection
+
                 if self.curIdx < int(endLineF) or \
                         (self.curIdx == int(endLineF)
                          and (endLineF - self.curIdx >= HALF_LINE_PERCENT)):
@@ -1952,8 +2070,10 @@ class LogView(QAbstractScrollArea, CommitSource):
                 else:
                     v = self.verticalScrollBar().value()
                     self.verticalScrollBar().setValue(v + 1)
+                    self.viewport().update()
 
                 self.currentIndexChanged.emit(self.curIdx)
+
         elif event.key() == Qt.Key_Home:
             self.verticalScrollBar().triggerAction(
                 QScrollBar.SliderToMinimum)
@@ -1964,9 +2084,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             super(LogView, self).keyPressEvent(event)
 
     def focusInEvent(self, event):
+        # Redraw current item to show focus border
         self.invalidateItem(self.curIdx)
 
     def focusOutEvent(self, event):
+        # Redraw current item to hide focus border
         self.invalidateItem(self.curIdx)
 
     def leaveEvent(self, event):
