@@ -4,11 +4,14 @@ import re
 from typing import List
 
 from PySide6.QtCore import (
+    Property,
+    QEasingCurve,
     QEventLoop,
     QMimeData,
     QPointF,
     QProcess,
     QProcessEnvironment,
+    QPropertyAnimation,
     QRect,
     QRectF,
     QSize,
@@ -503,6 +506,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Drag and drop state
         self._dragStartPos = None
         self._dropIndicatorLine = -1
+        self._dropIndicatorAlpha = 0.0  # For animation
+        self._dropIndicatorAnimation = None
+        # Vertical offset animation for items (0.0 to 1.0)
+        self._dropIndicatorOffset = 0.0
+        self._dropIndicatorOffsetAnimation = None
 
         self.lineSpace = 8
 
@@ -560,6 +568,61 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.__onFindResultAvailable)
         self._finder.findFinished.connect(
             self.__onFindFinished)
+
+    def _getDropIndicatorAlpha(self):
+        return self._dropIndicatorAlpha
+
+    def _setDropIndicatorAlpha(self, value):
+        self._dropIndicatorAlpha = value
+        self.viewport().update()
+
+    dropIndicatorAlpha = Property(
+        float, _getDropIndicatorAlpha, _setDropIndicatorAlpha)
+
+    def _getDropIndicatorOffset(self):
+        return self._dropIndicatorOffset
+
+    def _setDropIndicatorOffset(self, value):
+        self._dropIndicatorOffset = value
+        self.viewport().update()
+
+    dropIndicatorOffset = Property(
+        float, _getDropIndicatorOffset, _setDropIndicatorOffset)
+
+    def _startDropIndicatorAnimation(self):
+        """Start the drop indicator animation"""
+        # Stop any existing animation
+        self._stopDropIndicatorAnimation()
+
+        # Create fade-in animation for alpha (always from current value)
+        self._dropIndicatorAnimation = QPropertyAnimation(
+            self, b"dropIndicatorAlpha")
+        self._dropIndicatorAnimation.setDuration(200)  # 200ms
+        self._dropIndicatorAnimation.setStartValue(self._dropIndicatorAlpha)
+        self._dropIndicatorAnimation.setEndValue(1.0)
+        self._dropIndicatorAnimation.setEasingCurve(QEasingCurve.OutCubic)
+        self._dropIndicatorAnimation.start()
+
+        # Create offset animation to move items down (from current value)
+        self._dropIndicatorOffsetAnimation = QPropertyAnimation(
+            self, b"dropIndicatorOffset")
+        self._dropIndicatorOffsetAnimation.setDuration(200)  # 200ms
+        self._dropIndicatorOffsetAnimation.setStartValue(
+            self._dropIndicatorOffset)
+        self._dropIndicatorOffsetAnimation.setEndValue(1.0)
+        self._dropIndicatorOffsetAnimation.setEasingCurve(
+            QEasingCurve.OutCubic)
+        self._dropIndicatorOffsetAnimation.start()
+
+    def _stopDropIndicatorAnimation(self):
+        """Stop the drop indicator animation"""
+        if self._dropIndicatorAnimation:
+            self._dropIndicatorAnimation.stop()
+            self._dropIndicatorAnimation = None
+
+        if self._dropIndicatorOffsetAnimation:
+            self._dropIndicatorOffsetAnimation.stop()
+            self._dropIndicatorOffsetAnimation = None
 
     def __ensureContextMenu(self):
         if self.menu:
@@ -1389,7 +1452,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __laneWidth(self):
         return int(self.lineHeight * 9 / 16)
 
-    def __drawGraph(self, painter, graphPainter, rect, cid):
+    def __drawGraph(self, painter, graphPainter: QPainter, rect, cid):
         commit = self.data[cid]
         if commit.sha1 not in self.graphs:
             self.__updateGraph(cid)
@@ -1419,6 +1482,21 @@ class LogView(QAbstractScrollArea, CommitSource):
             x2 = 0
 
             graphPainter.save()
+            # Check if this commit is just before the drop indicator
+            isBeforeDropLine = (self._dropIndicatorLine >= 0 and
+                                cid == self._dropIndicatorLine - 1 and
+                                self._dropIndicatorOffset > 0)
+            extendLineBy = 0
+            if isBeforeDropLine:
+                maxOffset = self.lineHeight * 0.5
+                extendLineBy = int(maxOffset * self._dropIndicatorOffset)
+
+            # Apply drop indicator offset if this commit is at or below drop line
+            if self._dropIndicatorLine >= 0 and cid >= self._dropIndicatorLine and self._dropIndicatorOffset > 0:
+                maxOffset = self.lineHeight * 0.5
+                dropOffset = int(maxOffset * self._dropIndicatorOffset)
+                graphPainter.translate(0, dropOffset)
+
             graphPainter.translate(rect.topLeft())
             for i in range(len(lanes)):
                 x1 = x2
@@ -1433,7 +1511,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 else:
                     color = colorSchema.GraphColors[i % totalColor]
                 self.__drawGraphLane(graphPainter, lane, x1, x2,
-                                     color, activeColor, isHead, firstCommit)
+                                     color, activeColor, isHead, firstCommit, extendLineBy)
 
                 if x2 > maxW:
                     break
@@ -1456,7 +1534,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             offset += int(w / 3)
             rect.adjust(offset, 0, 0, 0)
 
-    def __drawGraphLane(self, painter: QPainter, lane, x1, x2, color, activeColor, isHead, firstCommit):
+    def __drawGraphLane(self, painter: QPainter, lane, x1, x2, color, activeColor, isHead, firstCommit, extendLineBy: int = 0):
         h = int(self.lineHeight / 2) + self.lineSpace // 4
         m = int((x1 + x2) / 2)
         r = int((x2 - x1) * 0.35)
@@ -1519,13 +1597,13 @@ class LogView(QAbstractScrollArea, CommitSource):
                 lane == Lane.CROSS or \
                 Lane.isJoin(lane):
             if firstCommit:
-                painter.drawLine(m, h, m, 2 * h)
+                painter.drawLine(m, h, m, 2 * h + extendLineBy)
             else:
-                painter.drawLine(m, 0, m, 2 * h)
+                painter.drawLine(m, 0, m, 2 * h + extendLineBy)
 
         elif lane == Lane.HEAD_L or \
                 lane == Lane.BRANCH:
-            painter.drawLine(m, h, m, 2 * h)
+            painter.drawLine(m, h, m, 2 * h + extendLineBy)
 
         elif lane == Lane.TAIL_L or \
                 lane == Lane.INITIAL or \
@@ -1884,7 +1962,19 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         painter.setFont(self.font)
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
+
+        # Calculate drop indicator offset for items
+        dropOffset = 0
+        if self._dropIndicatorLine >= 0 and self._dropIndicatorOffset > 0:
+            maxOffset = self.lineHeight * 0.5
+            dropOffset = int(maxOffset * self._dropIndicatorOffset)
+
         for i in range(startLine, endLine):
+            # Apply translation for items at or below drop indicator
+            if self._dropIndicatorLine >= 0 and i >= self._dropIndicatorLine and dropOffset > 0:
+                painter.save()
+                painter.translate(0, dropOffset)
+
             # Get full item rect without margin for selection background
             fullRect = self.__itemRect(i, needMargin=False)
 
@@ -2006,23 +2096,81 @@ class LogView(QAbstractScrollArea, CommitSource):
                 painter.drawText(rect, flags, content)
             painter.restore()
 
+            # Restore translation if applied
+            if self._dropIndicatorLine >= 0 and i >= self._dropIndicatorLine and dropOffset > 0:
+                painter.restore()
+
         if graphImage:
             del graphPainter
             self.logGraph.render(graphImage)
 
-        # Draw drop indicator line
-        # TODO: improve the line style
-        if self._dropIndicatorLine >= 0:
-            painter.save()
-            pen = QPen(Qt.blue)
-            pen.setWidth(2)
+        # Draw drop indicator with animation
+        if self._dropIndicatorLine >= 0 and self._dropIndicatorAlpha > 0:
+            self.__drawDropIndicator(painter, self._dropIndicatorLine)
+
+    def __drawDropIndicator(self, painter: QPainter, line: int):
+        """Draw an animated drop indicator with glowing effect"""
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        rect = self.__itemRect(line, needMargin=False)
+        maxOffset = self.lineHeight * 0.5
+        centerOffset = int(maxOffset * self._dropIndicatorOffset * 0.5)
+        y = rect.top() + centerOffset
+        width = self.viewport().width()
+        alpha = int(self._dropIndicatorAlpha * 255)
+
+        colorSchema = ApplicationBase.instance().colorSchema()
+        baseColor = colorSchema.FocusItemBorder
+
+        # Draw expanding glow effect
+        glowLevels = 3
+        for i in range(glowLevels, 0, -1):
+            glowAlpha = int(alpha * 0.3 * (glowLevels - i + 1) / glowLevels)
+            pen = QPen(baseColor)
+            pen.setWidth(i * 2)
+            color = baseColor
+            color.setAlpha(glowAlpha)
+            pen.setColor(color)
             painter.setPen(pen)
+            painter.drawLine(0, y, width, y)
 
-            rect = self.__itemRect(self._dropIndicatorLine, needMargin=False)
-            y = rect.top()
-            painter.drawLine(0, y, self.viewport().width(), y)
+        # Draw main indicator line
+        pen = QPen(baseColor)
+        pen.setWidth(2)
+        color = baseColor
+        color.setAlpha(alpha)
+        pen.setColor(color)
+        painter.setPen(pen)
+        painter.drawLine(0, y, width, y)
 
-            painter.restore()
+        # Draw arrow indicators on both sides
+        arrowSize = 8
+        arrowAlpha = alpha
+
+        # Left arrow
+        path = QPainterPath()
+        path.moveTo(arrowSize, y)
+        path.lineTo(0, y - arrowSize // 2)
+        path.lineTo(0, y + arrowSize // 2)
+        path.closeSubpath()
+
+        color = baseColor
+        color.setAlpha(arrowAlpha)
+        painter.fillPath(path, color)
+
+        # Right arrow
+        path = QPainterPath()
+        path.moveTo(width - arrowSize, y)
+        path.lineTo(width, y - arrowSize // 2)
+        path.lineTo(width, y + arrowSize // 2)
+        path.closeSubpath()
+
+        color = baseColor
+        color.setAlpha(arrowAlpha)
+        painter.fillPath(path, color)
+
+        painter.restore()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if not self.data:
@@ -2305,6 +2453,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             source = event.source()
             # Accept if from different logview
             if source and isinstance(source, LogView) and source != self:
+                # Initialize drop indicator state
+                self._dropIndicatorAlpha = 0.0
+                self._dropIndicatorOffset = 0.0
                 event.acceptProposedAction()
             else:
                 event.ignore()
@@ -2318,9 +2469,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             line = self.lineForPos(pos)
 
             if line >= 0:
-                # Show drop indicator
-                self._dropIndicatorLine = line
-                self.viewport().update()
+                # Show drop indicator with animation if line changed
+                if self._dropIndicatorLine != line:
+                    self._dropIndicatorLine = line
+                    # Continue animation from current value, don't reset
+                    self._startDropIndicatorAnimation()
                 event.acceptProposedAction()
             else:
                 event.ignore()
@@ -2329,12 +2482,18 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def dragLeaveEvent(self, event):
         """Clear drop indicator when drag leaves"""
+        self._stopDropIndicatorAnimation()
         self._dropIndicatorLine = -1
+        self._dropIndicatorAlpha = 0.0
+        self._dropIndicatorOffset = 0.0
         self.viewport().update()
 
     def dropEvent(self, event: QDropEvent):
         """Handle drop of commits for cherry-picking"""
+        self._stopDropIndicatorAnimation()
         self._dropIndicatorLine = -1
+        self._dropIndicatorAlpha = 0.0
+        self._dropIndicatorOffset = 0.0
         self.viewport().update()
 
         if not event.mimeData().hasFormat("application/x-qgitc-commits"):
