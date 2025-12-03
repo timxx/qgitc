@@ -2050,7 +2050,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 pen.setCosmetic(True)
                 painter.setPen(pen)
                 borderRect = QRectF(selectionRect)
-                borderRect.adjust(0, 0, -0.5, -0.5)
+                borderRect.adjust(0.5, 0.5, -0.5, -0.5)
                 painter.drawRect(borderRect)
                 # Restore text color
                 if isSelected:
