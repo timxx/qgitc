@@ -3,10 +3,25 @@
 import re
 from typing import List
 
-from PySide6.QtCore import QMimeData, QPointF, QRect, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import (
+    QEventLoop,
+    QMimeData,
+    QPointF,
+    QProcess,
+    QProcessEnvironment,
+    QRect,
+    QRectF,
+    QSize,
+    Qt,
+    Signal,
+)
 from PySide6.QtGui import (
     QConicalGradient,
     QCursor,
+    QDrag,
+    QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
     QFontMetrics,
     QImage,
     QMouseEvent,
@@ -39,44 +54,100 @@ from qgitc.windowtype import WindowType
 HALF_LINE_PERCENT = 0.76
 
 
+class MarkType:
+    """Types of marks that can be applied to commits"""
+    NORMAL = 0      # Regular selection mark
+    PICKED = 1      # Successfully cherry-picked
+    FAILED = 2      # Cherry-pick failed
+
+
+class MarkRange:
+    """Represents a range of marked commits with a specific type"""
+
+    def __init__(self, begin, end, mark_type=MarkType.NORMAL):
+        self.begin = min(begin, end)
+        self.end = max(begin, end)
+        self.mark_type = mark_type
+
+
 class Marker():
     CHAR_MARK = chr(0x2713)
+    CHAR_PICKED = chr(0x2192)  # Right arrow
+    CHAR_FAILED = chr(0x2716)  # Heavy multiplication X
 
     def __init__(self):
-        self._begin = -1
-        self._end = -1
+        self._ranges: List[MarkRange] = []
 
-    def mark(self, begin, end):
-        self._begin = min(begin, end)
-        self._end = max(begin, end)
+    def mark(self, begin, end, mark_type=MarkType.NORMAL):
+        """Mark a range of commits with a specific type"""
+        mark_range = MarkRange(begin, end, mark_type)
+        # Remove any overlapping ranges first
+        self._ranges = [
+            r for r in self._ranges if not self._overlaps(r, mark_range)]
+        self._ranges.append(mark_range)
+
+    def _overlaps(self, r1: MarkRange, r2: MarkRange):
+        """Check if two ranges overlap"""
+        return not (r1.end < r2.begin or r2.end < r1.begin)
 
     def clear(self):
-        self._begin = -1
-        self._end = -1
+        """Clear all marks"""
+        self._ranges.clear()
+
+    def clearType(self, mark_type):
+        """Clear all marks of a specific type"""
+        self._ranges = [r for r in self._ranges if r.mark_type != mark_type]
 
     def hasMark(self):
-        return self._begin != -1 and \
-            self._end != -1
+        """Check if there are any marks"""
+        return len(self._ranges) > 0
 
     def begin(self):
-        return self._begin
+        """Get the beginning of the first range (for compatibility)"""
+        if not self._ranges:
+            return -1
+        return min(r.begin for r in self._ranges)
 
     def end(self):
-        return self._end
+        """Get the end of the first range (for compatibility)"""
+        if not self._ranges:
+            return -1
+        return max(r.end for r in self._ranges)
 
     def isMarked(self, index):
-        return self.hasMark() and \
-            self._begin <= index and \
-            self._end >= index
+        """Check if an index is marked with any type"""
+        for r in self._ranges:
+            if r.begin <= index <= r.end:
+                return True
+        return False
 
-    def draw(self, index, painter, rect):
-        if not self.isMarked(index):
+    def getMarkType(self, index):
+        """Get the mark type for an index, or None if not marked"""
+        for r in self._ranges:
+            if r.begin <= index <= r.end:
+                return r.mark_type
+        return None
+
+    def draw(self, index, painter: QPainter, rect: QRect):
+        mark_type = self.getMarkType(index)
+        if mark_type is None:
             return
 
         painter.save()
 
-        painter.setPen(ApplicationBase.instance().colorSchema().Mark)
-        br = painter.drawText(rect, Qt.AlignVCenter, Marker.CHAR_MARK)
+        # Choose character and color based on mark type
+        if mark_type == MarkType.PICKED:
+            char = Marker.CHAR_PICKED
+            color = ApplicationBase.instance().colorSchema().ResolvedFg
+        elif mark_type == MarkType.FAILED:
+            char = Marker.CHAR_FAILED
+            color = ApplicationBase.instance().colorSchema().ConflictFg
+        else:  # MarkType.NORMAL
+            char = Marker.CHAR_MARK
+            color = ApplicationBase.instance().colorSchema().Mark
+
+        painter.setPen(QPen(color))
+        br = painter.drawText(rect, Qt.AlignVCenter, char)
         rect.adjust(br.width(), 0, 0, 0)
 
         painter.restore()
@@ -414,6 +485,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.setMouseTracking(True)
         self.setViewportMargins(1, 3, 3, 3)
 
+        # Enable drag and drop
+        self.setAcceptDrops(True)
+
         self.data: List[Commit] = []
         self.fetcher = LogsFetcher(self)
         self.curIdx = -1
@@ -425,6 +499,10 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.preferSha1 = None
         self.delayVisible = False
         self.delayUpdateParents = False
+
+        # Drag and drop state
+        self._dragStartPos = None
+        self._dropIndicatorLine = -1
 
         self.lineSpace = 8
 
@@ -603,7 +681,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         """Get all selected indices as a sorted list"""
         return sorted(self.selectedIndices)
 
-    def getSelectedCommits(self):
+    def getSelectedCommits(self) -> List[Commit]:
         """Get all selected commits"""
         indices = self.getSelectedIndices()
         return [self.data[i] for i in indices if i < len(self.data)]
@@ -1932,6 +2010,20 @@ class LogView(QAbstractScrollArea, CommitSource):
             del graphPainter
             self.logGraph.render(graphImage)
 
+        # Draw drop indicator line
+        # TODO: improve the line style
+        if self._dropIndicatorLine >= 0:
+            painter.save()
+            pen = QPen(Qt.blue)
+            pen.setWidth(2)
+            painter.setPen(pen)
+
+            rect = self.__itemRect(self._dropIndicatorLine, needMargin=False)
+            y = rect.top()
+            painter.drawLine(0, y, self.viewport().width(), y)
+
+            painter.restore()
+
     def mouseReleaseEvent(self, event: QMouseEvent):
         if not self.data:
             return
@@ -1985,7 +2077,34 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.selectedIndices.add(index)
             self.setCurrentIndex(index, clearSelection=False)
 
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse press to prepare for potential drag"""
+        if event.button() == Qt.LeftButton and self.data:
+            index = self.lineForPos(event.position())
+            if index >= 0:
+                # Store drag start position and index
+                self._dragStartPos = event.position()
+                return
+
+        # Reset drag state for non-drag scenarios
+        self._dragStartPos = None
+
     def mouseMoveEvent(self, event: QMouseEvent):
+        # Check if we should start dragging
+        if (event.buttons() & Qt.LeftButton) and self._dragStartPos is not None:
+            if (event.position() - self._dragStartPos).manhattanLength() >= 10:
+                # Determine what to drag
+                dragIndex = self.lineForPos(self._dragStartPos)
+                if dragIndex >= 0 and dragIndex not in self.selectedIndices:
+                    # Dragging unselected item - drag only this item
+                    drag_indices = [dragIndex]
+                else:
+                    # Dragging selected item(s) - drag all selected items
+                    drag_indices = sorted(list(self.selectedIndices))
+
+                self._startDrag(drag_indices)
+                return
+
         self._updateHover(event.position())
 
     def wheelEvent(self, event):
@@ -2155,3 +2274,271 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setStandalone(self, standalone: bool):
         self._standalone = standalone
+
+    def _startDrag(self, drag_indices: List[int]):
+        """Start drag operation with specified commit indices"""
+        if not drag_indices:
+            return
+
+        # Get commits for the specified indices
+        commits = [self.data[i] for i in drag_indices if i < len(self.data)]
+        if not commits:
+            return
+
+        # Create drag data
+        drag = QDrag(self)
+        mimeData = QMimeData()
+
+        indices_str = ",".join(str(i) for i in drag_indices)
+        sha1List = [c.sha1 for c in commits]
+        mimeData.setText("\n".join(sha1List))
+        mimeData.setData("application/x-qgitc-commits", indices_str.encode())
+
+        drag.setMimeData(mimeData)
+
+        # Start drag
+        drag.exec(Qt.CopyAction)
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        """Accept drag if it contains commits from another logview"""
+        if event.mimeData().hasFormat("application/x-qgitc-commits"):
+            source = event.source()
+            # Accept if from different logview
+            if source and isinstance(source, LogView) and source != self:
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent):
+        """Update drop indicator as drag moves"""
+        if event.mimeData().hasFormat("application/x-qgitc-commits"):
+            pos = event.position()
+            line = self.lineForPos(pos)
+
+            if line >= 0:
+                # Show drop indicator
+                self._dropIndicatorLine = line
+                self.viewport().update()
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """Clear drop indicator when drag leaves"""
+        self._dropIndicatorLine = -1
+        self.viewport().update()
+
+    def dropEvent(self, event: QDropEvent):
+        """Handle drop of commits for cherry-picking"""
+        self._dropIndicatorLine = -1
+        self.viewport().update()
+
+        if not event.mimeData().hasFormat("application/x-qgitc-commits"):
+            event.ignore()
+            return
+
+        # Get source widget
+        source = event.source()
+        if not isinstance(source, LogView):
+            event.ignore()
+            return
+
+        # Get source information
+        source_branch = source.curBranch
+
+        # Validation 1: Check if same branch (ignore remotes/origin/ prefix)
+        def normalizeBranch(branch: str) -> str:
+            """Remove remotes/origin/ prefix for comparison"""
+            if branch.startswith("remotes/origin/"):
+                return branch[15:]  # len("remotes/origin/") = 15
+            return branch
+
+        if normalizeBranch(source_branch) == normalizeBranch(self.curBranch):
+            QMessageBox.warning(
+                self, self.tr("Cherry-pick Failed"),
+                self.tr("Cannot cherry-pick commits to the same branch."))
+            event.ignore()
+            return
+
+        # Validation 2: Check if target branch is checked out
+        if not self._branchDir or not os.path.exists(self._branchDir):
+            QMessageBox.warning(
+                self, self.tr("Cherry-pick Failed"),
+                self.tr("The target branch '{0}' is not checked out.\n\n"
+                        "Please checkout the branch first.").format(self.curBranch))
+            event.ignore()
+            return
+
+        # Determine drop position
+        drop_line = self.lineForPos(event.position())
+        drop_before_sha1 = None
+        if drop_line >= 0 and drop_line < len(self.data):
+            drop_commit = self.data[drop_line]
+            # Only allow dropping before unpushed commits
+            if self._isUnpushedCommit(drop_commit):
+                drop_before_sha1 = drop_commit.sha1
+
+        indices_text = event.mimeData().data(
+            "application/x-qgitc-commits").data().decode()
+        indices = [int(i) for i in indices_text.split(",") if i.strip()]
+
+        # Execute cherry-pick
+        self._executeCherryPick(indices, source, drop_before_sha1)
+
+        event.acceptProposedAction()
+
+    def _isUnpushedCommit(self, commit: Commit) -> bool:
+        """Check if a commit is unpushed (exists only locally)"""
+        if not commit or not commit.sha1:
+            return False
+
+        # Local changes are always unpushed
+        if commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
+            return True
+
+        # Check if commit exists in remote
+        repoDir = commitRepoDir(commit)
+        args = ["branch", "-r", "--contains", commit.sha1]
+        try:
+            output = Git.checkOutput(args, repoDir=repoDir, reportError=False)
+            # If no remote branches contain this commit, it's unpushed
+            return not output or len(output.strip()) == 0
+        except:
+            # If we can't determine, assume it's pushed (safer)
+            return False
+
+    def _executeCherryPick(self, source_indices: List[int], source_logview: 'LogView', drop_before_sha1: str = None):
+        """Execute cherry-pick operation"""
+        if not source_indices:
+            return
+
+        # Reverse the list to pick from oldest to newest
+        # (commits are ordered newest first in the log view)
+        source_indices = list(reversed(source_indices))
+
+        # TODO: If drop_before_sha1 is specified, we need to rebase
+        # For now, just cherry-pick to HEAD
+
+        # Cherry-pick commits one by one
+        successful_picks = []  # Store source indices
+
+        def _markSuccessfulPicks():
+            for src_idx in successful_picks:
+                source_logview.marker.mark(
+                    src_idx, src_idx, MarkType.PICKED)
+            source_logview.viewport().update()
+
+        for src_idx in source_indices:
+            # Get commit from source
+            commit = source_logview.data[src_idx]
+            sha1 = commit.sha1
+            repoDir = fullRepoDir(commit.repoDir, self._branchDir)
+
+            ret, error, _ = Git.cherryPick(
+                [sha1], recordOrigin=True, repoDir=repoDir)
+            if ret != 0:
+                # Check if it's an empty commit (already applied)
+                if self._handleEmptyCherryPick(sha1, src_idx, error, successful_picks):
+                    _markSuccessfulPicks()
+                    continue
+                # Check if it's a conflict
+                if error and ("conflict" in error.lower() or Git.isCherryPicking(repoDir)):
+                    if self._resolveCherryPickConflict(source_logview, src_idx, sha1, error, successful_picks):
+                        _markSuccessfulPicks()
+                        continue
+                else:
+                    # Other error
+                    QMessageBox.critical(
+                        self, self.tr("Cherry-pick Failed"),
+                        self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
+                            sha1[:7], error if error else self.tr("Unknown error")))
+
+                # Stop processing remaining commits
+                break
+            else:
+                successful_picks.append(src_idx)
+                _markSuccessfulPicks()
+
+        # Reload logs to show new commits
+        if successful_picks:
+            self.reloadLogs()
+
+    def _resolveCherryPickConflict(self, source_logview: 'LogView', source_idx: int, sha1: str, error: str, successful_picks: List) -> bool:
+        """Prompt user to resolve cherry-pick conflict using mergetool"""
+        reply = QMessageBox.question(
+            self, self.tr("Cherry-pick Conflict"),
+            self.tr("Cherry-pick of commit {0} failed with conflicts:\n\n{1}\n\n"
+                    "Do you want to resolve the conflicts using mergetool?").format(
+                sha1[:7], error),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes)
+
+        if reply == QMessageBox.Yes:
+            # Run git mergetool using QProcess with event loop
+            process = QProcess()
+            process.setWorkingDirectory(self._branchDir)
+
+            env = QProcessEnvironment.systemEnvironment()
+            env.insert("LANGUAGE", "en_US")
+            process.setProcessEnvironment(env)
+
+            args = ["mergetool", "--no-prompt"]
+            toolName = ApplicationBase.instance().settings().mergeToolName()
+            if toolName:
+                args.append("--tool=%s" % toolName)
+
+            # Use event loop to wait for process to finish without blocking UI
+            loop = QEventLoop()
+            process.finished.connect(loop.quit)
+            process.start(GitProcess.GIT_BIN, args)
+            loop.exec()
+
+            ret = process.exitCode()
+            if ret == 0:
+                # Continue cherry-pick
+                ret, error = Git.cherryPickContinue(
+                    self._branchDir)
+                if ret == 0:
+                    successful_picks.append(source_idx)
+                    return True
+                # After resolved, it can be empty commit
+                if self._handleEmptyCherryPick(sha1, source_idx, error, successful_picks):
+                    return True
+
+        # Abort cherry-pick
+        Git.cherryPickAbort(self._branchDir)
+
+        # Mark this commit as failed in source
+        source_logview.marker.mark(source_idx, source_idx, MarkType.FAILED)
+        source_logview.viewport().update()
+
+        return False
+
+    def _handleEmptyCherryPick(self, sha1: str, source_idx: int, error: str, successful_picks: List) -> bool:
+        if error and "git commit --allow-empty" in error:
+            reply = QMessageBox.question(
+                self, self.tr("Empty Cherry-pick"),
+                self.tr("Commit {0} results in an empty commit (possibly already applied).\n\n"
+                        "Do you want to skip it?").format(sha1[:7]),
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Yes)
+
+            # Set button text for clarity
+            if reply == QMessageBox.Yes:
+                Git.cherryPickSkip(self._branchDir)
+                return True
+
+            if reply == QMessageBox.No:
+                ret, _ = Git.cherryPickAllowEmpty(self._branchDir)
+                if ret == 0:
+                    successful_picks.append(source_idx)
+                    return True
+            else:
+                # Abort
+                Git.cherryPickAbort(self._branchDir)
+
+        return False

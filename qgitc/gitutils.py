@@ -612,6 +612,99 @@ class Git():
             return 0, None
 
     @staticmethod
+    def cherryPick(sha1List, recordOrigin=True, repoDir=None):
+        """Cherry-pick commits
+        
+        Args:
+            sha1List: List of commit sha1s to cherry-pick
+            recordOrigin: If True, use -x to record origin commit
+            repoDir: Repository directory
+            
+        Returns:
+            tuple: (return_code, error_message, conflicted_sha1)
+                   conflicted_sha1 is None if successful, otherwise the sha1 that caused conflict
+        """
+        if not sha1List:
+            return 0, None, None
+
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+
+        args = ["cherry-pick"]
+        if recordOrigin:
+            args.append("-x")
+        args.extend(sha1List)
+
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+
+        if process.returncode != 0:
+            # Find which commit caused the conflict
+            conflicted_sha1 = None
+            if error:
+                # Try to extract the problematic commit
+                for sha1 in sha1List:
+                    if sha1[:7] in error or sha1 in error:
+                        conflicted_sha1 = sha1
+                        break
+                if not conflicted_sha1:
+                    # If we can't find it, assume it's the first one
+                    conflicted_sha1 = sha1List[0]
+            return process.returncode, error, conflicted_sha1
+
+        return 0, None, None
+
+    @staticmethod
+    def isCherryPicking(repoDir=None):
+        """Check if a cherry-pick operation is in progress"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        cherry_pick_head = os.path.join(branchDir, ".git", "CHERRY_PICK_HEAD")
+        return os.path.exists(cherry_pick_head)
+
+    @staticmethod
+    def cherryPickAbort(repoDir=None):
+        """Abort an in-progress cherry-pick operation"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        args = ["cherry-pick", "--abort"]
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+        if process.returncode != 0 and error:
+            return process.returncode, error
+        return 0, None
+
+    @staticmethod
+    def cherryPickContinue(repoDir=None):
+        """Continue a cherry-pick operation after resolving conflicts"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        args = ["cherry-pick", "--continue", "--no-edit"]
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+        if process.returncode != 0 and error:
+            return process.returncode, error
+        return 0, None
+
+    @staticmethod
+    def cherryPickAllowEmpty(repoDir=None):
+        """Continue a cherry-pick operation allowing empty commits"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        args = ["commit", "--allow-empty", "--no-edit"]
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+        if process.returncode != 0 and error:
+            return process.returncode, error
+        return 0, None
+
+    @staticmethod
+    def cherryPickSkip(repoDir=None):
+        """Skip the current commit in a cherry-pick operation"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        args = ["cherry-pick", "--skip"]
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+        if process.returncode != 0 and error:
+            return process.returncode, error
+        return 0, None
+
+    @staticmethod
     def repoUrl():
         args = ["config", "remote.origin.url"]
         data = Git.checkOutput(args, reportError=False)
