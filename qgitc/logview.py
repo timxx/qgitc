@@ -2173,7 +2173,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         painter.restore()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        if not self.data:
+        if not self.data or event.button() != Qt.LeftButton:
             return
 
         index = self.lineForPos(event.position())
