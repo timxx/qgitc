@@ -36,6 +36,8 @@ class GitProcess():
             stderr=subprocess.PIPE,
             creationflags=creationflags,
             universal_newlines=text,
+            encoding="utf-8" if text else None,
+            errors="replace" if text else None,
             env=env)
 
     @property
