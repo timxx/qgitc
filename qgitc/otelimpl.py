@@ -9,12 +9,7 @@ from typing import Dict
 from opentelemetry import _logs, trace
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk._logs import (
-    LogData,
-    LoggerProvider,
-    LoggingHandler,
-    LogRecordProcessor,
-)
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecordProcessor
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -27,7 +22,7 @@ from qgitc.telemetry import TelemetryBase, TraceSpanBase
 class LogFilterProcessor(LogRecordProcessor):
     """Processor that removes sensitive information from log records."""
 
-    def emit(self, log_data: LogData):
+    def emit(self, log_data):
         if log_data.log_record.attributes and "code.file.path" in log_data.log_record.attributes:
             try:
                 file_path = log_data.log_record.attributes["code.file.path"]

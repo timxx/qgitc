@@ -1,6 +1,12 @@
 import unittest
 
-from opentelemetry.sdk._logs import LogData, LogRecord
+try:
+    from opentelemetry.sdk._logs import LogData, LogRecord
+    use_log_data = True
+except ImportError:
+    from opentelemetry.sdk._logs import ReadWriteLogRecord
+    from opentelemetry.sdk._logs._internal import LogRecord
+    use_log_data = False
 
 from qgitc.otelimpl import LogFilterProcessor
 
@@ -11,8 +17,10 @@ class TestLogFilterProcessor(unittest.TestCase):
         log_record = LogRecord(
             attributes={"code.file.path": "/path/to/sensitive/file.txt"}
         )
-        log_data = LogData(log_record, None)
-
+        if use_log_data:
+            log_data = LogData(log_record, None)
+        else:
+            log_data = ReadWriteLogRecord(log_record)
         # ensure we can instantiate and call the processor
         processor = LogFilterProcessor()
         processor.on_emit(log_data)
