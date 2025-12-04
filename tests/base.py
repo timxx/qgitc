@@ -169,6 +169,8 @@ class TestBase(unittest.TestCase):
 
         os.chdir(self.oldDir)
         Git.REPO_DIR = self.oldDir
+        Git.REF_MAP = {}
+        Git.REV_HEAD = None
 
         if self.gitDir:
             time.sleep(0.1)

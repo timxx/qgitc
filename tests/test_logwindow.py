@@ -10,18 +10,19 @@ from qgitc.windowtype import WindowType
 from tests.base import TestBase
 
 
-class TestLogWindow(TestBase):
+class TestLogWindowBase(TestBase):
     def setUp(self):
         super().setUp()
+        self.afterAppSetup()
         self.window = self.app.getWindow(WindowType.LogWindow)
+
+    def afterAppSetup(self):
+        pass
 
     def tearDown(self):
         self.window.close()
         self.processEvents()
         super().tearDown()
-
-    def createSubRepo(self):
-        return True
 
     def waitForLoaded(self):
         spySubmodule = QSignalSpy(self.app.submoduleSearchCompleted)
@@ -36,6 +37,11 @@ class TestLogWindow(TestBase):
         logview = self.window.ui.gitViewA.ui.logView
         self.wait(10000, logview.fetcher.isLoading)
         self.wait(50)
+
+
+class TestLogWindow(TestLogWindowBase):
+    def createSubRepo(self):
+        return True
 
     def testReloadRepo(self):
         self.assertFalse(self.window.isWindowReady)
@@ -387,7 +393,63 @@ class TestLogWindow(TestBase):
 
     def _clickItem(self, widget, line, modifiers=Qt.NoModifier):
         """Helper to simulate a complete click (press + release) on a specific line"""
-        pressEvent = self._createMouseEvent(widget, line, modifiers, QEvent.Type.MouseButtonPress)
-        releaseEvent = self._createMouseEvent(widget, line, modifiers, QEvent.Type.MouseButtonRelease)
+        pressEvent = self._createMouseEvent(
+            widget, line, modifiers, QEvent.Type.MouseButtonPress)
+        releaseEvent = self._createMouseEvent(
+            widget, line, modifiers, QEvent.Type.MouseButtonRelease)
         widget.mousePressEvent(pressEvent)
         widget.mouseReleaseEvent(releaseEvent)
+
+
+class TestLogWindowNormalMode(TestLogWindowBase):
+    def createSubRepo(self):
+        return False
+
+    def testRefMap(self):
+        self.waitForLoaded()
+
+        self.assertIsNotNone(Git.REF_MAP)
+        self.assertGreaterEqual(len(Git.REF_MAP), 1)
+        self.assertIsNotNone(Git.REV_HEAD)
+
+
+class TestLogWindowNormalMode2(TestLogWindowBase):
+    def createSubRepo(self):
+        return True
+
+    def testRefMap(self):
+        self.waitForLoaded()
+
+        self.assertIsNotNone(Git.REF_MAP)
+        self.assertGreaterEqual(len(Git.REF_MAP), 1)
+        self.assertIsNotNone(Git.REV_HEAD)
+
+
+class TestLogWindowCompositeMode(TestLogWindowBase):
+    def afterAppSetup(self):
+        self.app.settings().setCompositeMode(True)
+
+    def createSubRepo(self):
+        return False
+
+    def testRefMap(self):
+        self.waitForLoaded()
+
+        # composite mode is not really enabled when there is no submodule
+        self.assertIsNotNone(Git.REF_MAP)
+        self.assertGreaterEqual(len(Git.REF_MAP), 1)
+        self.assertIsNotNone(Git.REV_HEAD)
+
+
+class TestLogWindowCompositeMode2(TestLogWindowBase):
+    def afterAppSetup(self):
+        self.app.settings().setCompositeMode(True)
+
+    def createSubRepo(self):
+        return True
+
+    def testRefMap(self):
+        self.waitForLoaded()
+
+        self.assertTrue(not Git.REF_MAP)
+        self.assertTrue(not Git.REV_HEAD)

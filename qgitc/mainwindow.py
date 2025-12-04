@@ -300,14 +300,17 @@ class MainWindow(StateWindow):
                 Git.REF_MAP.clear()
             Git.REV_HEAD = None
         else:
-            app.updateRepoDir(topLevelDir)
+            changed = app.updateRepoDir(topLevelDir)
             self._repoTopDir = topLevelDir
             self._updateRecentRepos(topLevelDir)
 
-            if not isCompositeMode:
-                Git.REF_MAP = Git.refs()
-                Git.REV_HEAD = Git.revHead()
-            else:
+            compositeModeEnabled = isCompositeMode and (
+                changed or len(app.submodules) > 0)
+            if not compositeModeEnabled:
+                if changed or not Git.REF_MAP:
+                    Git.REF_MAP = Git.refs()
+                    Git.REV_HEAD = Git.revHead()
+            elif changed:
                 Git.REF_MAP = {}
                 Git.REV_HEAD = None
 
