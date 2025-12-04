@@ -2769,35 +2769,49 @@ class LogView(QAbstractScrollArea, CommitSource):
         for commit in commits:
             sha1 = commit.get("sha1", "")
             repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
-
-            ret, error, _ = Git.cherryPick(
-                [sha1], recordOrigin=True, repoDir=repoDir)
-            if ret != 0:
-                # Check if it's an empty commit (already applied)
-                if self._handleEmptyCherryPick(sha1, error, source_logview):
-                    needReload = True
-                    continue
-                # Check if it's a conflict
-                if error and ("conflict" in error.lower() or Git.isCherryPicking(repoDir)):
-                    if self._resolveCherryPickConflict(sha1, error, source_logview):
-                        needReload = True
-                        continue
-                else:
-                    # Other error
-                    QMessageBox.critical(
-                        self, self.tr("Cherry-pick Failed"),
-                        self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
-                            sha1[:7], error if error else self.tr("Unknown error")))
-
+            if self._doCherryPick(repoDir, sha1, source_logview):
+                needReload = True
+            else:
                 # Stop processing remaining commits
                 break
-            else:
-                LogView._markPickStatus(source_logview, sha1, MarkType.PICKED)
-                needReload = True
+
+            subCommits = commit.get("subCommits", [])
+            for subCommit in subCommits:
+                sha1 = subCommit.get("sha1", "")
+                repoDir = fullRepoDir(subCommit.get(
+                    "repoDir", None), self._branchDir)
+                if self._doCherryPick(repoDir, sha1, source_logview):
+                    needReload = True
+                else:
+                    # Stop processing remaining commits
+                    break
 
         # Reload logs to show new commits
         if needReload:
             self.reloadLogs()
+
+    def _doCherryPick(self, repoDir: str, sha1: str, source_logview: 'LogView') -> bool:
+        """Perform cherry-pick of a single commit"""
+        ret, error, _ = Git.cherryPick(
+            [sha1], recordOrigin=True, repoDir=repoDir)
+        if ret != 0:
+            # Check if it's an empty commit (already applied)
+            if self._handleEmptyCherryPick(repoDir, sha1, error, source_logview):
+                return True
+            # Check if it's a conflict
+            if error and ("conflict" in error.lower() or Git.isCherryPicking(repoDir)):
+                if self._resolveCherryPickConflict(repoDir, sha1, error, source_logview):
+                    return True
+            else:
+                # Other error
+                QMessageBox.critical(
+                    self, self.tr("Cherry-pick Failed"),
+                    self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
+                        sha1[:7], error if error else self.tr("Unknown error")))
+            return False
+
+        LogView._markPickStatus(source_logview, sha1, MarkType.PICKED)
+        return True
 
     @staticmethod
     def _markPickStatus(source_logview: 'LogView', sha1: str, state: MarkType):
@@ -2811,7 +2825,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 break
         source_logview.viewport().update()
 
-    def _resolveCherryPickConflict(self, sha1: str, error: str, source_logview: 'LogView') -> bool:
+    def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, source_logview: 'LogView') -> bool:
         """Resolve cherry-pick conflict"""
         reply = QMessageBox.question(
             self, self.tr("Cherry-pick Conflict"),
@@ -2835,7 +2849,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                                 "- Git global config: git config --global merge.tool <tool-name>\n"
                                 "- Or in Preferences > Tools tab"))
                     # Abort cherry-pick
-                    Git.cherryPickAbort(self._branchDir)
+                    Git.cherryPickAbort(repoDir)
 
                     LogView._markPickStatus(
                         source_logview, sha1, MarkType.FAILED)
@@ -2843,7 +2857,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
             # Run git mergetool using QProcess with event loop
             process = QProcess()
-            process.setWorkingDirectory(self._branchDir)
+            process.setWorkingDirectory(repoDir)
 
             env = QProcessEnvironment.systemEnvironment()
             env.insert("LANGUAGE", "en_US")
@@ -2862,28 +2876,32 @@ class LogView(QAbstractScrollArea, CommitSource):
             ret = process.exitCode()
             if ret == 0:
                 # Continue cherry-pick
-                ret, error = Git.cherryPickContinue(self._branchDir)
+                ret, error = Git.cherryPickContinue(repoDir)
                 if ret == 0:
                     LogView._markPickStatus(
                         source_logview, sha1, MarkType.PICKED)
                     return True
                 # After resolved, it can be empty commit
-                if self._handleEmptyCherryPick(sha1, error, source_logview):
+                if self._handleEmptyCherryPick(repoDir, sha1, error, source_logview):
                     return True
+                QMessageBox.critical(
+                    self, self.tr("Cherry-pick Failed"),
+                    self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
+                        sha1[:7], error if error else self.tr("Unknown error")))
             else:
                 error = process.readAllStandardError().data().decode("utf-8").rstrip()
                 QMessageBox.critical(self, self.tr("Merge Tool Failed"), self.tr(
                     "Merge tool failed with error:\n\n{0}").format(error if error else self.tr("Unknown error")))
 
         # Abort cherry-pick
-        Git.cherryPickAbort(self._branchDir)
+        Git.cherryPickAbort(repoDir)
 
         # Mark this commit as failed in source if source exists
         LogView._markPickStatus(source_logview, sha1, MarkType.FAILED)
 
         return False
 
-    def _handleEmptyCherryPick(self, sha1: str, error: str, source_logview: 'LogView') -> bool:
+    def _handleEmptyCherryPick(self, repoDir: str, sha1: str, error: str, source_logview: 'LogView') -> bool:
         if error and "git commit --allow-empty" in error:
             reply = QMessageBox.question(
                 self, self.tr("Empty Cherry-pick"),
@@ -2893,17 +2911,24 @@ class LogView(QAbstractScrollArea, CommitSource):
                 QMessageBox.Yes)
 
             if reply == QMessageBox.Yes:
-                Git.cherryPickSkip(self._branchDir)
+                Git.cherryPickSkip(repoDir)
                 return True
 
             if reply == QMessageBox.No:
-                ret, _ = Git.cherryPickAllowEmpty(self._branchDir)
+                ret, error = Git.cherryPickAllowEmpty(repoDir)
                 if ret == 0:
                     LogView._markPickStatus(
                         source_logview, sha1, MarkType.PICKED)
                     return True
+
+                QMessageBox.critical(
+                    self, self.tr("Cherry-pick Failed"),
+                    self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
+                        sha1[:7], error if error else self.tr("Unknown error")))
+                return False
             else:
                 # Abort
-                Git.cherryPickAbort(self._branchDir)
+                Git.cherryPickAbort(repoDir)
+                return True
 
         return False
