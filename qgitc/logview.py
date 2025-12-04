@@ -70,10 +70,10 @@ class MarkType:
 class MarkRange:
     """Represents a range of marked commits with a specific type"""
 
-    def __init__(self, begin, end, mark_type=MarkType.NORMAL):
+    def __init__(self, begin, end, markType=MarkType.NORMAL):
         self.begin = min(begin, end)
         self.end = max(begin, end)
-        self.mark_type = mark_type
+        self.markType = markType
 
 
 class Marker():
@@ -84,13 +84,13 @@ class Marker():
     def __init__(self):
         self._ranges: List[MarkRange] = []
 
-    def mark(self, begin, end, mark_type=MarkType.NORMAL):
+    def mark(self, begin, end, markType=MarkType.NORMAL):
         """Mark a range of commits with a specific type"""
-        mark_range = MarkRange(begin, end, mark_type)
+        markRange = MarkRange(begin, end, markType)
         # Remove any overlapping ranges first
         self._ranges = [
-            r for r in self._ranges if not self._overlaps(r, mark_range)]
-        self._ranges.append(mark_range)
+            r for r in self._ranges if not self._overlaps(r, markRange)]
+        self._ranges.append(markRange)
 
     def _overlaps(self, r1: MarkRange, r2: MarkRange):
         """Check if two ranges overlap"""
@@ -100,9 +100,9 @@ class Marker():
         """Clear all marks"""
         self._ranges.clear()
 
-    def clearType(self, mark_type):
+    def clearType(self, markType):
         """Clear all marks of a specific type"""
-        self._ranges = [r for r in self._ranges if r.mark_type != mark_type]
+        self._ranges = [r for r in self._ranges if r.markType != markType]
 
     def hasMark(self):
         """Check if there are any marks"""
@@ -131,21 +131,21 @@ class Marker():
         """Get the mark type for an index, or None if not marked"""
         for r in self._ranges:
             if r.begin <= index <= r.end:
-                return r.mark_type
+                return r.markType
         return None
 
     def draw(self, index, painter: QPainter, rect: QRect):
-        mark_type = self.getMarkType(index)
-        if mark_type is None:
+        markType = self.getMarkType(index)
+        if markType is None:
             return
 
         painter.save()
 
         # Choose character and color based on mark type
-        if mark_type == MarkType.PICKED:
+        if markType == MarkType.PICKED:
             char = Marker.CHAR_PICKED
             color = ApplicationBase.instance().colorSchema().ResolvedFg
-        elif mark_type == MarkType.FAILED:
+        elif markType == MarkType.FAILED:
             char = Marker.CHAR_FAILED
             color = ApplicationBase.instance().colorSchema().ConflictFg
         else:  # MarkType.NORMAL
@@ -2257,12 +2257,12 @@ class LogView(QAbstractScrollArea, CommitSource):
                 dragIndex = self.lineForPos(self._dragStartPos)
                 if dragIndex >= 0 and dragIndex not in self.selectedIndices:
                     # Dragging unselected item - drag only this item
-                    drag_indices = [dragIndex]
+                    dragIndices = [dragIndex]
                 else:
                     # Dragging selected item(s) - drag all selected items
-                    drag_indices = sorted(list(self.selectedIndices))
+                    dragIndices = sorted(list(self.selectedIndices))
 
-                self._startDrag(drag_indices)
+                self._startDrag(dragIndices)
                 return
 
         self._updateHover(event.position())
@@ -2561,13 +2561,13 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         return pixmap
 
-    def _startDrag(self, drag_indices: List[int]):
+    def _startDrag(self, dragIndices: List[int]):
         """Start drag operation with specified commit indices"""
-        if not drag_indices:
+        if not dragIndices:
             return
 
         # Get commits for the specified indices
-        commits = [self.data[i] for i in drag_indices if i < len(self.data)]
+        commits = [self.data[i] for i in dragIndices if i < len(self.data)]
         if not commits:
             return
 
@@ -2575,28 +2575,28 @@ class LogView(QAbstractScrollArea, CommitSource):
         repoUrl = Git.repoUrl()
 
         # Serialize commits with minimal data (sha1, repoDir, subCommits)
-        serialized_commits = []
+        serializedCommits = []
         for commit in commits:
-            commit_data = {
+            commitData = {
                 "sha1": commit.sha1,
                 "repoDir": commit.repoDir if commit.repoDir else "."
             }
             # Serialize subCommits with same minimal data
             if commit.subCommits:
-                commit_data["subCommits"] = [
+                commitData["subCommits"] = [
                     {
                         "sha1": sc.sha1,
                         "repoDir": sc.repoDir if sc.repoDir else "."
                     }
                     for sc in commit.subCommits
                 ]
-            serialized_commits.append(commit_data)
+            serializedCommits.append(commitData)
 
-        drag_data = {
+        dragData = {
             "repoUrl": repoUrl,
             "repoDir": self._branchDir or Git.REPO_DIR,
             "branch": self.curBranch,
-            "commits": serialized_commits
+            "commits": serializedCommits
         }
 
         # Create drag data
@@ -2606,7 +2606,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         sha1List = [c.sha1 for c in commits]
         mimeData.setText("\n".join(sha1List))
         mimeData.setData("application/x-qgitc-commits",
-                         json.dumps(drag_data).encode("utf-8"))
+                         json.dumps(dragData).encode("utf-8"))
 
         drag.setMimeData(mimeData)
 
@@ -2678,8 +2678,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # Deserialize drag data
         try:
-            drag_data_bytes = event.mimeData().data("application/x-qgitc-commits").data()
-            drag_data: Dict = json.loads(drag_data_bytes.decode("utf-8"))
+            dragDataBytes = event.mimeData().data("application/x-qgitc-commits").data()
+            dragData: Dict = json.loads(dragDataBytes.decode("utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError) as e:
             QMessageBox.critical(
                 self, self.tr("Cherry-pick Failed"),
@@ -2688,24 +2688,24 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         # Validation 0: Check repo URL matches
-        source_repo_url = drag_data.get("repoUrl", "")
-        target_repo_url = Git.repoUrl()
-        if source_repo_url != target_repo_url:
+        sourceRepoUrl = dragData.get("repoUrl", "")
+        targetRepoUrl = Git.repoUrl()
+        if sourceRepoUrl != targetRepoUrl:
             QMessageBox.warning(
                 self, self.tr("Cherry-pick Failed"),
                 self.tr("Cannot cherry-pick commits from a different repository.\n\n"
-                        "Source: {0}\nTarget: {1}").format(source_repo_url or "<unknown>", target_repo_url or "<unknown>"))
+                        "Source: {0}\nTarget: {1}").format(sourceRepoUrl or "<unknown>", targetRepoUrl or "<unknown>"))
             event.ignore()
             return
 
-        commits = drag_data.get("commits", [])
+        commits = dragData.get("commits", [])
         if not commits:
             event.ignore()
             return
 
         # Get source branch from MIME data
-        source_branch = drag_data.get("branch", "")
-        sourceRepoDir = drag_data.get("repoDir", "")
+        sourceBranch = dragData.get("branch", "")
+        sourceRepoDir = dragData.get("repoDir", "")
         isSameRepo = sourceRepoDir == (self._branchDir or Git.REPO_DIR)
 
         # Validation 1: Check if same branch (ignore remotes/origin/ prefix)
@@ -2716,7 +2716,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             return branch
 
         # Allow same branch if from different repo dir
-        if isSameRepo and source_branch and normalizeBranch(source_branch) == normalizeBranch(self.curBranch):
+        if isSameRepo and sourceBranch and normalizeBranch(sourceBranch) == normalizeBranch(self.curBranch):
             QMessageBox.warning(
                 self, self.tr("Cherry-pick Failed"),
                 self.tr("Cannot cherry-pick commits to the same branch."))
@@ -2733,17 +2733,17 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         # Determine drop position
-        drop_line = self.lineForPos(event.position())
-        drop_before_sha1 = None
-        if drop_line >= 0 and drop_line < len(self.data):
-            drop_commit = self.data[drop_line]
+        dropLineIndex = self.lineForPos(event.position())
+        dropBeforeSha1 = None
+        if dropLineIndex >= 0 and dropLineIndex < len(self.data):
+            dropCommit = self.data[dropLineIndex]
             # Only allow dropping before unpushed commits
-            if self._isUnpushedCommit(drop_commit):
-                drop_before_sha1 = drop_commit.sha1
+            if self._isUnpushedCommit(dropCommit):
+                dropBeforeSha1 = dropCommit.sha1
 
         # Execute cherry-pick
         self._executeCherryPick(
-            commits, source, sourceRepoDir, drop_before_sha1)
+            commits, source, sourceRepoDir, dropBeforeSha1)
 
         event.acceptProposedAction()
 
@@ -2767,7 +2767,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             # If we can't determine, assume it's pushed (safer)
             return False
 
-    def _executeCherryPick(self, commits: List[dict], source_logview: 'LogView', source_repo_dir: str, drop_before_sha1: str = None):
+    def _executeCherryPick(self, commits: List[dict], sourceView: 'LogView', sourceRepoDir: str, dropBeforeSha1: str = None):
         """Execute cherry-pick operation"""
         if not commits:
             return
@@ -2776,7 +2776,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         # (commits are ordered newest first in the log view)
         commits = list(reversed(commits))
 
-        # TODO: If drop_before_sha1 is specified, we need to rebase
+        # TODO: If dropBeforeSha1 is specified, we need to rebase
         # For now, just cherry-pick to HEAD
 
         # Cherry-pick commits one by one
@@ -2785,7 +2785,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         for commit in commits:
             sha1 = commit.get("sha1", "")
             repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
-            if self._doCherryPick(repoDir, sha1, source_repo_dir, source_logview):
+            if self._doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
                 needReload = True
             else:
                 # Stop processing remaining commits
@@ -2796,7 +2796,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 sha1 = subCommit.get("sha1", "")
                 repoDir = fullRepoDir(subCommit.get(
                     "repoDir", None), self._branchDir)
-                if self._doCherryPick(repoDir, sha1, source_repo_dir, source_logview):
+                if self._doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
                     needReload = True
                 else:
                     # Stop processing remaining commits
@@ -2806,20 +2806,20 @@ class LogView(QAbstractScrollArea, CommitSource):
         if needReload:
             self.reloadLogs()
 
-    def _doCherryPick(self, repoDir: str, sha1: str, source_repo_dir: str, source_logview: 'LogView') -> bool:
+    def _doCherryPick(self, repoDir: str, sha1: str, sourceRepoDir: str, sourceView: 'LogView') -> bool:
         """Perform cherry-pick of a single commit"""
         if sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
-            return self._applyLocalChanges(repoDir, sha1, source_repo_dir, source_logview)
+            return self._applyLocalChanges(repoDir, sha1, sourceRepoDir, sourceView)
 
         ret, error, _ = Git.cherryPick(
             [sha1], recordOrigin=True, repoDir=repoDir)
         if ret != 0:
             # Check if it's an empty commit (already applied)
-            if self._handleEmptyCherryPick(repoDir, sha1, error, source_logview):
+            if self._handleEmptyCherryPick(repoDir, sha1, error, sourceView):
                 return True
             # Check if it's a conflict
             if error and ("conflict" in error.lower() or Git.isCherryPicking(repoDir)):
-                if self._resolveCherryPickConflict(repoDir, sha1, error, source_logview):
+                if self._resolveCherryPickConflict(repoDir, sha1, error, sourceView):
                     return True
             else:
                 # Other error
@@ -2829,22 +2829,22 @@ class LogView(QAbstractScrollArea, CommitSource):
                         sha1[:7], error if error else self.tr("Unknown error")))
             return False
 
-        LogView._markPickStatus(source_logview, sha1, MarkType.PICKED)
+        LogView._markPickStatus(sourceView, sha1, MarkType.PICKED)
         return True
 
     @staticmethod
-    def _markPickStatus(source_logview: 'LogView', sha1: str, state: MarkType):
-        # Only mark picks if source_logview exists (same app)
-        if not source_logview:
+    def _markPickStatus(sourceView: 'LogView', sha1: str, state: MarkType):
+        # Only mark picks if sourceView exists (same app)
+        if not sourceView:
             return
         # Find index in source logview
-        for idx, commit in enumerate(source_logview.data):
+        for idx, commit in enumerate(sourceView.data):
             if commit.sha1 == sha1:
-                source_logview.marker.mark(idx, idx, state)
+                sourceView.marker.mark(idx, idx, state)
                 break
-        source_logview.viewport().update()
+        sourceView.viewport().update()
 
-    def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, source_logview: 'LogView') -> bool:
+    def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView') -> bool:
         """Resolve cherry-pick conflict"""
         reply = QMessageBox.question(
             self, self.tr("Cherry-pick Conflict"),
@@ -2871,7 +2871,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                     Git.cherryPickAbort(repoDir)
 
                     LogView._markPickStatus(
-                        source_logview, sha1, MarkType.FAILED)
+                        sourceView, sha1, MarkType.FAILED)
                     return False
 
             # Run git mergetool using QProcess with event loop
@@ -2898,10 +2898,10 @@ class LogView(QAbstractScrollArea, CommitSource):
                 ret, error = Git.cherryPickContinue(repoDir)
                 if ret == 0:
                     LogView._markPickStatus(
-                        source_logview, sha1, MarkType.PICKED)
+                        sourceView, sha1, MarkType.PICKED)
                     return True
                 # After resolved, it can be empty commit
-                if self._handleEmptyCherryPick(repoDir, sha1, error, source_logview):
+                if self._handleEmptyCherryPick(repoDir, sha1, error, sourceView):
                     return True
                 QMessageBox.critical(
                     self, self.tr("Cherry-pick Failed"),
@@ -2916,11 +2916,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         Git.cherryPickAbort(repoDir)
 
         # Mark this commit as failed in source if source exists
-        LogView._markPickStatus(source_logview, sha1, MarkType.FAILED)
+        LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
 
         return False
 
-    def _handleEmptyCherryPick(self, repoDir: str, sha1: str, error: str, source_logview: 'LogView') -> bool:
+    def _handleEmptyCherryPick(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView') -> bool:
         if error and "git commit --allow-empty" in error:
             reply = QMessageBox.question(
                 self, self.tr("Empty Cherry-pick"),
@@ -2937,7 +2937,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 ret, error = Git.cherryPickAllowEmpty(repoDir)
                 if ret == 0:
                     LogView._markPickStatus(
-                        source_logview, sha1, MarkType.PICKED)
+                        sourceView, sha1, MarkType.PICKED)
                     return True
 
                 QMessageBox.critical(
@@ -2963,22 +2963,22 @@ class LogView(QAbstractScrollArea, CommitSource):
             return False
 
         # Create a temporary patch file
-        patch_file = None
+        patchFile = None
         try:
             with tempfile.NamedTemporaryFile(mode='wb', suffix='.patch', delete=False) as f:
-                patch_file = f.name
+                patchFile = f.name
                 f.write(diff)
 
-            args = ["apply", patch_file]
+            args = ["apply", patchFile]
             if sha1 == Git.LCC_SHA1:
                 args.insert(1, "--index")
             process = Git.run(args, repoDir=targetRepoDir, text=True)
             _, error = process.communicate()
             if process.returncode != 0:
-                error_msg = error if error else self.tr("Unknown error")
+                errorMsg = error if error else self.tr("Unknown error")
                 QMessageBox.critical(
                     self, self.tr("Apply Changes Failed"),
-                    self.tr("Failed to apply local changes:\n\n{0}").format(error_msg))
+                    self.tr("Failed to apply local changes:\n\n{0}").format(errorMsg))
                 LogView._markPickStatus(
                     sourceView, sha1, MarkType.FAILED)
                 return False
@@ -2993,5 +2993,5 @@ class LogView(QAbstractScrollArea, CommitSource):
             LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
             return False
         finally:
-            if patch_file:
-                os.remove(patch_file)
+            if patchFile:
+                os.remove(patchFile)
