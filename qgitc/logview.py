@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
 import re
+import tempfile
 from typing import List
 
 from PySide6.QtCore import (
@@ -2477,7 +2479,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         extraCount = len(commits) - maxVisibleCommits
         if extraCount > 0:
             lines.append(
-                self.tr("... and {0} more commits").format(extraCount) if extraCount > 1 
+                self.tr("... and {0} more commits").format(extraCount) if extraCount > 1
                 else self.tr("... and 1 more commit"))
 
         # Calculate pixmap size
@@ -2590,9 +2592,9 @@ class LogView(QAbstractScrollArea, CommitSource):
                 ]
             serialized_commits.append(commit_data)
 
-        # Create drag data with repo URL, branch and serialized commits
         drag_data = {
             "repoUrl": repoUrl,
+            "repoDir": self._branchDir or Git.REPO_DIR,
             "branch": self.curBranch,
             "commits": serialized_commits
         }
@@ -2696,8 +2698,15 @@ class LogView(QAbstractScrollArea, CommitSource):
             event.ignore()
             return
 
+        commits = drag_data.get("commits", [])
+        if not commits:
+            event.ignore()
+            return
+
         # Get source branch from MIME data
         source_branch = drag_data.get("branch", "")
+        sourceRepoDir = drag_data.get("repoDir", "")
+        isSameRepo = sourceRepoDir == (self._branchDir or Git.REPO_DIR)
 
         # Validation 1: Check if same branch (ignore remotes/origin/ prefix)
         def normalizeBranch(branch: str) -> str:
@@ -2706,15 +2715,11 @@ class LogView(QAbstractScrollArea, CommitSource):
                 return branch[15:]  # len("remotes/origin/") = 15
             return branch
 
-        if source_branch and normalizeBranch(source_branch) == normalizeBranch(self.curBranch):
+        # Allow same branch if from different repo dir
+        if isSameRepo and source_branch and normalizeBranch(source_branch) == normalizeBranch(self.curBranch):
             QMessageBox.warning(
                 self, self.tr("Cherry-pick Failed"),
                 self.tr("Cannot cherry-pick commits to the same branch."))
-            event.ignore()
-            return
-
-        commits = drag_data.get("commits", [])
-        if not commits:
             event.ignore()
             return
 
@@ -2737,7 +2742,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 drop_before_sha1 = drop_commit.sha1
 
         # Execute cherry-pick
-        self._executeCherryPick(commits, source, drop_before_sha1)
+        self._executeCherryPick(
+            commits, source, sourceRepoDir, drop_before_sha1)
 
         event.acceptProposedAction()
 
@@ -2761,7 +2767,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             # If we can't determine, assume it's pushed (safer)
             return False
 
-    def _executeCherryPick(self, commits: List[dict], source_logview: 'LogView', drop_before_sha1: str = None):
+    def _executeCherryPick(self, commits: List[dict], source_logview: 'LogView', source_repo_dir: str, drop_before_sha1: str = None):
         """Execute cherry-pick operation"""
         if not commits:
             return
@@ -2779,7 +2785,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         for commit in commits:
             sha1 = commit.get("sha1", "")
             repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
-            if self._doCherryPick(repoDir, sha1, source_logview):
+            if self._doCherryPick(repoDir, sha1, source_repo_dir, source_logview):
                 needReload = True
             else:
                 # Stop processing remaining commits
@@ -2790,7 +2796,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 sha1 = subCommit.get("sha1", "")
                 repoDir = fullRepoDir(subCommit.get(
                     "repoDir", None), self._branchDir)
-                if self._doCherryPick(repoDir, sha1, source_logview):
+                if self._doCherryPick(repoDir, sha1, source_repo_dir, source_logview):
                     needReload = True
                 else:
                     # Stop processing remaining commits
@@ -2800,8 +2806,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         if needReload:
             self.reloadLogs()
 
-    def _doCherryPick(self, repoDir: str, sha1: str, source_logview: 'LogView') -> bool:
+    def _doCherryPick(self, repoDir: str, sha1: str, source_repo_dir: str, source_logview: 'LogView') -> bool:
         """Perform cherry-pick of a single commit"""
+        if sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
+            return self._applyLocalChanges(repoDir, sha1, source_repo_dir, source_logview)
+
         ret, error, _ = Git.cherryPick(
             [sha1], recordOrigin=True, repoDir=repoDir)
         if ret != 0:
@@ -2942,3 +2951,47 @@ class LogView(QAbstractScrollArea, CommitSource):
                 return True
 
         return False
+
+    def _applyLocalChanges(self, targetRepoDir: str, sha1: str, sourceRepoDir: str, sourceView: 'LogView') -> bool:
+        """Apply local uncommitted or cached changes using git diff and apply"""
+        # Get the diff for the local changes
+        diff = Git.commitRawDiff(sha1, repoDir=sourceRepoDir)
+        if not diff:
+            QMessageBox.warning(
+                self, self.tr("Apply Changes Failed"),
+                self.tr("No changes found to apply."))
+            return False
+
+        # Create a temporary patch file
+        patch_file = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='wb', suffix='.patch', delete=False) as f:
+                patch_file = f.name
+                f.write(diff)
+
+            args = ["apply", patch_file]
+            if sha1 == Git.LCC_SHA1:
+                args.insert(1, "--index")
+            process = Git.run(args, repoDir=targetRepoDir, text=True)
+            _, error = process.communicate()
+            if process.returncode != 0:
+                error_msg = error if error else self.tr("Unknown error")
+                QMessageBox.critical(
+                    self, self.tr("Apply Changes Failed"),
+                    self.tr("Failed to apply local changes:\n\n{0}").format(error_msg))
+                LogView._markPickStatus(
+                    sourceView, sha1, MarkType.FAILED)
+                return False
+
+            LogView._markPickStatus(sourceView, sha1, MarkType.PICKED)
+            return True
+
+        except Exception as e:
+            QMessageBox.critical(
+                self, self.tr("Apply Changes Failed"),
+                self.tr("Failed to apply local changes:\n\n{0}").format(str(e)))
+            LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
+            return False
+        finally:
+            if patch_file:
+                os.remove(patch_file)
