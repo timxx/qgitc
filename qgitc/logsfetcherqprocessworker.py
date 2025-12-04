@@ -22,12 +22,13 @@ from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 class LocalChangesFetcher(QObject):
     finished = Signal()
 
-    def __init__(self, repoDir=None, parent=None):
+    def __init__(self, repoDir=None, isComposite=False, parent=None):
         super().__init__(parent)
         self._repoDir = repoDir
         self._lccProcess: QProcess = None
         self._lucProcess: QProcess = None
         self._failedStart = set()
+        self.isComposite = isComposite
 
         self.hasLCC = False
         self.hasLUC = False
@@ -135,7 +136,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         lcFetcher = None
         if self.needLocalChanges():
-            lcFetcher = LocalChangesFetcher()
+            lcFetcher = LocalChangesFetcher(self._branchDir, False)
             lcFetcher.finished.connect(self._onFetchFinished)
             self._fetchers.append(lcFetcher)
             lcFetcher.fetch()
@@ -174,8 +175,9 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         hasLUC = fetcher.hasLUC
 
         if hasLCC or hasLUC:
+            repoDir = fetcher._repoDir if fetcher.isComposite else None
             LogsFetcherWorkerBase._makeLocalCommits(
-                self._lccCommit, self._lucCommit, hasLCC, hasLUC, fetcher._repoDir)
+                self._lccCommit, self._lucCommit, hasLCC, hasLUC, repoDir)
 
     def _onFetchFinished(self):
         if self.isInterruptionRequested():
@@ -243,7 +245,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
                     return
 
                 fetcher = LocalChangesFetcher(
-                    fullRepoDir(submodule, self._branchDir))
+                    fullRepoDir(submodule, self._branchDir), True)
                 fetcher.finished.connect(self._onFetchFinished)
 
                 if len(self._fetchers) < MAX_QUEUE_SIZE:
