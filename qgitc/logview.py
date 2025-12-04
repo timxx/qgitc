@@ -2432,6 +2432,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setStandalone(self, standalone: bool):
         self._standalone = standalone
+        self.setAcceptDrops(standalone)
 
     def _createDragPreview(self, commits: List[Commit]) -> QPixmap:
         """Create a preview pixmap for dragging commits"""
@@ -2701,7 +2702,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Validation 1: Check if same branch (ignore remotes/origin/ prefix)
         def normalizeBranch(branch: str) -> str:
             """Remove remotes/origin/ prefix for comparison"""
-            if branch.startswith("remotes/origin/"):
+            if branch and branch.startswith("remotes/origin/"):
                 return branch[15:]  # len("remotes/origin/") = 15
             return branch
 
