@@ -579,6 +579,17 @@ class MergeWidget(QWidget):
         if not toolName:
             toolName = ApplicationBase.instance().settings().mergeToolName()
 
+            if not toolName:
+                gitMergeTool = Git.getConfigValue("merge.tool", False)
+                if not gitMergeTool:
+                    QMessageBox.warning(
+                        self, self.tr("Merge Tool Not Configured"),
+                        self.tr("No merge tool is configured.\n\n"
+                                "Please configure a merge tool in:\n"
+                                "- Git global config: git config --global merge.tool <tool-name>\n"
+                                "- Or in Preferences > Tools tab"))
+                    return
+
         if toolName:
             args.append("--tool=%s" % toolName)
 
