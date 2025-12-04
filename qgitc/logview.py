@@ -26,13 +26,13 @@ from PySide6.QtGui import (
     QDragEnterEvent,
     QDragMoveEvent,
     QDropEvent,
-    QFontMetrics,
     QImage,
     QMouseEvent,
     QPainter,
     QPainterPath,
     QPalette,
     QPen,
+    QPixmap,
 )
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
@@ -858,9 +858,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def updateSettings(self):
         settings = ApplicationBase.instance().settings()
-        self.font = settings.logViewFont()
+        self.setFont(settings.logViewFont())
 
-        self.lineHeight = QFontMetrics(self.font).height() + self.lineSpace
+        self.lineHeight = self.fontMetrics().height() + self.lineSpace
 
         self.updateGeometries()
         self.updateView()
@@ -1961,7 +1961,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         colorSchema = ApplicationBase.instance().colorSchema()
 
-        painter.setFont(self.font)
+        painter.setFont(self.font())
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
 
         # Calculate drop indicator offset for items
@@ -2424,6 +2424,131 @@ class LogView(QAbstractScrollArea, CommitSource):
     def setStandalone(self, standalone: bool):
         self._standalone = standalone
 
+    def _createDragPreview(self, commits: List[Commit]) -> QPixmap:
+        """Create a preview pixmap for dragging commits"""
+        if not commits:
+            return None
+
+        # Configuration
+        maxVisibleCommits = 2
+        padding = 8
+        lineSpacing = 4
+        maxTextWidth = 400
+        iconSize = 16
+
+        # Get color scheme
+        colorSchema = ApplicationBase.instance().colorSchema()
+        bgColor = self.palette().color(QPalette.Base)
+        textColor = self.palette().color(QPalette.WindowText)
+        borderColor = colorSchema.FocusItemBorder
+
+        # Prepare font
+        fm = self.fontMetrics()
+        lineHeight = fm.height()
+
+        # Helper function to get short sha1 and summary
+        def getCommitText(commit: Commit) -> str:
+            shortSha = commit.sha1[:7]
+            summary = commit.comments.split('\n')[0]
+
+            # Truncate summary if too long
+            maxSummaryLen = 50
+            if len(summary) > maxSummaryLen:
+                summary = summary[:maxSummaryLen - 3] + "..."
+
+            return f"{shortSha} {summary}"
+
+        # Calculate lines to draw
+        lines = []
+        for i in range(min(len(commits), maxVisibleCommits)):
+            lines.append(getCommitText(commits[i]))
+
+        # Add count indicator if more than maxVisibleCommits
+        extraCount = len(commits) - maxVisibleCommits
+        if extraCount > 0:
+            lines.append(
+                self.tr("... and {0} more commits").format(extraCount) if extraCount > 1 
+                else self.tr("... and 1 more commit"))
+
+        # Calculate pixmap size
+        maxWidth = 0
+        for line in lines:
+            textWidth = fm.horizontalAdvance(line)
+            maxWidth = max(maxWidth, textWidth)
+
+        # Clamp width
+        maxWidth = min(maxWidth, maxTextWidth)
+
+        width = maxWidth + 2 * padding + iconSize + 4
+        height = len(lines) * (lineHeight + lineSpacing) - \
+            lineSpacing + 2 * padding
+
+        # Create pixmap with transparency
+        ratio = self.devicePixelRatioF()
+        pixmap = QPixmap(width * ratio, height * ratio)
+        pixmap.setDevicePixelRatio(ratio)
+        pixmap.fill(Qt.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setFont(self.font())
+
+        # Draw background with rounded corners
+        bgRect = QRectF(0, 0, width, height)
+        painter.setPen(borderColor)
+        painter.setBrush(bgColor)
+        painter.drawRoundedRect(bgRect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4)
+
+        # Draw text
+        textX = padding + iconSize + 4
+        textY = padding
+
+        painter.setPen(textColor)
+        for i, line in enumerate(lines):
+            if i >= maxVisibleCommits:
+                # Draw extra count in a lighter color
+                painter.save()
+                font = painter.font()
+                font.setItalic(True)
+                painter.setFont(font)
+                painter.setPen(colorSchema.Whitespace)
+            else:
+                # Draw commit icon
+                painter.save()
+                iconCenterX = padding + iconSize // 2
+                iconCenterY = textY + lineHeight // 2
+
+                circleRadius = iconSize // 5
+
+                # Draw horizontal lines (left and right of circle)
+                lineY = iconCenterY
+                painter.setPen(QPen(textColor))
+                # Left line
+                painter.drawLine(
+                    padding, lineY, iconCenterX - circleRadius, lineY)
+                # Right line
+                painter.drawLine(iconCenterX + circleRadius,
+                                 lineY, padding + iconSize, lineY)
+
+                # Draw circle
+                painter.setBrush(Qt.NoBrush)
+                painter.drawEllipse(iconCenterX - circleRadius, iconCenterY - circleRadius,
+                                    circleRadius * 2, circleRadius * 2)
+                painter.restore()
+
+            textRect = QRect(textX, textY, maxWidth, lineHeight)
+            painter.drawText(textRect, Qt.AlignLeft |
+                             Qt.AlignVCenter | Qt.TextSingleLine, line)
+
+            if i >= maxVisibleCommits:
+                painter.restore()
+
+            textY += lineHeight + lineSpacing
+
+        painter.end()
+
+        return pixmap
+
     def _startDrag(self, drag_indices: List[int]):
         """Start drag operation with specified commit indices"""
         if not drag_indices:
@@ -2472,6 +2597,11 @@ class LogView(QAbstractScrollArea, CommitSource):
                          json.dumps(drag_data).encode("utf-8"))
 
         drag.setMimeData(mimeData)
+
+        # Create drag preview image
+        pixmap = self._createDragPreview(commits)
+        if pixmap:
+            drag.setPixmap(pixmap)
 
         # Start drag
         drag.exec(Qt.CopyAction)
@@ -2707,7 +2837,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                     # Abort cherry-pick
                     Git.cherryPickAbort(self._branchDir)
 
-                    LogView._markPickStatus(source_logview, sha1, MarkType.FAILED)
+                    LogView._markPickStatus(
+                        source_logview, sha1, MarkType.FAILED)
                     return False
 
             # Run git mergetool using QProcess with event loop
@@ -2733,7 +2864,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 # Continue cherry-pick
                 ret, error = Git.cherryPickContinue(self._branchDir)
                 if ret == 0:
-                    LogView._markPickStatus(source_logview, sha1, MarkType.PICKED)
+                    LogView._markPickStatus(
+                        source_logview, sha1, MarkType.PICKED)
                     return True
                 # After resolved, it can be empty commit
                 if self._handleEmptyCherryPick(sha1, error, source_logview):
@@ -2767,7 +2899,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             if reply == QMessageBox.No:
                 ret, _ = Git.cherryPickAllowEmpty(self._branchDir)
                 if ret == 0:
-                    LogView._markPickStatus(source_logview, sha1, MarkType.PICKED)
+                    LogView._markPickStatus(
+                        source_logview, sha1, MarkType.PICKED)
                     return True
             else:
                 # Abort
