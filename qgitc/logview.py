@@ -1376,7 +1376,7 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __linesPerPage(self):
         return int(self.__linesPerPageF())
 
-    def __itemRect(self, index, needMargin=True):
+    def itemRect(self, index, needMargin=True):
         """@index the index of data"""
 
         # the row number in viewport
@@ -1767,7 +1767,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 commit.children.append(child)
 
     def invalidateItem(self, index):
-        rect = self.__itemRect(index, False)
+        rect = self.itemRect(index, False)
         # update if visible in the viewport
         if rect.y() >= 0:
             self.viewport().update(rect)
@@ -1979,14 +1979,14 @@ class LogView(QAbstractScrollArea, CommitSource):
                 painter.translate(0, dropOffset)
 
             # Get full item rect without margin for selection background
-            fullRect = self.__itemRect(i, needMargin=False)
+            fullRect = self.itemRect(i, needMargin=False)
 
             # Distinguish between selected items and active/current item
             isSelected = i in self.selectedIndices
             isCurrent = i == self.curIdx
 
             # Get rect with margin for content drawing
-            rect = self.__itemRect(i)
+            rect = self.itemRect(i)
             rect.adjust(2, 0, 0, 0)
 
             commit = self.data[i]
@@ -2116,7 +2116,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
 
-        rect = self.__itemRect(line, needMargin=False)
+        rect = self.itemRect(line, needMargin=False)
         maxOffset = self.lineHeight * 0.5
         centerOffset = int(maxOffset * self._dropIndicatorOffset * 0.5)
         y = rect.top() + centerOffset
@@ -2727,7 +2727,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Get source branch from MIME data
         sourceBranch = dragData.get("branch", "")
         sourceRepoDir = dragData.get("repoDir", "")
-        isSameRepo = sourceRepoDir == (self._branchDir or Git.REPO_DIR)
+        targetRepoDir = self._branchDir or Git.REPO_DIR
+        isSameRepo = os.path.normcase(os.path.normpath(
+            sourceRepoDir)) == os.path.normcase(os.path.normpath(targetRepoDir))
 
         # Validation 1: Check if same branch (ignore remotes/origin/ prefix)
         def normalizeBranch(branch: str) -> str:
