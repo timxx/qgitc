@@ -2639,8 +2639,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         """Update drop indicator as drag moves"""
         if event.mimeData().hasFormat("application/x-qgitc-commits"):
             pos = event.position()
-            line = self.lineForPos(pos)
-
+            line = self._findDropPosition(pos)
             if line >= 0:
                 # Show drop indicator with animation if line changed
                 if self._dropIndicatorLine != line:
@@ -2648,10 +2647,25 @@ class LogView(QAbstractScrollArea, CommitSource):
                     # Continue animation from current value, don't reset
                     self._startDropIndicatorAnimation()
                 event.acceptProposedAction()
-            else:
-                event.ignore()
-        else:
-            event.ignore()
+                return
+        event.ignore()
+
+    def _findDropPosition(self, pos) -> int:
+        """Find drop line index for given position"""
+
+        # FIXME: we only support drop before HEAD for now
+        # FIXME: if we are dropping local changes, we should allow dropping before LUC too
+        for i in range(len(self.data)):
+            sha1 = self.data[i].sha1
+            if sha1 == Git.LCC_SHA1:
+                return i + 1
+            if sha1 == Git.LUC_SHA1:
+                if (i + 1) < len(self.data) and self.data[i + 1].sha1 == Git.LCC_SHA1:
+                    return i + 2
+                return i + 1
+            return 0
+
+        return -1
 
     def dragLeaveEvent(self, event):
         """Clear drop indicator when drag leaves"""
@@ -2732,40 +2746,14 @@ class LogView(QAbstractScrollArea, CommitSource):
             event.ignore()
             return
 
-        # Determine drop position
-        dropLineIndex = self.lineForPos(event.position())
+        # TODO: Determine drop position
         dropBeforeSha1 = None
-        if dropLineIndex >= 0 and dropLineIndex < len(self.data):
-            dropCommit = self.data[dropLineIndex]
-            # Only allow dropping before unpushed commits
-            if self._isUnpushedCommit(dropCommit):
-                dropBeforeSha1 = dropCommit.sha1
 
         # Execute cherry-pick
         self._executeCherryPick(
             commits, source, sourceRepoDir, dropBeforeSha1)
 
         event.acceptProposedAction()
-
-    def _isUnpushedCommit(self, commit: Commit) -> bool:
-        """Check if a commit is unpushed (exists only locally)"""
-        if not commit or not commit.sha1:
-            return False
-
-        # Local changes are always unpushed
-        if commit.sha1 in [Git.LCC_SHA1, Git.LUC_SHA1]:
-            return True
-
-        # Check if commit exists in remote
-        repoDir = commitRepoDir(commit)
-        args = ["branch", "-r", "--contains", commit.sha1]
-        try:
-            output = Git.checkOutput(args, repoDir=repoDir, reportError=False)
-            # If no remote branches contain this commit, it's unpushed
-            return not output or len(output.strip()) == 0
-        except:
-            # If we can't determine, assume it's pushed (safer)
-            return False
 
     def _executeCherryPick(self, commits: List[dict], sourceView: 'LogView', sourceRepoDir: str, dropBeforeSha1: str = None):
         """Execute cherry-pick operation"""
