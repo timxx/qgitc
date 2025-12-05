@@ -2233,9 +2233,15 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.currentIndexChanged.emit(self.curIdx)
         else:
             # Normal click - clear previous selections and select clicked item
+            needUpdate = index == self.curIdx and len(
+                self.selectedIndices) > 0 and index not in self.selectedIndices
+
             self.selectedIndices.clear()
             self.selectedIndices.add(index)
             self.setCurrentIndex(index, clearSelection=False)
+
+            if needUpdate:
+                self.viewport().update()
 
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press to prepare for potential drag"""
