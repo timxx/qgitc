@@ -2453,6 +2453,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         lineSpacing = 4
         maxTextWidth = 400
         iconSize = 16
+        margin = 4
 
         # Get color scheme
         colorSchema = ApplicationBase.instance().colorSchema()
@@ -2468,36 +2469,36 @@ class LogView(QAbstractScrollArea, CommitSource):
         def getCommitText(commit: Commit) -> str:
             shortSha = commit.sha1[:7]
             summary = commit.comments.split('\n')[0]
-
-            # Truncate summary if too long
-            maxSummaryLen = 50
-            if len(summary) > maxSummaryLen:
-                summary = summary[:maxSummaryLen - 3] + "..."
-
             return f"{shortSha} {summary}"
 
         # Calculate lines to draw
         lines = []
+        maxWidth = 0
+
+        def _addElidedText(text: str):
+            nonlocal maxWidth
+            text = fm.elidedText(text, Qt.ElideRight, maxTextWidth - iconSize - padding * 2 - margin)
+            textWidth = fm.horizontalAdvance(text)
+            maxWidth = max(maxWidth, textWidth)
+            lines.append(text)
+
         for i in range(min(len(commits), maxVisibleCommits)):
-            lines.append(getCommitText(commits[i]))
+            text = getCommitText(commits[i])
+            _addElidedText(text)
 
         # Add count indicator if more than maxVisibleCommits
         extraCount = len(commits) - maxVisibleCommits
-        if extraCount > 0:
-            lines.append(
-                self.tr("... and {0} more commits").format(extraCount) if extraCount > 1
-                else self.tr("... and 1 more commit"))
-
-        # Calculate pixmap size
-        maxWidth = 0
-        for line in lines:
-            textWidth = fm.horizontalAdvance(line)
-            maxWidth = max(maxWidth, textWidth)
+        if extraCount == 1:
+            _addElidedText(getCommitText(commits[maxVisibleCommits]))
+            maxVisibleCommits = 3
+        elif extraCount > 1:
+            text = self.tr("... and {0} more commits").format(extraCount)
+            _addElidedText(text)
 
         # Clamp width
         maxWidth = min(maxWidth, maxTextWidth)
 
-        width = maxWidth + 2 * padding + iconSize + 4
+        width = maxWidth + 2 * padding + iconSize + margin
         height = len(lines) * (lineHeight + lineSpacing) - \
             lineSpacing + 2 * padding
 
@@ -2518,7 +2519,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         painter.drawRoundedRect(bgRect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4)
 
         # Draw text
-        textX = padding + iconSize + 4
+        textX = padding + iconSize + margin
         textY = padding
 
         painter.setPen(textColor)
