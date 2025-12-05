@@ -707,6 +707,35 @@ class Git():
         return 0, None
 
     @staticmethod
+    def isApplying(repoDir=None):
+        """Check if a git am operation is in progress"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        rebase_apply = os.path.join(branchDir, ".git", "rebase-apply")
+        return os.path.exists(rebase_apply)
+
+    @staticmethod
+    def amAbort(repoDir=None):
+        """Abort an in-progress git am operation"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        args = ["am", "--abort"]
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+        if process.returncode != 0 and error:
+            return process.returncode, error
+        return 0, None
+
+    @staticmethod
+    def amContinue(repoDir=None):
+        """Continue a git am operation after resolving conflicts"""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        args = ["am", "--continue"]
+        process = GitProcess(branchDir, args, text=True)
+        _, error = process.communicate()
+        if process.returncode != 0 and error:
+            return process.returncode, error
+        return 0, None
+
+    @staticmethod
     def repoUrl():
         args = ["config", "remote.origin.url"]
         data = Git.checkOutput(args, reportError=False)

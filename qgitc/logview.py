@@ -2821,6 +2821,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             if error and ("conflict" in error.lower() or Git.isCherryPicking(repoDir)):
                 if self._resolveCherryPickConflict(repoDir, sha1, error, sourceView):
                     return True
+            elif not sourceView and error and f"fatal: bad object {sha1}" in error:
+                if self._pickFromAnotherRepo(repoDir, sourceRepoDir, sha1):
+                    return True
             else:
                 # Other error
                 QMessageBox.critical(
@@ -2846,52 +2849,10 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView') -> bool:
         """Resolve cherry-pick conflict"""
-        reply = QMessageBox.question(
-            self, self.tr("Cherry-pick Conflict"),
-            self.tr("Cherry-pick of commit {0} failed with conflicts:\n\n{1}\n\n"
-                    "Do you want to resolve the conflicts using mergetool?").format(
-                sha1[:7], error),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes)
-
-        if reply == QMessageBox.Yes:
-            # Check if merge tool is configured
-            toolName = ApplicationBase.instance().settings().mergeToolName()
-            if not toolName:
-                # Check if git has a default merge.tool configured
-                gitMergeTool = Git.getConfigValue("merge.tool", False)
-                if not gitMergeTool:
-                    QMessageBox.warning(
-                        self, self.tr("Merge Tool Not Configured"),
-                        self.tr("No merge tool is configured.\n\n"
-                                "Please configure a merge tool in:\n"
-                                "- Git global config: git config --global merge.tool <tool-name>\n"
-                                "- Or in Preferences > Tools tab"))
-                    # Abort cherry-pick
-                    Git.cherryPickAbort(repoDir)
-
-                    LogView._markPickStatus(
-                        sourceView, sha1, MarkType.FAILED)
-                    return False
-
-            # Run git mergetool using QProcess with event loop
-            process = QProcess()
-            process.setWorkingDirectory(repoDir)
-
-            env = QProcessEnvironment.systemEnvironment()
-            env.insert("LANGUAGE", "en_US")
-            process.setProcessEnvironment(env)
-
-            args = ["mergetool", "--no-prompt"]
-            if toolName:
-                args.append("--tool=%s" % toolName)
-
-            # Use event loop to wait for process to finish without blocking UI
-            loop = QEventLoop()
-            process.finished.connect(loop.quit)
-            process.start(GitProcess.GIT_BIN, args)
-            loop.exec()
-
+        process, ok = self._runMergeTool(repoDir, sha1, error, sourceView, True)
+        if not ok:
+            return False
+        if process:
             ret = process.exitCode()
             if ret == 0:
                 # Continue cherry-pick
@@ -2995,3 +2956,142 @@ class LogView(QAbstractScrollArea, CommitSource):
         finally:
             if patchFile:
                 os.remove(patchFile)
+
+    def _pickFromAnotherRepo(self, repoDir: str, sourceRepoDir: str, sha1: str) -> bool:
+        """Pick commits from another repository by generating and applying patch"""
+        # Generate patch from source repo
+        args = ["format-patch", "-1", "--stdout", sha1]
+        process = Git.run(args, repoDir=sourceRepoDir, text=True)
+        patchContent, error = process.communicate()
+
+        if process.returncode != 0:
+            errorMsg = error if error else self.tr("Unknown error")
+            QMessageBox.critical(
+                self, self.tr("Cherry-pick Failed"),
+                self.tr("Failed to generate patch from source repository:\n\n{0}").format(errorMsg))
+            return False
+
+        if not patchContent:
+            QMessageBox.warning(
+                self, self.tr("Cherry-pick Failed"),
+                self.tr("No patch content generated for commit {0}.").format(sha1[:7]))
+            return False
+
+        # Create a temporary patch file
+        patchFile = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.patch', delete=False, encoding='utf-8') as f:
+                patchFile = f.name
+                f.write(patchContent)
+
+            # Apply patch to target repo
+            args = ["am", "--3way", "--ignore-space-change", patchFile]
+            process = Git.run(args, repoDir=repoDir, text=True)
+            _, error = process.communicate()
+
+            if process.returncode != 0:
+                errorMsg = error if error else self.tr("Unknown error")
+
+                # Check if it's a conflict
+                if error and ("conflict" in error.lower() or Git.isApplying(repoDir)):
+                    process, ok = self._runMergeTool(repoDir, sha1, error, None, False)
+                    if not ok:
+                        return False
+                    if process:
+                        ret = process.exitCode()
+                        if ret == 0:
+                            # Continue applying
+                            ret, error = Git.amContinue(repoDir)
+                            if ret == 0:
+                                return True
+                            if self._handleEmptyCherryPick(repoDir, sha1, error, None):
+                                return True
+                            QMessageBox.critical(
+                                self, self.tr("Cherry-pick Failed"),
+                                self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
+                                    sha1[:7], error if error else self.tr("Unknown error")))
+                        else:
+                            error = process.readAllStandardError().data().decode("utf-8").rstrip()
+                            QMessageBox.critical(
+                                self, self.tr("Merge Tool Failed"),
+                                self.tr("Merge tool failed with error:\n\n{0}").format(
+                                    error if error else self.tr("Unknown error")))
+
+                    # Abort applying
+                    Git.amAbort(repoDir)
+                    return False
+                else:
+                    QMessageBox.critical(
+                        self, self.tr("Cherry-pick Failed"),
+                        self.tr("Failed to apply patch to target repository:\n\n{0}").format(errorMsg))
+                    return False
+
+            return True
+
+        except Exception as e:
+            QMessageBox.critical(
+                self, self.tr("Cherry-pick Failed"),
+                self.tr("Failed to apply patch from another repository:\n\n{0}").format(str(e)))
+            return False
+        finally:
+            if patchFile and os.path.exists(patchFile):
+                os.remove(patchFile)
+
+    def _runMergeTool(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView', isPick: bool):
+        reply = QMessageBox.question(
+            self, self.tr("Cherry-pick Conflict"),
+            self.tr("Cherry-pick of commit {0} failed with conflicts:\n\n{1}\n\n"
+                    "Do you want to resolve the conflicts using mergetool?").format(
+                sha1[:7], error),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes)
+
+        if reply == QMessageBox.Yes:
+            # Check if merge tool is configured
+            toolName = ApplicationBase.instance().settings().mergeToolName()
+            if not toolName:
+                # Check if git has a default merge.tool configured
+                gitMergeTool = Git.getConfigValue("merge.tool", False)
+                if not gitMergeTool:
+                    QMessageBox.warning(
+                        self, self.tr("Merge Tool Not Configured"),
+                        self.tr("No merge tool is configured.\n\n"
+                                "Please configure a merge tool in:\n"
+                                "- Git global config: git config --global merge.tool <tool-name>\n"
+                                "- Or in Preferences > Tools tab"))
+                    if isPick:
+                        Git.cherryPickAbort(repoDir)
+                    else:
+                        Git.amAbort(repoDir)
+
+                    LogView._markPickStatus(
+                        sourceView, sha1, MarkType.FAILED)
+                    return None, False
+
+            # Run git mergetool using QProcess with event loop
+            process = QProcess()
+            process.setWorkingDirectory(repoDir)
+
+            env = QProcessEnvironment.systemEnvironment()
+            env.insert("LANGUAGE", "en_US")
+            process.setProcessEnvironment(env)
+
+            args = ["mergetool", "--no-prompt"]
+            if toolName:
+                args.append("--tool=%s" % toolName)
+
+            # Use event loop to wait for process to finish without blocking UI
+            loop = QEventLoop()
+            process.finished.connect(loop.quit)
+            process.start(GitProcess.GIT_BIN, args)
+            loop.exec()
+
+            return process, True
+
+        if isPick:
+            Git.cherryPickAbort(repoDir)
+        else:
+            Git.amAbort(repoDir)
+
+        LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
+        return None, False
