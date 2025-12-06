@@ -697,8 +697,9 @@ class MainWindow(StateWindow):
 
     def __onCommitTriggered(self):
         # we can't import application here, because it will cause circular import
-        ApplicationBase.instance().postEvent(
-            ApplicationBase.instance(), RequestCommitEvent())
+        app = ApplicationBase.instance()
+        app.postEvent(app, RequestCommitEvent())
+        app.trackFeatureUsage("menu.commit")
 
     def reloadLocalChanges(self):
         self.ui.gitViewA.ui.logView.reloadLogs()
@@ -816,11 +817,14 @@ class MainWindow(StateWindow):
         self.ui.leRepo.setRecentRepositories(recentRepos)
 
     def _onCodeReview(self):
-        fw = ApplicationBase.instance().focusWidget()
+        app = ApplicationBase.instance()
+        fw = app.focusWidget()
         if isinstance(fw, LogView):
             fw.codeReviewOnCurrent()
         else:
             self.ui.gitViewA.logView.codeReviewOnCurrent()
+
+        app.trackFeatureUsage("menu.code_review")
 
     def _onChangeCommitAuthor(self):
         """Handle changing commit author from Git menu"""
@@ -840,6 +844,8 @@ class MainWindow(StateWindow):
             return
 
         logView.changeAuthor()
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("menu.change_commit_author")
 
     def _onBranchCompareTriggered(self):
         targetBranch = None
@@ -853,3 +859,4 @@ class MainWindow(StateWindow):
 
         app = ApplicationBase.instance()
         app.postEvent(app, ShowBranchCompareEvent(targetBranch, baseBranch))
+        app.trackFeatureUsage("menu.branch_compare")
