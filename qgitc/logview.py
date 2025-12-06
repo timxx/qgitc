@@ -2695,7 +2695,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         # Get source widget
-        source = event.source()
+        sourceView = event.source()
 
         # Deserialize drag data
         try:
@@ -2758,9 +2758,16 @@ class LogView(QAbstractScrollArea, CommitSource):
         # TODO: Determine drop position
         dropBeforeSha1 = None
 
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("cherry_pick", {
+            "commits": len(commits),
+            "in_app": True if sourceView else False,
+            "same_repo": isSameRepo
+        })
+
         # Execute cherry-pick
         self._executeCherryPick(
-            commits, source, sourceRepoDir, dropBeforeSha1)
+            commits, sourceView, sourceRepoDir, dropBeforeSha1)
 
         event.acceptProposedAction()
 
