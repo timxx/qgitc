@@ -876,7 +876,7 @@ class TestLogViewDragDrop(TestBase):
 
         picked_order = []
 
-        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView):
+        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin=True):
             picked_order.append(sha1)
             return True
 
@@ -898,7 +898,7 @@ class TestLogViewDragDrop(TestBase):
 
         picked_commits = []
 
-        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView):
+        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin=True):
             picked_commits.append(sha1)
             # Fail on second commit
             return sha1 != "commit2"
@@ -925,7 +925,7 @@ class TestLogViewDragDrop(TestBase):
 
         picked_commits = []
 
-        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView):
+        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin=True):
             picked_commits.append((sha1, repoDir))
             return True
 
