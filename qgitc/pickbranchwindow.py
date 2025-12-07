@@ -368,20 +368,10 @@ class PickBranchWindow(StateWindow):
                         "Please checkout the branch first.").format(self._targetBranch))
             return
 
-        # Execute cherry-pick using LogView's implementation
-        needReload = False
-
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
         for commit in markedCommits:
-            if self.ui.logView.doCherryPick(targetRepoDir, commit.sha1, commit.repoDir, self.ui.logView, recordOrigin):
-                needReload = True
-            else:
-                # Stop processing remaining commits on error
+            if not self.ui.logView.doCherryPick(targetRepoDir, commit.sha1, commit.repoDir, self.ui.logView, recordOrigin):
                 break
-
-        # Reload the commit list to show the result
-        if needReload:
-            self._loadCommits()
 
     def _updateStatus(self, message: str):
         """Update status label"""
