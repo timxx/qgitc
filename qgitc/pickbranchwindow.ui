@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PickBranchWindow</class>
+ <widget class="QMainWindow" name="PickBranchWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>QGitc Cherry Pick</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_main">
+    <item>
+     <widget class="QFrame" name="frameBranchSelection">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Shape::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Shadow::Raised</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_branches">
+       <property name="spacing">
+        <number>3</number>
+       </property>
+       <property name="leftMargin">
+        <number>4</number>
+       </property>
+       <property name="topMargin">
+        <number>4</number>
+       </property>
+       <property name="rightMargin">
+        <number>4</number>
+       </property>
+       <property name="bottomMargin">
+        <number>4</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_branches">
+         <item>
+          <widget class="QLabel" name="labelSourceBranch">
+           <property name="text">
+            <string>&amp;Source Branch:</string>
+           </property>
+           <property name="buddy">
+            <cstring>cbSourceBranch</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cbSourceBranch">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Select the source branch to cherry-pick commits from</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelTargetBranch">
+           <property name="text">
+            <string>&amp;Target Branch:</string>
+           </property>
+           <property name="buddy">
+            <cstring>cbTargetBranch</cstring>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cbTargetBranch">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>Select the target branch to cherry-pick commits to (current branch)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnShowLogWindow">
+           <property name="text">
+            <string>Change &amp;Repository...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_options">
+         <item>
+          <widget class="QCheckBox" name="cbMergeBase">
+           <property name="toolTip">
+            <string>Use merge base to find commits unique to source branch (excludes common ancestors)</string>
+           </property>
+           <property name="text">
+            <string>Use &amp;Merge Base</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="cbRecordOrigin">
+           <property name="toolTip">
+            <string>Record the origin commit SHA in the cherry-picked commit message (-x option)</string>
+           </property>
+           <property name="text">
+            <string>&amp;Record Origin</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_options">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnSelectAll">
+           <property name="toolTip">
+            <string>Select all commits</string>
+           </property>
+           <property name="text">
+            <string>Select &amp;All</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnSelectNone">
+           <property name="toolTip">
+            <string>Deselect all commits</string>
+           </property>
+           <property name="text">
+            <string>Select &amp;None</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QSplitter" name="splitterMain">
+      <property name="orientation">
+       <enum>Qt::Orientation::Horizontal</enum>
+      </property>
+      <widget class="QFrame" name="frameCommits">
+       <property name="frameShape">
+        <enum>QFrame::Shape::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Shadow::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_commits">
+        <property name="leftMargin">
+         <number>4</number>
+        </property>
+        <property name="topMargin">
+         <number>4</number>
+        </property>
+        <property name="rightMargin">
+         <number>4</number>
+        </property>
+        <property name="bottomMargin">
+         <number>4</number>
+        </property>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_commits_header">
+          <item>
+           <widget class="QLabel" name="labelCommits">
+            <property name="text">
+             <string>Commits to Cherry-Pick</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QtWaitingSpinner" name="spinnerCommits" native="true"/>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_commits">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="LogView" name="logView" native="true">
+          <property name="toolTip">
+           <string>Click commits to view diff. Use Ctrl+Click or checkboxes to select multiple commits to cherry-pick</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QSplitter" name="splitterRight">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <widget class="QFrame" name="frameDiff">
+        <property name="frameShape">
+         <enum>QFrame::Shape::StyledPanel</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Raised</enum>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_diff">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="leftMargin">
+          <number>4</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_diff_header">
+           <item>
+            <widget class="QLabel" name="labelDiff">
+             <property name="text">
+              <string>Diff</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QtWaitingSpinner" name="spinnerDiff" native="true"/>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_diff">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="PatchViewer" name="diffViewer" native="true"/>
+         </item>
+        </layout>
+       </widget>
+       <widget class="CommitDetailPanel" name="commitDetailPanel" native="true"/>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="frameActions">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Shape::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Shadow::Raised</enum>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_actions">
+       <property name="leftMargin">
+        <number>4</number>
+       </property>
+       <property name="topMargin">
+        <number>4</number>
+       </property>
+       <property name="rightMargin">
+        <number>4</number>
+       </property>
+       <property name="bottomMargin">
+        <number>4</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="labelStatus">
+         <property name="text">
+          <string>Ready</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_actions">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnCherryPick">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="toolTip">
+          <string>Cherry-pick selected commits to target branch</string>
+         </property>
+         <property name="text">
+          <string>Cherry-&amp;Pick</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnClose">
+         <property name="text">
+          <string>&amp;Close</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LogView</class>
+   <extends>QWidget</extends>
+   <header>logview.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>PatchViewer</class>
+   <extends>QWidget</extends>
+   <header>patchviewer.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QtWaitingSpinner</class>
+   <extends>QWidget</extends>
+   <header>waitingspinnerwidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CommitDetailPanel</class>
+   <extends>QWidget</extends>
+   <header>commitdetailpanel.h</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>cbSourceBranch</tabstop>
+  <tabstop>cbTargetBranch</tabstop>
+  <tabstop>btnShowLogWindow</tabstop>
+  <tabstop>cbMergeBase</tabstop>
+  <tabstop>cbRecordOrigin</tabstop>
+  <tabstop>btnSelectAll</tabstop>
+  <tabstop>btnSelectNone</tabstop>
+  <tabstop>btnCherryPick</tabstop>
+  <tabstop>btnClose</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>btnClose</sender>
+   <signal>clicked()</signal>
+   <receiver>PickBranchWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>930</x>
+     <y>670</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>500</x>
+     <y>350</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

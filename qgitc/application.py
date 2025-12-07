@@ -41,6 +41,7 @@ from qgitc.events import (
     ShowAiAssistantEvent,
     ShowBranchCompareEvent,
     ShowCommitEvent,
+    ShowPickBranchEvent,
 )
 from qgitc.findsubmodules import FindSubmoduleThread
 from qgitc.findwidget import FindWidget
@@ -49,6 +50,7 @@ from qgitc.gitutils import Git
 from qgitc.mainwindow import MainWindow
 from qgitc.newversiondialog import NewVersionDialog
 from qgitc.otelimpl import OTelService
+from qgitc.pickbranchwindow import PickBranchWindow
 from qgitc.settings import Settings
 from qgitc.textline import Link
 from qgitc.version import __version__
@@ -60,7 +62,6 @@ try:
     from qgitc.otelenv import OTEL_AUTH, OTEL_ENDPOINT
 except ImportError:
     OTEL_ENDPOINT = None
-
 
 
 class Application(ApplicationBase):
@@ -87,6 +88,7 @@ class Application(ApplicationBase):
         self._aiChatWindow = None
         self._commitWindow = None
         self._branchCompareWindow = None
+        self._pickBranchWindow = None
 
         self._threads: List[QThread] = []
         self._findSubmoduleThread: FindSubmoduleThread = None
@@ -173,6 +175,13 @@ class Application(ApplicationBase):
                 self._branchCompareWindow.destroyed.connect(
                     self._onBranchCompareWindowDestroyed)
             window = self._branchCompareWindow
+
+        elif type == WindowType.PickBranchWindow:
+            if not self._pickBranchWindow and ensureCreated:
+                self._pickBranchWindow = PickBranchWindow()
+                self._pickBranchWindow.destroyed.connect(
+                    self._onPickBranchWindowDestroyed)
+            window = self._pickBranchWindow
 
         return window
 
@@ -264,6 +273,21 @@ class Application(ApplicationBase):
                 window.compareBranches(event.targetBranch, event.baseBranch)
             return True
 
+        if type == ShowPickBranchEvent.Type:
+            window = self.getWindow(WindowType.PickBranchWindow)
+            self._ensureVisible(window)
+            if event.sourceBranch or event.targetBranch:
+                # Set branches if provided
+                if event.sourceBranch:
+                    idx = window.ui.cbSourceBranch.findText(event.sourceBranch)
+                    if idx >= 0:
+                        window.ui.cbSourceBranch.setCurrentIndex(idx)
+                if event.targetBranch:
+                    idx = window.ui.cbTargetBranch.findText(event.targetBranch)
+                    if idx >= 0:
+                        window.ui.cbTargetBranch.setCurrentIndex(idx)
+            return True
+
         if type == QEvent.ApplicationPaletteChange:
             self._setupColorSchema()
 
@@ -283,6 +307,9 @@ class Application(ApplicationBase):
 
     def _onBranchCompareWindowDestroyed(self, obj):
         self._branchCompareWindow = None
+
+    def _onPickBranchWindowDestroyed(self, obj):
+        self._pickBranchWindow = None
 
     def _onNewVersionAvailable(self, version):
         ignoredVersion = self.settings().ignoredVersion()

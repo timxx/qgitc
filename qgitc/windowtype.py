@@ -9,3 +9,4 @@ class WindowType(Enum):
     AiAssistant = auto()
     CommitWindow = auto()
     BranchCompareWindow = auto()
+    PickBranchWindow = auto()

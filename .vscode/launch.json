@@ -53,6 +53,16 @@
             ]
         },
         {
+            "name": "Pick Branch",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceRoot}/qgitc.py",
+            "console": "integratedTerminal",
+            "args": [
+                "pick"
+            ]
+        },
+        {
             "name": "MergeTool",
             "type": "debugpy",
             "request": "launch",

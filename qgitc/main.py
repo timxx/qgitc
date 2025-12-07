@@ -103,6 +103,11 @@ def _setup_argument(prog):
         help="Compare changes between branches.")
     branch_compare_parser.set_defaults(func=_do_branch_compare)
 
+    pick_branch_parser = subparsers.add_parser(
+        "pick",
+        help="Cherry-pick commits from one branch to another.")
+    pick_branch_parser.set_defaults(func=_do_pick_branch)
+
     setup_shell_args(subparsers)
 
     return parser.parse_args()
@@ -433,6 +438,20 @@ def _do_branch_compare(args):
     app = _init_gui(args.cmd)
 
     window = app.getWindow(WindowType.BranchCompareWindow)
+    _move_center(window)
+
+    if window.restoreState():
+        window.show()
+    else:
+        window.showMaximized()
+
+    return _do_exec(app)
+
+
+def _do_pick_branch(args):
+    app = _init_gui(args.cmd)
+
+    window = app.getWindow(WindowType.PickBranchWindow)
     _move_center(window)
 
     if window.restoreState():

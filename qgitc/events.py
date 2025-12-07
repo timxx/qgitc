@@ -122,3 +122,12 @@ class ShowBranchCompareEvent(QEvent):
         super().__init__(QEvent.Type(ShowBranchCompareEvent.Type))
         self.targetBranch = targetBranch
         self.baseBranch = baseBranch
+
+
+class ShowPickBranchEvent(QEvent):
+    Type = QEvent.User + 13
+
+    def __init__(self, sourceBranch: str = None, targetBranch: str = None):
+        super().__init__(QEvent.Type(ShowPickBranchEvent.Type))
+        self.sourceBranch = sourceBranch
+        self.targetBranch = targetBranch

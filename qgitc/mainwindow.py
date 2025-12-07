@@ -17,6 +17,7 @@ from qgitc.events import (
     RequestCommitEvent,
     ShowAiAssistantEvent,
     ShowBranchCompareEvent,
+    ShowPickBranchEvent,
 )
 from qgitc.findwidget import FindWidget
 from qgitc.gitutils import Git
@@ -196,6 +197,8 @@ class MainWindow(StateWindow):
             self.__onCommitTriggered)
         self.ui.acBranchCompare.triggered.connect(
             self._onBranchCompareTriggered)
+        self.ui.acBranchPick.triggered.connect(
+            self._onPickBranchTriggered)
 
         self.ui.acShowAIAssistant.triggered.connect(
             self._onShowAiAssistant)
@@ -860,3 +863,17 @@ class MainWindow(StateWindow):
         app = ApplicationBase.instance()
         app.postEvent(app, ShowBranchCompareEvent(targetBranch, baseBranch))
         app.trackFeatureUsage("menu.branch_compare")
+
+    def _onPickBranchTriggered(self):
+        """Handle pick branch menu action"""
+        # Get current branch as target (where commits will be picked to)
+        if self.gitViewB:
+            targetBranch = self.ui.gitViewA.currentBranch()
+            sourceBranch = self.gitViewB.currentBranch()
+        else:
+            targetBranch = self.ui.gitViewA.currentBranch()
+            sourceBranch = None
+
+        app = ApplicationBase.instance()
+        app.postEvent(app, ShowPickBranchEvent(sourceBranch, targetBranch))
+        app.trackFeatureUsage("menu.pick_branch")

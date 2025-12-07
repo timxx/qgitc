@@ -197,6 +197,7 @@
     </property>
     <addaction name="acCommit"/>
     <addaction name="acBranchCompare"/>
+    <addaction name="acBranchPick"/>
     <addaction name="separator"/>
     <addaction name="acChangeCommitAuthor"/>
    </widget>
@@ -425,6 +426,11 @@
   <action name="acBranchCompare">
    <property name="text">
     <string>&amp;Branch Compare</string>
+   </property>
+  </action>
+  <action name="acBranchPick">
+   <property name="text">
+    <string>Cherry-&amp;Pick...</string>
    </property>
   </action>
   <action name="acChangeCommitAuthor">

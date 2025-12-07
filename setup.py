@@ -74,6 +74,7 @@ class BuildQt(Command):
                              rb"|searchlineedit"
                              rb"|repopathinput"
                              rb"|commitpanel"
+                             rb"|commitdetailpanel"
                              rb") (import .*$)")
 
         for uiFile in glob("qgitc/*.ui"):
