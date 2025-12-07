@@ -2789,7 +2789,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         for commit in commits:
             sha1 = commit.get("sha1", "")
             repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
-            if self._doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
+            if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
                 needReload = True
             else:
                 # Stop processing remaining commits
@@ -2800,7 +2800,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 sha1 = subCommit.get("sha1", "")
                 repoDir = fullRepoDir(subCommit.get(
                     "repoDir", None), self._branchDir)
-                if self._doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
+                if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
                     needReload = True
                 else:
                     # Stop processing remaining commits
@@ -2810,13 +2810,13 @@ class LogView(QAbstractScrollArea, CommitSource):
         if needReload:
             self.reloadLogs()
 
-    def _doCherryPick(self, repoDir: str, sha1: str, sourceRepoDir: str, sourceView: 'LogView') -> bool:
+    def doCherryPick(self, repoDir: str, sha1: str, sourceRepoDir: str, sourceView: 'LogView', recordOrigin=True) -> bool:
         """Perform cherry-pick of a single commit"""
         if sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
             return self._applyLocalChanges(repoDir, sha1, sourceRepoDir, sourceView)
 
         ret, error, _ = Git.cherryPick(
-            [sha1], recordOrigin=True, repoDir=repoDir)
+            [sha1], recordOrigin=recordOrigin, repoDir=repoDir)
         if ret != 0:
             # Check if it's an empty commit (already applied)
             if self._handleEmptyCherryPick(repoDir, sha1, error, sourceView):

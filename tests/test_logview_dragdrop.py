@@ -510,7 +510,7 @@ class TestLogViewDragDrop(TestBase):
         """Test successful cherry-pick operation"""
         mock_cherry_pick.return_value = (0, "", "")
 
-        result = self.logview._doCherryPick(
+        result = self.logview.doCherryPick(
             self.gitDir.name, "abc123", self.gitDir.name, None
         )
 
@@ -525,7 +525,7 @@ class TestLogViewDragDrop(TestBase):
         with patch.object(self.logview, '_resolveCherryPickConflict') as mock_resolve:
             mock_resolve.return_value = False
 
-            result = self.logview._doCherryPick(
+            result = self.logview.doCherryPick(
                 self.gitDir.name, "abc123", self.gitDir.name, None
             )
 
@@ -540,7 +540,7 @@ class TestLogViewDragDrop(TestBase):
         with patch.object(self.logview, '_handleEmptyCherryPick') as mock_handle:
             mock_handle.return_value = True
 
-            result = self.logview._doCherryPick(
+            result = self.logview.doCherryPick(
                 self.gitDir.name, "abc123", self.gitDir.name, None
             )
 
@@ -553,7 +553,7 @@ class TestLogViewDragDrop(TestBase):
         mock_cherry_pick.return_value = (1, "some error occurred", "")
 
         with patch.object(QMessageBox, 'critical') as mock_critical:
-            result = self.logview._doCherryPick(
+            result = self.logview.doCherryPick(
                 self.gitDir.name, "abc123", self.gitDir.name, None
             )
 
@@ -565,7 +565,7 @@ class TestLogViewDragDrop(TestBase):
         with patch.object(self.logview, '_applyLocalChanges') as mock_apply:
             mock_apply.return_value = True
 
-            result = self.logview._doCherryPick(
+            result = self.logview.doCherryPick(
                 self.gitDir.name, Git.LUC_SHA1, self.gitDir.name, None
             )
 
@@ -577,7 +577,7 @@ class TestLogViewDragDrop(TestBase):
         with patch.object(self.logview, '_applyLocalChanges') as mock_apply:
             mock_apply.return_value = True
 
-            result = self.logview._doCherryPick(
+            result = self.logview.doCherryPick(
                 self.gitDir.name, Git.LCC_SHA1, self.gitDir.name, None
             )
 

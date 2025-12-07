@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from typing import List
+
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import QComboBox, QCompleter, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import fullRepoDir
+from qgitc.common import Commit, fullRepoDir
 from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
@@ -343,7 +345,7 @@ class PickBranchWindow(StateWindow):
         if commitCount == 0:
             return
 
-        markedCommits = []
+        markedCommits: List[Commit] = []
         for i in range(commitCount):
             if self.ui.logView.marker.isMarked(i):
                 commit = self.ui.logView.getCommit(i)
@@ -369,9 +371,9 @@ class PickBranchWindow(StateWindow):
         # Execute cherry-pick using LogView's implementation
         needReload = False
 
+        recordOrigin = self.ui.cbRecordOrigin.isChecked()
         for commit in markedCommits:
-            # Use LogView's _doCherryPick method which handles all edge cases
-            if self.ui.logView._doCherryPick(targetRepoDir, commit.sha1, commit.repoDir, self.ui.logView):
+            if self.ui.logView.doCherryPick(targetRepoDir, commit.sha1, commit.repoDir, self.ui.logView, recordOrigin):
                 needReload = True
             else:
                 # Stop processing remaining commits on error
