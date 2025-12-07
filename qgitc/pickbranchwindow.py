@@ -93,6 +93,9 @@ class PickBranchWindow(StateWindow):
         icon = QIcon(iconsPath + "clear-all.svg")
         self.ui.btnSelectNone.setIcon(icon)
 
+        self.ui.cbRecordOrigin.setChecked(
+            ApplicationBase.instance().settings().recordOrigin())
+
     def _setupBranchComboboxes(self):
         """Setup branch selection comboboxes"""
         self._setupBranchCombobox(self.ui.cbSourceBranch)
@@ -117,6 +120,8 @@ class PickBranchWindow(StateWindow):
         self.ui.btnSelectAll.clicked.connect(self._selectAllCommits)
         self.ui.btnSelectNone.clicked.connect(self._selectNoneCommits)
         self.ui.btnCherryPick.clicked.connect(self._onCherryPickClicked)
+        self.ui.cbRecordOrigin.toggled.connect(
+            lambda checked: ApplicationBase.instance().settings().setRecordOrigin(checked))
 
         # LogView signals
         self.ui.logView.currentIndexChanged.connect(self._onCommitSelected)

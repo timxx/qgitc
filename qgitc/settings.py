@@ -684,3 +684,9 @@ class Settings(QSettings):
         self.remove(historyId)
         self.endGroup()
         self.endGroup()
+
+    def recordOrigin(self):
+        return self.value("recordOrigin", True, type=bool)
+
+    def setRecordOrigin(self, record: bool):
+        self.setValue("recordOrigin", record)

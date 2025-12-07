@@ -2866,10 +2866,13 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Cherry-pick commits one by one
         needReload = False
 
+        # FIXME: Add global setting for record origin
+        recordOrigin = ApplicationBase.instance().settings().recordOrigin()
+
         for commit in commits:
             sha1 = commit.get("sha1", "")
             repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
-            if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
+            if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin):
                 needReload = True
             else:
                 # Stop processing remaining commits
