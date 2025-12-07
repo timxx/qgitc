@@ -88,6 +88,7 @@ class Preferences(QDialog):
             self.ui.tabTools: (self._initToolsTab, self._saveToolsTab),
             self.ui.tabLLM: (self._initLLMTab, self._saveLLMTab),
             self.ui.tabCommitMessage: (self._initCommitMessageTab, self._saveCommitMessageTab),
+            self.ui.tabCherryPick: (self._initCherryPickTab, self._saveCherryPickTab),
         }
 
         self._onTabChanged(self.ui.tabWidget.currentIndex())
@@ -587,6 +588,84 @@ class Preferences(QDialog):
 
         self.settings.setUseGlobalCommitActions(
             self.ui.cbUseGlobalActions.isChecked())
+
+    def _initCherryPickTab(self):
+        # General settings
+        self.ui.cbRecordOrigin.setChecked(
+            self.settings.recordOrigin())
+
+        # Filter settings
+        self.ui.cbFilterRevertedCommits.setChecked(
+            self.settings.filterRevertedCommits())
+
+        # Load patterns into list
+        patterns = self.settings.filterCommitPatterns()
+        self.ui.listFilterPatterns.clear()
+        for pattern in patterns:
+            self.ui.listFilterPatterns.addItem(pattern)
+
+        self.ui.cbFilterUseRegex.setChecked(
+            self.settings.filterUseRegex())
+
+        self.ui.cbApplyFilterByDefault.setChecked(
+            self.settings.applyFilterByDefault())
+
+        # Connect pattern management buttons
+        self.ui.btnAddPattern.clicked.connect(self._onAddPatternClicked)
+        self.ui.btnRemovePattern.clicked.connect(self._onRemovePatternClicked)
+        self.ui.leNewPattern.returnPressed.connect(self._onAddPatternClicked)
+
+    def _saveCherryPickTab(self):
+        # General settings
+        self.settings.setRecordOrigin(
+            self.ui.cbRecordOrigin.isChecked())
+
+        # Filter settings
+        self.settings.setFilterRevertedCommits(
+            self.ui.cbFilterRevertedCommits.isChecked())
+
+        # Save patterns from list
+        patterns = []
+        for i in range(self.ui.listFilterPatterns.count()):
+            item = self.ui.listFilterPatterns.item(i)
+            if item and item.text().strip():
+                patterns.append(item.text().strip())
+        self.settings.setFilterCommitPatterns(patterns)
+
+        self.settings.setFilterUseRegex(
+            self.ui.cbFilterUseRegex.isChecked())
+
+        self.settings.setApplyFilterByDefault(
+            self.ui.cbApplyFilterByDefault.isChecked())
+
+    def _onAddPatternClicked(self):
+        """Add a new pattern to the filter list"""
+        pattern = self.ui.leNewPattern.text().strip()
+        if not pattern:
+            return
+
+        # Check if pattern already exists
+        for i in range(self.ui.listFilterPatterns.count()):
+            item = self.ui.listFilterPatterns.item(i)
+            if item and item.text() == pattern:
+                # Pattern already exists, just clear the input
+                self.ui.leNewPattern.clear()
+                return
+
+        # Add the new pattern
+        self.ui.listFilterPatterns.addItem(pattern)
+        self.ui.leNewPattern.clear()
+        self.ui.leNewPattern.setFocus()
+
+    def _onRemovePatternClicked(self):
+        """Remove selected pattern(s) from the filter list"""
+        selectedItems = self.ui.listFilterPatterns.selectedItems()
+        if not selectedItems:
+            return
+
+        for item in selectedItems:
+            row = self.ui.listFilterPatterns.row(item)
+            self.ui.listFilterPatterns.takeItem(row)
 
     def _onGithubCopilotClicked(self):
         if self.ui.btnGithubCopilot.text() == self.tr("Logout"):

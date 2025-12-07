@@ -685,8 +685,75 @@ class Settings(QSettings):
         self.endGroup()
         self.endGroup()
 
+    # Cherry-Pick Settings Group
     def recordOrigin(self):
-        return self.value("recordOrigin", True, type=bool)
+        """Whether to record origin commit SHA in cherry-picked commit message"""
+        self.beginGroup("cherryPick")
+        value = self.value("recordOrigin", True, type=bool)
+        self.endGroup()
+        return value
 
     def setRecordOrigin(self, record: bool):
+        self.beginGroup("cherryPick")
         self.setValue("recordOrigin", record)
+        self.endGroup()
+
+    def filterRevertedCommits(self):
+        """Whether to filter out reverted commits when cherry-picking"""
+        self.beginGroup("cherryPick")
+        value = self.value("filterReverted", False, type=bool)
+        self.endGroup()
+        return value
+
+    def setFilterRevertedCommits(self, filter: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("filterReverted", filter)
+        self.endGroup()
+
+    def filterCommitPatterns(self):
+        """Get the list of patterns to filter commits"""
+        self.beginGroup("cherryPick")
+        size = self.beginReadArray("filterPatterns")
+        patterns = []
+        for i in range(size):
+            self.setArrayIndex(i)
+            pattern = self.value("pattern", "", type=str)
+            if pattern:
+                patterns.append(pattern)
+        self.endArray()
+        self.endGroup()
+        return patterns
+
+    def setFilterCommitPatterns(self, patterns: list):
+        """Set the list of patterns to filter commits"""
+        self.beginGroup("cherryPick")
+        self.beginWriteArray("filterPatterns")
+        for i, pattern in enumerate(patterns):
+            self.setArrayIndex(i)
+            self.setValue("pattern", pattern)
+        self.endArray()
+        self.endGroup()
+
+    def filterUseRegex(self):
+        """Whether to use regex for pattern matching"""
+        self.beginGroup("cherryPick")
+        value = self.value("filterUseRegex", False, type=bool)
+        self.endGroup()
+        return value
+
+    def setFilterUseRegex(self, useRegex: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("filterUseRegex", useRegex)
+        self.endGroup()
+
+    def applyFilterByDefault(self):
+        """Whether to apply cherry-pick filter automatically when loading commits"""
+        self.beginGroup("cherryPick")
+        value = self.value("applyFilterByDefault", False, type=bool)
+        self.endGroup()
+        return value
+
+    def setApplyFilterByDefault(self, apply: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("applyFilterByDefault", apply)
+        self.endGroup()

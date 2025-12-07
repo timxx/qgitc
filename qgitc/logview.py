@@ -2866,7 +2866,6 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Cherry-pick commits one by one
         needReload = False
 
-        # FIXME: Add global setting for record origin
         recordOrigin = ApplicationBase.instance().settings().recordOrigin()
 
         for commit in commits:

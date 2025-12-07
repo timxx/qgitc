@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import re
 from typing import List
 
 from PySide6.QtCore import QEvent, Qt, QTimer
@@ -11,6 +12,7 @@ from qgitc.common import Commit, dataDirPath, fullRepoDir
 from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
+from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_pickbranchwindow import Ui_PickBranchWindow
 from qgitc.waitingspinnerwidget import QtWaitingSpinner
@@ -92,6 +94,10 @@ class PickBranchWindow(StateWindow):
         self.ui.btnSelectAll.setIcon(icon)
         icon = QIcon(iconsPath + "clear-all.svg")
         self.ui.btnSelectNone.setIcon(icon)
+        icon = QIcon(iconsPath + "filter-list.svg")
+        self.ui.btnFilterCommits.setIcon(icon)
+        icon = QIcon(iconsPath + "settings.svg")
+        self.ui.btnSettings.setIcon(icon)
 
         self.ui.cbRecordOrigin.setChecked(
             ApplicationBase.instance().settings().recordOrigin())
@@ -119,6 +125,8 @@ class PickBranchWindow(StateWindow):
         self.ui.btnShowLogWindow.clicked.connect(self._showLogWindow)
         self.ui.btnSelectAll.clicked.connect(self._selectAllCommits)
         self.ui.btnSelectNone.clicked.connect(self._selectNoneCommits)
+        self.ui.btnFilterCommits.clicked.connect(self._filterCommits)
+        self.ui.btnSettings.clicked.connect(self._openSettings)
         self.ui.btnCherryPick.clicked.connect(self._onCherryPickClicked)
         self.ui.cbRecordOrigin.toggled.connect(
             lambda checked: ApplicationBase.instance().settings().setRecordOrigin(checked))
@@ -160,6 +168,12 @@ class PickBranchWindow(StateWindow):
         if event.type() == CommitsAvailableEvent.EventType:
             # mark all by default
             self._selectAllCommits()
+
+            # Apply filter by default if enabled
+            settings = ApplicationBase.instance().settings()
+            if settings.applyFilterByDefault():
+                self._filterCommits()
+
             return True
 
         return super().event(event)
@@ -341,6 +355,93 @@ class PickBranchWindow(StateWindow):
         self.ui.logView.marker.clear()
         self.ui.logView.viewport().update()
         self._updatePickButton()
+
+    def _filterCommits(self):
+        """Filter commits based on user preferences"""
+        settings = ApplicationBase.instance().settings()
+        filterReverted = settings.filterRevertedCommits()
+        filterPatterns = settings.filterCommitPatterns()
+        useRegex = settings.filterUseRegex()
+
+        if not filterReverted and not filterPatterns:
+            # No filters enabled, show message
+            self._updateStatus(
+                self.tr("No filters configured. Please configure filters in Settings > Cherry-Pick"))
+            return
+
+        commitCount = self.ui.logView.getCount()
+        if commitCount == 0:
+            return
+
+        # Compile regex patterns if needed
+        compiledPatterns = []
+        if filterPatterns:
+            if useRegex:
+                try:
+                    compiledPatterns = [re.compile(
+                        pattern, re.IGNORECASE) for pattern in filterPatterns]
+                except re.error as e:
+                    self._updateStatus(
+                        self.tr("Invalid regex pattern: {0}").format(str(e)))
+                    return
+            else:
+                # Convert to lowercase for case-insensitive matching
+                compiledPatterns = [pattern.lower()
+                                    for pattern in filterPatterns]
+
+        filteredCount = 0
+
+        # Get currently marked indices
+        markedIndices = self.ui.logView.marker.getMarkedIndices()
+        for index in markedIndices:
+            commit: Commit = self.ui.logView.getCommit(index)
+            if not commit:
+                continue
+
+            shouldFilter = False
+
+            # Check if commit is a revert commit
+            # TODO: check if it is reverted later
+            if filterReverted:
+                if "this reverts commit " in commit.comments:
+                    shouldFilter = True
+
+            # Check if commit matches any pattern
+            if not shouldFilter and compiledPatterns:
+                full_text = commit.comments.lower()
+                for pattern in compiledPatterns:
+                    if useRegex:
+                        # Pattern is a compiled regex
+                        if pattern.search(full_text):
+                            shouldFilter = True
+                            break
+                    else:
+                        # Pattern is a lowercase string
+                        if pattern in full_text:
+                            shouldFilter = True
+                            break
+
+            # Unmark the commit if it matches filter criteria
+            if shouldFilter:
+                self.ui.logView.marker.unmark(index)
+                filteredCount += 1
+
+        self.ui.logView.viewport().update()
+        self._updatePickButton()
+
+        if filteredCount > 0:
+            self._updateStatus(
+                self.tr("Filtered out {0} commit(s)").format(filteredCount))
+        else:
+            self._updateStatus(
+                self.tr("No commits matched the filter criteria"))
+
+    def _openSettings(self):
+        """Open preferences dialog to cherry-pick tab"""
+        settings = ApplicationBase.instance().settings()
+        dialog = Preferences(settings, self)
+        dialog.ui.tabWidget.setCurrentWidget(dialog.ui.tabCherryPick)
+        dialog.exec()
 
     def _updatePickButton(self):
         """Update cherry-pick button state"""
