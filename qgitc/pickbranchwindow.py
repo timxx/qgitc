@@ -3,11 +3,11 @@
 from typing import List
 
 from PySide6.QtCore import QEvent, Qt, QTimer
-from PySide6.QtGui import QMouseEvent
+from PySide6.QtGui import QIcon, QMouseEvent
 from PySide6.QtWidgets import QComboBox, QCompleter, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, fullRepoDir
+from qgitc.common import Commit, dataDirPath, fullRepoDir
 from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
@@ -85,6 +85,13 @@ class PickBranchWindow(StateWindow):
 
         # Install event filter to handle Ctrl+Click for marking
         self.ui.logView.viewport().installEventFilter(self)
+
+        # Setup icons for tool buttons
+        iconsPath = dataDirPath() + "/icons/"
+        icon = QIcon(iconsPath + "select-all.svg")
+        self.ui.btnSelectAll.setIcon(icon)
+        icon = QIcon(iconsPath + "clear-all.svg")
+        self.ui.btnSelectNone.setIcon(icon)
 
     def _setupBranchComboboxes(self):
         """Setup branch selection comboboxes"""
@@ -336,10 +343,13 @@ class PickBranchWindow(StateWindow):
         commitCount = self.ui.logView.getCount()
         self.ui.btnCherryPick.setEnabled(hasMarkedCommits and commitCount > 0)
 
-        if hasMarkedCommits:
+        if not hasMarkedCommits:
+            status = self.tr("Please select commits to cherry-pick")
+        else:
             markedCount = self.ui.logView.marker.countMarked()
-            self._updateStatus(
-                self.tr("Selected {0} commit(s) to cherry-pick").format(markedCount))
+            status = self.tr(
+                "Selected {0} commit(s) to cherry-pick").format(markedCount)
+        self._updateStatus(status)
 
     def _onCherryPickClicked(self):
         """Handle cherry-pick button click"""

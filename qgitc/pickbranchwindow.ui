@@ -118,19 +118,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QCheckBox" name="cbRecordOrigin">
-           <property name="toolTip">
-            <string>Record the origin commit SHA in the cherry-picked commit message (-x option)</string>
-           </property>
-           <property name="text">
-            <string>&amp;Record Origin</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
           <spacer name="horizontalSpacer_options">
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
@@ -142,26 +129,6 @@
             </size>
            </property>
           </spacer>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnSelectAll">
-           <property name="toolTip">
-            <string>Select all commits</string>
-           </property>
-           <property name="text">
-            <string>Select &amp;All</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnSelectNone">
-           <property name="toolTip">
-            <string>Deselect all commits</string>
-           </property>
-           <property name="text">
-            <string>Select &amp;None</string>
-           </property>
-          </widget>
          </item>
         </layout>
        </item>
@@ -218,14 +185,42 @@
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="ColoredIconToolButton" name="btnSelectAll">
+            <property name="toolTip">
+             <string>Select all commits</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="ColoredIconToolButton" name="btnSelectNone">
+            <property name="toolTip">
+             <string>Deselect all commits</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item>
-         <widget class="LogView" name="logView" native="true">
-          <property name="toolTip">
-           <string>Click commits to view diff. Use Ctrl+Click to select multiple commits to cherry-pick</string>
-          </property>
-         </widget>
+         <widget class="LogView" name="logView" native="true"/>
         </item>
        </layout>
       </widget>
@@ -340,6 +335,19 @@
         </spacer>
        </item>
        <item>
+        <widget class="QCheckBox" name="cbRecordOrigin">
+         <property name="toolTip">
+          <string>Record the origin commit SHA in the cherry-picked commit message (-x option)</string>
+         </property>
+         <property name="text">
+          <string>&amp;Record Origin</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btnCherryPick">
          <property name="enabled">
           <bool>false</bool>
@@ -352,13 +360,6 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnClose">
-         <property name="text">
-          <string>&amp;Close</string>
-         </property>
-        </widget>
-       </item>
       </layout>
      </widget>
     </item>
@@ -366,12 +367,6 @@
   </widget>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>LogView</class>
-   <extends>QWidget</extends>
-   <header>logview.h</header>
-   <container>1</container>
-  </customwidget>
   <customwidget>
    <class>PatchViewer</class>
    <extends>QWidget</extends>
@@ -385,6 +380,17 @@
    <container>1</container>
   </customwidget>
   <customwidget>
+   <class>ColoredIconToolButton</class>
+   <extends>QToolButton</extends>
+   <header>coloredicontoolbutton.h</header>
+  </customwidget>
+  <customwidget>
+   <class>LogView</class>
+   <extends>QWidget</extends>
+   <header>logview.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>CommitDetailPanel</class>
    <extends>QWidget</extends>
    <header>commitdetailpanel.h</header>
@@ -395,29 +401,10 @@
   <tabstop>cbTargetBranch</tabstop>
   <tabstop>btnShowLogWindow</tabstop>
   <tabstop>cbMergeBase</tabstop>
-  <tabstop>cbRecordOrigin</tabstop>
   <tabstop>btnSelectAll</tabstop>
   <tabstop>btnSelectNone</tabstop>
   <tabstop>btnCherryPick</tabstop>
-  <tabstop>btnClose</tabstop>
  </tabstops>
  <resources/>
- <connections>
-  <connection>
-   <sender>btnClose</sender>
-   <signal>clicked()</signal>
-   <receiver>PickBranchWindow</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>930</x>
-     <y>670</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>500</x>
-     <y>350</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>
