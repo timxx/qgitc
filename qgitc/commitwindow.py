@@ -68,6 +68,7 @@ class FileStatus(Enum):
     Unstaged = 1
     Staged = 2
 
+
 class GitErrorEvent(QEvent):
     Type = QEvent.User + 2
 
@@ -131,6 +132,16 @@ class NtpDateTimeReadyEvent(QEvent):
         super().__init__(QEvent.Type(NtpDateTimeReadyEvent.Type))
         self.ntpDateTime = ntpDateTime
         self.localDateTime = localDateTime
+
+
+class FileDeleteEvent(QEvent):
+    Type = QEvent.User + 8
+
+    def __init__(self, submodule: str, files: List[str], error: str = None):
+        super().__init__(QEvent.Type(FileDeleteEvent.Type))
+        self.submodule = submodule
+        self.files = files
+        self.error = error
 
 
 class CommitWindow(StateWindow):
@@ -567,7 +578,8 @@ class CommitWindow(StateWindow):
             if not self._ntpDateTime:
                 logger.warning("NTP time is not available, using local time")
             else:
-                ntpDateTime = self._ntpDateTime.addMSecs(self._ntpElapsed.elapsed())
+                ntpDateTime = self._ntpDateTime.addMSecs(
+                    self._ntpElapsed.elapsed())
                 date = ntpDateTime.toString(Qt.ISODate)
 
         submodules = {}
@@ -842,6 +854,10 @@ class CommitWindow(StateWindow):
 
         if evt.type() == FileRestoreEvent.Type:
             self._handleFileRestoreEvent(evt.submodule, evt.files, evt.error)
+            return True
+
+        if evt.type() == FileDeleteEvent.Type:
+            self._handleFileDeleteEvent(evt.submodule, evt.files, evt.error)
             return True
 
         if evt.type() == NtpDateTimeReadyEvent.Type:
@@ -1385,6 +1401,12 @@ class CommitWindow(StateWindow):
             indexes) > 1 else self.tr("&Restore this file")
         self._acRestoreFiles.setText(text)
         self._acRestoreFiles.setData(listView)
+
+        deleteText = self.tr("&Delete these files") if len(
+            indexes) > 1 else self.tr("&Delete this file")
+        self._acDeleteFiles.setText(deleteText)
+        self._acDeleteFiles.setData(listView)
+
         self._contextMenu.exec(listView.mapToGlobal(pos))
 
     def _setupContextMenu(self):
@@ -1392,12 +1414,15 @@ class CommitWindow(StateWindow):
         self._acRestoreFiles = self._contextMenu.addAction(
             self.tr("&Restore this file"),
             self._onRestoreFiles)
+        self._acDeleteFiles = self._contextMenu.addAction(
+            self.tr("&Delete this file"),
+            self._onDeleteFiles)
         self._contextMenu.addSeparator()
         self._contextMenu.addAction(self.tr("External &diff"),
-                                   self._onExternalDiff)
+                                    self._onExternalDiff)
         self._contextMenu.addSeparator()
         self._contextMenu.addAction(self.tr("&Open Containing Folder"),
-                                   self._onOpenContainingFolder)
+                                    self._onOpenContainingFolder)
         self._contextMenu.addAction(self.tr("&Copy File Path"),
                                     self._onCopyFilePath)
 
@@ -1442,11 +1467,74 @@ class CommitWindow(StateWindow):
         ApplicationBase.instance().postEvent(
             self, FileRestoreEvent(submodule, files, error))
 
+    def _onDeleteFiles(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.delete_files")
+        listView: QListView = self._acDeleteFiles.data()
+        repoFiles = self._collectSectionFiles(listView)
+        if not repoFiles:
+            return
+
+        # Count total files
+        totalFiles = sum(len(files) for files in repoFiles.values())
+
+        # Ask for confirmation if multiple files selected
+        if totalFiles > 1:
+            reply = QMessageBox.question(
+                self,
+                self.tr("Delete Files"),
+                self.tr("Are you sure you want to delete {} selected files?").format(
+                    totalFiles),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No)
+
+            if reply != QMessageBox.Yes:
+                return
+
+        self._blockUI()
+        self.ui.spinnerUnstaged.start()
+        self._submoduleExecutor.submit(repoFiles, self._doDeleteFiles)
+        self.clearModels()
+        self._curFile = None
+        self._curFileStatus = None
+
+    def _doDeleteFiles(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
+        if cancelEvent.isSet():
+            return
+
+        repoDir = fullRepoDir(submodule)
+        error = None
+
+        for file in files:
+            if cancelEvent.isSet():
+                break
+
+            fullPath = os.path.join(repoDir, file)
+            try:
+                if os.path.exists(fullPath):
+                    os.remove(fullPath)
+            except Exception as e:
+                error = str(e)
+                break
+
+        self._statusFetcher.fetchStatus(submodule, cancelEvent)
+
+        ApplicationBase.instance().postEvent(
+            self, FileDeleteEvent(submodule, files, error))
+
     def _handleFileRestoreEvent(self, submodule: str, files: List[str], error: str):
         if error:
             QMessageBox.critical(
                 self,
                 self.tr("Restore File Failed"),
+                error,
+                QMessageBox.Ok)
+            return
+
+    def _handleFileDeleteEvent(self, submodule: str, files: List[str], error: str):
+        if error:
+            QMessageBox.critical(
+                self,
+                self.tr("Delete File Failed"),
                 error,
                 QMessageBox.Ok)
             return
