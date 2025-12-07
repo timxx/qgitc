@@ -94,13 +94,9 @@ class PickBranchWindow(StateWindow):
 
     def _setupSignals(self):
         """Connect all signals"""
-        # Branch selection changes
-        self.ui.cbSourceBranch.currentIndexChanged.connect(
-            self._delayLoadCommits)
-        self.ui.cbTargetBranch.currentIndexChanged.connect(
-            self._delayLoadCommits)
-        self.ui.cbSourceBranch.editTextChanged.connect(self._delayLoadCommits)
-        self.ui.cbTargetBranch.editTextChanged.connect(self._delayLoadCommits)
+        # Branch selection changes - only when user selects from dropdown or presses Enter
+        self.ui.cbSourceBranch.activated.connect(self._delayLoadCommits)
+        self.ui.cbTargetBranch.activated.connect(self._delayLoadCommits)
         self.ui.cbMergeBase.toggled.connect(self._delayLoadCommits)
 
         # Button clicks
