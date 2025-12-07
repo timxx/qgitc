@@ -880,7 +880,7 @@ class TestLogViewDragDrop(TestBase):
             picked_order.append(sha1)
             return True
 
-        with patch.object(self.logview, '_doCherryPick', side_effect=mock_cherry_pick):
+        with patch.object(self.logview, 'doCherryPick', side_effect=mock_cherry_pick):
             with patch.object(self.logview, 'reloadLogs'):
                 self.logview._executeCherryPick(
                     commits, None, self.gitDir.name, None)
@@ -903,7 +903,7 @@ class TestLogViewDragDrop(TestBase):
             # Fail on second commit
             return sha1 != "commit2"
 
-        with patch.object(self.logview, '_doCherryPick', side_effect=mock_cherry_pick):
+        with patch.object(self.logview, 'doCherryPick', side_effect=mock_cherry_pick):
             with patch.object(self.logview, 'reloadLogs'):
                 self.logview._executeCherryPick(
                     commits, None, self.gitDir.name, None)
@@ -929,7 +929,7 @@ class TestLogViewDragDrop(TestBase):
             picked_commits.append((sha1, repoDir))
             return True
 
-        with patch.object(self.logview, '_doCherryPick', side_effect=mock_cherry_pick):
+        with patch.object(self.logview, 'doCherryPick', side_effect=mock_cherry_pick):
             with patch.object(self.logview, 'reloadLogs'):
                 self.logview._executeCherryPick(
                     commits, None, self.gitDir.name, None)

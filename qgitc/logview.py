@@ -83,6 +83,7 @@ class Marker():
 
     def __init__(self):
         self._ranges: List[MarkRange] = []
+        self._sorted = True  # Track if ranges are sorted
 
     def mark(self, begin, end, markType=MarkType.NORMAL):
         """Mark a range of commits with a specific type"""
@@ -91,18 +92,27 @@ class Marker():
         self._ranges = [
             r for r in self._ranges if not self._overlaps(r, markRange)]
         self._ranges.append(markRange)
+        self._sorted = False
 
     def _overlaps(self, r1: MarkRange, r2: MarkRange):
         """Check if two ranges overlap"""
         return not (r1.end < r2.begin or r2.end < r1.begin)
 
+    def _ensureSorted(self):
+        """Ensure ranges are sorted by begin index for efficient lookup"""
+        if not self._sorted:
+            self._ranges.sort(key=lambda r: r.begin)
+            self._sorted = True
+
     def clear(self):
         """Clear all marks"""
         self._ranges.clear()
+        self._sorted = True
 
     def clearType(self, markType):
         """Clear all marks of a specific type"""
         self._ranges = [r for r in self._ranges if r.markType != markType]
+        # Sorting state remains unchanged
 
     def hasMark(self):
         """Check if there are any marks"""
@@ -122,17 +132,86 @@ class Marker():
 
     def isMarked(self, index):
         """Check if an index is marked with any type"""
-        for r in self._ranges:
+        self._ensureSorted()
+        # Binary search for efficiency with many ranges
+        left, right = 0, len(self._ranges) - 1
+        while left <= right:
+            mid = (left + right) // 2
+            r = self._ranges[mid]
             if r.begin <= index <= r.end:
                 return True
+            elif index < r.begin:
+                right = mid - 1
+            else:
+                left = mid + 1
         return False
 
     def getMarkType(self, index):
         """Get the mark type for an index, or None if not marked"""
-        for r in self._ranges:
+        self._ensureSorted()
+        # Binary search for efficiency
+        left, right = 0, len(self._ranges) - 1
+        while left <= right:
+            mid = (left + right) // 2
+            r = self._ranges[mid]
             if r.begin <= index <= r.end:
                 return r.markType
+            elif index < r.begin:
+                right = mid - 1
+            else:
+                left = mid + 1
         return None
+
+    def toggle(self, index, markType=MarkType.NORMAL):
+        """Toggle mark at a single index. Returns True if now marked, False if unmarked."""
+        if self.isMarked(index):
+            self.unmark(index)
+            return False
+        else:
+            self.mark(index, index, markType)
+            return True
+
+    def unmark(self, begin, end=None):
+        """
+        Efficiently unmark a single index or range without rebuilding everything.
+        If end is None, unmaks only the single index at begin.
+        """
+        if end is None:
+            end = begin
+
+        # Normalize range
+        if begin > end:
+            begin, end = end, begin
+
+        newRanges = []
+        for r in self._ranges:
+            # No overlap - keep the range as is
+            if r.end < begin or r.begin > end:
+                newRanges.append(r)
+            else:
+                # There's overlap - we may need to split the range
+                # Case 1: Range before the unmark region
+                if r.begin < begin:
+                    newRanges.append(MarkRange(r.begin, begin - 1, r.markType))
+
+                # Case 2: Range after the unmark region
+                if r.end > end:
+                    newRanges.append(MarkRange(end + 1, r.end, r.markType))
+
+        self._ranges = newRanges
+        self._sorted = False
+
+    def countMarked(self):
+        """Efficiently count total number of marked commits"""
+        return sum(r.end - r.begin + 1 for r in self._ranges)
+
+    def getMarkedIndices(self):
+        """Get a sorted list of all marked indices (for iteration)"""
+        self._ensureSorted()
+        indices = []
+        for r in self._ranges:
+            indices.extend(range(r.begin, r.end + 1))
+        return indices
 
     def draw(self, index, painter: QPainter, rect: QRect):
         markType = self.getMarkType(index)
@@ -2477,7 +2556,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         def _addElidedText(text: str):
             nonlocal maxWidth
-            text = fm.elidedText(text, Qt.ElideRight, maxTextWidth - iconSize - padding * 2 - margin)
+            text = fm.elidedText(
+                text, Qt.ElideRight, maxTextWidth - iconSize - padding * 2 - margin)
             textWidth = fm.horizontalAdvance(text)
             maxWidth = max(maxWidth, textWidth)
             lines.append(text)
@@ -2853,7 +2933,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView') -> bool:
         """Resolve cherry-pick conflict"""
-        process, ok = self._runMergeTool(repoDir, sha1, error, sourceView, True)
+        process, ok = self._runMergeTool(
+            repoDir, sha1, error, sourceView, True)
         if not ok:
             return False
         if process:
@@ -2998,7 +3079,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
                 # Check if it's a conflict
                 if error and ("conflict" in error.lower() or Git.isApplying(repoDir)):
-                    process, ok = self._runMergeTool(repoDir, sha1, error, None, False)
+                    process, ok = self._runMergeTool(
+                        repoDir, sha1, error, None, False)
                     if not ok:
                         return False
                     if process:
