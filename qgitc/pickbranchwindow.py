@@ -382,7 +382,7 @@ class PickBranchWindow(StateWindow):
             if useRegex:
                 try:
                     compiledPatterns = [re.compile(
-                        pattern, re.IGNORECASE) for pattern in filterPatterns]
+                        pattern) for pattern in filterPatterns]
                 except re.error as e:
                     self._updateStatus(
                         self.tr("Invalid regex pattern: {0}").format(str(e)))
@@ -411,16 +411,16 @@ class PickBranchWindow(StateWindow):
 
             # Check if commit matches any pattern
             if not shouldFilter and compiledPatterns:
-                full_text = commit.comments.lower()
+                lowercase_commit_message = commit.comments.lower()
                 for pattern in compiledPatterns:
                     if useRegex:
                         # Pattern is a compiled regex
-                        if pattern.search(full_text):
+                        if pattern.search(commit.comments):
                             shouldFilter = True
                             break
                     else:
                         # Pattern is a lowercase string
-                        if pattern in full_text:
+                        if pattern in lowercase_commit_message:
                             shouldFilter = True
                             break
 
