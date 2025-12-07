@@ -5,7 +5,7 @@ from typing import List
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon, QMouseEvent
-from PySide6.QtWidgets import QComboBox, QCompleter, QMessageBox
+from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, dataDirPath, fullRepoDir
@@ -444,7 +444,11 @@ class PickBranchWindow(StateWindow):
         settings = ApplicationBase.instance().settings()
         dialog = Preferences(settings, self)
         dialog.ui.tabWidget.setCurrentWidget(dialog.ui.tabCherryPick)
-        dialog.exec()
+        result = dialog.exec()
+
+        # Update UI after preferences dialog closes
+        if result == QDialog.Accepted:
+            self.ui.cbRecordOrigin.setChecked(settings.recordOrigin())
 
     def _updateButtonStates(self):
         """Update all button states based on commit count and mark count"""
