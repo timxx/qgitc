@@ -102,6 +102,9 @@ class PickBranchWindow(StateWindow):
         self.ui.cbRecordOrigin.setChecked(
             ApplicationBase.instance().settings().recordOrigin())
 
+        # Initialize button states (no commits loaded yet)
+        self._updateButtonStates()
+
     def _setupBranchComboboxes(self):
         """Setup branch selection comboboxes"""
         self._setupBranchCombobox(self.ui.cbSourceBranch)
@@ -240,15 +243,15 @@ class PickBranchWindow(StateWindow):
         targetBranch = self.ui.cbTargetBranch.currentText()
 
         if not sourceBranch or not targetBranch:
+            self._updateButtonStates()
             self._updateStatus(
                 self.tr("Please select both source and target branches"))
-            self.ui.btnCherryPick.setEnabled(False)
             return
 
         if sourceBranch == targetBranch:
+            self._updateButtonStates()
             self._updateStatus(
                 self.tr("Source and target branches must be different"))
-            self.ui.btnCherryPick.setEnabled(False)
             return
 
         self._sourceBranch = sourceBranch
@@ -261,9 +264,9 @@ class PickBranchWindow(StateWindow):
                 args = ["merge-base", targetBranch, sourceBranch]
                 self._mergeBase = Git.checkOutput(args, True).strip()
             except Exception as e:
+                self._updateButtonStates()
                 self._updateStatus(
                     self.tr("Failed to find merge base: {0}").format(str(e)))
-                self.ui.btnCherryPick.setEnabled(False)
                 return
 
         # Load commits using git log
@@ -290,8 +293,8 @@ class PickBranchWindow(StateWindow):
 
         commitCount = self.ui.logView.getCount()
         if commitCount == 0:
+            self._updateButtonStates()
             self._updateStatus(self.tr("No commits to cherry-pick"))
-            self.ui.btnCherryPick.setEnabled(False)
         else:
             self._updateStatus(
                 self.tr("Found {0} commit(s) to cherry-pick").format(commitCount))
@@ -443,19 +446,33 @@ class PickBranchWindow(StateWindow):
         dialog.ui.tabWidget.setCurrentWidget(dialog.ui.tabCherryPick)
         dialog.exec()
 
-    def _updatePickButton(self):
-        """Update cherry-pick button state"""
-        hasMarkedCommits = self.ui.logView.marker.hasMark()
+    def _updateButtonStates(self):
+        """Update all button states based on commit count and mark count"""
         commitCount = self.ui.logView.getCount()
+        hasMarkedCommits = self.ui.logView.marker.hasMark()
+        markedCount = self.ui.logView.marker.countMarked() if hasMarkedCommits else 0
+
+        # Enable/disable buttons based on commit count and mark count
+        self.ui.btnSelectAll.setEnabled(
+            commitCount > 0 and markedCount < commitCount)
+        self.ui.btnSelectNone.setEnabled(markedCount > 0)
+        self.ui.btnFilterCommits.setEnabled(markedCount > 0)
         self.ui.btnCherryPick.setEnabled(hasMarkedCommits and commitCount > 0)
 
+        # Update status message
         if not hasMarkedCommits:
-            status = self.tr("Please select commits to cherry-pick")
+            if commitCount > 0:
+                status = self.tr("Please select commits to cherry-pick")
+            else:
+                status = self.tr("No commits available")
         else:
-            markedCount = self.ui.logView.marker.countMarked()
             status = self.tr(
                 "Selected {0} commit(s) to cherry-pick").format(markedCount)
         self._updateStatus(status)
+
+    def _updatePickButton(self):
+        """Update cherry-pick button state and selection/filter buttons (legacy method)"""
+        self._updateButtonStates()
 
     def _onCherryPickClicked(self):
         """Handle cherry-pick button click"""
