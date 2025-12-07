@@ -3,11 +3,12 @@ import os
 from unittest import mock
 from unittest.mock import patch
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QItemSelectionModel, Qt, QThread
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QMessageBox
 
-from qgitc.aichatwindow import AiChatWidget, AiChatWindow
+from qgitc.aichatwindow import AiChatWidget
+from qgitc.cancelevent import CancelEvent
 from qgitc.events import CodeReviewEvent
 from qgitc.gitutils import Git
 from qgitc.llm import AiModelBase
@@ -376,7 +377,8 @@ class TestCommitWindow(TestBase):
             spyInitialized = QSignalSpy(chatWidget.initialized)
             self.assertFalse(chatWidget._isInitialized)
 
-            self.wait(5000, lambda: spyInitialized.count() == 0 or spyFinished.count() == 0)
+            self.wait(5000, lambda: spyInitialized.count()
+                      == 0 or spyFinished.count() == 0)
             self.processEvents()
 
             self.assertEqual(spyInitialized.count(), 1)
@@ -388,3 +390,221 @@ class TestCommitWindow(TestBase):
             self.assertEqual(model.modelId, "test-model")
 
             chatWindow.close()
+
+    def testDeleteSingleFile(self):
+        self.waitForLoaded()
+
+        # Create a test file
+        testFile = os.path.join(self.gitDir.name, "delete_test.txt")
+        with open(testFile, "w+") as f:
+            f.write("test content")
+
+        # Refresh to show the file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertGreater(filesModel.rowCount(), 0)
+
+        # Find and select the test file
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName == "delete_test.txt":
+                lvFiles.setCurrentIndex(index)
+                break
+
+        # Mock the context menu action trigger
+        with patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            self.window._acDeleteFiles.setData(lvFiles)
+            self.window._onDeleteFiles()
+            self.processEvents()
+
+            # Verify submit was called with the delete function
+            mock_submit.assert_called_once()
+            args = mock_submit.call_args[0]
+            self.assertIn(".", args[0])  # Root submodule
+            self.assertIn("delete_test.txt", args[0]["."])
+            self.assertEqual(args[1], self.window._doDeleteFiles)
+
+    def testDeleteMultipleFiles(self):
+        self.waitForLoaded()
+
+        # Create multiple test files
+        testFiles = ["delete1.txt", "delete2.txt", "delete3.txt"]
+        for fileName in testFiles:
+            filePath = os.path.join(self.gitDir.name, fileName)
+            with open(filePath, "w+") as f:
+                f.write("test content")
+
+        # Refresh to show the files
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertGreater(filesModel.rowCount(), 0)
+
+        # Select all test files
+        lvFiles.clearSelection()
+        selectionModel = lvFiles.selectionModel()
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName in testFiles:
+                selectionModel.select(index, QItemSelectionModel.Select)
+
+        selectedIndexes = lvFiles.selectedIndexes()
+        self.assertEqual(len(selectedIndexes), 3)
+
+        # Mock QMessageBox.question to simulate user confirmation
+        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes) as mock_question, \
+                patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+
+            self.window._acDeleteFiles.setData(lvFiles)
+            self.window._onDeleteFiles()
+            self.processEvents()
+
+            # Verify confirmation dialog was shown
+            mock_question.assert_called_once()
+            call_args = mock_question.call_args[0]
+            # Check that the message mentions multiple files
+            self.assertIn("3", call_args[2])  # Message should contain "3"
+
+            # Verify submit was called
+            mock_submit.assert_called_once()
+
+    def testDeleteMultipleFilesCancel(self):
+        self.waitForLoaded()
+
+        # Create multiple test files
+        testFiles = ["delete_cancel1.txt", "delete_cancel2.txt"]
+        for fileName in testFiles:
+            filePath = os.path.join(self.gitDir.name, fileName)
+            with open(filePath, "w+") as f:
+                f.write("test content")
+
+        # Refresh to show the files
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        # Select all test files
+        lvFiles.clearSelection()
+        selectionModel = lvFiles.selectionModel()
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName in testFiles:
+                selectionModel.select(index, QItemSelectionModel.Select)
+
+        # Mock QMessageBox.question to simulate user canceling
+        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.No) as mock_question, \
+                patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+
+            self.window._acDeleteFiles.setData(lvFiles)
+            self.window._onDeleteFiles()
+            self.processEvents()
+
+            # Verify confirmation dialog was shown
+            mock_question.assert_called_once()
+
+            # Verify submit was NOT called (user canceled)
+            mock_submit.assert_not_called()
+
+    def testDoDeleteFiles(self):
+        """Test the actual file deletion worker function"""
+        self.waitForLoaded()
+
+        # Create test files
+        testFiles = ["worker_delete1.txt", "worker_delete2.txt"]
+        fullPaths = []
+        for fileName in testFiles:
+            filePath = os.path.join(self.gitDir.name, fileName)
+            with open(filePath, "w+") as f:
+                f.write("test content")
+            fullPaths.append(filePath)
+            self.assertTrue(os.path.exists(filePath))
+
+        # Mock cancel event with a mock thread
+        mockThread = mock.MagicMock(spec=QThread)
+        mockThread.isInterruptionRequested.return_value = False
+        cancelEvent = CancelEvent(mockThread)
+
+        # Call the delete worker function
+        self.window._doDeleteFiles(".", testFiles, cancelEvent)
+        self.processEvents()
+
+        # Verify files were deleted
+        for filePath in fullPaths:
+            self.assertFalse(os.path.exists(filePath))
+
+    def testDeleteFileError(self):
+        """Test error handling in file deletion"""
+        self.waitForLoaded()
+
+        # Try to delete a non-existent file
+        mockThread = mock.MagicMock(spec=QThread)
+        mockThread.isInterruptionRequested.return_value = False
+        cancelEvent = CancelEvent(mockThread)
+
+        # Mock a file that doesn't exist (should not cause error since we check existence)
+        nonExistentFile = "this_file_does_not_exist.txt"
+
+        with patch.object(self.window, '_statusFetcher'):
+            # Call delete on non-existent file (should handle gracefully)
+            self.window._doDeleteFiles(".", [nonExistentFile], cancelEvent)
+            self.processEvents()
+
+        # Test with an actual error (mock os.remove to raise exception)
+        testFile = "error_test.txt"
+        filePath = os.path.join(self.gitDir.name, testFile)
+        with open(filePath, "w+") as f:
+            f.write("test")
+
+        with patch('os.remove', side_effect=PermissionError("Permission denied")), \
+                patch.object(self.window._statusFetcher, 'fetchStatus'), \
+                patch("PySide6.QtWidgets.QMessageBox.critical") as mock_critical:
+
+            self.window._doDeleteFiles(".", [testFile], cancelEvent)
+            self.processEvents()
+
+            # Give time for event to be processed
+            self.wait(100)
+
+            # Verify error message box was shown
+            mock_critical.assert_called_once()
+
+            # File should still exist due to error
+            self.assertTrue(os.path.exists(filePath))
+
+    def testDeleteContextMenu(self):
+        """Test delete action in context menu"""
+        self.waitForLoaded()
+
+        # Create a test file
+        testFile = os.path.join(self.gitDir.name, "context_menu_test.txt")
+        with open(testFile, "w+") as f:
+            f.write("test content")
+
+        # Refresh to show the file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        # Find and select the test file
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName == "context_menu_test.txt":
+                lvFiles.setCurrentIndex(index)
+                break
+
+        # Verify delete action exists and has correct text
+        self.assertIsNotNone(self.window._acDeleteFiles)
+        self.assertIn("Delete", self.window._acDeleteFiles.text())

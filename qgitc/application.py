@@ -123,6 +123,9 @@ class Application(ApplicationBase):
         return self._settings
 
     def setupTranslator(self):
+        if self.testing:
+            return
+
         locale = self.uiLocale()
         # Do nothing for English locale, as the strings are already in English.
         # This fix addresses the issue where the translator misloaded Chinese when the locale is set to "en".
