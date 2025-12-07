@@ -3,6 +3,7 @@
 from typing import List
 
 from PySide6.QtCore import QEvent, Qt, QTimer
+from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QComboBox, QCompleter, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
@@ -82,6 +83,9 @@ class PickBranchWindow(StateWindow):
         self.ui.logView.setStandalone(False)
         self.ui.logView.setShowNoDataTips(True)
 
+        # Install event filter to handle Ctrl+Click for marking
+        self.ui.logView.viewport().installEventFilter(self)
+
     def _setupBranchComboboxes(self):
         """Setup branch selection comboboxes"""
         self._setupBranchCombobox(self.ui.cbSourceBranch)
@@ -142,7 +146,8 @@ class PickBranchWindow(StateWindow):
     def event(self, event: QEvent):
         """Handle custom events"""
         if event.type() == CommitsAvailableEvent.EventType:
-            self._updatePickButton()
+            # mark all by default
+            self._selectAllCommits()
             return True
 
         return super().event(event)
@@ -332,25 +337,21 @@ class PickBranchWindow(StateWindow):
         self.ui.btnCherryPick.setEnabled(hasMarkedCommits and commitCount > 0)
 
         if hasMarkedCommits:
-            # Count marked commits
-            markedCount = sum(1 for i in range(commitCount)
-                              if self.ui.logView.marker.isMarked(i))
+            markedCount = self.ui.logView.marker.countMarked()
             self._updateStatus(
                 self.tr("Selected {0} commit(s) to cherry-pick").format(markedCount))
 
     def _onCherryPickClicked(self):
         """Handle cherry-pick button click"""
-        # Get marked commits
         commitCount = self.ui.logView.getCount()
         if commitCount == 0:
             return
 
         markedCommits: List[Commit] = []
-        for i in range(commitCount):
-            if self.ui.logView.marker.isMarked(i):
-                commit = self.ui.logView.getCommit(i)
-                if commit:
-                    markedCommits.append(commit)
+        for i in self.ui.logView.marker.getMarkedIndices():
+            commit = self.ui.logView.getCommit(i)
+            if commit:
+                markedCommits.append(commit)
 
         if not markedCommits:
             return
@@ -376,3 +377,31 @@ class PickBranchWindow(StateWindow):
     def _updateStatus(self, message: str):
         """Update status label"""
         self.ui.labelStatus.setText(message)
+
+    def eventFilter(self, obj, event: QEvent) -> bool:
+        """Filter events from LogView viewport to handle Ctrl+Click for marking"""
+        if obj == self.ui.logView.viewport() and event.type() == QEvent.MouseButtonRelease:
+            if self._filterMouseRelease(event):
+                return True
+
+        return super().eventFilter(obj, event)
+
+    def _filterMouseRelease(self, event: QMouseEvent) -> bool:
+        if event.button() != Qt.LeftButton:
+            return False
+
+        modifiers = event.modifiers()
+        if modifiers != Qt.ControlModifier:
+            return False
+
+        # Handle Ctrl+Click to toggle marker
+        pos = event.position()
+        index = self.ui.logView.lineForPos(pos)
+        if index == -1:
+            return False
+
+        self.ui.logView.marker.toggle(index)
+
+        self.ui.logView.viewport().update()
+        self._updatePickButton()
+        return True  # Event handled

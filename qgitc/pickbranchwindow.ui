@@ -223,7 +223,7 @@
         <item>
          <widget class="LogView" name="logView" native="true">
           <property name="toolTip">
-           <string>Click commits to view diff. Use Ctrl+Click or checkboxes to select multiple commits to cherry-pick</string>
+           <string>Click commits to view diff. Use Ctrl+Click to select multiple commits to cherry-pick</string>
           </property>
          </widget>
         </item>
