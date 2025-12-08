@@ -578,6 +578,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.curIdx = -1
         self.hoverIdx = -1
         self.selectedIndices = set()  # Track multiple selected items
+        self.selectionAnchor = -1  # Track where shift-selection started
         self.branchA = True
         self.curBranch = ""
         self.args = None
@@ -856,6 +857,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if clearSelection:
             self.selectedIndices.clear()
             self.selectedIndices.add(index)
+            self.selectionAnchor = -1  # Reset anchor on new selection
 
         if index >= 0 and index < len(self.data):
             self.ensureVisible()
@@ -2284,6 +2286,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             oldIdx = self.curIdx
             self.curIdx = index
             self.__ensureChildren(index)
+            self.selectionAnchor = -1  # Reset anchor on Ctrl+click
 
             # Update only affected items
             if oldIdx != -1:
@@ -2292,14 +2295,17 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.currentIndexChanged.emit(self.curIdx)
 
         elif mod == Qt.ShiftModifier:
-            # Range selection from curIdx to clicked index
+            # Range selection from anchor (or curIdx if no anchor) to clicked index
             if self.curIdx == -1:
                 # No current index, just select clicked item
                 self.setCurrentIndex(index)
             else:
-                # Select range
-                start = min(self.curIdx, index)
-                end = max(self.curIdx, index)
+                # Set anchor if not already set
+                if self.selectionAnchor == -1:
+                    self.selectionAnchor = self.curIdx
+                # Select range from anchor to clicked index
+                start = min(self.selectionAnchor, index)
+                end = max(self.selectionAnchor, index)
                 self.selectedIndices.clear()
                 self.selectedIndices.update(range(start, end + 1))
                 self.setCurrentIndex(index, clearSelection=False)
@@ -2391,19 +2397,20 @@ class LogView(QAbstractScrollArea, CommitSource):
 
                 # Handle multi-selection with modifiers
                 if mod == Qt.ShiftModifier:
-                    # Shift+Up: Range selection
-                    start = min(oldIdx, self.curIdx)
-                    end = max(oldIdx, self.curIdx)
+                    # Shift+Up: Range selection from anchor
+                    if self.selectionAnchor == -1:
+                        self.selectionAnchor = oldIdx
+                    start = min(self.selectionAnchor, self.curIdx)
+                    end = max(self.selectionAnchor, self.curIdx)
                     self.selectedIndices.clear()
                     self.selectedIndices.update(range(start, end + 1))
-                # Note: Normal navigation (without modifiers) doesn't change selection
-
-                if self.curIdx >= startLine:
-                    self.invalidateItem(self.curIdx + 1)
-                    self.invalidateItem(self.curIdx)
                 else:
+                    # Reset anchor when not using Shift
+                    self.selectionAnchor = -1
+
+                if self.curIdx < startLine:
                     self.verticalScrollBar().setValue(self.curIdx)
-                    self.viewport().update()
+                self.viewport().update()
 
                 self.currentIndexChanged.emit(self.curIdx)
 
@@ -2416,22 +2423,25 @@ class LogView(QAbstractScrollArea, CommitSource):
 
                 # Handle multi-selection with modifiers
                 if mod == Qt.ShiftModifier:
-                    # Shift+Down: Range selection
-                    start = min(oldIdx, self.curIdx)
-                    end = max(oldIdx, self.curIdx)
+                    # Shift+Down: Range selection from anchor
+                    if self.selectionAnchor == -1:
+                        self.selectionAnchor = oldIdx
+                    start = min(self.selectionAnchor, self.curIdx)
+                    end = max(self.selectionAnchor, self.curIdx)
                     self.selectedIndices.clear()
                     self.selectedIndices.update(range(start, end + 1))
-                # Note: Normal navigation (without modifiers) doesn't change selection
+                else:
+                    # Reset anchor when not using Shift
+                    self.selectionAnchor = -1
 
                 if self.curIdx < int(endLineF) or \
                         (self.curIdx == int(endLineF)
                          and (endLineF - self.curIdx >= HALF_LINE_PERCENT)):
-                    self.invalidateItem(self.curIdx - 1)
-                    self.invalidateItem(self.curIdx)
+                    pass
                 else:
                     v = self.verticalScrollBar().value()
                     self.verticalScrollBar().setValue(v + 1)
-                    self.viewport().update()
+                self.viewport().update()
 
                 self.currentIndexChanged.emit(self.curIdx)
 

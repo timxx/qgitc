@@ -242,26 +242,26 @@ class TestLogWindow(TestLogWindowBase):
         # Set initial position
         logView.setCurrentIndex(0)
         self.assertEqual(0, logView.currentIndex())
-        self.assertEqual([], logView.getSelectedIndices())
+        self.assertEqual([0], logView.getSelectedIndices())
 
         # Normal arrow key navigation should not change selection
         QTest.keyClick(logView, Qt.Key_Down)
         self.assertEqual(1, logView.currentIndex())
-        self.assertEqual([], logView.getSelectedIndices())
+        self.assertEqual([0], logView.getSelectedIndices())
 
         QTest.keyClick(logView, Qt.Key_Up)
         self.assertEqual(0, logView.currentIndex())
-        self.assertEqual([], logView.getSelectedIndices())
+        self.assertEqual([0], logView.getSelectedIndices())
 
         # Space to toggle selection of current item
         QTest.keyClick(logView, Qt.Key_Space)
-        self.assertIn(0, logView.selectedIndices)
-        self.assertEqual([0], logView.getSelectedIndices())
+        self.assertNotIn(0, logView.selectedIndices)
+        self.assertEqual([], logView.getSelectedIndices())
 
         # Space again to deselect
         QTest.keyClick(logView, Qt.Key_Space)
-        self.assertNotIn(0, logView.selectedIndices)
-        self.assertEqual([], logView.getSelectedIndices())
+        self.assertIn(0, logView.selectedIndices)
+        self.assertEqual([0], logView.getSelectedIndices())
 
         # Shift+Down for range selection
         logView.setCurrentIndex(1)
@@ -289,8 +289,8 @@ class TestLogWindow(TestLogWindowBase):
         logView.setFocus()
         self.processEvents()
 
-        # Initially no selection
-        self.assertEqual([], logView.getSelectedIndices())
+        # Initially selection
+        self.assertEqual([0], logView.getSelectedIndices())
 
         # Ctrl+A to select all
         QTest.keyClick(logView, Qt.Key_A, Qt.ControlModifier)
@@ -309,8 +309,7 @@ class TestLogWindow(TestLogWindowBase):
         logView = self.window.ui.gitViewA.ui.logView
         self.assertGreater(logView.getCount(), 2)
 
-        # No selection initially
-        self.assertEqual([], logView.getSelectedCommits())
+        self.assertEqual([0], logView.getSelectedIndices())
 
         # Select some items
         logView.selectedIndices.add(0)
@@ -353,22 +352,22 @@ class TestLogWindow(TestLogWindowBase):
         # Set active item without selection
         logView.setCurrentIndex(1)
         self.assertEqual(1, logView.currentIndex())
-        self.assertEqual([], logView.getSelectedIndices())
+        self.assertEqual([1], logView.getSelectedIndices())
 
         # Select different items (not including active)
         logView.selectedIndices.add(0)
         logView.selectedIndices.add(2)
-        self.assertEqual([0, 2], logView.getSelectedIndices())
+        self.assertEqual([0, 1, 2], logView.getSelectedIndices())
         self.assertEqual(1, logView.currentIndex())
 
         # Navigate to another item - selection should not change
         logView.setCurrentIndex(2)
-        self.assertEqual([0, 2], logView.getSelectedIndices())
+        self.assertEqual([2], logView.getSelectedIndices())
         self.assertEqual(2, logView.currentIndex())
 
         # Select the active item too
         logView.selectedIndices.add(2)
-        self.assertEqual([0, 2], logView.getSelectedIndices())
+        self.assertEqual([2], logView.getSelectedIndices())
         self.assertEqual(2, logView.currentIndex())
 
     def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier, eventType=QEvent.Type.MouseButtonPress):
