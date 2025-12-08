@@ -43,11 +43,13 @@ class LogsFetcherWorkerBase(QObject):
 
     def needLocalChanges(self):
         # only if branch checked out
-        # and no disable by user
-        # and no logs filtered
+        # and not disabled in settings
+        # and no revision range
+        # and no merge-base
         return self._branchDir and \
             not self._noLocalChanges \
-            and not self._args[1]
+            and not self._args[1] \
+            and not self._mergeBaseTargetBranch
 
     def needReportSlowFetch(self):
         return self._submodules and self.needLocalChanges()
