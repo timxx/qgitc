@@ -7,8 +7,15 @@ from typing import List
 from PySide6.QtCore import Signal
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, extractFilePaths, isRevisionRange, toSubmodulePath
+from qgitc.common import (
+    Commit,
+    extractFilePaths,
+    isRevisionRange,
+    logger,
+    toSubmodulePath,
+)
 from qgitc.datafetcher import DataFetcher
+from qgitc.gitutils import Git
 
 log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 
@@ -23,6 +30,7 @@ class LogsFetcherImpl(DataFetcher):
         self.repoDir = repoDir
         self._branch: bytes = None
         self.commits: List[Commit] = []
+        self._mergeBaseTargetBranch = None
 
     def parse(self, data: bytes):
         commits = LogsFetcherImpl.parseLogs(data, self.separator, self.repoDir)
@@ -33,7 +41,8 @@ class LogsFetcherImpl(DataFetcher):
 
     def makeArgs(self, args):
         days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
-        gitArgs, self._branch = LogsFetcherImpl.makeGitArgs(args, self.repoDir, days)
+        gitArgs, self._branch = LogsFetcherImpl.makeGitArgs(
+            args, self.repoDir, days, self._cwd, self._mergeBaseTargetBranch)
         return gitArgs
 
     @staticmethod
@@ -62,12 +71,36 @@ class LogsFetcherImpl(DataFetcher):
         return commits
 
     @staticmethod
-    def makeGitArgs(args, repoDir=None, maxCompositeCommitsSince=0):
+    def makeGitArgs(args, repoDir=None, maxCompositeCommitsSince=0, cwd=None, mergeBaseTargetBranch=None):
         branch = args[0]
         logArgs = args[1]
         _branch = branch.encode("utf-8") if branch else None
 
         hasRevisionRange = LogsFetcherImpl.hasRevisionRange(logArgs)
+
+        # Calculate merge base for this submodule if mergeBaseTargetBranch is provided
+        mergeBase = None
+        if mergeBaseTargetBranch and branch and not hasRevisionRange:
+            try:
+                merge_args = ["merge-base", mergeBaseTargetBranch, branch]
+                mergeBase = Git.checkOutput(
+                    merge_args, text=True, repoDir=cwd).strip()
+                # Replace the revision range in logArgs with merge-base range
+                if mergeBase:
+                    hasRevisionRange = True
+                    # Remove any existing revision range from logArgs
+                    if logArgs:
+                        logArgs = [
+                            arg for arg in logArgs if not isRevisionRange(arg)]
+                    else:
+                        logArgs = []
+                    # Add new merge-base range
+                    logArgs.insert(0, f"{mergeBase}..{branch}")
+            except Exception as e:
+                # If merge-base fails for this submodule, log and continue with original range
+                logger.warning(
+                    f"Failed to calculate merge base for {repoDir or 'main repo'}: {e}")
+
         if branch and (branch.startswith("(HEAD detached") or hasRevisionRange):
             branch = None
 

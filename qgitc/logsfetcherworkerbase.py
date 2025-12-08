@@ -14,13 +14,14 @@ class LogsFetcherWorkerBase(QObject):
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
-    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
+    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args, mergeBaseTargetBranch=None):
         super().__init__()
 
         self._submodules = submodules.copy() if submodules else []
         self._branchDir = branchDir
         self._noLocalChanges = noLocalChanges
         self._args = args
+        self._mergeBaseTargetBranch = mergeBaseTargetBranch
 
         self._errorData = b''
         self._exitCode = 0

@@ -774,7 +774,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         return settings.commitColorB().name()
 
-    def showLogs(self, branch, branchDir, args=None):
+    def showLogs(self, branch, branchDir, args=None, mergeBaseTargetBranch=None):
         self.curBranch = branch
         self.args = args
         self._finder.reset()
@@ -786,7 +786,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             submodules = app.submodules
         self.fetcher.setSubmodules(submodules)
 
-        self.fetcher.fetch(branch, args, branchDir=self._branchDir)
+        self.fetcher.fetch(branch, args, branchDir=self._branchDir,
+                           mergeBaseTargetBranch=mergeBaseTargetBranch)
         self.beginFetch.emit()
         self.viewport().update()
 

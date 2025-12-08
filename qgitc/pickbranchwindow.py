@@ -45,7 +45,6 @@ class PickBranchWindow(StateWindow):
         self.ui.splitterRight.setSizes(sizes)
 
         self._isFirstShow = True
-        self._mergeBase = None
         self._sourceBranch = None
         self._targetBranch = None
 
@@ -226,7 +225,6 @@ class PickBranchWindow(StateWindow):
         """Load commits from source branch"""
         self.ui.logView.clear()
         self.ui.diffView.clear()
-        self._mergeBase = None
 
         sourceBranch = self.ui.cbSourceBranch.currentText()
         targetBranch = self.ui.cbTargetBranch.currentText()
@@ -246,27 +244,17 @@ class PickBranchWindow(StateWindow):
         self._sourceBranch = sourceBranch
         self._targetBranch = targetBranch
 
-        # Calculate merge base if requested
+        # Check if merge base should be used
         useMergeBase = self.ui.cbMergeBase.isChecked()
         if useMergeBase:
-            try:
-                args = ["merge-base", targetBranch, sourceBranch]
-                self._mergeBase = Git.checkOutput(args, True).strip()
-            except Exception as e:
-                self._updateButtonStates()
-                self._updateStatus(
-                    self.tr("Failed to find merge base: {0}").format(str(e)))
-                return
-
-        # Load commits using git log
-        # Show commits that are in source but not in target
-        if useMergeBase and self._mergeBase:
-            revisionRange = f"{self._mergeBase}..{sourceBranch}"
+            revisionRange = None
         else:
-            revisionRange = f"{targetBranch}..{sourceBranch}"
+            revisionRange = [f"{targetBranch}..{sourceBranch}"]
 
         branchDir = Git.branchDir(sourceBranch)
-        self.ui.logView.showLogs(sourceBranch, branchDir, [revisionRange])
+        self.ui.logView.showLogs(
+            sourceBranch, branchDir, revisionRange,
+            mergeBaseTargetBranch=targetBranch if useMergeBase else None)
         self.ui.diffView.setBranchDir(branchDir)
         self._updateStatus(
             self.tr("Loading commits from {0}...").format(sourceBranch))
