@@ -9,7 +9,6 @@ from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, dataDirPath, fullRepoDir
-from qgitc.difffetcher import DiffFetcher
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
 from qgitc.preferences import Preferences
@@ -50,16 +49,7 @@ class PickBranchWindow(StateWindow):
         self._sourceBranch = None
         self._targetBranch = None
 
-        # Diff fetcher for showing commit diffs
-        self._diffFetcher = DiffFetcher(self)
-        self._diffFetcher.diffAvailable.connect(self._onDiffAvailable)
-        self._diffFetcher.fetchFinished.connect(self._onDiffFetchFinished)
-
         # Spinner delay timers
-        self._diffSpinnerDelayTimer = QTimer(self)
-        self._diffSpinnerDelayTimer.setSingleShot(True)
-        self._diffSpinnerDelayTimer.timeout.connect(self.ui.spinnerDiff.start)
-
         self._commitSpinnerDelayTimer = QTimer(self)
         self._commitSpinnerDelayTimer.setSingleShot(True)
         self._commitSpinnerDelayTimer.timeout.connect(
@@ -71,8 +61,10 @@ class PickBranchWindow(StateWindow):
         self._loadCommitsDelayTimer.timeout.connect(self._loadCommits)
 
         self._setupSpinner(self.ui.spinnerCommits)
-        self._setupSpinner(self.ui.spinnerDiff)
         self._setupSignals()
+
+        # Setup DiffView with vertical orientation (file list on bottom)
+        self.ui.diffView.setFileListOrientation(Qt.Vertical)
 
     def _setupUi(self):
         """Setup UI components"""
@@ -81,8 +73,6 @@ class PickBranchWindow(StateWindow):
 
         # Setup LogView to allow marking commits
         self.ui.logView.setEditable(False)
-        self.ui.logView.setAllowSelectOnFetch(False)
-        self.ui.logView.setStandalone(False)
         self.ui.logView.setShowNoDataTips(True)
 
         # Install event filter to handle Ctrl+Click for marking
@@ -162,7 +152,7 @@ class PickBranchWindow(StateWindow):
 
     def closeEvent(self, event):
         """Handle close event"""
-        self._diffFetcher.cancel()
+        self.ui.diffView.queryClose()
         self.ui.logView.queryClose()
         super().closeEvent(event)
 
@@ -235,8 +225,7 @@ class PickBranchWindow(StateWindow):
     def _loadCommits(self):
         """Load commits from source branch"""
         self.ui.logView.clear()
-        self.ui.diffViewer.clear()
-        self.ui.commitDetailPanel.clear()
+        self.ui.diffView.clear()
         self._mergeBase = None
 
         sourceBranch = self.ui.cbSourceBranch.currentText()
@@ -278,6 +267,7 @@ class PickBranchWindow(StateWindow):
 
         branchDir = Git.branchDir(sourceBranch)
         self.ui.logView.showLogs(sourceBranch, branchDir, [revisionRange])
+        self.ui.diffView.setBranchDir(branchDir)
         self._updateStatus(
             self.tr("Loading commits from {0}...").format(sourceBranch))
 
@@ -310,34 +300,8 @@ class PickBranchWindow(StateWindow):
         if not commit:
             return
 
-        # Show commit details
-        self.ui.commitDetailPanel.showCommit(commit)
-
-        # Fetch and show diff
-        self.ui.diffViewer.clear()
-        self._diffFetcher.resetRow(0)
-
-        if not self.ui.spinnerDiff.isSpinning():
-            self._diffSpinnerDelayTimer.start(500)
-
-        repoDir = fullRepoDir(commit.repoDir)
-        if repoDir and repoDir != ".":
-            self._diffFetcher.cwd = repoDir
-            self._diffFetcher.repoDir = commit.repoDir
-        else:
-            self._diffFetcher.cwd = Git.REPO_DIR
-            self._diffFetcher.repoDir = None
-
-        self._diffFetcher.fetch(commit.sha1, [], None)
-
-    def _onDiffAvailable(self, lineItems, fileItems):
-        """Handle diff data available"""
-        self.ui.diffViewer.appendLines(lineItems)
-
-    def _onDiffFetchFinished(self, exitCode):
-        """Handle diff fetch finished"""
-        self._diffSpinnerDelayTimer.stop()
-        self.ui.spinnerDiff.stop()
+        # Show commit in DiffView (handles both details and diff)
+        self.ui.diffView.showCommit(commit)
 
     def _showLogWindow(self):
         """Show the main log window to change repository"""

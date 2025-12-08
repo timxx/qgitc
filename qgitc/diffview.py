@@ -218,7 +218,7 @@ class DiffView(QWidget):
             self.tr("&Restore this file"),
             self.__onRestoreFiles)
 
-        self.splitter = QSplitter(self)
+        self.splitter = QSplitter(Qt.Horizontal, self)
         self.splitter.addWidget(self.viewer)
 
         self.fileListView.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -286,6 +286,26 @@ class DiffView(QWidget):
 
         self.fileListView.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.fileListView.installEventFilter(self)
+
+    def setFileListOrientation(self, orientation: Qt.Orientation):
+        """Set the orientation of the file list relative to the diff viewer.
+        
+        Args:
+            orientation: Qt.Horizontal (file list on right) or Qt.Vertical (file list on bottom)
+        """
+        self.splitter.setOrientation(orientation)
+
+        # Adjust splitter sizes based on orientation
+        if orientation == Qt.Horizontal:
+            # File list on right side
+            width = self.sizeHint().width()
+            sizes = [width * 2 / 3, width * 1 / 3]
+        else:
+            # File list on bottom
+            height = self.sizeHint().height()
+            sizes = [height * 2 / 3, height * 1 / 3]
+
+        self.splitter.setSizes(sizes)
 
     def __onFileListViewCurrentRowChanged(self, current, previous):
         if not self._withinFileRowChanged and current.isValid():
