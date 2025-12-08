@@ -623,9 +623,9 @@ class DiffView(QWidget):
                 content = self.tr("Parent: ") + parent
                 repoDir = commit.repoDir
                 if isLocalChanges and repoDir:
-                    index = self.commitSource.findCommitIndex(parent)
+                    index = self._commitSource.findCommitIndex(parent)
                     if index != -1:
-                        parentCommit = self.commitSource.getCommit(index)
+                        parentCommit = self._commitSource.getCommit(index)
                         repoDir = parentCommit.repoDir
 
                 content += self.__commitDesc(parent, repoDir)
@@ -795,4 +795,4 @@ class DiffView(QWidget):
         return True
 
     def setCommitSource(self, source: CommitSource):
-        self.commitSource = source
+        self._commitSource = source
