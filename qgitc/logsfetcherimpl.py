@@ -86,16 +86,18 @@ class LogsFetcherImpl(DataFetcher):
                 mergeBase = Git.checkOutput(
                     merge_args, text=True, repoDir=cwd).strip()
                 # Replace the revision range in logArgs with merge-base range
-                if mergeBase:
-                    hasRevisionRange = True
-                    # Remove any existing revision range from logArgs
-                    if logArgs:
-                        logArgs = [
-                            arg for arg in logArgs if not isRevisionRange(arg)]
-                    else:
-                        logArgs = []
-                    # Add new merge-base range
-                    logArgs.insert(0, f"{mergeBase}..{branch}")
+                if not mergeBase:
+                    mergeBase = f"{mergeBaseTargetBranch}"
+
+                hasRevisionRange = True
+                # Remove any existing revision range from logArgs
+                if logArgs:
+                    logArgs = [
+                        arg for arg in logArgs if not isRevisionRange(arg)]
+                else:
+                    logArgs = []
+                # Add new merge-base range
+                logArgs.insert(0, f"{mergeBase}..{branch}")
             except Exception as e:
                 # If merge-base fails for this submodule, log and continue with original range
                 logger.warning(
