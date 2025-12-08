@@ -845,7 +845,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             if (endLineF - self.curIdx) < HALF_LINE_PERCENT:
                 self.verticalScrollBar().setValue(startLine + 1)
 
-    def setCurrentIndex(self, index, clearSelection=False):
+    def setCurrentIndex(self, index, clearSelection=True):
         self.preferSha1 = None
         if index == self.curIdx and not clearSelection:
             return
@@ -855,6 +855,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Update selection based on clearSelection flag
         if clearSelection:
             self.selectedIndices.clear()
+            self.selectedIndices.add(index)
 
         if index >= 0 and index < len(self.data):
             self.ensureVisible()
@@ -2033,14 +2034,15 @@ class LogView(QAbstractScrollArea, CommitSource):
             graphPainter = QPainter(graphImage)
             graphPainter.setRenderHints(QPainter.Antialiasing)
 
-        isFullMessage = ApplicationBase.instance().settings().isFullCommitMessage()
+        app = ApplicationBase.instance()
+        isFullMessage = app.settings().isFullCommitMessage()
 
         def makeMessage(commit):
             if isFullMessage:
                 return commit.comments.replace('\n', ' ')
             return commit.comments.split('\n')[0]
 
-        colorSchema = ApplicationBase.instance().colorSchema()
+        colorSchema = app.colorSchema()
 
         painter.setFont(self.font())
         flags = Qt.AlignLeft | Qt.AlignVCenter | Qt.TextSingleLine
@@ -2127,7 +2129,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 painter.setPen(palette.color(QPalette.WindowText))
 
             # Draw focus/active border for current item (drawn over selection)
-            if isCurrent and self.hasFocus():
+            if isCurrent and app.applicationState() == Qt.ApplicationActive:
                 pen = QPen(colorSchema.FocusItemBorder)
                 pen.setCosmetic(True)
                 painter.setPen(pen)
@@ -2261,7 +2263,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if event.button() == Qt.RightButton:
             index = self.lineForPos(event.position())
             if index >= 0 and index != self.curIdx:
-                self.setCurrentIndex(index)
+                self.setCurrentIndex(index, clearSelection=False)
             return
 
         if event.button() != Qt.LeftButton:
@@ -2293,8 +2295,6 @@ class LogView(QAbstractScrollArea, CommitSource):
             # Range selection from curIdx to clicked index
             if self.curIdx == -1:
                 # No current index, just select clicked item
-                self.selectedIndices.clear()
-                self.selectedIndices.add(index)
                 self.setCurrentIndex(index)
             else:
                 # Select range
@@ -2302,22 +2302,12 @@ class LogView(QAbstractScrollArea, CommitSource):
                 end = max(self.curIdx, index)
                 self.selectedIndices.clear()
                 self.selectedIndices.update(range(start, end + 1))
-
-                oldIdx = self.curIdx
-                self.curIdx = index
-                self.__ensureChildren(index)
-
-                # Redraw all visible items since range may be large
-                self.viewport().update()
-                self.currentIndexChanged.emit(self.curIdx)
+                self.setCurrentIndex(index, clearSelection=False)
         else:
             # Normal click - clear previous selections and select clicked item
             needUpdate = index == self.curIdx and len(
                 self.selectedIndices) > 0 and index not in self.selectedIndices
-
-            self.selectedIndices.clear()
-            self.selectedIndices.add(index)
-            self.setCurrentIndex(index, clearSelection=False)
+            self.setCurrentIndex(index)
 
             if needUpdate:
                 self.viewport().update()
