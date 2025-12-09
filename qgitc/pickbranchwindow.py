@@ -447,6 +447,15 @@ class PickBranchWindow(StateWindow):
 
         # Check if target branch is checked out
         targetBranch = self.ui.cbTargetBranch.currentText()
+        sourceBranch = self.ui.cbSourceBranch.currentText()
+        if targetBranch == sourceBranch:
+            QMessageBox.warning(
+                self,
+                self.tr("Cherry-pick Failed"),
+                self.tr("The target branch '{0}' is the same as source branch.\n\n"
+                        "Please select a different target branch.").format(targetBranch))
+            return
+
         targetRepoDir = Git.branchDir(targetBranch)
         if not targetRepoDir or not Git.REPO_DIR:
             QMessageBox.warning(
