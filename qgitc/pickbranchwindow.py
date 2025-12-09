@@ -380,7 +380,7 @@ class PickBranchWindow(StateWindow):
             # Check if commit is a revert commit
             # TODO: check if it is reverted later
             if filterReverted:
-                if "this reverts commit " in commit.comments:
+                if "This reverts commit " in commit.comments:
                     shouldFilter = True
 
             # Check if commit matches any pattern
