@@ -76,8 +76,9 @@ class LogsFetcherImpl(DataFetcher):
         _branch = branch.encode("utf-8") if branch else None
 
         hasRevisionRange = LogsFetcherImpl.hasRevisionRange(logArgs)
+        hasNotValue = LogsFetcherImpl.hasNotArgValue(logArgs)
 
-        if branch and (branch.startswith("(HEAD detached") or hasRevisionRange):
+        if branch and (branch.startswith("(HEAD detached") or (hasRevisionRange and not hasNotValue)):
             branch = None
 
         git_args = ["log", "-z", "--topo-order",
@@ -89,7 +90,7 @@ class LogsFetcherImpl(DataFetcher):
         paths = None
         # reduce commits to analyze
         if repoDir and not LogsFetcherImpl.hasSinceArg(logArgs) and \
-                not hasRevisionRange and not LogsFetcherImpl.hasNotArgValue(logArgs):
+                not hasRevisionRange and not hasNotValue:
             paths = extractFilePaths(logArgs) if logArgs else None
             if not paths:
                 if maxCompositeCommitsSince > 0:

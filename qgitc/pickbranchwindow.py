@@ -8,7 +8,7 @@ from PySide6.QtGui import QIcon, QMouseEvent
 from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, dataDirPath, fullRepoDir
+from qgitc.common import Commit, dataDirPath
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
 from qgitc.preferences import Preferences
