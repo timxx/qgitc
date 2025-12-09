@@ -107,6 +107,8 @@ class GitView(QWidget):
         app.settings().compositeModeChanged.connect(
             self.__onCompositeModeChanged)
         app.submoduleAvailable.connect(self.__onSubmoduleAvailable)
+        if app.submodules:
+            self.__onSubmoduleAvailable(app.submodules, True)
 
     def __updateBranches(self, activeBranch=None):
         if self._delayTimer.isActive():
