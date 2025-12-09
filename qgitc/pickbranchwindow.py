@@ -45,6 +45,7 @@ class PickBranchWindow(StateWindow):
         self.ui.splitterRight.setSizes(sizes)
 
         self._isFirstShow = True
+        self._pendingSourceBranch = None
 
         # Spinner delay timers
         self._commitSpinnerDelayTimer = QTimer(self)
@@ -144,7 +145,7 @@ class PickBranchWindow(StateWindow):
         if not self._isFirstShow:
             return
 
-        self._reloadBranches()
+        QTimer.singleShot(0, self._reloadBranches)
         self._isFirstShow = False
 
     def closeEvent(self, event):
@@ -167,6 +168,23 @@ class PickBranchWindow(StateWindow):
             return True
 
         return super().event(event)
+
+    def setSourceBranch(self, branchName: str):
+        """Set source branch by name if it exists in the combobox
+
+        Args:
+            branchName: The name of the branch to select
+        """
+        # If branches haven't been loaded yet, store for later
+        if self.ui.cbSourceBranch.count() == 0:
+            self._pendingSourceBranch = branchName
+            return
+
+        self._pendingSourceBranch = None
+        index = self.ui.cbSourceBranch.findText(branchName)
+        if index != -1:
+            self.ui.cbSourceBranch.setCurrentIndex(index)
+            self._delayLoadCommits()
 
     def _reloadBranches(self):
         """Reload branch list from git"""
@@ -217,6 +235,13 @@ class PickBranchWindow(StateWindow):
             self.ui.cbBaseBranch.setCurrentIndex(curBranchIdx)
 
         self.ui.cbSourceBranch.setCurrentIndex(-1)
+        # Apply pending source branch if set
+        if self._pendingSourceBranch:
+            index = self.ui.cbSourceBranch.findText(self._pendingSourceBranch)
+            if index != -1:
+                self.ui.cbSourceBranch.setCurrentIndex(index)
+            self._pendingSourceBranch = None
+
         self.ui.cbSourceBranch.blockSignals(False)
         self.ui.cbTargetBranch.blockSignals(False)
         self.ui.cbBaseBranch.blockSignals(False)

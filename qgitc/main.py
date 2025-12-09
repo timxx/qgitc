@@ -106,6 +106,11 @@ def _setup_argument(prog):
     pick_branch_parser = subparsers.add_parser(
         "pick",
         help="Cherry-pick commits from one branch to another.")
+    pick_branch_parser.add_argument(
+        "source_branch",
+        metavar="<branch>",
+        nargs="?",
+        help="Source branch to cherry-pick from.")
     pick_branch_parser.set_defaults(func=_do_pick_branch)
 
     setup_shell_args(subparsers)
@@ -458,6 +463,10 @@ def _do_pick_branch(args):
         window.show()
     else:
         window.showMaximized()
+
+    # Set source branch if specified
+    if args.source_branch:
+        window.setSourceBranch(args.source_branch)
 
     return _do_exec(app)
 
