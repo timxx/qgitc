@@ -366,6 +366,11 @@ class PickBranchWindow(StateWindow):
                 compiledPatterns = [pattern.lower()
                                     for pattern in filterPatterns]
 
+        # Build revert tracking state if needed
+        revertedCommits = set()
+        if filterReverted:
+            revertedCommits = self._buildRevertTrackingState()
+
         filteredCount = 0
 
         # Get currently marked indices
@@ -377,11 +382,9 @@ class PickBranchWindow(StateWindow):
 
             shouldFilter = False
 
-            # Check if commit is a revert commit
-            # TODO: check if it is reverted later
-            if filterReverted:
-                if "this reverts commit " in commit.comments:
-                    shouldFilter = True
+            # Check if commit is effectively reverted (not reapplied later)
+            if filterReverted and commit.sha1 in revertedCommits:
+                shouldFilter = True
 
             # Check if commit matches any pattern
             if not shouldFilter and compiledPatterns:
@@ -412,6 +415,114 @@ class PickBranchWindow(StateWindow):
         else:
             self._updateStatus(
                 self.tr("No commits matched the filter criteria"))
+
+    def _buildRevertTrackingState(self) -> set:
+        """Build tracking state for reverted commits by processing from bottom to top.
+
+        Returns:
+            Set of SHA1s for commits that are effectively reverted (not reapplied later)
+        """
+        commitCount = self.ui.logView.getCount()
+        if commitCount == 0:
+            return set()
+
+        # Track the revert state of each commit
+        # True = currently reverted, False = currently active (original or reapplied)
+        revertState = {}  # sha1 -> bool
+
+        # Track what each revert commit reverts
+        # This is needed to handle transitive reverts (reverting a revert)
+        revertTarget = {}  # revert_commit_sha1 -> target_commit_sha1
+
+        # Process from bottom to top (newest to oldest, index 0 = top/newest)
+        # We reverse to process from oldest to newest for logical flow
+        for index in range(commitCount - 1, -1, -1):
+            commit: Commit = self.ui.logView.getCommit(index)
+            if not commit:
+                continue
+
+            match = re.search(
+                r'This reverts commit ([0-9a-fA-F]{7,40})', commit.comments)
+            if not match:
+                continue
+
+            sha1 = commit.sha1
+            revertedSha1 = match.group(1)
+            # Check if we're reverting a revert commit
+            if revertedSha1 in revertTarget:
+                # This is reverting a revert (reapply or re-revert case)
+                # Mark the direct target as reverted
+                revertState[revertedSha1] = True
+
+                # Follow the chain to find all transitively affected commits
+                current = revertedSha1
+                while current in revertTarget:
+                    current = revertTarget[current]
+                    # Toggle the transitive target
+                    currentState = revertState.get(current, False)
+                    revertState[current] = not currentState
+
+                # Track what this revert targets
+                revertTarget[sha1] = revertedSha1
+            else:
+                # This is a simple revert of a regular commit
+                currentState = revertState.get(revertedSha1, False)
+                revertState[revertedSha1] = not currentState
+
+                # Track what this revert targets
+                revertTarget[sha1] = revertedSha1
+
+        # Return the set of commits that are currently in reverted state
+        return {sha1 for sha1, isReverted in revertState.items() if isReverted}
+
+    def _calculateRevertDepth(self, message: str) -> int:
+        """Calculate the revert depth by analyzing nested revert/reapply structure.
+
+        Args:
+            message: Commit message to analyze
+
+        Returns:
+            0 = original commit (not a revert)
+            1 = revert ("Revert "...")
+            2 = reapply ("Reapply "..." which reverts a revert)
+            3 = revert of reapply ("Revert "Reapply "..."")
+            4 = reapply of revert of reapply, etc.
+
+        Examples:
+            'Fix bug' -> 0
+            'Revert "Fix bug"' -> 1
+            'Reapply "Fix bug"' -> 2
+            'Revert "Reapply "Fix bug""' -> 3
+            'Reapply "Revert "Reapply "Fix bug\"\"\"' -> 4
+        """
+        # Get the first line (title) of the commit message
+        firstLine = message.split('\n')[0]
+
+        # Count alternating Revert/Reapply patterns
+        depth = 0
+        text = firstLine
+
+        while True:
+            # Check for "Revert " at the start
+            revertMatch = re.match(r'^Revert\s+"', text)
+            if revertMatch:
+                depth += 1
+                # Remove the matched portion (including opening quote) to check inside
+                text = text[revertMatch.end():]
+                continue
+
+            # Check for "Reapply " at the start
+            reapplyMatch = re.match(r'^Reapply\s+"', text)
+            if reapplyMatch:
+                depth += 1
+                # Remove the matched portion (including opening quote) to check inside
+                text = text[reapplyMatch.end():]
+                continue
+
+            # No more nested revert/reapply
+            break
+
+        return depth
 
     def _openSettings(self):
         """Open preferences dialog to cherry-pick tab"""
