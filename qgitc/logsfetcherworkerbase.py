@@ -14,14 +14,13 @@ class LogsFetcherWorkerBase(QObject):
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
 
-    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args, mergeBaseTargetBranch=None):
+    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__()
 
         self._submodules = submodules.copy() if submodules else []
         self._branchDir = branchDir
         self._noLocalChanges = noLocalChanges
         self._args = args
-        self._mergeBaseTargetBranch = mergeBaseTargetBranch
 
         self._errorData = b''
         self._exitCode = 0
@@ -45,11 +44,9 @@ class LogsFetcherWorkerBase(QObject):
         # only if branch checked out
         # and not disabled in settings
         # and no revision range
-        # and no merge-base
         return self._branchDir and \
             not self._noLocalChanges \
-            and not self._args[1] \
-            and not self._mergeBaseTargetBranch
+            and not self._args[1]
 
     def needReportSlowFetch(self):
         return self._submodules and self.needLocalChanges()

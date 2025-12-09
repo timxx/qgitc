@@ -99,9 +99,8 @@ class LocalChangesFetcher(QObject):
 
 class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
-    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args, mergeBaseTargetBranch=None):
-        super().__init__(submodules, branchDir, noLocalChanges,
-                         *args, mergeBaseTargetBranch=mergeBaseTargetBranch)
+    def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
+        super().__init__(submodules, branchDir, noLocalChanges, *args)
 
         self._fetchers: List[LogsFetcherImpl] = []
         self._eventLoop = None
@@ -131,7 +130,6 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             self.logsAvailable)
         fetcher.fetchFinished.connect(self._onFetchNormalLogsFinished)
         fetcher.cwd = self._branchDir
-        fetcher._mergeBaseTargetBranch = self._mergeBaseTargetBranch
         self._fetchers.append(fetcher)
 
         fetcher.fetch(*self._args)
@@ -231,7 +229,6 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
                 fetcher.cwd = os.path.join(Git.REPO_DIR, submodule)
-            fetcher._mergeBaseTargetBranch = self._mergeBaseTargetBranch
             fetcher.fetchFinished.connect(self._onFetchFinished)
 
             if len(self._fetchers) < MAX_QUEUE_SIZE:

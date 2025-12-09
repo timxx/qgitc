@@ -30,7 +30,6 @@ class LogsFetcherImpl(DataFetcher):
         self.repoDir = repoDir
         self._branch: bytes = None
         self.commits: List[Commit] = []
-        self._mergeBaseTargetBranch = None
 
     def parse(self, data: bytes):
         commits = LogsFetcherImpl.parseLogs(data, self.separator, self.repoDir)
@@ -42,7 +41,7 @@ class LogsFetcherImpl(DataFetcher):
     def makeArgs(self, args):
         days = ApplicationBase.instance().settings().maxCompositeCommitsSince()
         gitArgs, self._branch = LogsFetcherImpl.makeGitArgs(
-            args, self.repoDir, days, self._cwd, self._mergeBaseTargetBranch)
+            args, self.repoDir, days, self._cwd)
         return gitArgs
 
     @staticmethod
@@ -71,37 +70,12 @@ class LogsFetcherImpl(DataFetcher):
         return commits
 
     @staticmethod
-    def makeGitArgs(args, repoDir=None, maxCompositeCommitsSince=0, cwd=None, mergeBaseTargetBranch=None):
-        branch = args[0]
-        logArgs = args[1]
+    def makeGitArgs(args, repoDir=None, maxCompositeCommitsSince=0, cwd=None):
+        branch: str = args[0]
+        logArgs: List[str] = args[1]
         _branch = branch.encode("utf-8") if branch else None
 
         hasRevisionRange = LogsFetcherImpl.hasRevisionRange(logArgs)
-
-        # Calculate merge base for this submodule if mergeBaseTargetBranch is provided
-        mergeBase = None
-        if mergeBaseTargetBranch and branch and not hasRevisionRange:
-            try:
-                merge_args = ["merge-base", mergeBaseTargetBranch, branch]
-                mergeBase = Git.checkOutput(
-                    merge_args, text=True, repoDir=cwd).strip()
-                # Replace the revision range in logArgs with merge-base range
-                if not mergeBase:
-                    mergeBase = f"{mergeBaseTargetBranch}"
-
-                hasRevisionRange = True
-                # Remove any existing revision range from logArgs
-                if logArgs:
-                    logArgs = [
-                        arg for arg in logArgs if not isRevisionRange(arg)]
-                else:
-                    logArgs = []
-                # Add new merge-base range
-                logArgs.insert(0, f"{mergeBase}..{branch}")
-            except Exception as e:
-                # If merge-base fails for this submodule, log and continue with original range
-                logger.warning(
-                    f"Failed to calculate merge base for {repoDir or 'main repo'}: {e}")
 
         if branch and (branch.startswith("(HEAD detached") or hasRevisionRange):
             branch = None
@@ -114,7 +88,8 @@ class LogsFetcherImpl(DataFetcher):
         needBoundary = True
         paths = None
         # reduce commits to analyze
-        if repoDir and not LogsFetcherImpl.hasSinceArg(logArgs) and not hasRevisionRange:
+        if repoDir and not LogsFetcherImpl.hasSinceArg(logArgs) and \
+                not hasRevisionRange and not LogsFetcherImpl.hasNotArgValue(logArgs):
             paths = extractFilePaths(logArgs) if logArgs else None
             if not paths:
                 if maxCompositeCommitsSince > 0:
@@ -162,5 +137,14 @@ class LogsFetcherImpl(DataFetcher):
             return False
         for arg in args:
             if isRevisionRange(arg):
+                return True
+        return False
+
+    @staticmethod
+    def hasNotArgValue(args: List[str]):
+        if not args:
+            return False
+        for i, arg in enumerate(args):
+            if arg == "--not" and i + 1 < len(args):
                 return True
         return False

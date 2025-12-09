@@ -284,7 +284,9 @@ def _isArgNeedValue(arg: str):
         "--max-count", "--skip", "--since", "--after", "--until", "--before",
         "--author", "--committer", "--grep-reflog", "--grep",
         "--min-parents", "--max-parents", "--glob", "--exclude",
-        "--format", "--encoding", "--date"
+        "--format", "--encoding", "--date",
+        # --not can be used without value
+         "--not",
         # "--branches", "--tags", "--remotes"
     ]
     return arg in known_args

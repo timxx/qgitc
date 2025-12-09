@@ -45,8 +45,6 @@ class PickBranchWindow(StateWindow):
         self.ui.splitterRight.setSizes(sizes)
 
         self._isFirstShow = True
-        self._sourceBranch = None
-        self._targetBranch = None
 
         # Spinner delay timers
         self._commitSpinnerDelayTimer = QTimer(self)
@@ -98,6 +96,7 @@ class PickBranchWindow(StateWindow):
         """Setup branch selection comboboxes"""
         self._setupBranchCombobox(self.ui.cbSourceBranch)
         self._setupBranchCombobox(self.ui.cbTargetBranch)
+        self._setupBranchCombobox(self.ui.cbBaseBranch)
 
     def _setupBranchCombobox(self, comboBox: QComboBox):
         """Setup a single branch combobox with auto-completion"""
@@ -110,8 +109,7 @@ class PickBranchWindow(StateWindow):
         """Connect all signals"""
         # Branch selection changes - only when user selects from dropdown or presses Enter
         self.ui.cbSourceBranch.activated.connect(self._delayLoadCommits)
-        self.ui.cbTargetBranch.activated.connect(self._delayLoadCommits)
-        self.ui.cbMergeBase.toggled.connect(self._delayLoadCommits)
+        self.ui.cbBaseBranch.activated.connect(self._delayLoadCommits)
 
         # Button clicks
         self.ui.btnShowLogWindow.clicked.connect(self._showLogWindow)
@@ -179,9 +177,11 @@ class PickBranchWindow(StateWindow):
 
         self.ui.cbSourceBranch.blockSignals(True)
         self.ui.cbTargetBranch.blockSignals(True)
+        self.ui.cbBaseBranch.blockSignals(True)
 
         self.ui.cbSourceBranch.clear()
         self.ui.cbTargetBranch.clear()
+        self.ui.cbBaseBranch.clear()
 
         for branch in branches:
             branch = branch.strip()
@@ -190,11 +190,13 @@ class PickBranchWindow(StateWindow):
                     branch = branch.replace("remotes/", "")
                     self.ui.cbSourceBranch.addItem(branch)
                     self.ui.cbTargetBranch.addItem(branch)
+                    self.ui.cbBaseBranch.addItem(branch)
             elif branch:
                 if branch.startswith("*"):
                     pure_branch = branch.replace("*", "").strip()
                     self.ui.cbSourceBranch.addItem(pure_branch)
                     self.ui.cbTargetBranch.addItem(pure_branch)
+                    self.ui.cbBaseBranch.addItem(pure_branch)
                     defBranchIdx = self.ui.cbTargetBranch.count() - 1
                     if curBranchIdx == -1:
                         curBranchIdx = defBranchIdx
@@ -204,16 +206,20 @@ class PickBranchWindow(StateWindow):
                     branch = branch.strip()
                     self.ui.cbSourceBranch.addItem(branch)
                     self.ui.cbTargetBranch.addItem(branch)
+                    self.ui.cbBaseBranch.addItem(branch)
 
         # Set current branch as target by default
         if curBranchIdx == -1:
             curBranchIdx = defBranchIdx
         if curBranchIdx != -1:
             self.ui.cbTargetBranch.setCurrentIndex(curBranchIdx)
+            # Set base branch to target branch by default
+            self.ui.cbBaseBranch.setCurrentIndex(curBranchIdx)
 
         self.ui.cbSourceBranch.setCurrentIndex(-1)
         self.ui.cbSourceBranch.blockSignals(False)
         self.ui.cbTargetBranch.blockSignals(False)
+        self.ui.cbBaseBranch.blockSignals(False)
 
         self._loadCommits()
 
@@ -227,34 +233,25 @@ class PickBranchWindow(StateWindow):
         self.ui.diffView.clear()
 
         sourceBranch = self.ui.cbSourceBranch.currentText()
-        targetBranch = self.ui.cbTargetBranch.currentText()
+        baseBranch = self.ui.cbBaseBranch.currentText()
 
-        if not sourceBranch or not targetBranch:
+        if not sourceBranch or not baseBranch:
             self._updateButtonStates()
             self._updateStatus(
-                self.tr("Please select both source and target branches"))
+                self.tr("Please select both source and base branches"))
             return
 
-        if sourceBranch == targetBranch:
+        if sourceBranch == baseBranch:
             self._updateButtonStates()
             self._updateStatus(
-                self.tr("Source and target branches must be different"))
+                self.tr("Source and base branches must be different"))
             return
 
-        self._sourceBranch = sourceBranch
-        self._targetBranch = targetBranch
-
-        # Check if merge base should be used
-        useMergeBase = self.ui.cbMergeBase.isChecked()
-        if useMergeBase:
-            revisionRange = None
-        else:
-            revisionRange = [f"{targetBranch}..{sourceBranch}"]
+        revisionRange = ["--not", baseBranch]
 
         branchDir = Git.branchDir(sourceBranch)
         self.ui.logView.showLogs(
-            sourceBranch, branchDir, revisionRange,
-            mergeBaseTargetBranch=targetBranch if useMergeBase else None)
+            sourceBranch, branchDir, revisionRange)
         self.ui.diffView.setBranchDir(branchDir)
         self._updateStatus(
             self.tr("Loading commits from {0}...").format(sourceBranch))
@@ -449,13 +446,14 @@ class PickBranchWindow(StateWindow):
         markedCommits = list(reversed(markedCommits))
 
         # Check if target branch is checked out
-        targetRepoDir = Git.branchDir(self._targetBranch)
+        targetBranch = self.ui.cbTargetBranch.currentText()
+        targetRepoDir = Git.branchDir(targetBranch)
         if not targetRepoDir or not Git.REPO_DIR:
             QMessageBox.warning(
                 self,
                 self.tr("Cherry-pick Failed"),
                 self.tr("The target branch '{0}' is not checked out.\n\n"
-                        "Please checkout the branch first.").format(self._targetBranch))
+                        "Please checkout the branch first.").format(targetBranch))
             return
 
         recordOrigin = self.ui.cbRecordOrigin.isChecked()

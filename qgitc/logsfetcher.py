@@ -32,22 +32,21 @@ class LogsFetcher(QObject):
     def setSubmodules(self, submodules: List[str]):
         self._submodules = submodules
 
-    def fetch(self, *args, branchDir=None, mergeBaseTargetBranch=None):
+    def fetch(self, *args, branchDir=None):
         self.cancel()
         self._errorData = b''
         # always detect local changes for single repo
         noLocalChanges = len(self._submodules) > 0 and not ApplicationBase.instance(
         ).settings().detectLocalChanges()
 
-        if Git.RUN_SLOW and len(self._submodules) > 50 and os.name == "nt" and mergeBaseTargetBranch is None:
+        if Git.RUN_SLOW and len(self._submodules) > 50 and os.name == "nt":
             from qgitc.logsfetchergitworker import LogsFetcherGitWorker
             if LogsFetcherGitWorker.isSupportFilterArgs(args[1]):
                 self._worker = LogsFetcherGitWorker(
                     self._submodules, branchDir, noLocalChanges, *args)
         if not self._worker:
             self._worker = LogsFetcherQProcessWorker(
-                self._submodules, branchDir, noLocalChanges, *args,
-                mergeBaseTargetBranch=mergeBaseTargetBranch)
+                self._submodules, branchDir, noLocalChanges, *args)
         self._worker.logsAvailable.connect(self._onLogsAvailable)
         self._worker.fetchFinished.connect(self._onFetchFinished)
         self._worker.localChangesAvailable.connect(
