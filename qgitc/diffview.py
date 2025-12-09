@@ -618,6 +618,8 @@ class DiffView(QWidget):
         else:
             self.viewer.addAuthorLine(self.tr("Author: ") + self.tr("You"))
 
+        self.viewer.addSHA1Line(self.tr("Commit: ") + commit.sha1, False)
+
         if ApplicationBase.instance().settings().showParentChild():
             for parent in commit.parents:
                 content = self.tr("Parent: ") + parent
