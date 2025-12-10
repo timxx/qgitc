@@ -3116,6 +3116,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             repoDir, sha1, error, sourceView, True)
         if not ok:
             return False
+        # User merge by external tool
+        if not process:
+            return True
         if process:
             ret = process.exitCode()
             if ret == 0:
@@ -3262,6 +3265,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                         repoDir, sha1, error, None, False)
                     if not ok:
                         return False
+                    if not process:
+                        return True
                     if process:
                         ret = process.exitCode()
                         if ret == 0:
@@ -3303,15 +3308,29 @@ class LogView(QAbstractScrollArea, CommitSource):
                 os.remove(patchFile)
 
     def _runMergeTool(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView', isPick: bool):
-        reply = QMessageBox.question(
-            self, self.tr("Cherry-pick Conflict"),
+        msgBox = QMessageBox(self)
+        msgBox.setWindowTitle(self.tr("Cherry-pick Conflict"))
+        msgBox.setText(
             self.tr("Cherry-pick of commit {0} failed with conflicts:\n\n{1}\n\n"
                     "Do you want to resolve the conflicts using mergetool?").format(
-                sha1[:7], error),
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes)
+                sha1[:7], error))
+        msgBox.setIcon(QMessageBox.Question)
 
-        if reply == QMessageBox.Yes:
+        yesBtn = msgBox.addButton(QMessageBox.Yes)
+        msgBox.addButton(QMessageBox.Abort)
+        resolvedBtn = msgBox.addButton(
+            self.tr("Already Resolved"), QMessageBox.ActionRole)
+        msgBox.setDefaultButton(yesBtn)
+
+        msgBox.exec()
+        clickedBtn = msgBox.clickedButton()
+
+        if clickedBtn == resolvedBtn:
+            # User already resolved externally (trust user choice)
+            LogView._markPickStatus(sourceView, sha1, MarkType.PICKED)
+            return None, True
+
+        if clickedBtn == yesBtn:
             # Check if merge tool is configured
             toolName = ApplicationBase.instance().settings().mergeToolName()
             if not toolName:
