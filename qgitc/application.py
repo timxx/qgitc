@@ -624,3 +624,6 @@ class Application(ApplicationBase):
     def _onAboutToQuit(self):
         self._watchDog.stop()
         self._cancelFindSubmodules(True)
+
+        for thread in self._threads[:]:
+            self.terminateThread(thread)

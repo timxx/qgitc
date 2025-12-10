@@ -63,7 +63,7 @@ class TestApp(TestBase):
         if self.app._findSubmoduleThread and self.app._findSubmoduleThread.isRunning():
             self.app._findSubmoduleThread.requestInterruption()
             self.app._findSubmoduleThread.wait()
-
+            self.processEvents()
 
 class TestAppNoRepo(TestBase):
     def doCreateRepo(self):
