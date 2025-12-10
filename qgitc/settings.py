@@ -757,3 +757,39 @@ class Settings(QSettings):
         self.beginGroup("cherryPick")
         self.setValue("applyFilterByDefault", apply)
         self.endGroup()
+
+    def confirmCheckoutFiles(self):
+        """Whether to show confirmation dialog when checking out files"""
+        self.beginGroup("commit")
+        value = self.value("confirmCheckoutFiles", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setConfirmCheckoutFiles(self, confirm: bool):
+        self.beginGroup("commit")
+        self.setValue("confirmCheckoutFiles", confirm)
+        self.endGroup()
+
+    def confirmRestoreFiles(self):
+        """Whether to show confirmation dialog when restoring files"""
+        self.beginGroup("commit")
+        value = self.value("confirmRestoreFiles", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setConfirmRestoreFiles(self, confirm: bool):
+        self.beginGroup("commit")
+        self.setValue("confirmRestoreFiles", confirm)
+        self.endGroup()
+
+    def confirmDeleteFiles(self):
+        """Whether to show confirmation dialog when deleting files"""
+        self.beginGroup("commit")
+        value = self.value("confirmDeleteFiles", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setConfirmDeleteFiles(self, confirm: bool):
+        self.beginGroup("commit")
+        self.setValue("confirmDeleteFiles", confirm)
+        self.endGroup()

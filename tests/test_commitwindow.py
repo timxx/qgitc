@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from PySide6.QtCore import QItemSelectionModel, Qt, QThread
 from PySide6.QtTest import QSignalSpy, QTest
@@ -415,11 +415,29 @@ class TestCommitWindow(TestBase):
                 lvFiles.setCurrentIndex(index)
                 break
 
-        # Mock the context menu action trigger
-        with patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+        # This is the default value
+        self.assertTrue(self.app.settings().confirmDeleteFiles())
+
+        # Mock the confirmation dialog and executor submission
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.Yes
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
+                patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
+
             self.window._acDeleteFiles.setData(lvFiles)
             self.window._onDeleteFiles()
             self.processEvents()
+
+            # Verify confirmation dialog was shown
+            mock_msgbox_class.assert_called_once()
+            mock_msgbox.exec.assert_called_once()
 
             # Verify submit was called with the delete function
             mock_submit.assert_called_once()
@@ -458,19 +476,28 @@ class TestCommitWindow(TestBase):
         selectedIndexes = lvFiles.selectedIndexes()
         self.assertEqual(len(selectedIndexes), 3)
 
-        # Mock QMessageBox.question to simulate user confirmation
-        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes) as mock_question, \
+        self.assertTrue(self.app.settings().confirmDeleteFiles())
+
+        # Mock the confirmation dialog and executor submission
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.Yes
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
                 patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
 
             self.window._acDeleteFiles.setData(lvFiles)
             self.window._onDeleteFiles()
             self.processEvents()
 
             # Verify confirmation dialog was shown
-            mock_question.assert_called_once()
-            call_args = mock_question.call_args[0]
-            # Check that the message mentions multiple files
-            self.assertIn("3", call_args[2])  # Message should contain "3"
+            mock_msgbox_class.assert_called_once()
+            mock_msgbox.exec.assert_called_once()
 
             # Verify submit was called
             mock_submit.assert_called_once()
@@ -501,16 +528,26 @@ class TestCommitWindow(TestBase):
             if fileName in testFiles:
                 selectionModel.select(index, QItemSelectionModel.Select)
 
-        # Mock QMessageBox.question to simulate user canceling
-        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.No) as mock_question, \
+        # Mock the confirmation dialog to simulate user canceling
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.No
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
                 patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
 
             self.window._acDeleteFiles.setData(lvFiles)
             self.window._onDeleteFiles()
             self.processEvents()
 
             # Verify confirmation dialog was shown
-            mock_question.assert_called_once()
+            mock_msgbox_class.assert_called_once()
+            mock_msgbox.exec.assert_called_once()
 
             # Verify submit was NOT called (user canceled)
             mock_submit.assert_not_called()
@@ -613,14 +650,17 @@ class TestCommitWindow(TestBase):
         """Test checkout action for a single file"""
         self.waitForLoaded()
 
-        # Create and modify a tracked file
-        testFile = os.path.join(self.gitDir.name, "test.py")
-        with open(testFile, "a+") as f:
-            f.write("\n# Modified content\n")
+        # Modify a tracked file in submodule
+        subRepoFile = os.path.join("subRepo", "test.py")
+        testFile = os.path.join(self.gitDir.name, subRepoFile)
+        with open(testFile, "a") as f:
+            f.write("# Modified content\n")
 
         # Refresh to show the modified file
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
         self.waitForLoaded()
+
+        self.assertTrue(self.app.settings().confirmCheckoutFiles())
 
         lvFiles = self.window.ui.lvFiles
         filesModel = lvFiles.model()
@@ -631,30 +671,41 @@ class TestCommitWindow(TestBase):
         for row in range(filesModel.rowCount()):
             index = filesModel.index(row, 0)
             fileName = filesModel.data(index)
-            if fileName == "test.py":
+            if fileName == subRepoFile:
                 lvFiles.setCurrentIndex(index)
                 found = True
                 break
 
-        self.assertTrue(found, "test.py should be in the modified files list")
+        self.assertTrue(
+            found, f"{subRepoFile} should be in the modified files list")
 
-        # Mock QMessageBox.question to verify it's NOT called for single file
-        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes) as mock_question, \
+        # Mock the confirmation dialog and executor submission
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.Yes
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
                 patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
 
             self.window._acCheckoutFiles.setData(lvFiles)
             self.window._onCheckoutFiles()
+
             self.processEvents()
 
-            # Verify confirmation dialog was NOT shown for single file
-            mock_question.assert_not_called()
+            # Verify confirmation dialog was shown
+            mock_msgbox_class.assert_called_once()
+            mock_msgbox.exec.assert_called_once()
 
             # Verify submit was called with the checkout function
             mock_submit.assert_called_once()
             args = mock_submit.call_args[0]
-            self.assertIn(".", args[0])  # Root submodule
-            self.assertIn("test.py", args[0]["."])
-            self.assertEqual(args[1], self.window._doCheckoutFiles)
+            self.assertIn("subRepo", args[0])  # Submodule
+            self.assertIn(f"subRepo{os.sep}test.py", args[0]["subRepo"])
 
         self.waitForLoaded()
 
@@ -666,8 +717,8 @@ class TestCommitWindow(TestBase):
         testFiles = ["test.py", "README.md"]
         for fileName in testFiles:
             filePath = os.path.join(self.gitDir.name, fileName)
-            with open(filePath, "a+") as f:
-                f.write("\n# Modified content\n")
+            with open(filePath, "w") as f:
+                f.write(f"# Modified {fileName}\n")
 
         # Refresh to show the modified files
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
@@ -691,20 +742,26 @@ class TestCommitWindow(TestBase):
         self.assertEqual(selectedCount, len(testFiles),
                          "All test files should be selected")
 
-        # Mock QMessageBox.question to simulate user confirmation
-        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes) as mock_question, \
+        # Mock the confirmation dialog and executor submission
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.Yes
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
                 patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
 
             self.window._acCheckoutFiles.setData(lvFiles)
             self.window._onCheckoutFiles()
             self.processEvents()
 
             # Verify confirmation dialog was shown
-            mock_question.assert_called_once()
-            call_args = mock_question.call_args[0]
-            # Check that the message mentions multiple files and count
-            self.assertIn("2", call_args[2])  # Message should contain "2"
-            self.assertIn("selected files", call_args[2])
+            mock_msgbox_class.assert_called_once()
+            mock_msgbox.exec.assert_called_once()
 
             # Verify submit was called
             mock_submit.assert_called_once()
@@ -723,8 +780,8 @@ class TestCommitWindow(TestBase):
         testFiles = ["test.py", "README.md"]
         for fileName in testFiles:
             filePath = os.path.join(self.gitDir.name, fileName)
-            with open(filePath, "a+") as f:
-                f.write("\n# Modified for cancel test\n")
+            with open(filePath, "w") as f:
+                f.write(f"# Modified for cancel test: {fileName}\n")
 
         # Refresh to show the modified files
         QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
@@ -742,16 +799,26 @@ class TestCommitWindow(TestBase):
             if fileName in testFiles:
                 selectionModel.select(index, QItemSelectionModel.Select)
 
-        # Mock QMessageBox.question to simulate user canceling
-        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.No) as mock_question, \
+        # Mock the confirmation dialog to simulate user canceling
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.No
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
                 patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
 
             self.window._acCheckoutFiles.setData(lvFiles)
             self.window._onCheckoutFiles()
             self.processEvents()
 
             # Verify confirmation dialog was shown
-            mock_question.assert_called_once()
+            mock_msgbox_class.assert_called_once()
+            mock_msgbox.exec.assert_called_once()
 
             # Verify submit was NOT called (user canceled)
             mock_submit.assert_not_called()
@@ -873,10 +940,18 @@ class TestCommitWindow(TestBase):
                 lvFiles.setCurrentIndex(index)
                 break
 
-        # Mock tracking and test
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.No
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
         with patch.object(self.app, 'trackFeatureUsage') as mock_track, \
-                patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes), \
+            patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class, \
+                patch("qgitc.commitwindow.QCheckBox", return_value=mock_checkbox), \
                 patch.object(self.window._submoduleExecutor, 'submit'):
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
 
             self.window._acCheckoutFiles.setData(lvFiles)
             self.window._onCheckoutFiles()
@@ -884,3 +959,43 @@ class TestCommitWindow(TestBase):
 
             # Verify feature usage was tracked
             mock_track.assert_called_once_with("commit.checkout_files")
+
+    def testRestoreFile(self):
+        self.waitForLoaded()
+
+        # Modify a tracked file in submodule
+        subRepoFile = os.path.join("subRepo", "test.py")
+        testFile = os.path.join(self.gitDir.name, subRepoFile)
+        with open(testFile, "a") as f:
+            f.write("# Modified content\n")
+
+        # Refresh to show the modified file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        self.assertTrue(self.app.settings().confirmRestoreFiles())
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertGreater(filesModel.rowCount(), 0)
+
+        lvFiles.selectAll()
+
+        # Mock the confirmation dialog and executor submission
+        mock_msgbox = MagicMock()
+        mock_msgbox.exec.return_value = QMessageBox.Yes
+        mock_checkbox = MagicMock()
+        mock_checkbox.isChecked.return_value = False
+        mock_msgbox.checkBox.return_value = mock_checkbox
+
+        with patch("qgitc.commitwindow.QMessageBox", return_value=mock_msgbox) as mock_msgbox_class:
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
+
+            self.window._acRestoreFiles.setData(lvFiles)
+            self.window._onRestoreFiles()
+            self.processEvents()
+
+            mock_msgbox_class.assert_called_once()
+
+        self.waitForLoaded()

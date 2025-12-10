@@ -30,6 +30,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QListView,
@@ -1450,6 +1451,30 @@ class CommitWindow(StateWindow):
         if not repoFiles:
             return
 
+        # Show confirmation if enabled
+        settings = ApplicationBase.instance().settings()
+        if settings.confirmRestoreFiles():
+            msgBox = QMessageBox(self)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle(self.tr("Restore Files"))
+            msgBox.setText(
+                self.tr("Are you sure you want to restore the selected files?"))
+            msgBox.setInformativeText(self.tr(
+                "This will discard all local changes (both staged and unstaged) and restore files to HEAD state."))
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msgBox.setDefaultButton(QMessageBox.No)
+
+            checkBox = QCheckBox(self.tr("Don't show this message again"))
+            msgBox.setCheckBox(checkBox)
+
+            reply = msgBox.exec()
+
+            if checkBox.isChecked():
+                settings.setConfirmRestoreFiles(False)
+
+            if reply != QMessageBox.Yes:
+                return
+
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(repoFiles, self._doRestoreStaged)
@@ -1465,18 +1490,26 @@ class CommitWindow(StateWindow):
         if not repoFiles:
             return
 
-        # Count total files for confirmation
-        totalFiles = sum(len(files) for files in repoFiles.values())
+        # Show confirmation if enabled
+        settings = ApplicationBase.instance().settings()
+        if settings.confirmCheckoutFiles():
+            msgBox = QMessageBox(self)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle(self.tr("Checkout Files"))
+            msgBox.setText(
+                self.tr("Are you sure you want to checkout the selected files?"))
+            msgBox.setInformativeText(
+                self.tr("This will discard unstaged changes."))
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msgBox.setDefaultButton(QMessageBox.No)
 
-        # Ask for confirmation only if multiple files selected
-        if totalFiles > 1:
-            reply = QMessageBox.question(
-                self,
-                self.tr("Checkout Files"),
-                self.tr("Are you sure you want to checkout {} selected files? This will discard local changes.").format(
-                    totalFiles),
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No)
+            checkBox = QCheckBox(self.tr("Don't show this message again"))
+            msgBox.setCheckBox(checkBox)
+
+            reply = msgBox.exec()
+
+            if checkBox.isChecked():
+                settings.setConfirmCheckoutFiles(False)
 
             if reply != QMessageBox.Yes:
                 return
@@ -1537,18 +1570,26 @@ class CommitWindow(StateWindow):
         if not repoFiles:
             return
 
-        # Count total files
-        totalFiles = sum(len(files) for files in repoFiles.values())
+        # Show confirmation if enabled
+        settings = ApplicationBase.instance().settings()
+        if settings.confirmDeleteFiles():
+            msgBox = QMessageBox(self)
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setWindowTitle(self.tr("Delete Files"))
+            msgBox.setText(
+                self.tr("Are you sure you want to delete the selected files?"))
+            msgBox.setInformativeText(self.tr(
+                "This will permanently delete the files from disk. This action cannot be undone."))
+            msgBox.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msgBox.setDefaultButton(QMessageBox.No)
 
-        # Ask for confirmation if multiple files selected
-        if totalFiles > 1:
-            reply = QMessageBox.question(
-                self,
-                self.tr("Delete Files"),
-                self.tr("Are you sure you want to delete {} selected files?").format(
-                    totalFiles),
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No)
+            checkBox = QCheckBox(self.tr("Don't show this message again"))
+            msgBox.setCheckBox(checkBox)
+
+            reply = msgBox.exec()
+
+            if checkBox.isChecked():
+                settings.setConfirmDeleteFiles(False)
 
             if reply != QMessageBox.Yes:
                 return
