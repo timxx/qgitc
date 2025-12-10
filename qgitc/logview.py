@@ -1008,7 +1008,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         if not commits:
             return
 
-        clipboard = ApplicationBase.instance().clipboard()
+        app = ApplicationBase.instance()
+        clipboard = app.clipboard()
 
         htmlText = '<html>\n'
         htmlText += '<head>\n'
@@ -1062,6 +1063,10 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         clipboard.setMimeData(mimeData)
 
+        app.trackFeatureUsage("menu.copy_commit_summary", {
+            "count": len(commits)
+        })
+
     def __onCopyAbbrevCommit(self):
         if self.curIdx == -1:
             return
@@ -1089,8 +1094,13 @@ class LogView(QAbstractScrollArea, CommitSource):
         mimeData = QMimeData()
         mimeData.setText('\n'.join(abbrevs))
 
-        clipboard = ApplicationBase.instance().clipboard()
+        app = ApplicationBase.instance()
+        clipboard = app.clipboard()
         clipboard.setMimeData(mimeData)
+
+        app.trackFeatureUsage("menu.copy_abbrev_commit", {
+            "count": len(commits)
+        })
 
     def copyToLog(self):
         if self.curIdx == -1:
@@ -1172,6 +1182,11 @@ class LogView(QAbstractScrollArea, CommitSource):
                 with open(f, "wb+") as h:
                     h.write(patch)
 
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("menu.generate_patch", {
+            "count": len(commits)
+        })
+
     def __onGenerateDiff(self):
         if self.curIdx == -1:
             return
@@ -1215,6 +1230,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             if diff:
                 with open(f, "wb+") as h:
                     h.write(diff)
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("menu.generate_diff", {
+            "count": len(commits)
+        })
 
     def __onRevertCommit(self):
         if self.curIdx == -1:
@@ -1269,6 +1289,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.clear()
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("menu.revert_commit", {
+            "count": len(commits)
+        })
+
     def __resetToCurCommit(self, method):
         if self.curIdx == -1:
             return
@@ -1283,6 +1308,11 @@ class LogView(QAbstractScrollArea, CommitSource):
                 error)
         else:
             self.reloadLogs()
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("menu.reset_commit", {
+            "method": method
+        })
 
     def __onResetSoft(self):
         self.__resetToCurCommit("soft")
@@ -1353,6 +1383,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         else:
             # Reload logs to show updated information
             self.reloadLogs()
+
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("menu.change_commit_author")
 
     def __onChangeAuthor(self):
         self.changeAuthor()

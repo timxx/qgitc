@@ -847,8 +847,6 @@ class MainWindow(StateWindow):
             return
 
         logView.changeAuthor()
-        app = ApplicationBase.instance()
-        app.trackFeatureUsage("menu.change_commit_author")
 
     def _onBranchCompareTriggered(self):
         targetBranch = None
