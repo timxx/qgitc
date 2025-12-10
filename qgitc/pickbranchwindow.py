@@ -333,7 +333,8 @@ class PickBranchWindow(StateWindow):
 
     def _filterCommits(self):
         """Filter commits based on user preferences"""
-        settings = ApplicationBase.instance().settings()
+        app = ApplicationBase.instance()
+        settings = app.settings()
         filterReverted = settings.filterRevertedCommits()
         filterPatterns = settings.filterCommitPatterns()
         useRegex = settings.filterUseRegex()
@@ -343,6 +344,13 @@ class PickBranchWindow(StateWindow):
             self._updateStatus(
                 self.tr("No filters configured. Please configure filters in Settings > Cherry-Pick"))
             return
+
+        app.trackFeatureUsage("cherry_pick_filter_commits", {
+            "filter_reverted": filterReverted,
+            "filter_patterns": bool(filterPatterns),
+            "use_regex": useRegex,
+            "by_default": settings.applyFilterByDefault(),
+        })
 
         commitCount = self.ui.logView.getCount()
         if commitCount == 0:
