@@ -752,7 +752,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if self._editable:
             self.menu.addSeparator()
             self.acRevert = self.menu.addAction(
-                self.tr("Re&vert this commit"),
+                self.tr("Re&vert commit(s)"),
                 self.__onRevertCommit)
             resetMenu = self.menu.addMenu(self.tr("Re&set to here"))
             resetMenu.addAction(
@@ -771,7 +771,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.__onChangeAuthor)
 
         self.menu.addSeparator()
-        self.menu.addAction(self.tr("&Code Review"), self.__onCodeReview)
+        self.acCodeReview = self.menu.addAction(
+            self.tr("&Code Review"), self.__onCodeReview)
 
     def setBranchB(self):
         self.branchA = False
@@ -920,28 +921,54 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.__ensureContextMenu()
 
-        isCommitted = self.isCurrentCommitted()
-        self.acCopySummary.setEnabled(isCommitted)
-        self.acGenPatch.setEnabled(isCommitted)
-        self.acCopyAbbrevCommit.setEnabled(isCommitted)
+        # Check if multiple items are selected
+        indices = self.getSelectedIndices()
+        multipleSelected = len(indices) > 1
+
+        # Check if all selected commits are committed (not local changes)
+        allCommitted = True
+        if multipleSelected:
+            if 0 in indices and self.data[0].sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
+                allCommitted = False
+            elif 1 in indices and self.data[1].sha1 in [Git.LCC_SHA1]:
+                allCommitted = False
+        else:
+            allCommitted = self.isCurrentCommitted()
+
+        # Operations that work with multiple selection
+        self.acCopySummary.setEnabled(allCommitted)
+        self.acGenPatch.setEnabled(allCommitted)
+        self.acCopyAbbrevCommit.setEnabled(allCommitted)
 
         logWindow = self.logWindow()
         w = logWindow.mergeWidget if logWindow else None
         visible = w is not None
         self.acCopyToLog.setVisible(visible)
         if visible:
-            self.acCopyToLog.setEnabled(isCommitted and w.isResolving())
+            # Only allow copy to log for single selection
+            self.acCopyToLog.setEnabled(
+                allCommitted and w.isResolving() and not multipleSelected)
 
         if self._editable:
-            enabled = isCommitted and not not self._branchDir
+            # Revert supports multiple selection
+            enabled = allCommitted and not not self._branchDir
             self.acRevert.setEnabled(enabled)
 
+            # Reset only works for single selection
+            enabled = enabled and not multipleSelected
             # to avoid bad reset on each repo
             app = ApplicationBase.instance()
             if enabled and app.settings().isCompositeMode():
                 # disable only if have submodules
                 enabled = not app.submodules
             self.resetMenu.setEnabled(enabled)
+
+            # Change author only works for single selection
+            self.acChangeAuthor.setEnabled(
+                allCommitted and not multipleSelected and not not self._branchDir)
+
+        # Code review only works for single selection
+        self.acCodeReview.setEnabled(allCommitted and not multipleSelected)
 
         hasMark = self.marker.hasMark()
         self.acClearMarks.setVisible(hasMark)
@@ -964,13 +991,10 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onCopyCommitSummary(self):
         if self.curIdx == -1:
             return
-        commit = self.data[self.curIdx]
-        if not commit:
-            return
 
-        repoDir = commitRepoDir(commit)
-        commit = Git.commitSummary(commit.sha1, repoDir)
-        if not commit:
+        # Get selected commits
+        commits = self.getSelectedCommits()
+        if not commits:
             return
 
         clipboard = ApplicationBase.instance().clipboard()
@@ -981,41 +1005,59 @@ class LogView(QAbstractScrollArea, CommitSource):
         htmlText += '</head>\n'
         htmlText += '<body>\n'
         htmlText += '<div>\n'
-        htmlText += '<p style="margin:0pt">\n'
-        htmlText += '<span style="font-size:10pt;color:{0}">'.format(
-            self.color)
-        htmlText += self.__sha1Url(commit["sha1"])
-        htmlText += ' (&quot;'
-        htmlText += self.__filterBug(commit["subject"])
-        htmlText += '&quot;, ' + \
-            self.__mailTo(commit["author"], commit["email"])
-        htmlText += ', ' + commit["date"]
-        htmlText += ')</span>'
-        htmlText += '</p>\n'
+
+        plainTexts = []
+
+        for commitData in commits:
+            repoDir = commitRepoDir(commitData)
+            commit = Git.commitSummary(commitData.sha1, repoDir)
+            if not commit:
+                continue
+
+            htmlText += '<p style="margin:0pt">\n'
+            htmlText += '<span style="font-size:10pt;color:{0}">'.format(
+                self.color)
+            htmlText += self.__sha1Url(commit["sha1"])
+            htmlText += ' (&quot;'
+            htmlText += self.__filterBug(commit["subject"])
+            htmlText += '&quot;, ' + \
+                self.__mailTo(commit["author"], commit["email"])
+            htmlText += ', ' + commit["date"]
+            htmlText += ')</span>'
+            htmlText += '</p>\n'
+
+            plainTexts.append('{0} ("{1}", {2}, {3})'.format(
+                commit["sha1"],
+                commit["subject"],
+                commit["author"],
+                commit["date"]))
+
         htmlText += '</div>\n'
         htmlText += '</body>\n'
         htmlText += '</html>\n'
 
         mimeData = QMimeData()
         mimeData.setHtml(htmlText)
-        mimeData.setText('{0} ("{1}", {2}, {3})'.format(
-            commit["sha1"],
-            commit["subject"],
-            commit["author"],
-            commit["date"]))
+        mimeData.setText('\n'.join(plainTexts))
 
         clipboard.setMimeData(mimeData)
 
     def __onCopyAbbrevCommit(self):
         if self.curIdx == -1:
             return
-        commit = self.data[self.curIdx]
-        if not commit:
+
+        # Get selected commits
+        commits = self.getSelectedCommits()
+        if not commits:
             return
 
+        abbrevs = []
+        for commit in commits:
+            abbrev = Git.abbrevCommit(commit.sha1)
+            abbrevs.append(abbrev)
+
         mimeData = QMimeData()
-        abbrev = Git.abbrevCommit(commit.sha1)
-        mimeData.setText(abbrev)
+        mimeData.setText('\n'.join(abbrevs))
 
         clipboard = ApplicationBase.instance().clipboard()
         clipboard.setMimeData(mimeData)
@@ -1048,7 +1090,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         else:
             # Single selection: toggle current commit
             self.marker.toggle(self.curIdx)
-        
+
         # TODO: update marked lines only
         self.viewport().update()
 
@@ -1060,24 +1102,32 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onGeneratePatch(self):
         if self.curIdx == -1:
             return
-        commit = self.data[self.curIdx]
-        if not commit:
+
+        # Get selected commits
+        commits = self.getSelectedCommits()
+        if not commits:
             return
 
         f, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Patch"))
         if f:
-            repoDir = commitRepoDir(commit)
-            patch = Git.commitRawPatch(commit.sha1, repoDir)
-            if patch is None:
-                patch = b''
+            patch = b''
 
-            for subCommit in commit.subCommits:
-                repoDir = commitRepoDir(subCommit)
-                subPatch = Git.commitRawPatch(subCommit.sha1, repoDir)
-                if subPatch:
-                    patch += b'\n' + subPatch
+            # Generate patches for all selected commits
+            for commit in commits:
+                repoDir = commitRepoDir(commit)
+                commitPatch = Git.commitRawPatch(commit.sha1, repoDir)
+                if commitPatch:
+                    if patch:
+                        patch += b'\n'
+                    patch += commitPatch
+
+                for subCommit in commit.subCommits:
+                    repoDir = commitRepoDir(subCommit)
+                    subPatch = Git.commitRawPatch(subCommit.sha1, repoDir)
+                    if subPatch:
+                        patch += b'\n' + subPatch
 
             if patch:
                 with open(f, "wb+") as h:
@@ -1086,23 +1136,33 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onGenerateDiff(self):
         if self.curIdx == -1:
             return
-        commit = self.data[self.curIdx]
-        if not commit:
+
+        # Get selected commits
+        commits = self.getSelectedCommits()
+        if not commits:
             return
 
         f, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Diff"))
         if f:
-            repoDir = commitRepoDir(commit)
-            diff = Git.commitRawDiff(commit.sha1, repoDir=repoDir)
-            if diff is None:
-                diff = b''
-            for subCommit in commit.subCommits:
-                repoDir = commitRepoDir(subCommit)
-                subDiff = Git.commitRawDiff(subCommit.sha1, repoDir=repoDir)
-                if subDiff:
-                    diff += b'\n' + subDiff
+            diff = b''
+
+            # Generate diffs for all selected commits
+            for commit in commits:
+                repoDir = commitRepoDir(commit)
+                commitDiff = Git.commitRawDiff(commit.sha1, repoDir=repoDir)
+                if commitDiff:
+                    if diff:
+                        diff += b'\n'
+                    diff += commitDiff
+
+                for subCommit in commit.subCommits:
+                    repoDir = commitRepoDir(subCommit)
+                    subDiff = Git.commitRawDiff(
+                        subCommit.sha1, repoDir=repoDir)
+                    if subDiff:
+                        diff += b'\n' + subDiff
 
             if diff:
                 with open(f, "wb+") as h:
@@ -1111,9 +1171,22 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onRevertCommit(self):
         if self.curIdx == -1:
             return
-        commit = self.data[self.curIdx]
-        if not commit:
+
+        # Get selected commits
+        commits = self.getSelectedCommits()
+        if not commits:
             return
+
+        # Confirm revert for multiple commits
+        if len(commits) > 1:
+            reply = QMessageBox.question(
+                self, self.window().windowTitle(),
+                self.tr("Are you sure you want to revert {0} commits?").format(
+                    len(commits)),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No)
+            if reply != QMessageBox.Yes:
+                return
 
         def _doRevert(sha1, repoDir):
             ret, error = Git.revertCommit(self.curBranch, sha1, repoDir)
@@ -1125,13 +1198,15 @@ class LogView(QAbstractScrollArea, CommitSource):
                 return False
             return True
 
-        repoDir = commitRepoDir(commit)
-        if not _doRevert(commit.sha1, repoDir):
-            return
+        for commit in commits:
+            repoDir = commitRepoDir(commit)
+            if not _doRevert(commit.sha1, repoDir):
+                break
 
-        for subCommit in commit.subCommits:
-            repoDir = commitRepoDir(subCommit)
-            _doRevert(subCommit.sha1, repoDir)
+            for subCommit in commit.subCommits:
+                repoDir = commitRepoDir(subCommit)
+                if not _doRevert(subCommit.sha1, repoDir):
+                    break
 
         # FIXME: fetch the new one only?
         self.clear()
