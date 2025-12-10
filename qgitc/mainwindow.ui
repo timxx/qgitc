@@ -410,22 +410,22 @@
   </action>
   <action name="acCommit">
    <property name="text">
-    <string>&amp;Commit</string>
+    <string>&amp;Commit...</string>
    </property>
   </action>
   <action name="acShowAIAssistant">
    <property name="text">
-    <string>Show AI &amp;Assistant</string>
+    <string>Show AI &amp;Assistant...</string>
    </property>
   </action>
   <action name="acCodeReview">
    <property name="text">
-    <string>Code &amp;Review</string>
+    <string>Code &amp;Review...</string>
    </property>
   </action>
   <action name="acBranchCompare">
    <property name="text">
-    <string>&amp;Branch Compare</string>
+    <string>&amp;Branch Compare...</string>
    </property>
   </action>
   <action name="acBranchPick">
