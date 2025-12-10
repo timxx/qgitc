@@ -736,10 +736,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.copyToLog)
         self.menu.addSeparator()
 
-        self.menu.addAction(self.tr("&Mark this commit"),
+        self.menu.addAction(self.tr("&Toggle marker"),
                             self.__onMarkCommit)
-        self.acMarkTo = self.menu.addAction(self.tr("Mark &to this commit"),
-                                            self.__onMarkToCommit)
         self.acClearMarks = self.menu.addAction(self.tr("Clea&r Marks"),
                                                 self.__onClearMarks)
 
@@ -946,7 +944,6 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.resetMenu.setEnabled(enabled)
 
         hasMark = self.marker.hasMark()
-        self.acMarkTo.setVisible(hasMark)
         self.acClearMarks.setVisible(hasMark)
 
         globalPos = self.mapToGlobal(pos)
@@ -1043,18 +1040,15 @@ class LogView(QAbstractScrollArea, CommitSource):
     def __onMarkCommit(self):
         assert self.curIdx >= 0
 
-        begin = self.curIdx
-        end = self.curIdx
-        self.marker.mark(begin, end)
-        # TODO: update marked lines only
-        self.viewport().update()
-
-    def __onMarkToCommit(self):
-        assert self.curIdx >= 0
-
-        begin = self.marker.begin()
-        end = self.curIdx
-        self.marker.mark(begin, end)
+        # Toggle markers for all selected commits
+        if len(self.selectedIndices) > 1:
+            # Multiple selection: toggle each commit
+            for idx in self.selectedIndices:
+                self.marker.toggle(idx)
+        else:
+            # Single selection: toggle current commit
+            self.marker.toggle(self.curIdx)
+        
         # TODO: update marked lines only
         self.viewport().update()
 
