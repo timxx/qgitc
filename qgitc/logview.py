@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QMenu,
     QMessageBox,
+    QProgressDialog,
     QScrollBar,
     QWidget,
 )
@@ -988,6 +989,16 @@ class LogView(QAbstractScrollArea, CommitSource):
     def updateView(self):
         return self.viewport().update()
 
+    def _createProgressDialog(self, label: str, maxValue: int):
+        progress = QProgressDialog(
+            label,
+            self.tr("Cancel"),
+            0, maxValue, self)
+        progress.setWindowTitle(self.window().windowTitle())
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(2000)
+        return progress
+
     def __onCopyCommitSummary(self):
         if self.curIdx == -1:
             return
@@ -1008,7 +1019,14 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         plainTexts = []
 
-        for commitData in commits:
+        progress = self._createProgressDialog(
+            self.tr("Copying Commit Summaries"), len(commits))
+
+        for idx, commitData in enumerate(commits):
+            progress.setValue(idx)
+            if progress.wasCanceled():
+                break
+
             repoDir = commitRepoDir(commitData)
             commit = Git.commitSummary(commitData.sha1, repoDir)
             if not commit:
@@ -1032,6 +1050,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 commit["author"],
                 commit["date"]))
 
+        progress.setValue(len(commits))
+
         htmlText += '</div>\n'
         htmlText += '</body>\n'
         htmlText += '</html>\n'
@@ -1052,9 +1072,19 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         abbrevs = []
-        for commit in commits:
+
+        progress = self._createProgressDialog(
+            self.tr("Copying Commit Hashes"), len(commits))
+
+        for idx, commit in enumerate(commits):
+            progress.setValue(idx)
+            if progress.wasCanceled():
+                break
+
             abbrev = Git.abbrevCommit(commit.sha1)
             abbrevs.append(abbrev)
+
+        progress.setValue(len(commits))
 
         mimeData = QMimeData()
         mimeData.setText('\n'.join(abbrevs))
@@ -1114,8 +1144,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         if f:
             patch = b''
 
+            progress = self._createProgressDialog(
+                self.tr("Generating Patches"), len(commits))
+
             # Generate patches for all selected commits
-            for commit in commits:
+            for idx, commit in enumerate(commits):
+                progress.setValue(idx)
+                if progress.wasCanceled():
+                    break
+
                 repoDir = commitRepoDir(commit)
                 commitPatch = Git.commitRawPatch(commit.sha1, repoDir)
                 if commitPatch:
@@ -1128,6 +1165,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                     subPatch = Git.commitRawPatch(subCommit.sha1, repoDir)
                     if subPatch:
                         patch += b'\n' + subPatch
+
+            progress.setValue(len(commits))
 
             if patch:
                 with open(f, "wb+") as h:
@@ -1148,8 +1187,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         if f:
             diff = b''
 
+            progress = self._createProgressDialog(
+                self.tr("Generating Diffs"), len(commits))
+
             # Generate diffs for all selected commits
-            for commit in commits:
+            for idx, commit in enumerate(commits):
+                progress.setValue(idx)
+                if progress.wasCanceled():
+                    break
+
                 repoDir = commitRepoDir(commit)
                 commitDiff = Git.commitRawDiff(commit.sha1, repoDir=repoDir)
                 if commitDiff:
@@ -1163,6 +1209,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                         subCommit.sha1, repoDir=repoDir)
                     if subDiff:
                         diff += b'\n' + subDiff
+
+            progress.setValue(len(commits))
 
             if diff:
                 with open(f, "wb+") as h:
@@ -1198,7 +1246,14 @@ class LogView(QAbstractScrollArea, CommitSource):
                 return False
             return True
 
-        for commit in commits:
+        progress = self._createProgressDialog(
+            self.tr("Reverting Commits"), len(commits))
+
+        for idx, commit in enumerate(commits):
+            progress.setValue(idx)
+            if progress.wasCanceled():
+                break
+
             repoDir = commitRepoDir(commit)
             if not _doRevert(commit.sha1, repoDir):
                 break
@@ -1207,6 +1262,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                 repoDir = commitRepoDir(subCommit)
                 if not _doRevert(subCommit.sha1, repoDir):
                     break
+
+        progress.setValue(len(commits))
 
         # FIXME: fetch the new one only?
         self.clear()
