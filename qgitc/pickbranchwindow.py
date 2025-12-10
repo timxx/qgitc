@@ -4,7 +4,7 @@ import re
 from typing import List
 
 from PySide6.QtCore import QEvent, Qt, QTimer
-from PySide6.QtGui import QIcon, QMouseEvent
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
@@ -73,9 +73,6 @@ class PickBranchWindow(StateWindow):
         self.ui.logView.setEditable(False)
         self.ui.logView.setShowNoDataTips(True)
 
-        # Install event filter to handle Ctrl+Click for marking
-        self.ui.logView.viewport().installEventFilter(self)
-
         # Setup icons for tool buttons
         iconsPath = dataDirPath() + "/icons/"
         icon = QIcon(iconsPath + "select-all.svg")
@@ -126,6 +123,7 @@ class PickBranchWindow(StateWindow):
         self.ui.logView.currentIndexChanged.connect(self._onCommitSelected)
         self.ui.logView.beginFetch.connect(self._onCommitsFetchStarted)
         self.ui.logView.endFetch.connect(self._onCommitsFetchFinished)
+        self.ui.logView.markerChanged.connect(self._updateButtonStates)
 
         # Application signals
         app = ApplicationBase.instance()
@@ -498,31 +496,3 @@ class PickBranchWindow(StateWindow):
     def _updateStatus(self, message: str):
         """Update status label"""
         self.ui.labelStatus.setText(message)
-
-    def eventFilter(self, obj, event: QEvent) -> bool:
-        """Filter events from LogView viewport to handle Ctrl+Click for marking"""
-        if obj == self.ui.logView.viewport() and event.type() == QEvent.MouseButtonRelease:
-            if self._filterMouseRelease(event):
-                return True
-
-        return super().eventFilter(obj, event)
-
-    def _filterMouseRelease(self, event: QMouseEvent) -> bool:
-        if event.button() != Qt.LeftButton:
-            return False
-
-        modifiers = event.modifiers()
-        if modifiers != Qt.ControlModifier:
-            return False
-
-        # Handle Ctrl+Click to toggle marker
-        pos = event.position()
-        index = self.ui.logView.lineForPos(pos)
-        if index == -1:
-            return False
-
-        self.ui.logView.marker.toggle(index)
-
-        self.ui.logView.viewport().update()
-        self._updatePickButton()
-        return True  # Event handled

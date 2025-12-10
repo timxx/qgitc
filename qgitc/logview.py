@@ -81,9 +81,10 @@ class Marker():
     CHAR_PICKED = chr(0x2192)  # Right arrow
     CHAR_FAILED = chr(0x2716)  # Heavy multiplication X
 
-    def __init__(self):
+    def __init__(self, changedCallback=None):
         self._ranges: List[MarkRange] = []
         self._sorted = True  # Track if ranges are sorted
+        self._changedCallback = changedCallback
 
     def mark(self, begin, end, markType=MarkType.NORMAL):
         """Mark a range of commits with a specific type"""
@@ -93,6 +94,8 @@ class Marker():
             r for r in self._ranges if not self._overlaps(r, markRange)]
         self._ranges.append(markRange)
         self._sorted = False
+        if self._changedCallback:
+            self._changedCallback()
 
     def _overlaps(self, r1: MarkRange, r2: MarkRange):
         """Check if two ranges overlap"""
@@ -106,13 +109,19 @@ class Marker():
 
     def clear(self):
         """Clear all marks"""
-        self._ranges.clear()
-        self._sorted = True
+        if self._ranges:  # Only notify if there were marks
+            self._ranges.clear()
+            self._sorted = True
+            if self._changedCallback:
+                self._changedCallback()
 
     def clearType(self, markType):
         """Clear all marks of a specific type"""
+        oldCount = len(self._ranges)
         self._ranges = [r for r in self._ranges if r.markType != markType]
         # Sorting state remains unchanged
+        if oldCount != len(self._ranges) and self._changedCallback:
+            self._changedCallback()
 
     def hasMark(self):
         """Check if there are any marks"""
@@ -200,6 +209,8 @@ class Marker():
 
         self._ranges = newRanges
         self._sorted = False
+        if self._changedCallback:
+            self._changedCallback()
 
     def countMarked(self):
         """Efficiently count total number of marked commits"""
@@ -557,6 +568,7 @@ class LogGraph(QWidget):
 class LogView(QAbstractScrollArea, CommitSource):
     currentIndexChanged = Signal(int)
     findFinished = Signal(int)
+    markerChanged = Signal()
 
     beginFetch = Signal()
     endFetch = Signal()
@@ -610,7 +622,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.needUpdateFindResult = True
 
         self.highlightPattern = None
-        self.marker = Marker()
+        self.marker = Marker(changedCallback=lambda: self.markerChanged.emit())
 
         self.filterPath = None
         self.menu = None
@@ -2273,6 +2285,12 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         index = self.lineForPos(event.position())
         mod = event.modifiers()
+
+        if mod == Qt.AltModifier:
+            if index >= 0:
+                self.marker.toggle(index)
+                self.viewport().update()
+            return
 
         # Handle multi-selection with keyboard modifiers
         if mod == Qt.ControlModifier:
