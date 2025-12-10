@@ -1402,6 +1402,14 @@ class CommitWindow(StateWindow):
         self._acRestoreFiles.setText(text)
         self._acRestoreFiles.setData(listView)
 
+        # Only show checkout for lvFiles (unstaged files)
+        isUnstagedList = (listView == self.ui.lvFiles)
+        checkoutText = self.tr("&Checkout these files") if len(
+            indexes) > 1 else self.tr("&Checkout this file")
+        self._acCheckoutFiles.setText(checkoutText)
+        self._acCheckoutFiles.setData(listView)
+        self._acCheckoutFiles.setVisible(isUnstagedList)
+
         deleteText = self.tr("&Delete these files") if len(
             indexes) > 1 else self.tr("&Delete this file")
         self._acDeleteFiles.setText(deleteText)
@@ -1414,6 +1422,9 @@ class CommitWindow(StateWindow):
         self._acRestoreFiles = self._contextMenu.addAction(
             self.tr("&Restore this file"),
             self._onRestoreFiles)
+        self._acCheckoutFiles = self._contextMenu.addAction(
+            self.tr("&Checkout this file"),
+            self._onCheckoutFiles)
         self._acDeleteFiles = self._contextMenu.addAction(
             self.tr("&Delete this file"),
             self._onDeleteFiles)
@@ -1446,6 +1457,37 @@ class CommitWindow(StateWindow):
         self._curFile = None
         self._curFileStatus = None
 
+    def _onCheckoutFiles(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.checkout_files")
+        listView: QListView = self._acCheckoutFiles.data()
+        repoFiles = self._collectSectionFiles(
+            listView, CommitWindow._filterUntrackedFiles)
+        if not repoFiles:
+            return
+
+        # Count total files for confirmation
+        totalFiles = sum(len(files) for files in repoFiles.values())
+
+        # Ask for confirmation only if multiple files selected
+        if totalFiles > 1:
+            reply = QMessageBox.question(
+                self,
+                self.tr("Checkout Files"),
+                self.tr("Are you sure you want to checkout {} selected files? This will discard local changes.").format(
+                    totalFiles),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No)
+
+            if reply != QMessageBox.Yes:
+                return
+
+        self._blockUI()
+        self.ui.spinnerUnstaged.start()
+        self._submoduleExecutor.submit(repoFiles, self._doCheckoutFiles)
+        self.clearModels()
+        self._curFile = None
+        self._curFileStatus = None
+
     def _doRestore(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
         self._doRestoreFiles(submodule, files, cancelEvent, False)
 
@@ -1464,6 +1506,27 @@ class CommitWindow(StateWindow):
 
         if error and error.startswith("error: pathspec "):
             error = None
+        ApplicationBase.instance().postEvent(
+            self, FileRestoreEvent(submodule, files, error))
+
+    def _doCheckoutFiles(self, submodule: str, files: List[str], cancelEvent: CancelEvent):
+        if cancelEvent.isSet():
+            return
+
+        repoDir = fullRepoDir(submodule)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+
+        # Execute git checkout -- <files>
+        args = ["checkout", "--"]
+        args.extend(repoFiles)
+        process = Git.run(args, text=True, repoDir=repoDir)
+        _, error = process.communicate()
+
+        if cancelEvent.isSet():
+            return
+
+        self._statusFetcher.fetchStatus(submodule, cancelEvent)
+
         ApplicationBase.instance().postEvent(
             self, FileRestoreEvent(submodule, files, error))
 

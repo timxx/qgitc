@@ -608,3 +608,279 @@ class TestCommitWindow(TestBase):
         # Verify delete action exists and has correct text
         self.assertIsNotNone(self.window._acDeleteFiles)
         self.assertIn("Delete", self.window._acDeleteFiles.text())
+
+    def testCheckoutSingleFile(self):
+        """Test checkout action for a single file"""
+        self.waitForLoaded()
+
+        # Create and modify a tracked file
+        testFile = os.path.join(self.gitDir.name, "test.py")
+        with open(testFile, "a+") as f:
+            f.write("\n# Modified content\n")
+
+        # Refresh to show the modified file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertGreater(filesModel.rowCount(), 0)
+
+        # Find and select the test file
+        found = False
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName == "test.py":
+                lvFiles.setCurrentIndex(index)
+                found = True
+                break
+
+        self.assertTrue(found, "test.py should be in the modified files list")
+
+        # Mock QMessageBox.question to verify it's NOT called for single file
+        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes) as mock_question, \
+                patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+
+            self.window._acCheckoutFiles.setData(lvFiles)
+            self.window._onCheckoutFiles()
+            self.processEvents()
+
+            # Verify confirmation dialog was NOT shown for single file
+            mock_question.assert_not_called()
+
+            # Verify submit was called with the checkout function
+            mock_submit.assert_called_once()
+            args = mock_submit.call_args[0]
+            self.assertIn(".", args[0])  # Root submodule
+            self.assertIn("test.py", args[0]["."])
+            self.assertEqual(args[1], self.window._doCheckoutFiles)
+
+        self.waitForLoaded()
+
+    def testCheckoutMultipleFiles(self):
+        """Test checkout action for multiple files"""
+        self.waitForLoaded()
+
+        # Create and modify multiple tracked files
+        testFiles = ["test.py", "README.md"]
+        for fileName in testFiles:
+            filePath = os.path.join(self.gitDir.name, fileName)
+            with open(filePath, "a+") as f:
+                f.write("\n# Modified content\n")
+
+        # Refresh to show the modified files
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertGreater(filesModel.rowCount(), 0)
+
+        # Select all test files
+        lvFiles.clearSelection()
+        selectionModel = lvFiles.selectionModel()
+        selectedCount = 0
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName in testFiles:
+                selectionModel.select(index, QItemSelectionModel.Select)
+                selectedCount += 1
+
+        self.assertEqual(selectedCount, len(testFiles),
+                         "All test files should be selected")
+
+        # Mock QMessageBox.question to simulate user confirmation
+        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes) as mock_question, \
+                patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+
+            self.window._acCheckoutFiles.setData(lvFiles)
+            self.window._onCheckoutFiles()
+            self.processEvents()
+
+            # Verify confirmation dialog was shown
+            mock_question.assert_called_once()
+            call_args = mock_question.call_args[0]
+            # Check that the message mentions multiple files and count
+            self.assertIn("2", call_args[2])  # Message should contain "2"
+            self.assertIn("selected files", call_args[2])
+
+            # Verify submit was called
+            mock_submit.assert_called_once()
+            args = mock_submit.call_args[0]
+            self.assertIn(".", args[0])
+            # Both files should be in the submission
+            self.assertGreaterEqual(len(args[0]["."]), 2)
+
+        self.waitForLoaded()
+
+    def testCheckoutMultipleFilesCancel(self):
+        """Test canceling checkout for multiple files"""
+        self.waitForLoaded()
+
+        # Create and modify multiple tracked files
+        testFiles = ["test.py", "README.md"]
+        for fileName in testFiles:
+            filePath = os.path.join(self.gitDir.name, fileName)
+            with open(filePath, "a+") as f:
+                f.write("\n# Modified for cancel test\n")
+
+        # Refresh to show the modified files
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        # Select test files
+        lvFiles.clearSelection()
+        selectionModel = lvFiles.selectionModel()
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName in testFiles:
+                selectionModel.select(index, QItemSelectionModel.Select)
+
+        # Mock QMessageBox.question to simulate user canceling
+        with patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.No) as mock_question, \
+                patch.object(self.window._submoduleExecutor, 'submit') as mock_submit:
+
+            self.window._acCheckoutFiles.setData(lvFiles)
+            self.window._onCheckoutFiles()
+            self.processEvents()
+
+            # Verify confirmation dialog was shown
+            mock_question.assert_called_once()
+
+            # Verify submit was NOT called (user canceled)
+            mock_submit.assert_not_called()
+
+        self.waitForLoaded()
+
+    def testDoCheckoutFiles(self):
+        """Test the actual checkout worker function"""
+        self.waitForLoaded()
+
+        # Modify a tracked file
+        testFile = "test.py"
+        testFilePath = os.path.join(self.gitDir.name, testFile)
+
+        # Read original content
+        with open(testFilePath, "r") as f:
+            originalContent = f.read()
+
+        # Modify the file
+        with open(testFilePath, "a+") as f:
+            f.write("\n# This modification should be reverted\n")
+
+        # Verify the file was modified
+        with open(testFilePath, "r") as f:
+            modifiedContent = f.read()
+        self.assertNotEqual(originalContent, modifiedContent)
+
+        # Mock cancel event with a mock thread
+        mockThread = mock.MagicMock(spec=QThread)
+        mockThread.isInterruptionRequested.return_value = False
+        cancelEvent = CancelEvent(mockThread)
+
+        # Call the checkout worker function
+        with patch.object(self.window._statusFetcher, 'fetchStatus'):
+            self.window._doCheckoutFiles(".", [testFile], cancelEvent)
+            self.processEvents()
+
+        # Verify file content was reverted
+        with open(testFilePath, "r") as f:
+            currentContent = f.read()
+        self.assertEqual(originalContent, currentContent)
+
+        self.waitForLoaded()
+
+    def testCheckoutContextMenuVisibility(self):
+        """Test that checkout action is visible only for lvFiles, not lvStaged"""
+        self.waitForLoaded()
+
+        # Create a test file and stage it
+        testFile = os.path.join(self.gitDir.name, "stage_test.txt")
+        with open(testFile, "w+") as f:
+            f.write("test content")
+
+        # Refresh and stage
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertEqual(filesModel.rowCount(), 1)
+
+        # Select a file in lvFiles
+        lvFiles.setCurrentIndex(filesModel.index(0, 0))
+
+        # Mock the menu exec to prevent it from blocking
+        with patch.object(self.window._contextMenu, 'exec'):
+            # Test context menu for lvFiles (should show checkout)
+            self.window._showStatusContextMenu(lvFiles.pos(), lvFiles)
+            self.assertTrue(self.window._acCheckoutFiles.isVisible(),
+                            "Checkout action should be visible for unstaged files")
+
+        spyFinished = QSignalSpy(self.window._submoduleExecutor.finished)
+        QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
+        self.wait(10000, lambda: spyFinished.count() == 0)
+
+        lvStaged = self.window.ui.lvStaged
+        stagedModel = lvStaged.model()
+        self.assertEqual(stagedModel.rowCount(), 1)
+
+        # Select a file in lvStaged
+        lvStaged.setCurrentIndex(stagedModel.index(0, 0))
+
+        # Mock the menu exec to prevent it from blocking
+        with patch.object(self.window._contextMenu, 'exec'):
+            # Test context menu for lvStaged (should NOT show checkout)
+            self.window._showStatusContextMenu(lvStaged.pos(), lvStaged)
+            self.assertFalse(self.window._acCheckoutFiles.isVisible(),
+                             "Checkout action should NOT be visible for staged files")
+
+    def testCheckoutActionExists(self):
+        """Test that checkout action is properly initialized"""
+        self.waitForLoaded()
+
+        # Verify checkout action exists and has correct text
+        self.assertIsNotNone(self.window._acCheckoutFiles)
+        self.assertIn("Checkout", self.window._acCheckoutFiles.text())
+
+    def testCheckoutFeatureTracking(self):
+        """Test that checkout feature usage is tracked"""
+        self.waitForLoaded()
+
+        # Create and modify a tracked file
+        testFile = os.path.join(self.gitDir.name, "test.py")
+        with open(testFile, "a+") as f:
+            f.write("\n# Modified content\n")
+
+        # Refresh to show the modified file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        # Find and select the test file
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName == "test.py":
+                lvFiles.setCurrentIndex(index)
+                break
+
+        # Mock tracking and test
+        with patch.object(self.app, 'trackFeatureUsage') as mock_track, \
+                patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.Yes), \
+                patch.object(self.window._submoduleExecutor, 'submit'):
+
+            self.window._acCheckoutFiles.setData(lvFiles)
+            self.window._onCheckoutFiles()
+            self.processEvents()
+
+            # Verify feature usage was tracked
+            mock_track.assert_called_once_with("commit.checkout_files")
