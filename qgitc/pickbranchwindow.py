@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
-from typing import List
+from typing import List, Tuple
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
@@ -470,11 +470,11 @@ class PickBranchWindow(StateWindow):
         if commitCount == 0:
             return
 
-        markedCommits: List[Commit] = []
-        for i in self.ui.logView.marker.getMarkedIndices():
-            commit = self.ui.logView.getCommit(i)
+        markedCommits: List[Tuple[Commit, int]] = []
+        for step in self.ui.logView.marker.getMarkedIndices():
+            commit = self.ui.logView.getCommit(step)
             if commit:
-                markedCommits.append(commit)
+                markedCommits.append((commit, step))
 
         if not markedCommits:
             return
@@ -511,10 +511,13 @@ class PickBranchWindow(StateWindow):
 
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
         sourceBranchDir = Git.branchDir(sourceBranch)
-        for i, commit in enumerate(markedCommits):
-            progress.setValue(i)
+        for step, (commit, index) in enumerate(markedCommits):
+            progress.setValue(step)
             if progress.wasCanceled():
                 break
+
+            self.ui.logView.ensureVisible(index)
+
             fullTargetRepoDir = fullRepoDir(commit.repoDir, targetRepoDir)
             fullSourceDir = fullRepoDir(commit.repoDir, sourceBranchDir)
             if not self.ui.logView.doCherryPick(fullTargetRepoDir, commit.sha1, fullSourceDir, self.ui.logView, recordOrigin):

@@ -844,18 +844,18 @@ class LogView(QAbstractScrollArea, CommitSource):
         indices = self.getSelectedIndices()
         return [self.data[i] for i in indices if i < len(self.data)]
 
-    def ensureVisible(self):
-        if self.curIdx == -1:
+    def ensureVisible(self, index: int):
+        if index == -1:
             return
 
         startLine = self.verticalScrollBar().value()
         endLineF = startLine + self.__linesPerPageF()
 
-        if (self.curIdx < startLine) or (self.curIdx > int(endLineF)):
-            self.verticalScrollBar().setValue(self.curIdx)
-        elif self.curIdx == int(endLineF):
+        if (index < startLine) or (index > int(endLineF)):
+            self.verticalScrollBar().setValue(index)
+        elif index == int(endLineF):
             # allow the last line not full visible
-            if (endLineF - self.curIdx) < HALF_LINE_PERCENT:
+            if (endLineF - index) < HALF_LINE_PERCENT:
                 self.verticalScrollBar().setValue(startLine + 1)
 
     def setCurrentIndex(self, index, clearSelection=True):
@@ -872,7 +872,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.selectionAnchor = -1  # Reset anchor on new selection
 
         if index >= 0 and index < len(self.data):
-            self.ensureVisible()
+            self.ensureVisible(self.curIdx)
             self.__ensureChildren(index)
 
         self.viewport().update()
@@ -883,7 +883,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         if self.curIdx != -1 and self.curIdx < len(self.data):
             commit = self.data[self.curIdx]
             if commit and commit.sha1.startswith(sha1):
-                self.ensureVisible()
+                self.ensureVisible(self.curIdx)
                 return True
 
         index = self.findCommitIndex(sha1)
@@ -1440,7 +1440,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def __onFetchFinished(self, exitCode):
         if self.delayVisible:
-            self.ensureVisible()
+            self.ensureVisible(self.curIdx)
             self.delayVisible = False
         elif self.curIdx == -1 and self.data and self._selectOnFetch:
             self.setCurrentIndex(0)
