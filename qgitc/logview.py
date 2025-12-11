@@ -3043,7 +3043,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         # Cherry-pick commits one by one
         needReload = False
 
-        recordOrigin = ApplicationBase.instance().settings().recordOrigin()
+        app = ApplicationBase.instance()
+        recordOrigin = app.settings().recordOrigin()
 
         progress = self._createProgressDialog(
             self.tr("Cherry-picking commits..."), len(commits))
@@ -3052,6 +3053,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         for i, commit in enumerate(commits):
             progress.setValue(i)
+            app.processEvents()
             if progress.wasCanceled():
                 break
 

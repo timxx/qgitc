@@ -511,8 +511,10 @@ class PickBranchWindow(StateWindow):
 
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
         sourceBranchDir = Git.branchDir(sourceBranch)
+        app = ApplicationBase.instance()
         for step, (commit, index) in enumerate(markedCommits):
             progress.setValue(step)
+            app.processEvents()
             if progress.wasCanceled():
                 break
 
