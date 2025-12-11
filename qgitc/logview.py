@@ -2683,6 +2683,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setEditable(self, editable: bool):
         self._editable = editable
+        self.setAcceptDrops(self._standalone and self._editable)
 
     def codeReviewOnCurrent(self):
         self.__onCodeReview()
@@ -2696,7 +2697,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setStandalone(self, standalone: bool):
         self._standalone = standalone
-        self.setAcceptDrops(standalone)
+        self.setAcceptDrops(standalone and self._editable)
 
     def _createDragPreview(self, commits: List[Commit]) -> QPixmap:
         """Create a preview pixmap for dragging commits"""
