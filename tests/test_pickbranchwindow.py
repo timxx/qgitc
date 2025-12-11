@@ -2,8 +2,6 @@
 import os
 from unittest.mock import Mock, patch
 
-from PySide6.QtCore import QEvent, Qt
-from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QMessageBox
 
 from qgitc.gitutils import Git

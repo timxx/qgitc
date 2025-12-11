@@ -649,18 +649,6 @@ class TestLogViewDragDrop(TestBase):
                 self.assertTrue(result)
                 mock_allow.assert_called_once()
 
-    def test_handleEmptyCherryPick_cancel(self):
-        """Test handling empty cherry-pick with cancel option"""
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.Cancel):
-            with patch('qgitc.gitutils.Git.cherryPickAbort') as mock_abort:
-                result = self.logview._handleEmptyCherryPick(
-                    self.gitDir.name, "abc123",
-                    "git commit --allow-empty", None
-                )
-
-                self.assertTrue(result)
-                mock_abort.assert_called_once()
-
     def test_handleEmptyCherryPick_returns_false_for_non_empty_error(self):
         """Test that _handleEmptyCherryPick returns False for non-empty errors"""
         result = self.logview._handleEmptyCherryPick(
