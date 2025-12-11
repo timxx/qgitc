@@ -43,7 +43,7 @@ from qgitc.applicationbase import ApplicationBase
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffetcher import DiffFetcher
-from qgitc.diffutils import FileInfo
+from qgitc.diffutils import FileInfo, FileState
 from qgitc.gitutils import Git, GitProcess
 from qgitc.patchviewer import PatchViewer
 
@@ -149,6 +149,16 @@ class FileListModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), rowCount, rowCount)
         self._fileList.append((file, info))
         self.endInsertRows()
+
+    def updateFileState(self, file: str, newState: FileState):
+        for i, (f, info) in enumerate(self._fileList):
+            if f != file:
+                continue
+            if info.state != newState:
+                info.state = newState
+                index = self.index(i, 0)
+                self.dataChanged.emit(index, index, [Qt.DecorationRole])
+            break
 
     def clear(self):
         self.removeRows(0, self.rowCount())
@@ -278,6 +288,8 @@ class DiffView(QWidget):
 
         self.fetcher.diffAvailable.connect(
             self.__onDiffAvailable)
+        self.fetcher.fileStateChanged.connect(
+            self.__onDiffFileStateChanged)
         self.fetcher.fetchFinished.connect(
             self.__onFetchFinished)
 
@@ -548,6 +560,9 @@ class DiffView(QWidget):
     def __onDiffAvailable(self, lineItems, fileItems):
         self.__addToFileListView(fileItems)
         self.viewer.appendLines(lineItems)
+
+    def __onDiffFileStateChanged(self, filePath: str, newState: FileState):
+        self.fileListModel.updateFileState(filePath, newState)
 
     def __onFetchFinished(self, exitCode):
         # TODO: use multiprocessing maybe is better

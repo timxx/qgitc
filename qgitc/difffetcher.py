@@ -13,6 +13,8 @@ from qgitc.gitutils import Git
 class DiffFetcher(DataFetcher):
 
     diffAvailable = Signal(list, dict)
+    # Emits (filename, state) for state updates
+    fileStateChanged = Signal(str, FileState)
 
     def __init__(self, parent=None):
         super(DiffFetcher, self).__init__(parent)
@@ -21,6 +23,11 @@ class DiffFetcher(DataFetcher):
         self._firstPatch = True
         self._repoDir = None
         self.repoDirBytes = None
+        # Track file states across incremental parse calls
+        self._fileStates = {}
+        # Track current file being processed (for metadata in next chunk)
+        self._currentFileA = None
+        self._currentFileB = None
 
     def parse(self, data: bytes):
         lineItems = []
@@ -36,11 +43,15 @@ class DiffFetcher(DataFetcher):
 
         def _updateFileState():
             nonlocal fullFileAStr, fullFileBStr, fileState
-            if fileState != FileState.Normal and fileItems:
-                if fullFileAStr and fullFileAStr in fileItems:
-                    fileItems[fullFileAStr].state = fileState
-                if fullFileBStr and fullFileBStr in fileItems:
-                    fileItems[fullFileBStr].state = fileState
+            if fileState != FileState.Normal:
+                if fullFileAStr:
+                    self._fileStates[fullFileAStr] = fileState
+                    if fullFileAStr in fileItems:
+                        fileItems[fullFileAStr].state = fileState
+                if fullFileBStr:
+                    self._fileStates[fullFileBStr] = fileState
+                    if fullFileBStr in fileItems:
+                        fileItems[fullFileBStr].state = fileState
             fullFileAStr = None
             fullFileBStr = None
             fileState = FileState.Normal
@@ -65,14 +76,25 @@ class DiffFetcher(DataFetcher):
                 fullFileA = self.makeFilePath(fileA)
                 fullFileAStr = fullFileA.decode(diff_encoding)
                 fileItems[fullFileAStr] = FileInfo(self._row)
+                # Apply previously tracked state from earlier parse calls
+                if fullFileAStr in self._fileStates:
+                    fileItems[fullFileAStr].state = self._fileStates[fullFileAStr]
+
+                # Store current file for incremental parsing
+                self._currentFileA = fullFileAStr
+
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
                     fullFileB = self.makeFilePath(fileB)
                     lineItems.append((DiffType.File, fullFileB))
                     fullFileBStr = fullFileB.decode(diff_encoding)
                     fileItems[fullFileBStr] = FileInfo(self._row)
+                    if fullFileBStr in self._fileStates:
+                        fileItems[fullFileBStr].state = self._fileStates[fullFileBStr]
+                    self._currentFileB = fullFileBStr
                 else:
                     lineItems.append((DiffType.File, fullFileA))
+                    self._currentFileB = None
 
                 self._row += 1
                 self._isDiffContent = False
@@ -122,6 +144,30 @@ class DiffFetcher(DataFetcher):
                     elif fileState == FileState.Normal:
                         fileState = FileState.Modified
 
+                fileAToUpdate = fullFileAStr or self._currentFileA
+                fileBToUpdate = fullFileBStr or self._currentFileB
+
+                if fileAToUpdate:
+                    oldState = self._fileStates.get(fileAToUpdate)
+                    self._fileStates[fileAToUpdate] = fileState
+                    # If file not in fileItems yet (metadata from previous chunk)
+                    if fileAToUpdate not in fileItems:
+                        if oldState != fileState:
+                            self.fileStateChanged.emit(
+                                fileAToUpdate, fileState)
+                    else:
+                        fileItems[fileAToUpdate].state = fileState
+
+                if fileBToUpdate:
+                    oldState = self._fileStates.get(fileBToUpdate)
+                    self._fileStates[fileBToUpdate] = fileState
+                    if fileBToUpdate not in fileItems:
+                        if oldState != fileState:
+                            self.fileStateChanged.emit(
+                                fileBToUpdate, fileState)
+                    else:
+                        fileItems[fileBToUpdate].state = fileState
+
             if itemType != DiffType.Diff:
                 line = line.rstrip(b'\r')
             lineItems.append((itemType, line))
@@ -137,6 +183,9 @@ class DiffFetcher(DataFetcher):
         self._row = row
         self._isDiffContent = False
         self._firstPatch = True
+        self._fileStates.clear()
+        self._currentFileA = None
+        self._currentFileB = None
 
     def cancel(self):
         self._isDiffContent = False
