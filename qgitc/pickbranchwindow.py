@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, dataDirPath
+from qgitc.common import Commit, dataDirPath, fullRepoDir
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
 from qgitc.preferences import Preferences
@@ -510,11 +510,14 @@ class PickBranchWindow(StateWindow):
         progress.setWindowModality(Qt.NonModal)
 
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
+        sourceBranchDir = Git.branchDir(sourceBranch)
         for i, commit in enumerate(markedCommits):
             progress.setValue(i)
             if progress.wasCanceled():
                 break
-            if not self.ui.logView.doCherryPick(targetRepoDir, commit.sha1, commit.repoDir, self.ui.logView, recordOrigin):
+            fullTargetRepoDir = fullRepoDir(commit.repoDir, targetRepoDir)
+            fullSourceDir = fullRepoDir(commit.repoDir, sourceBranchDir)
+            if not self.ui.logView.doCherryPick(fullTargetRepoDir, commit.sha1, fullSourceDir, self.ui.logView, recordOrigin):
                 break
 
         progress.setValue(len(markedCommits))
