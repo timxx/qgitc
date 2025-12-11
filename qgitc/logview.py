@@ -3170,7 +3170,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self, self.tr("Empty Cherry-pick"),
                 self.tr("Commit {0} results in an empty commit (possibly already applied).\n\n"
                         "Do you want to skip it?").format(sha1[:7]),
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.Yes)
 
             if reply == QMessageBox.Yes:
@@ -3189,10 +3189,6 @@ class LogView(QAbstractScrollArea, CommitSource):
                     self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
                         sha1[:7], error if error else self.tr("Unknown error")))
                 return False
-            else:
-                # Abort
-                Git.cherryPickAbort(repoDir)
-                return True
 
         return False
 
