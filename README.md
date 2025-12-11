@@ -31,6 +31,9 @@ A cross-platform Git GUI tool designed to simplify commit history exploration, b
 ### Merge Tool
 ![Merge Tool](./screenshots/resolve.png)
 
+### Cherry-Pick
+![Cherry-Pick](./screenshots/cherrypick.png)
+
 ## Features
 
 - [x] Two branches view for easy comparing a conflict commit base on the file.
@@ -49,6 +52,7 @@ A cross-platform Git GUI tool designed to simplify commit history exploration, b
 - [x] AI-based commit
 - [x] AI-based code review
 - [x] Branch compare, to show full changes for two branches
+- [x] Cherry-Pick, support drag & drop and pick full branch
 
 
 ## Requirements
