@@ -3056,8 +3056,10 @@ class LogView(QAbstractScrollArea, CommitSource):
                 break
 
             sha1 = commit.get("sha1", "")
-            repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
-            if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin):
+            subRepoDir = commit.get("repoDir", None)
+            fullTargetRepoDir = fullRepoDir(subRepoDir, self._branchDir)
+            fullSourceRepoDir = fullRepoDir(subRepoDir, sourceRepoDir)
+            if self.doCherryPick(fullTargetRepoDir, sha1, fullSourceRepoDir, sourceView, recordOrigin):
                 needReload = True
             else:
                 # Stop processing remaining commits
@@ -3066,9 +3068,10 @@ class LogView(QAbstractScrollArea, CommitSource):
             subCommits = commit.get("subCommits", [])
             for subCommit in subCommits:
                 sha1 = subCommit.get("sha1", "")
-                repoDir = fullRepoDir(subCommit.get(
-                    "repoDir", None), self._branchDir)
-                if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView):
+                subRepoDir = subCommit.get("repoDir", None)
+                fullTargetRepoDir = fullRepoDir(subRepoDir, self._branchDir)
+                fullSourceRepoDir = fullRepoDir(subRepoDir, sourceRepoDir)
+                if self.doCherryPick(fullTargetRepoDir, sha1, fullSourceRepoDir, sourceView):
                     needReload = True
                 else:
                     # Stop processing remaining commits
