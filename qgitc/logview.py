@@ -3045,7 +3045,16 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         recordOrigin = ApplicationBase.instance().settings().recordOrigin()
 
-        for commit in commits:
+        progress = self._createProgressDialog(
+            self.tr("Cherry-picking commits..."), len(commits))
+        # avoid block the messagebox
+        progress.setWindowModality(Qt.NonModal)
+
+        for i, commit in enumerate(commits):
+            progress.setValue(i)
+            if progress.wasCanceled():
+                break
+
             sha1 = commit.get("sha1", "")
             repoDir = fullRepoDir(commit.get("repoDir", None), self._branchDir)
             if self.doCherryPick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin):
@@ -3065,6 +3074,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                     # Stop processing remaining commits
                     break
 
+        progress.setValue(len(commits))
         # Reload logs to show new commits
         if needReload:
             self.reloadLogs()

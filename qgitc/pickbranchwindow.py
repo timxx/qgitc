@@ -5,7 +5,13 @@ from typing import List
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
+from PySide6.QtWidgets import (
+    QComboBox,
+    QCompleter,
+    QDialog,
+    QMessageBox,
+    QProgressDialog,
+)
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, dataDirPath
@@ -496,10 +502,22 @@ class PickBranchWindow(StateWindow):
                         "Please checkout the branch first.").format(targetBranch))
             return
 
+        progress = QProgressDialog(
+            self.tr("Cherry-picking commits..."),
+            self.tr("Cancel"),
+            0, len(markedCommits), self)
+        progress.setWindowTitle(self.window().windowTitle())
+        progress.setWindowModality(Qt.NonModal)
+
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
-        for commit in markedCommits:
+        for i, commit in enumerate(markedCommits):
+            progress.setValue(i)
+            if progress.wasCanceled():
+                break
             if not self.ui.logView.doCherryPick(targetRepoDir, commit.sha1, commit.repoDir, self.ui.logView, recordOrigin):
                 break
+
+        progress.setValue(len(markedCommits))
 
     def _updateStatus(self, message: str):
         """Update status label"""
