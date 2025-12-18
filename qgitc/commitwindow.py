@@ -1475,6 +1475,9 @@ class CommitWindow(StateWindow):
             if reply != QMessageBox.Yes:
                 return
 
+        self._updateSubmoduleFiles(repoFiles, self.ui.lvFiles.model())
+        self._updateSubmoduleFiles(repoFiles, self.ui.lvStaged.model())
+
         self._blockUI()
         self.ui.spinnerUnstaged.start()
         self._submoduleExecutor.submit(repoFiles, self._doRestoreStaged)
@@ -1513,6 +1516,9 @@ class CommitWindow(StateWindow):
 
             if reply != QMessageBox.Yes:
                 return
+
+        self._updateSubmoduleFiles(repoFiles, self.ui.lvFiles.model())
+        self._updateSubmoduleFiles(repoFiles, self.ui.lvStaged.model())
 
         self._blockUI()
         self.ui.spinnerUnstaged.start()
@@ -1593,6 +1599,9 @@ class CommitWindow(StateWindow):
 
             if reply != QMessageBox.Yes:
                 return
+
+        self._updateSubmoduleFiles(repoFiles, self.ui.lvFiles.model())
+        self._updateSubmoduleFiles(repoFiles, self.ui.lvStaged.model())
 
         self._blockUI()
         self.ui.spinnerUnstaged.start()
