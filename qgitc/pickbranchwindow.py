@@ -192,18 +192,24 @@ class PickBranchWindow(StateWindow):
 
     def _reloadBranches(self):
         """Reload branch list from git"""
-        branches = Git.branches()
-
         curBranchIdx = -1
         defBranchIdx = -1
 
-        self.ui.cbSourceBranch.blockSignals(True)
-        self.ui.cbTargetBranch.blockSignals(True)
-        self.ui.cbBaseBranch.blockSignals(True)
+        def _blockSignals(block: bool):
+            self.ui.cbSourceBranch.blockSignals(block)
+            self.ui.cbTargetBranch.blockSignals(block)
+            self.ui.cbBaseBranch.blockSignals(block)
+
+        _blockSignals(True)
 
         self.ui.cbSourceBranch.clear()
         self.ui.cbTargetBranch.clear()
         self.ui.cbBaseBranch.clear()
+
+        branches = Git.branches()
+        if not branches:
+            _blockSignals(False)
+            return
 
         for branch in branches:
             branch = branch.strip()
@@ -246,9 +252,7 @@ class PickBranchWindow(StateWindow):
                 self.ui.cbSourceBranch.setCurrentIndex(index)
             self._pendingSourceBranch = None
 
-        self.ui.cbSourceBranch.blockSignals(False)
-        self.ui.cbTargetBranch.blockSignals(False)
-        self.ui.cbBaseBranch.blockSignals(False)
+        _blockSignals(False)
 
         self._loadCommits()
 
