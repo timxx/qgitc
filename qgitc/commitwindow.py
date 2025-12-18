@@ -1537,9 +1537,12 @@ class CommitWindow(StateWindow):
         if cancelEvent.isSet():
             return
 
-        repoDir = fullRepoDir(submodule)
-        repoFiles = [toSubmodulePath(submodule, file) for file in files]
-        error = Git.restoreFiles(repoDir, repoFiles, isStaged)
+        if files:
+            repoDir = fullRepoDir(submodule)
+            repoFiles = [toSubmodulePath(submodule, file) for file in files]
+            error = Git.restoreFiles(repoDir, repoFiles, isStaged)
+        else:
+            error = None
 
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
 
@@ -1552,17 +1555,20 @@ class CommitWindow(StateWindow):
         if cancelEvent.isSet():
             return
 
-        repoDir = fullRepoDir(submodule)
-        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+        if files:
+            repoDir = fullRepoDir(submodule)
+            repoFiles = [toSubmodulePath(submodule, file) for file in files]
 
-        # Execute git checkout -- <files>
-        args = ["checkout", "--"]
-        args.extend(repoFiles)
-        process = Git.run(args, text=True, repoDir=repoDir)
-        _, error = process.communicate()
+            # Execute git checkout -- <files>
+            args = ["checkout", "--"]
+            args.extend(repoFiles)
+            process = Git.run(args, text=True, repoDir=repoDir)
+            _, error = process.communicate()
 
-        if cancelEvent.isSet():
-            return
+            if cancelEvent.isSet():
+                return
+        else:
+            error = None
 
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
 
