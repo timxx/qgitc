@@ -84,7 +84,7 @@ class OTelService(TelemetryBase):
         self._isEnabled = False
         self.inited = False
 
-    def setupService(self, serviceName: str, serviceVersion: str, endPoint: str, auth: str = None):
+    def setupService(self, serviceName: str, serviceVersion: str, qtVersion: str, endPoint: str, auth: str = None):
         self._isEnabled = True
         self.inited = True
 
@@ -99,6 +99,7 @@ class OTelService(TelemetryBase):
             "py.version": sys.version.split()[0],
             "os.platform": sys.platform,
             "os.arch": arch,
+            "qt.version": qtVersion
         })
 
         headers = None

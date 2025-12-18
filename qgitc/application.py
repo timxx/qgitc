@@ -17,6 +17,7 @@ from PySide6.QtCore import (
     QTimer,
     QTranslator,
     QUrl,
+    qVersion,
 )
 from PySide6.QtGui import QDesktopServices, QIcon, QPalette
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
@@ -502,6 +503,7 @@ class Application(ApplicationBase):
             self._telemetry.setupService(
                 self.applicationName(),
                 __version__,
+                qVersion(),
                 OTEL_ENDPOINT,
                 OTEL_AUTH
             )
@@ -541,6 +543,7 @@ class Application(ApplicationBase):
             self._telemetry.setupService(
                 self.applicationName(),
                 __version__,
+                qVersion(),
                 OTEL_ENDPOINT,
                 OTEL_AUTH
             )
