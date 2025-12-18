@@ -64,6 +64,7 @@ class BlameCommitPanel(QSplitter):
         self.logView.setEditable(False)
         self.logView.setShowNoDataTips(True)
         self.logView.setStandalone(False)
+        self.logView.setAllowSelectOnFetch(False)
 
         self.detailPanel = CommitDetailPanel(self)
 
@@ -72,8 +73,6 @@ class BlameCommitPanel(QSplitter):
 
         self.logView.currentIndexChanged.connect(
             self._onCommitChanged)
-        self.logView.endFetch.connect(
-            self._onLogFetchFinished)
 
         self.detailPanel.linkActivated.connect(
             self.linkActivated)
@@ -84,7 +83,7 @@ class BlameCommitPanel(QSplitter):
 
     def showRevision(self, rev: BlameLine):
         self.logView.blockSignals(True)
-        if self.logView.switchToCommit(rev.sha1):
+        if self.logView.switchToCommit(rev.sha1, self.logView.fetcher.isLoading()):
             # the log is fetching, update later in _onCommitChanged
             index = self.logView.currentIndex()
             if index != -1:
@@ -163,21 +162,6 @@ class BlameCommitPanel(QSplitter):
             previous = panel.revisions[i].previous
 
         self.detailPanel.showCommit(commit, previous)
-
-    def _onLogFetchFinished(self):
-        panel: RevisionPanel = self._viewer.panel
-        rev = panel._activeRev
-        if rev:
-            if self.logView.switchToCommit(rev):
-                commit = self.logView.getCommit(self.logView.currentIndex())
-                previous = None
-                for r in panel.revisions:
-                    if r.sha1 == rev:
-                        previous = r.previous
-                        break
-                self.detailPanel.showCommit(commit, previous)
-        else:
-            self.logView.setCurrentIndex(-1)
 
     def _onNameAvailable(self, data: List[tuple]):
         if not data:
