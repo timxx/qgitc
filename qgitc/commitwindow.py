@@ -1612,7 +1612,8 @@ class CommitWindow(StateWindow):
             if cancelEvent.isSet():
                 break
 
-            fullPath = os.path.join(repoDir, file)
+            repoFile = toSubmodulePath(submodule, file)
+            fullPath = os.path.join(repoDir, repoFile)
             try:
                 if os.path.exists(fullPath):
                     os.remove(fullPath)
