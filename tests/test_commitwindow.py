@@ -999,3 +999,192 @@ class TestCommitWindow(TestBase):
             mock_msgbox_class.assert_called_once()
 
         self.waitForLoaded()
+
+    def testDeleteFilesInSubmoduleWithCorrectPath(self):
+        """Test bug fix: File removal in submodules uses correct submodule path
+        
+        Bug: Previously, when deleting files in submodules, the code was not
+        resolving the correct submodule path before deletion, causing files
+        to not be found and deleted.
+        
+        Fix (commit abe1373): Use toSubmodulePath() to resolve the correct
+        path relative to the submodule before constructing the full path.
+        """
+        self.waitForLoaded()
+
+        # Create a test file in submodule
+        subRepoFile = os.path.join("subRepo", "delete_test.txt")
+        testFilePath = os.path.join(self.gitDir.name, subRepoFile)
+        with open(testFilePath, "w+") as f:
+            f.write("content to delete")
+
+        # Verify file exists
+        self.assertTrue(os.path.exists(testFilePath))
+
+        # Mock cancel event
+        mockThread = mock.MagicMock(spec=QThread)
+        mockThread.isInterruptionRequested.return_value = False
+        cancelEvent = CancelEvent(mockThread)
+
+        # Mock the status fetcher to avoid actual git operations
+        with patch.object(self.window._statusFetcher, 'fetchStatus'):
+            # Call _doDeleteFiles with submodule path
+            self.window._doDeleteFiles(
+                "subRepo", ["subRepo/delete_test.txt"], cancelEvent)
+            self.processEvents()
+
+        # Verify the file was actually deleted (this proves toSubmodulePath was used correctly)
+        self.assertFalse(os.path.exists(testFilePath),
+                         "File in submodule should be deleted using correct path")
+
+    def _assertModelUpdateCalledBeforeClear(self, action, lvFiles):
+        """Helper method to verify _updateSubmoduleFiles is called before clearModels"""
+        with patch.object(self.window, '_updateSubmoduleFiles') as mock_update, \
+                patch.object(self.window, 'clearModels') as mock_clear, \
+                patch("qgitc.commitwindow.QMessageBox") as mock_msgbox_class:
+
+            mock_msgbox = MagicMock()
+            mock_msgbox.exec.return_value = QMessageBox.Yes
+            mock_checkbox = MagicMock()
+            mock_checkbox.isChecked.return_value = False
+            mock_msgbox.checkBox.return_value = mock_checkbox
+            mock_msgbox_class.return_value = mock_msgbox
+            mock_msgbox_class.Yes = QMessageBox.Yes
+            mock_msgbox_class.No = QMessageBox.No
+
+            action.setData(lvFiles)
+            action.trigger()
+            self.processEvents()
+
+            # Verify _updateSubmoduleFiles was called twice (for both models)
+            self.assertEqual(mock_update.call_count, 2,
+                             "_updateSubmoduleFiles should be called twice for both models")
+
+            # Verify clearModels was called
+            mock_clear.assert_called_once()
+
+    def testRestoreFilesUpdatesSubmoduleFilesBeforeClearingModels(self):
+        """Test bug fix: Missing file status after restore operation
+        
+        Bug: After restoring files, the file status was missing because
+        clearModels() was called without first updating the submodule files
+        in the models.
+        
+        Fix (commit b93af54): Call _updateSubmoduleFiles() on both models
+        before clearing them to ensure all repositories are properly tracked.
+        """
+        self.waitForLoaded()
+
+        # Modify a tracked file (not untracked, since restore filters those out)
+        testFile = "test.py"
+        testFilePath = os.path.join(self.gitDir.name, testFile)
+        with open(testFilePath, "a+") as f:
+            f.write("\n# Modification for restore test\n")
+
+        # Refresh to show the modified file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertGreater(filesModel.rowCount(), 0, "Should have modified files")
+        lvFiles.selectAll()
+
+        self._assertModelUpdateCalledBeforeClear(self.window._acRestoreFiles, lvFiles)
+
+    def testCheckoutFilesUpdatesSubmoduleFilesBeforeClearingModels(self):
+        """Test bug fix: Missing file status after checkout operation
+        
+        Bug: After checking out files, the file status was missing because
+        clearModels() was called without first updating the submodule files
+        in the models.
+        
+        Fix (commit b93af54): Call _updateSubmoduleFiles() on both models
+        before clearing them to ensure all repositories are properly tracked.
+        """
+        self.waitForLoaded()
+
+        # Create and modify a tracked file
+        testFile = "test.py"
+        testFilePath = os.path.join(self.gitDir.name, testFile)
+        with open(testFilePath, "a+") as f:
+            f.write("\n# Modification for checkout test\n")
+
+        # Refresh to show changes
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        lvFiles.selectAll()
+
+        self._assertModelUpdateCalledBeforeClear(self.window._acCheckoutFiles, lvFiles)
+
+    def testDeleteFilesUpdatesSubmoduleFilesBeforeClearingModels(self):
+        """Test bug fix: Missing file status after delete operation
+        
+        Bug: After deleting files, the file status was missing because
+        clearModels() was called without first updating the submodule files
+        in the models.
+        
+        Fix (commit b93af54): Call _updateSubmoduleFiles() on both models
+        before clearing them to ensure all repositories are properly tracked.
+        """
+        self.waitForLoaded()
+
+        # Create an untracked file
+        testFile = os.path.join(self.gitDir.name, "delete_model_test.txt")
+        with open(testFile, "w+") as f:
+            f.write("content to delete")
+
+        # Refresh to show the file
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        lvFiles.selectAll()
+
+        self._assertModelUpdateCalledBeforeClear(self.window._acDeleteFiles, lvFiles)
+
+    def testSubmodulePathResolutionInDeleteFiles(self):
+        """Test that toSubmodulePath correctly resolves paths in _doDeleteFiles
+        
+        This test verifies the fix from commit abe1373 by ensuring that
+        the toSubmodulePath function is used to convert file paths relative
+        to the submodule before constructing the full path for deletion.
+        """
+        self.waitForLoaded()
+
+        # Create files in both main repo and submodule
+        mainFile = "main_delete.txt"
+        mainFilePath = os.path.join(self.gitDir.name, mainFile)
+        with open(mainFilePath, "w+") as f:
+            f.write("main repo file")
+
+        subRepoFile = os.path.join("subRepo", "sub_delete.txt")
+        subFilePath = os.path.join(self.gitDir.name, subRepoFile)
+        with open(subFilePath, "w+") as f:
+            f.write("submodule file")
+
+        # Verify files exist
+        self.assertTrue(os.path.exists(mainFilePath))
+        self.assertTrue(os.path.exists(subFilePath))
+
+        mockThread = mock.MagicMock(spec=QThread)
+        mockThread.isInterruptionRequested.return_value = False
+        cancelEvent = CancelEvent(mockThread)
+
+        with patch.object(self.window._statusFetcher, 'fetchStatus'):
+            # Delete file in main repo (submodule = ".")
+            self.window._doDeleteFiles(".", [mainFile], cancelEvent)
+            self.processEvents()
+
+            # Delete file in submodule (path should be relative to submodule)
+            self.window._doDeleteFiles(
+                "subRepo", ["subRepo/sub_delete.txt"], cancelEvent)
+            self.processEvents()
+
+        # Verify both files were deleted
+        self.assertFalse(os.path.exists(mainFilePath),
+                         "File in main repo should be deleted")
+        self.assertFalse(os.path.exists(subFilePath),
+                         "File in submodule should be deleted using correct path resolution")
