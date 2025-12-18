@@ -809,53 +809,53 @@ If this is not the most recent commit, history will be rewritten.</source>
     </message>
     <message>
         <location filename="../../commitwindow.py" line="1467"/>
-        <location filename="../../commitwindow.py" line="1506"/>
-        <location filename="../../commitwindow.py" line="1586"/>
+        <location filename="../../commitwindow.py" line="1509"/>
+        <location filename="../../commitwindow.py" line="1592"/>
         <source>Don&apos;t show this message again</source>
         <translation>不再显示此消息</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1498"/>
+        <location filename="../../commitwindow.py" line="1501"/>
         <source>Checkout Files</source>
         <translation>检出文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1500"/>
+        <location filename="../../commitwindow.py" line="1503"/>
         <source>Are you sure you want to checkout the selected files?</source>
         <translation>确定要检出选定的文件吗？</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1502"/>
+        <location filename="../../commitwindow.py" line="1505"/>
         <source>This will discard unstaged changes.</source>
         <translation>此操作将丢弃未暂存的更改。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1578"/>
+        <location filename="../../commitwindow.py" line="1584"/>
         <source>Delete Files</source>
         <translation>删除文件</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1580"/>
+        <location filename="../../commitwindow.py" line="1586"/>
         <source>Are you sure you want to delete the selected files?</source>
         <translation>确定要删除选定的文件吗？</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1582"/>
+        <location filename="../../commitwindow.py" line="1588"/>
         <source>This will permanently delete the files from disk. This action cannot be undone.</source>
         <translation>此操作将永久删除选定的文件且无法撤销。</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1632"/>
+        <location filename="../../commitwindow.py" line="1642"/>
         <source>Restore File Failed</source>
         <translation>还原文件失败</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1641"/>
+        <location filename="../../commitwindow.py" line="1651"/>
         <source>Delete File Failed</source>
         <translation>删除文件失败</translation>
     </message>
     <message>
-        <location filename="../../commitwindow.py" line="1796"/>
+        <location filename="../../commitwindow.py" line="1806"/>
         <source>Local time is not synchronized with the network time</source>
         <translation>本地时间与标准时间不同步</translation>
     </message>
@@ -1542,33 +1542,33 @@ Settings → Commit → Detect Local Changes</source>
         <translation>未找到记录。您可能需要增加“最大记录数”设置或禁用“聚合模式”。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="2752"/>
+        <location filename="../../logview.py" line="2753"/>
         <source>... and {0} more commits</source>
         <translation>...以及另外{0}条提交</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="2963"/>
-        <location filename="../../logview.py" line="2973"/>
-        <location filename="../../logview.py" line="3001"/>
-        <location filename="../../logview.py" line="3009"/>
-        <location filename="../../logview.py" line="3103"/>
-        <location filename="../../logview.py" line="3145"/>
-        <location filename="../../logview.py" line="3182"/>
-        <location filename="../../logview.py" line="3247"/>
-        <location filename="../../logview.py" line="3253"/>
-        <location filename="../../logview.py" line="3290"/>
-        <location filename="../../logview.py" line="3305"/>
-        <location filename="../../logview.py" line="3313"/>
+        <location filename="../../logview.py" line="2964"/>
+        <location filename="../../logview.py" line="2974"/>
+        <location filename="../../logview.py" line="3002"/>
+        <location filename="../../logview.py" line="3010"/>
+        <location filename="../../logview.py" line="3109"/>
+        <location filename="../../logview.py" line="3151"/>
+        <location filename="../../logview.py" line="3188"/>
+        <location filename="../../logview.py" line="3249"/>
+        <location filename="../../logview.py" line="3255"/>
+        <location filename="../../logview.py" line="3292"/>
+        <location filename="../../logview.py" line="3307"/>
+        <location filename="../../logview.py" line="3315"/>
         <source>Cherry-pick Failed</source>
         <translation>拣选失败</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="2964"/>
+        <location filename="../../logview.py" line="2965"/>
         <source>Invalid drag data format.</source>
         <translation>拖拽数据格式无效。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="2974"/>
+        <location filename="../../logview.py" line="2975"/>
         <source>Cannot cherry-pick commits from a different repository.
 
 Source: {0}
@@ -1579,12 +1579,12 @@ Target: {1}</source>
 目标：{1}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3002"/>
+        <location filename="../../logview.py" line="3003"/>
         <source>Cannot cherry-pick commits to the same branch.</source>
         <translation>无法将提交拣选到同一个分支。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3010"/>
+        <location filename="../../logview.py" line="3011"/>
         <source>The target branch &apos;{0}&apos; is not checked out.
 
 Please checkout the branch first.</source>
@@ -1593,15 +1593,15 @@ Please checkout the branch first.</source>
 请先检出该分支。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3049"/>
+        <location filename="../../logview.py" line="3051"/>
         <source>Cherry-picking commits...</source>
         <translation>正在拣选提交...</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3104"/>
-        <location filename="../../logview.py" line="3146"/>
-        <location filename="../../logview.py" line="3183"/>
-        <location filename="../../logview.py" line="3291"/>
+        <location filename="../../logview.py" line="3110"/>
+        <location filename="../../logview.py" line="3152"/>
+        <location filename="../../logview.py" line="3189"/>
+        <location filename="../../logview.py" line="3293"/>
         <source>Cherry-pick of commit {0} failed:
 
 {1}</source>
@@ -1610,27 +1610,27 @@ Please checkout the branch first.</source>
 {1}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3105"/>
-        <location filename="../../logview.py" line="3147"/>
-        <location filename="../../logview.py" line="3151"/>
-        <location filename="../../logview.py" line="3184"/>
-        <location filename="../../logview.py" line="3216"/>
-        <location filename="../../logview.py" line="3245"/>
-        <location filename="../../logview.py" line="3270"/>
-        <location filename="../../logview.py" line="3292"/>
-        <location filename="../../logview.py" line="3298"/>
+        <location filename="../../logview.py" line="3111"/>
+        <location filename="../../logview.py" line="3153"/>
+        <location filename="../../logview.py" line="3157"/>
+        <location filename="../../logview.py" line="3190"/>
+        <location filename="../../logview.py" line="3218"/>
+        <location filename="../../logview.py" line="3247"/>
+        <location filename="../../logview.py" line="3272"/>
+        <location filename="../../logview.py" line="3294"/>
+        <location filename="../../logview.py" line="3300"/>
         <source>Unknown error</source>
         <translation>未知错误</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3150"/>
-        <location filename="../../logview.py" line="3296"/>
+        <location filename="../../logview.py" line="3156"/>
+        <location filename="../../logview.py" line="3298"/>
         <source>Merge Tool Failed</source>
         <translation>合并工具失败</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3151"/>
-        <location filename="../../logview.py" line="3297"/>
+        <location filename="../../logview.py" line="3157"/>
+        <location filename="../../logview.py" line="3299"/>
         <source>Merge tool failed with error:
 
 {0}</source>
@@ -1639,12 +1639,12 @@ Please checkout the branch first.</source>
 {0}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3164"/>
+        <location filename="../../logview.py" line="3170"/>
         <source>Empty Cherry-pick</source>
         <translation>空拣选</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3165"/>
+        <location filename="../../logview.py" line="3171"/>
         <source>Commit {0} results in an empty commit (possibly already applied).
 
 Do you want to skip it?</source>
@@ -1653,20 +1653,20 @@ Do you want to skip it?</source>
 是否跳过此提交？</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3199"/>
-        <location filename="../../logview.py" line="3218"/>
-        <location filename="../../logview.py" line="3229"/>
+        <location filename="../../logview.py" line="3201"/>
+        <location filename="../../logview.py" line="3220"/>
+        <location filename="../../logview.py" line="3231"/>
         <source>Apply Changes Failed</source>
         <translation>应用改动失败</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3200"/>
+        <location filename="../../logview.py" line="3202"/>
         <source>No changes found to apply.</source>
         <translation>未找到可应用的改动。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3219"/>
-        <location filename="../../logview.py" line="3230"/>
+        <location filename="../../logview.py" line="3221"/>
+        <location filename="../../logview.py" line="3232"/>
         <source>Failed to apply local changes:
 
 {0}</source>
@@ -1675,7 +1675,7 @@ Do you want to skip it?</source>
 {0}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3248"/>
+        <location filename="../../logview.py" line="3250"/>
         <source>Failed to generate patch from source repository:
 
 {0}</source>
@@ -1684,12 +1684,12 @@ Do you want to skip it?</source>
 {0}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3254"/>
+        <location filename="../../logview.py" line="3256"/>
         <source>No patch content generated for commit {0}.</source>
         <translation>提交 {0} 没有生成补丁内容。</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3306"/>
+        <location filename="../../logview.py" line="3308"/>
         <source>Failed to apply patch to target repository:
 
 {0}</source>
@@ -1698,7 +1698,7 @@ Do you want to skip it?</source>
 {0}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3314"/>
+        <location filename="../../logview.py" line="3316"/>
         <source>Failed to apply patch from another repository:
 
 {0}</source>
@@ -1707,12 +1707,12 @@ Do you want to skip it?</source>
 {0}</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3322"/>
+        <location filename="../../logview.py" line="3324"/>
         <source>Cherry-pick Conflict</source>
         <translation>拣选冲突</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3324"/>
+        <location filename="../../logview.py" line="3326"/>
         <source>Cherry-pick of commit {0} failed with conflicts:
 
 {1}
@@ -1725,17 +1725,17 @@ Do you want to resolve the conflicts using mergetool?</source>
 您是否要使用合并工具解决这些冲突？</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3332"/>
+        <location filename="../../logview.py" line="3334"/>
         <source>Already Resolved</source>
         <translation>已解决</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3351"/>
+        <location filename="../../logview.py" line="3353"/>
         <source>Merge Tool Not Configured</source>
         <translation>合并工具未配置</translation>
     </message>
     <message>
-        <location filename="../../logview.py" line="3352"/>
+        <location filename="../../logview.py" line="3354"/>
         <source>No merge tool is configured.
 
 Please configure a merge tool in:
@@ -2346,73 +2346,83 @@ Please configure a merge tool in:
 <context>
     <name>PickBranchWindow</name>
     <message>
-        <location filename="../../pickbranchwindow.py" line="270"/>
+        <location filename="../../pickbranchwindow.py" line="211"/>
+        <source>No branches found in the repository</source>
+        <translation>当前仓库无分支</translation>
+    </message>
+    <message>
+        <location filename="../../pickbranchwindow.py" line="212"/>
+        <source>Please select a valid repository</source>
+        <translation>请选择一个有效的仓库</translation>
+    </message>
+    <message>
+        <location filename="../../pickbranchwindow.py" line="277"/>
         <source>Please select both source and base branches</source>
         <translation>请同时选择源分支和基线分支</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="276"/>
+        <location filename="../../pickbranchwindow.py" line="283"/>
         <source>Source and base branches must be different</source>
         <translation>源分支与基准分支必须不同</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="286"/>
+        <location filename="../../pickbranchwindow.py" line="293"/>
         <source>Loading commits from {0}...</source>
         <translation>正在从 {0} 加载提交...</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="301"/>
+        <location filename="../../pickbranchwindow.py" line="308"/>
         <source>No commits to cherry-pick</source>
         <translation>没有可拣选的提交</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="304"/>
+        <location filename="../../pickbranchwindow.py" line="311"/>
         <source>Found {0} commit(s) to cherry-pick</source>
         <translation>找到 {0} 条可拣选的提交</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="351"/>
+        <location filename="../../pickbranchwindow.py" line="358"/>
         <source>No filters configured. Please configure filters in Settings &gt; Cherry-Pick</source>
         <translation>未配置过滤器。请在 设置 &gt; Cherry-Pick 中配置过滤器</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="374"/>
+        <location filename="../../pickbranchwindow.py" line="381"/>
         <source>Invalid regex pattern: {0}</source>
         <translation>无效的正则表达式模式：{0}</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="423"/>
+        <location filename="../../pickbranchwindow.py" line="430"/>
         <source>Filtered out {0} commit(s)</source>
         <translation>已过滤掉 {0} 条提交</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="426"/>
+        <location filename="../../pickbranchwindow.py" line="433"/>
         <source>No commits matched the filter criteria</source>
         <translation>没有提交符合筛选条件</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="455"/>
+        <location filename="../../pickbranchwindow.py" line="462"/>
         <source>Please select commits to cherry-pick</source>
         <translation>请选择要拣选的提交</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="457"/>
+        <location filename="../../pickbranchwindow.py" line="464"/>
         <source>No commits available</source>
         <translation>没有可用的提交</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="460"/>
+        <location filename="../../pickbranchwindow.py" line="467"/>
         <source>Selected {0} commit(s) to cherry-pick</source>
         <translation>已选中 {0} 条待拣选的提交</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="491"/>
-        <location filename="../../pickbranchwindow.py" line="500"/>
+        <location filename="../../pickbranchwindow.py" line="498"/>
+        <location filename="../../pickbranchwindow.py" line="507"/>
         <source>Cherry-pick Failed</source>
         <translation>拣选失败</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="492"/>
+        <location filename="../../pickbranchwindow.py" line="499"/>
         <source>The target branch &apos;{0}&apos; is the same as source branch.
 
 Please select a different target branch.</source>
@@ -2421,7 +2431,7 @@ Please select a different target branch.</source>
 请选择一个不同的目标分支。</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="501"/>
+        <location filename="../../pickbranchwindow.py" line="508"/>
         <source>The target branch &apos;{0}&apos; is not checked out.
 
 Please checkout the branch first.</source>
@@ -2430,12 +2440,12 @@ Please checkout the branch first.</source>
 请先检出该分支。</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="506"/>
+        <location filename="../../pickbranchwindow.py" line="513"/>
         <source>Cherry-picking commits...</source>
         <translation>正在拣选提交...</translation>
     </message>
     <message>
-        <location filename="../../pickbranchwindow.py" line="507"/>
+        <location filename="../../pickbranchwindow.py" line="514"/>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>

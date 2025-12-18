@@ -208,6 +208,9 @@ class PickBranchWindow(StateWindow):
 
         branches = Git.branches()
         if not branches:
+            text = self.tr("No branches found in the repository") if Git.REPO_DIR else self.tr(
+                "Please select a valid repository")
+            self._updateStatus(text)
             _blockSignals(False)
             return
 
