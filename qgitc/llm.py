@@ -278,18 +278,18 @@ class AiModelBase(QObject):
 
     def handleNonStreamResponse(self, response: bytes):
         try:
-            data = json.loads(response)
+            data: dict = json.loads(response)
         except json.JSONDecodeError as e:
             logger.error("Failed to decode JSON response: %s", e)
             return
-        usage = data["usage"]
+        usage: dict = data.get("usage", {})
         aiResponse = AiResponse()
-        aiResponse.total_tokens = usage["total_tokens"]
+        aiResponse.total_tokens = usage.get("total_tokens", 0)
 
         for choice in data["choices"]:
-            message = choice["message"]
+            message: dict = choice["message"]
             content = message["content"]
-            role = message["role"]
+            role = message.get("role", "assistant")
             aiResponse.role = AiRole.Assistant
             aiResponse.message = content
             self.responseAvailable.emit(aiResponse)
