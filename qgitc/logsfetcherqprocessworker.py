@@ -22,7 +22,7 @@ from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 class LocalChangesFetcher(QObject):
     finished = Signal()
 
-    def __init__(self, repoDir=None, isComposite=False, parent=None):
+    def __init__(self, repoDir: str = None, isComposite=False, parent=None):
         super().__init__(parent)
         self._repoDir = repoDir
         self._lccProcess: QProcess = None
@@ -175,7 +175,12 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         hasLUC = fetcher.hasLUC
 
         if hasLCC or hasLUC:
-            repoDir = fetcher._repoDir if fetcher.isComposite else None
+            repoDir = None
+            if fetcher.isComposite:
+                if fetcher._repoDir.startswith(self._branchDir):
+                    repoDir = fetcher._repoDir[len(self._branchDir) + 1:]
+                    if not repoDir:
+                        repoDir = "."
             LogsFetcherWorkerBase._makeLocalCommits(
                 self._lccCommit, self._lucCommit, hasLCC, hasLUC, repoDir)
 
