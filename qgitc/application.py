@@ -459,7 +459,7 @@ class Application(ApplicationBase):
         locale = self.uiLocale()
         return locale.languageToString(locale.language())
 
-    def terminateThread(self, thread: QThread, waitTime=1000):
+    def terminateThread(self, thread: QThread, waitTime=3000):
         if not thread.isRunning():
             return False
 
