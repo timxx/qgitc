@@ -103,7 +103,7 @@ class TestSubmoduleExecutor(TestBase):
         self.processEvents()
 
     def _blockAction(self, submodule, data, cancelEvent: CancelEvent):
-        time.sleep(2)
+        time.sleep(4)
 
     @unittest.skipIf(sys.version_info >= (3, 14), "Skip on Python >= 3.14")
     def testAbort(self):
