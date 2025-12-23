@@ -353,13 +353,15 @@ class TestGitViewSplitterWithRealSubmodules(TestBase):
 
         try:
             # If submodules were detected, graph should be collapsed
-            if self.app.submodules:
-                sizes = gitView.ui.logWidget.sizes()
-                total = sum(sizes)
-                if total > 0:
-                    graphRatio = sizes[0] / total
-                    self.assertLess(graphRatio, 0.01,
-                                    f"Graph should be collapsed with submodules in composite mode")
+            self.assertGreater(len(self.app.submodules), 0)
+            sizes = gitView.ui.logWidget.sizes()
+            total = sum(sizes)
+            self.assertGreater(total, 0)
+            self.assertEqual(
+                sizes[0], 0, f"Graph should be collapsed with submodules in composite mode")
+            total = sum(gitView._logWidgetSizes)
+            self.assertGreater(total, 0)
+            self.assertEqual(len(gitView._logWidgetSizes), 2)
         finally:
             gitView.queryClose()
             gitView.deleteLater()
@@ -381,12 +383,12 @@ class TestGitViewSplitterWithRealSubmodules(TestBase):
 
         try:
             # In normal mode, graph should be expanded even with submodules
+            self.assertGreater(len(self.app.submodules), 0)
             sizes = gitView.ui.logWidget.sizes()
             total = sum(sizes)
-            if total > 0:
-                graphRatio = sizes[0] / total
-                self.assertGreater(graphRatio, 0.01,
-                                   f"Graph should be expanded in normal mode regardless of submodules")
+            self.assertGreater(total, 0)
+            self.assertGreater(
+                sizes[0], 0, f"Graph should be expanded in normal mode regardless of submodules")
         finally:
             gitView.queryClose()
             gitView.deleteLater()

@@ -407,5 +407,7 @@ class GitView(QWidget):
 
     def __onSubmoduleAvailable(self, submodules: List[str], fromCache: bool):
         self._logWidgetSizes = self.ui.logWidget.sizes()
+        if len(self._logWidgetSizes) != 2 or (self._logWidgetSizes[0] == 0 and self._logWidgetSizes[1] == 0):
+            self._logWidgetSizes = [25, 75]
         if ApplicationBase.instance().settings().isCompositeMode():
             self.ui.logWidget.setSizes([0, 100])
