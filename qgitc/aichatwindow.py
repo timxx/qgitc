@@ -602,6 +602,10 @@ class AiChatWidget(QWidget):
     def _createNewConversation(self):
         """Create and switch to a new conversation"""
         model = self.currentChatModel()
+        if model is None:
+            logger.warning("Cannot create new conversation: no model available")
+            return
+
         history = AiChatHistory()
         history.modelKey = AiModelFactory.modelKey(model)
         history.modelId = model.modelId or model.name
