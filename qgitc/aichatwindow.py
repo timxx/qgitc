@@ -543,10 +543,7 @@ class AiChatWidget(QWidget):
 
     def _updateModelNames(self, model: AiModelBase):
         self.cbModelNames.clear()
-        modelKey = AiModelFactory.modelKey(model)
-        defaultId = ApplicationBase.instance().settings().defaultLlmModelId(modelKey)
-        if not defaultId:
-            defaultId = model.modelId
+        defaultId = model.modelId
         for id, name in model.models():
             self.cbModelNames.addItem(name, id)
             if id == defaultId:

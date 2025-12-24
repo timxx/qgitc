@@ -141,6 +141,7 @@ class GithubCopilot(AiModelBase):
                 return
 
         id = params.model or self.modelId or "gpt-4.1"
+        self.modelId = id
         caps: AiModelCapabilities = GithubCopilot._capabilities.get(
             id, AiModelCapabilities())
 
@@ -313,7 +314,9 @@ class GithubCopilot(AiModelBase):
         GithubCopilot._capabilities = fetcher.capabilities
 
         if not self.modelId:
-            self.modelId = fetcher.defaultModel or "gpt-4.1"
+            modelKey = AiModelFactory.modelKey(self)
+            settings = ApplicationBase.instance().settings()
+            self.modelId = settings.defaultLlmModelId(modelKey) or fetcher.defaultModel or "gpt-4.1"
 
         self._modelFetcher = None
         self.modelsReady.emit()
