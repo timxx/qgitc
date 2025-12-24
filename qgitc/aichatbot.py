@@ -87,6 +87,7 @@ class AiChatbot(QPlainTextEdit):
         cursor = self.textCursor()
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
+        docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
         if not response.is_delta or response.first_delta:
@@ -94,7 +95,7 @@ class AiChatbot(QPlainTextEdit):
             cursor.insertBlock()
         cursor.insertText(response.message)
 
-        if selectionStart != selectionEnd:
+        if selectionStart != selectionEnd and selectionEnd == docLength:
             newCursor = self.textCursor()
             newCursor.setPosition(selectionStart)
             newCursor.setPosition(selectionEnd, QTextCursor.KeepAnchor)
@@ -104,6 +105,7 @@ class AiChatbot(QPlainTextEdit):
         cursor = self.textCursor()
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
+        docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
         self._insertRoleBlock(cursor, AiRole.System)
@@ -111,7 +113,7 @@ class AiChatbot(QPlainTextEdit):
         cursor.insertBlock()
         cursor.insertText(self.tr("Service Unavailable"))
 
-        if selectionStart != selectionEnd:
+        if selectionStart != selectionEnd and selectionEnd == docLength:
             newCursor = self.textCursor()
             newCursor.setPosition(selectionStart)
             newCursor.setPosition(selectionEnd, QTextCursor.KeepAnchor)
