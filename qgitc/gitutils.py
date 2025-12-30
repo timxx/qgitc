@@ -898,16 +898,41 @@ class Git():
     @staticmethod
     def restoreStagedFiles(repoDir, files):
         """restore staged files
-        return error message if any
+        return (errorMessage, filesToRestore)
+        filesToRestore contains files that have unstaged changes after reset
+        and can be restored with 'git restore'
         """
         # `restore --staged` is much slower than reset HEAD
         args = ["reset", "HEAD", "--"]
         args.extend(files)
-        process = GitProcess(repoDir or Git.REPO_DIR, args)
-        _, error = process.communicate()
-        if process.returncode != 0 and error is not None:
-            return error.decode("utf-8")
-        return None
+        process = GitProcess(repoDir or Git.REPO_DIR, args, text=True)
+        output, error = process.communicate()
+
+        filesToRestore = []
+        if process.returncode != 0:
+            if error:
+                return error, filesToRestore
+            return None, filesToRestore
+
+        # Parse output to find files with unstaged changes
+        # Output format:
+        # Unstaged changes after reset:
+        # M       file1.txt
+        # M       file2.txt
+        if output:
+            lines = output.splitlines()
+            inUnstagedSection = False
+            for line in lines:
+                if 'Unstaged changes after reset:' in line:
+                    inUnstagedSection = True
+                    continue
+                if inUnstagedSection and line.strip():
+                    # Line format: "M       filename" or "M\tfilename"
+                    parts = line.split(None, 1)
+                    if len(parts) >= 2:
+                        filesToRestore.append(parts[1])
+
+        return None, filesToRestore
 
     @staticmethod
     def restoreFiles(repoDir, files, staged=False):
@@ -915,9 +940,14 @@ class Git():
         return error message if any
         """
         if staged:
-            error = Git.restoreStagedFiles(repoDir, files)
+            error, filesToRestore = Git.restoreStagedFiles(repoDir, files)
             if error:
                 return error
+            # Only restore files that exist in HEAD (newly added files won't be in this list)
+            files = filesToRestore
+
+        if not files:
+            return None
 
         args = ["restore", "--"]
         args.extend(files)
