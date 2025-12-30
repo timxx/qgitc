@@ -44,12 +44,74 @@ class TestGitUtils(TestBase):
         self.assertIn("diff --git a/test.dot b/test.dot", lines)
 
     def testRestoreFiles(self):
+        """Test restoreFiles with newly added file - should not fail"""
         with open("newfile.txt", "w", encoding="utf-8") as f:
             f.write("test")
         self.assertIsNone(Git.addFiles(None, ["newfile.txt"]))
 
+        # Should successfully unstage without error (newly added files won't be restored)
         error = Git.restoreFiles(None, ["newfile.txt"], staged=True)
-        self.assertTrue(error.startswith("error: pathspec "))
+        self.assertIsNone(error)
+
+    def testRestoreStagedFilesNewlyAdded(self):
+        """Test restoreStagedFiles with newly added file"""
+        with open("newfile_staged.txt", "w", encoding="utf-8") as f:
+            f.write("test content")
+        self.assertIsNone(Git.addFiles(None, ["newfile_staged.txt"]))
+
+        # restoreStagedFiles should successfully unstage without error
+        error, filesToRestore = Git.restoreStagedFiles(
+            None, ["newfile_staged.txt"])
+        self.assertIsNone(error)
+        # Newly added file should not be in filesToRestore (no unstaged changes)
+        self.assertEqual(filesToRestore, [])
+
+    def testRestoreStagedFilesModified(self):
+        """Test restoreStagedFiles with modified file"""
+        # First commit a file
+        with open("existing.txt", "w", encoding="utf-8") as f:
+            f.write("original content")
+        self.assertIsNone(Git.addFiles(None, ["existing.txt"]))
+        Git.commit("Add existing.txt")
+
+        # Modify and stage it
+        with open("existing.txt", "w", encoding="utf-8") as f:
+            f.write("modified content")
+        self.assertIsNone(Git.addFiles(None, ["existing.txt"]))
+
+        # restoreStagedFiles should unstage and return it in filesToRestore
+        error, filesToRestore = Git.restoreStagedFiles(None, ["existing.txt"])
+        self.assertIsNone(error)
+        # Modified file should be in filesToRestore (has unstaged changes after reset)
+        self.assertIn("existing.txt", filesToRestore)
+
+    def testRestoreFilesMixed(self):
+        """Test restoreFiles with mix of newly added and modified files"""
+        # Create and commit a file
+        with open("committed.txt", "w", encoding="utf-8") as f:
+            f.write("original")
+        self.assertIsNone(Git.addFiles(None, ["committed.txt"]))
+        Git.commit("Add committed.txt")
+
+        # Modify the existing file
+        with open("committed.txt", "w", encoding="utf-8") as f:
+            f.write("modified")
+        self.assertIsNone(Git.addFiles(None, ["committed.txt"]))
+
+        # Add a new file
+        with open("newfile_mixed.txt", "w", encoding="utf-8") as f:
+            f.write("new content")
+        self.assertIsNone(Git.addFiles(None, ["newfile_mixed.txt"]))
+
+        # Restore both files - should not fail
+        error = Git.restoreFiles(
+            None, ["committed.txt", "newfile_mixed.txt"], staged=True)
+        self.assertIsNone(error)
+
+        # Check that the modified file was restored to original content
+        with open("committed.txt", "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertEqual(content, "original")
 
     def testChangeCommitAuthorHead(self):
         """Test changing the author of the HEAD commit"""

@@ -794,7 +794,7 @@ class CommitWindow(StateWindow):
         repoDir = fullRepoDir(submodule)
         if files:
             repoFiles = [toSubmodulePath(submodule, file) for file in files]
-            error = Git.restoreStagedFiles(repoDir, repoFiles)
+            error, _ = Git.restoreStagedFiles(repoDir, repoFiles)
             if error:
                 ApplicationBase.instance().postEvent(self, GitErrorEvent(error))
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
@@ -1546,8 +1546,6 @@ class CommitWindow(StateWindow):
 
         self._statusFetcher.fetchStatus(submodule, cancelEvent)
 
-        if error and error.startswith("error: pathspec "):
-            error = None
         ApplicationBase.instance().postEvent(
             self, FileRestoreEvent(submodule, files, error))
 
