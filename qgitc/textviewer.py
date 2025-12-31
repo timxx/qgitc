@@ -1239,7 +1239,8 @@ class TextViewer(QAbstractScrollArea):
         if curFindIndex >= 0:
             self.select(result[curFindIndex])
 
-        self._findWidget.updateFindResult(result, curFindIndex, findPart)
+        if self._findWidget:
+            self._findWidget.updateFindResult(result, curFindIndex, findPart)
 
     def closeFindWidget(self):
         if self._findWidget and self._findWidget.isVisible():

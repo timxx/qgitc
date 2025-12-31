@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+import time
+
 from PySide6.QtCore import QPointF, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
-from qgitc.findconstants import FindFlags
+from qgitc.findconstants import FindFlags, FindPart
 from qgitc.textline import SourceTextLineBase, TextLine
 from qgitc.textviewer import TextViewer
 from tests.base import TestBase
@@ -171,7 +173,8 @@ class TestTextViewer(TestBase):
         self.wait(250)
         self.assertEqual(len(findWidget._findResult), 3)
 
-        QTest.mouseClick(findWidget._leFind.matchWholeWordSwitch, Qt.LeftButton)
+        QTest.mouseClick(
+            findWidget._leFind.matchWholeWordSwitch, Qt.LeftButton)
         self.assertEqual(len(findWidget._findResult), 0)
 
         QTest.mouseClick(findWidget._leFind.matchRegexSwitch, Qt.LeftButton)
@@ -246,3 +249,180 @@ class TestTextViewer(TestBase):
         result2 = self.viewer.findAll(
             "w.*d", flags=FindFlags.UseRegExp | FindFlags.CaseSenitively | FindFlags.WholeWords)
         self.assertEqual(result2, result)
+
+    def testFindResultAvailableSignalConnection(self):
+        """Test that findResultAvailable signal is connected to _onFindResultAvailable.
+
+        This is a regression test for the bug where findResultAvailable signal
+        was not connected in the base TextViewer class, causing find results
+        to be missing when text line count > 3000.
+        """
+        # Create a test spy to verify the signal can be received
+        spyFindResult = QSignalSpy(self.viewer.findResultAvailable)
+
+        # Create test data with search term
+        self.viewer.appendLines(
+            ["Line 1 with test", "Line 2 without", "Line 3 with test"])
+
+        # Initialize the find widget so _onFindResultAvailable can complete successfully
+        self.viewer.show()
+        self.viewer.executeFind()
+        findWidget = self.viewer._findWidget
+        QTest.qWaitForWindowExposed(findWidget)
+
+        # Manually trigger the signal as if findAllAsync emitted it
+        results = self.viewer.findAll("test", 0)
+
+        # Emit the signal manually to verify it's properly connected
+        self.viewer.findResultAvailable.emit(results, FindPart.All)
+
+        # Verify signal was received
+        self.assertEqual(spyFindResult.count(), 1,
+                         "findResultAvailable signal should be emitted")
+
+        # Verify that _onFindResultAvailable was called by checking side effects
+        # The method should highlight find results
+        self.assertEqual(len(self.viewer._highlightFind), 2,
+                         "Should have 2 highlighted find results after _onFindResultAvailable processes them")
+
+        # Verify find widget received the results
+        self.assertEqual(len(findWidget._findResult), 2,
+                         "Find widget should have 2 results after signal processing")
+
+        # Verify a result is selected
+        cursor = self.viewer.textCursor
+        self.assertTrue(cursor.hasSelection(),
+                        "A find result should be selected")
+        self.assertIn("test", cursor.selectedText(),
+                      "Selected text should contain search term")
+
+    def testFindAsyncWithManyLines(self):
+        """Test async find functionality with more than 3000 lines.
+        
+        This verifies the fix for missing find results when text line count > 3000.
+        When there are more than 3000 lines, findAllAsync is used which emits
+        the findResultAvailable signal. This signal must be properly connected
+        to _onFindResultAvailable to handle the results.
+        """
+        self.viewer.show()
+
+        # Create more than 3000 lines with some lines containing "test"
+        lines = []
+        for i in range(3500):
+            if i % 100 == 0:
+                lines.append(f"Line {i} with test pattern")
+            else:
+                lines.append(f"Line {i} without pattern")
+
+        self.viewer.appendLines(lines)
+        self.assertEqual(self.viewer.textLineCount(), 3500)
+
+        # Execute find operation
+        self.viewer.executeFind()
+        findWidget = self.viewer._findWidget
+        QTest.qWaitForWindowExposed(findWidget)
+
+        # Type search text
+        findWidget._leFind.setText("test")
+
+        # Create a spy to track findResultAvailable signal
+        spyFindResult = QSignalSpy(self.viewer.findResultAvailable)
+        spyFindFinished = QSignalSpy(self.viewer.findFinished)
+
+        # Start the find operation
+        findWidget.findStarted()
+
+        self.wait(1000, lambda: spyFindFinished.count() == 0)
+
+        # Verify that findResultAvailable signal was emitted
+        self.assertGreater(
+            spyFindResult.count(),
+            0,
+            "findResultAvailable signal should be emitted during async find"
+        )
+
+        # Verify that find results are available
+        self.assertGreater(
+            len(findWidget._findResult),
+            0,
+            "Find results should be available after async find completes"
+        )
+
+        # Verify the number of matches (35 lines with "test")
+        self.assertEqual(
+            len(findWidget._findResult),
+            35,
+            "Should find 35 occurrences of 'test'"
+        )
+
+        # Verify that a result is selected
+        cursor = self.viewer.textCursor
+        self.assertTrue(
+            cursor.hasSelection(),
+            "A find result should be selected"
+        )
+        self.assertIn(
+            "test",
+            cursor.selectedText().lower(),
+            "Selected text should contain the search term"
+        )
+
+    def testFindAsyncCurrentPageEmitsSignal(self):
+        """Test that findAllAsync emits findResultAvailable for current page results.
+        
+        This ensures the signal connection works for the immediate current page
+        search results before the async search continues to other pages.
+        """
+        # Create enough lines to trigger async find (> 3000)
+        lines = [f"Line {i} match" if i %
+                 10 == 0 else f"Line {i}" for i in range(3100)]
+        self.viewer.appendLines(lines)
+
+        # Create a spy before starting the find
+        spyFindResult = QSignalSpy(self.viewer.findResultAvailable)
+
+        # Start async find
+        started = self.viewer.findAllAsync("match", 0)
+
+        # Should return True indicating async operation started
+        self.assertTrue(
+            started, "findAllAsync should return True for > 3000 lines")
+
+        # Signal should be emitted at least once for current page results
+        self.assertGreaterEqual(
+            spyFindResult.count(),
+            1,
+            "findResultAvailable should be emitted at least once for current page"
+        )
+
+        # Clean up the async operation
+        self.viewer.cancelFind()
+
+    def testFindSyncWithFewerLinesDirect(self):
+        """Test that synchronous find (< 3000 lines) works correctly.
+        
+        When line count is less than 3000, findAll is called directly and
+        results are passed to _onFindResultAvailable. This should work
+        regardless of the signal connection.
+        """
+        # Create fewer than 3000 lines
+        lines = [f"Line {i} search" if i %
+                 5 == 0 else f"Line {i}" for i in range(100)]
+        self.viewer.appendLines(lines)
+
+        # Use findAll directly (synchronous)
+        results = self.viewer.findAll("search", 0)
+
+        # Verify results
+        self.assertEqual(len(results), 20, "Should find 20 occurrences")
+
+        # Each result should be a valid TextCursor with selection
+        for result in results:
+            self.assertTrue(result.hasSelection(),
+                            "Result should have a selection")
+            self.assertEqual(result.beginLine(), result.endLine(),
+                             "Single-line selection expected")
+            # Verify the selection is in the expected position
+            line_no = result.beginLine()
+            self.assertEqual(line_no % 5, 0,
+                             f"Match should be on lines divisible by 5, found on line {line_no}")
