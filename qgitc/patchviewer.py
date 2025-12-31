@@ -188,7 +188,6 @@ class PatchViewer(SourceViewer):
         self.verticalScrollBar().valueChanged.connect(
             self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)
-        self.findResultAvailable.connect(self._onFindResultAvailable)
 
     def toTextLine(self, item):
         type, content = item
