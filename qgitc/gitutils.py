@@ -919,6 +919,7 @@ class Git():
         # Unstaged changes after reset:
         # M       file1.txt
         # M       file2.txt
+        # Only include files that were in the original files list
         if output:
             lines = output.splitlines()
             inUnstagedSection = False
@@ -930,9 +931,35 @@ class Git():
                     # Line format: "M       filename" or "M\tfilename"
                     parts = line.split(None, 1)
                     if len(parts) >= 2:
-                        filesToRestore.append(parts[1])
+                        filename = parts[1].strip()
+                        if Git._isFileInList(filename, files):
+                            filesToRestore.append(filename)
 
         return None, filesToRestore
+
+    @staticmethod
+    def _isSameFile(targetFile: str, file: str):
+        if len(targetFile) != len(file):
+            return False
+
+        for c1, c2 in zip(targetFile, file):
+            if c1 in ('/', '\\') and c2 in ('/', '\\'):
+                continue
+
+            if c1.lower() != c2.lower():
+                return False
+
+        return True
+
+    @staticmethod
+    def _isFileInList(targetFile: str, files: List[str]):
+        if os.name != "nt":
+            return targetFile in files
+
+        for file in files:
+            if Git._isSameFile(targetFile, file):
+                return True
+        return False
 
     @staticmethod
     def restoreFiles(repoDir, files, staged=False):

@@ -188,3 +188,41 @@ class TestGitUtils(TestBase):
 
         # Should fail because the SHA doesn't exist
         self.assertNotEqual(ret, 0)
+
+    def testRestoreStagedFilesSelectiveRestore(self):
+        """Test that restoreStagedFiles only restores requested files, not all unstaged files.
+        
+        This tests the bug fix where restoreStagedFiles would incorrectly restore all files
+        with unstaged changes instead of just the ones that were requested.
+        
+        Scenario:
+        - Have two files: a.txt and b.txt, both with unstaged changes
+        - Stage both files
+        - Call restoreStagedFiles with only a.txt
+        - Only a.txt should be returned in filesToRestore, not b.txt
+        """
+        # Create and commit two files
+        with open("a.txt", "w", encoding="utf-8") as f:
+            f.write("original a")
+        with open("b.txt", "w", encoding="utf-8") as f:
+            f.write("original b")
+        self.assertIsNone(Git.addFiles(None, ["a.txt", "b.txt"]))
+        Git.commit("Add a.txt and b.txt")
+
+        # Modify both files
+        with open("a.txt", "w", encoding="utf-8") as f:
+            f.write("modified a")
+        with open("b.txt", "w", encoding="utf-8") as f:
+            f.write("modified b")
+
+        # Stage both files
+        self.assertIsNone(Git.addFiles(None, ["a.txt", "b.txt"]))
+
+        # Now unstage only a.txt
+        error, filesToRestore = Git.restoreStagedFiles(None, ["a.txt"])
+        self.assertIsNone(error)
+
+        # Only a.txt should be in filesToRestore, not b.txt
+        self.assertIn("a.txt", filesToRestore)
+        self.assertNotIn("b.txt", filesToRestore)
+        self.assertEqual(len(filesToRestore), 1)
