@@ -136,8 +136,16 @@ class DiffFetcher(DataFetcher):
                     fileState = FileState.Added
                 elif line.startswith(b"deleted file mode "):
                     fileState = FileState.Deleted
+                elif line.startswith(b"new mode "):
+                    if fileState == FileState.Normal:
+                        fileState = FileState.Modified
+                    elif fileState == FileState.Renamed:
+                        fileState = FileState.RenamedModified
                 elif line.startswith(b"rename "):
-                    fileState = FileState.Renamed
+                    if fileState == FileState.Normal:
+                        fileState = FileState.Renamed
+                    elif fileState == FileState.Modified:
+                        fileState = FileState.RenamedModified
                 elif line.startswith(b"index "):
                     if fileState == FileState.Renamed:
                         fileState = FileState.RenamedModified

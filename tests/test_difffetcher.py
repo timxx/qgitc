@@ -598,6 +598,7 @@ class TestDiffFetcher(unittest.TestCase):
     def test_permission_change_only(self):
         """
         Test file with only permission change (mode change)
+        Should be marked as Modified when both old mode and new mode are present
         """
         diff_data = b'\x00'.join([
             b'diff --git a/script.sh b/script.sh',
@@ -607,10 +608,121 @@ class TestDiffFetcher(unittest.TestCase):
             b'\x00'
         ])
 
-        lineItems, fileItems = self._parse_and_get_results(diff_data)
+        _, fileItems = self._parse_and_get_results(diff_data)
 
         self.assertIn('script.sh', fileItems)
-        # Permission change might be detected as Modified
+        self.assertEqual(fileItems['script.sh'].state, FileState.Modified,
+                         "File with only permission change should be Modified")
+
+    def test_permission_change_without_diff_content(self):
+        """
+        Test permission-only change without any diff hunks
+        This is the typical case when only file permissions change
+        """
+        diff_data = b'\x00'.join([
+            b'diff --git a/test b/test',
+            b'old mode 100644',
+            b'new mode 100755',
+            b'\x00'
+        ])
+
+        _, fileItems = self._parse_and_get_results(diff_data)
+
+        self.assertIn('test', fileItems)
+        self.assertEqual(fileItems['test'].state, FileState.Modified,
+                         "File with permission change but no content change should be Modified")
+
+    def test_permission_change_with_content_change(self):
+        """
+        Test file with both permission and content changes
+        """
+        diff_data = b'\x00'.join([
+            b'diff --git a/script.sh b/script.sh',
+            b'old mode 100644',
+            b'new mode 100755',
+            b'index abc123..def456 100755',
+            b'@@ -1,3 +1,3 @@',
+            b' #!/bin/bash',
+            b'-echo "old"',
+            b'+echo "new"',
+            b' exit 0',
+            b'\x00'
+        ])
+
+        _, fileItems = self._parse_and_get_results(diff_data)
+
+        self.assertIn('script.sh', fileItems)
+        self.assertEqual(fileItems['script.sh'].state, FileState.Modified,
+                         "File with both permission and content changes should be Modified")
+
+    def test_permission_change_multiple_files(self):
+        """
+        Test multiple files with various permission changes
+        """
+        diff_data = b'\x00'.join([
+            b'diff --git a/script1.sh b/script1.sh',
+            b'old mode 100644',
+            b'new mode 100755',
+            b'diff --git a/script2.sh b/script2.sh',
+            b'old mode 100755',
+            b'new mode 100644',
+            b'diff --git a/normal.txt b/normal.txt',
+            b'index abc123..def456 100644',
+            b'@@ -1 +1 @@',
+            b'-old',
+            b'+new',
+            b'\x00'
+        ])
+
+        _, fileItems = self._parse_and_get_results(diff_data)
+
+        self.assertEqual(len(fileItems), 3)
+        self.assertEqual(fileItems['script1.sh'].state, FileState.Modified,
+                         "script1.sh should be Modified (permission change)")
+        self.assertEqual(fileItems['script2.sh'].state, FileState.Modified,
+                         "script2.sh should be Modified (permission change)")
+        self.assertEqual(fileItems['normal.txt'].state, FileState.Modified,
+                         "normal.txt should be Modified (content change)")
+
+    def test_only_new_mode_without_old_mode(self):
+        """
+        Test that new mode alone (without old mode) doesn't trigger permission change state
+        This can happen with newly added files
+        """
+        diff_data = b'\x00'.join([
+            b'diff --git a/newfile.sh b/newfile.sh',
+            b'new file mode 100755',
+            b'index 0000000..abc123',
+            b'@@ -0,0 +1 @@',
+            b'+#!/bin/bash',
+            b'\x00'
+        ])
+
+        _, fileItems = self._parse_and_get_results(diff_data)
+
+        self.assertIn('newfile.sh', fileItems)
+        self.assertEqual(fileItems['newfile.sh'].state, FileState.Added,
+                         "New file should be Added, not treated as permission change")
+
+    def test_rename_with_permission_change(self):
+        """
+        Test renamed file that also has permission change
+        """
+        diff_data = b'\x00'.join([
+            b'diff --git a/tools/foo.py b/test.py',
+            b'old mode 100644',
+            b'new mode 100755',
+            b'similarity index 100%',
+            b'rename from tools/foo.py',
+            b'rename to test.py',
+            b'\x00'
+        ])
+
+        _, fileItems = self._parse_and_get_results(diff_data)
+
+        self.assertIn('test.py', fileItems)
+        self.assertEqual(fileItems['test.py'].state, FileState.RenamedModified,
+                         "Renamed file with permission and content change should be RenamedModified")
 
     def test_copy_file(self):
         """
