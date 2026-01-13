@@ -426,3 +426,63 @@ class TestTextViewer(TestBase):
             line_no = result.beginLine()
             self.assertEqual(line_no % 5, 0,
                              f"Match should be on lines divisible by 5, found on line {line_no}")
+
+    def testClearResetsSearchHighlights(self):
+        """Test that clear() resets search highlights and find widget results.
+        
+        This test verifies the fix for incorrect search highlights after 
+        changing selected file. When clear() is called, both the find widget
+        results and highlight results should be cleared.
+        """
+        # Setup: Add some lines with searchable content
+        self.viewer.appendLines(
+            ["Hello world", "Hello python", "Goodbye world"])
+        self.assertEqual(self.viewer.textLineCount(), 3)
+
+        # Perform a search to create highlights
+        results = self.viewer.findAll("Hello")
+        self.assertEqual(len(results), 2)
+
+        # Highlight the results
+        self.viewer.highlightFindResult(results)
+        # Verify highlights exist
+        self.assertEqual(len(self.viewer._highlightFind), 2)
+
+        # Call clear() - this should clear both content and highlights
+        self.viewer.clear()
+
+        # Verify all search-related state is cleared
+        self.assertEqual(self.viewer.textLineCount(), 0)
+        self.assertEqual(len(self.viewer._highlightFind), 0)
+
+    def testClearWithFindWidget(self):
+        """Test that clear() properly resets find widget state.
+        
+        This test verifies that when a find widget is active and clear()
+        is called, the find widget's results are properly cleared via
+        updateFindResult([]).
+        """
+        # Setup: Add content
+        self.viewer.appendLines(["test line 1", "test line 2", "other line"])
+
+        # Activate find widget (simulating user pressing Ctrl+F)
+        self.viewer.executeFind()
+        self.assertTrue(self.viewer._findWidget is not None)
+
+        # Perform a search
+        results = self.viewer.findAll("test")
+        self.assertEqual(len(results), 2)
+
+        # Update find widget with results
+        self.viewer.findWidget.updateFindResult(results)
+
+        # Highlight the results
+        self.viewer.highlightFindResult(results)
+        self.assertEqual(len(self.viewer._highlightFind), 2)
+
+        # Call clear() - should clear find widget results and highlights
+        self.viewer.clear()
+
+        # Verify highlights are cleared
+        self.assertEqual(len(self.viewer._highlightFind), 0)
+        self.assertEqual(self.viewer.findWidget._findResult, [])

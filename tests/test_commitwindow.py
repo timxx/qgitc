@@ -1087,10 +1087,12 @@ class TestCommitWindow(TestBase):
 
         lvFiles = self.window.ui.lvFiles
         filesModel = lvFiles.model()
-        self.assertGreater(filesModel.rowCount(), 0, "Should have modified files")
+        self.assertGreater(filesModel.rowCount(), 0,
+                           "Should have modified files")
         lvFiles.selectAll()
 
-        self._assertModelUpdateCalledBeforeClear(self.window._acRestoreFiles, lvFiles)
+        self._assertModelUpdateCalledBeforeClear(
+            self.window._acRestoreFiles, lvFiles)
 
     def testCheckoutFilesUpdatesSubmoduleFilesBeforeClearingModels(self):
         """Test bug fix: Missing file status after checkout operation
@@ -1117,7 +1119,8 @@ class TestCommitWindow(TestBase):
         lvFiles = self.window.ui.lvFiles
         lvFiles.selectAll()
 
-        self._assertModelUpdateCalledBeforeClear(self.window._acCheckoutFiles, lvFiles)
+        self._assertModelUpdateCalledBeforeClear(
+            self.window._acCheckoutFiles, lvFiles)
 
     def testDeleteFilesUpdatesSubmoduleFilesBeforeClearingModels(self):
         """Test bug fix: Missing file status after delete operation
@@ -1143,7 +1146,8 @@ class TestCommitWindow(TestBase):
         lvFiles = self.window.ui.lvFiles
         lvFiles.selectAll()
 
-        self._assertModelUpdateCalledBeforeClear(self.window._acDeleteFiles, lvFiles)
+        self._assertModelUpdateCalledBeforeClear(
+            self.window._acDeleteFiles, lvFiles)
 
     def testSubmodulePathResolutionInDeleteFiles(self):
         """Test that toSubmodulePath correctly resolves paths in _doDeleteFiles
@@ -1188,3 +1192,65 @@ class TestCommitWindow(TestBase):
                          "File in main repo should be deleted")
         self.assertFalse(os.path.exists(subFilePath),
                          "File in submodule should be deleted using correct path resolution")
+
+    def testFileChangesClearSearchHighlights(self):
+        """Test that search highlights are cleared when changing selected file.
+        
+        This test verifies the fix for incorrect search highlights after 
+        changing selected file. When switching between files, beginReading() 
+        and endReading() should be called to clear old search results.
+        """
+        self.waitForLoaded()
+
+        # Create two files with different content
+        file1Path = os.path.join(self.gitDir.name, "test1.txt")
+        file2Path = os.path.join(self.gitDir.name, "test2.txt")
+
+        with open(file1Path, "w") as f:
+            f.write("Hello world\nHello python\n")
+
+        with open(file2Path, "w") as f:
+            f.write("Hello Hello\nHello there\n")
+
+        # Refresh to load the changes
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        # Select first file
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+        self.assertEqual(filesModel.rowCount(), 2)
+
+        diffFetcher = self.window._diffFetcher
+        spyDiffFinished = QSignalSpy(diffFetcher.fetchFinished)
+
+        # Click on first file
+        rc = lvFiles.visualRect(filesModel.index(0, 0))
+        QTest.mouseClick(lvFiles.viewport(), Qt.LeftButton, pos=rc.center())
+        self.processEvents()
+
+        # Wait for diff to load
+        self.wait(500, lambda: spyDiffFinished.count() == 0)
+
+        # Verify viewer has content
+        viewer = self.window.ui.viewer
+        self.assertGreater(viewer.textLineCount(), 0)
+
+        # Simulate a search (if find widget is available)
+        viewer.executeFind()
+        viewer.findWidget.setText("Hello")
+        self.wait(250)  # Wait for search to process
+        self.assertEqual(len(viewer._highlightFind), 2)
+
+        # Click on second file - this should call beginReading() and endReading()
+        rc = lvFiles.visualRect(filesModel.index(1, 0))
+        QTest.mouseClick(lvFiles.viewport(), Qt.LeftButton, pos=rc.center())
+        self.processEvents()
+
+        # Wait for diff to load
+        self.wait(500, lambda: spyDiffFinished.count() == 1)
+        self.wait(50)
+
+        # Verify the viewer was properly cleared and reloaded
+        self.assertGreater(viewer.textLineCount(), 0)
+        self.assertEqual(len(viewer._highlightFind), 3)
