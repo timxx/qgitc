@@ -229,6 +229,10 @@ class TextViewer(QAbstractScrollArea):
         self.viewport().setCursor(Qt.IBeamCursor)
         self.viewport().update()
 
+        if self._findWidget:
+            self._findWidget.updateFindResult([])
+        self.highlightFindResult([])
+
     def hasTextLines(self):
         return self.textLineCount() > 0
 

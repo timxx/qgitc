@@ -490,6 +490,7 @@ class CommitWindow(StateWindow):
         else:
             sha1 = None
 
+        self.ui.viewer.beginReading()
         self._curFile = file
         self._curFileStatus = status
         self._diffFetcher.fetch(sha1, [file], None)
@@ -501,6 +502,7 @@ class CommitWindow(StateWindow):
     def _onDiffFetchFinished(self, exitCode):
         self._diffSpinnerDelayTimer.stop()
         self.ui.spinnerDiff.stop()
+        self.ui.viewer.endReading()
 
     def _onFileClicked(self, index: QModelIndex):
         self._showIndexDiff(index)
