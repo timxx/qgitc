@@ -1,0 +1,212 @@
+# -*- coding: utf-8 -*-
+
+from PySide6.QtCore import QEvent, QSize, Signal
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QVBoxLayout
+
+from qgitc.aichatedit import AiChatEdit
+from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.common import dataDirPath
+from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory
+
+
+class AiChatContextPanel(QFrame):
+    enterPressed = Signal()
+    modeChanged = Signal(AiChatMode)
+    textChanged = Signal()
+    modelChanged = Signal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setFrameShape(QFrame.StyledPanel)
+        self.setFrameShadow(QFrame.Plain)
+        self.setLineWidth(1)
+
+        self._updateFrameStyle(False)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setSpacing(0)
+
+        # Text input (auto-expanding) at top
+        self.edit = AiChatEdit(self)
+        self.edit.setPlaceholderText(self.tr("Ask anything..."))
+        self.edit.enterPressed.connect(self.enterPressed)
+        self.edit.textChanged.connect(self.textChanged)
+        # Remove border from inner edit
+        self.edit.edit.setStyleSheet(
+            "QPlainTextEdit { border: none; background: transparent; }")
+        # Install event filter to track focus
+        self.edit.edit.installEventFilter(self)
+        layout.addWidget(self.edit)
+
+        # Bottom control line
+        controlLayout = QHBoxLayout()
+        controlLayout.setContentsMargins(4, 4, 4, 4)
+        controlLayout.setSpacing(4)
+
+        # Inline combobox style (no frame by default, show on hover)
+        comboBoxStyle = """
+            QComboBox {
+                border: 1px solid transparent;
+                background: transparent;
+            }
+            QComboBox:hover {
+                border: 1px solid palette(mid);
+                border-radius: 2px;
+                background: palette(button);
+            }
+            QComboBox:focus {
+                border: 1px solid palette(highlight);
+                border-radius: 2px;
+            }
+        """
+
+        self.cbBots = QComboBox(self)
+        self.cbBots.setEditable(False)
+        self.cbBots.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.cbBots.setStyleSheet(comboBoxStyle)
+        self.cbBots.currentIndexChanged.connect(self._onModelChanged)
+        controlLayout.addWidget(self.cbBots)
+
+        self.cbModelNames = QComboBox(self)
+        self.cbModelNames.setEditable(False)
+        self.cbModelNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.cbModelNames.setStyleSheet(comboBoxStyle)
+        controlLayout.addWidget(self.cbModelNames)
+
+        # Mode selector
+        self.cbMode = QComboBox(self)
+        self.cbMode.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self.cbMode.setStyleSheet(comboBoxStyle)
+        self.cbMode.currentIndexChanged.connect(self._onModeChanged)
+        controlLayout.addWidget(self.cbMode)
+
+        settingsIcon = QIcon(dataDirPath() + "/icons/settings.svg")
+        self.btnSettings = ColoredIconToolButton(
+            settingsIcon, QSize(16, 16), self)
+        self.btnSettings.setToolTip(self.tr("Open Settings"))
+        controlLayout.addWidget(self.btnSettings)
+
+        controlLayout.addStretch()
+
+        # Send button
+        sendIcon = QIcon(dataDirPath() + "/icons/send.svg")
+        self.btnSend = ColoredIconToolButton(sendIcon, QSize(20, 20), self)
+        self.btnSend.setToolTip(self.tr("Send"))
+        self.btnSend.setEnabled(False)
+        controlLayout.addWidget(self.btnSend)
+
+        # Stop button (hidden by default)
+        stopIcon = QIcon(dataDirPath() + "/icons/stop.svg")
+        self.btnStop = ColoredIconToolButton(stopIcon, QSize(20, 20), self)
+        self.btnStop.setVisible(False)
+        controlLayout.addWidget(self.btnStop)
+
+        layout.addLayout(controlLayout)
+        self.setFocusProxy(self.edit)
+
+    def _updateFrameStyle(self, focused):
+        """Update frame border color based on focus state"""
+        if focused:
+            self.setStyleSheet("""
+                AiChatContextPanel {
+                    border: 1px solid palette(highlight);
+                    border-radius: 4px;
+                    background-color: palette(base);
+                }
+            """)
+        else:
+            self.setStyleSheet("""
+                AiChatContextPanel {
+                    border: 1px solid palette(mid);
+                    border-radius: 4px;
+                    background-color: palette(base);
+                }
+            """)
+
+    def eventFilter(self, watched, event: QEvent):
+        """Track focus changes on the edit widget to highlight frame border"""
+        if watched == self.edit.edit:
+            if event.type() == QEvent.FocusIn:
+                # Highlight border when focused
+                self._updateFrameStyle(True)
+            elif event.type() == QEvent.FocusOut:
+                # Reset to inactive color when focus lost
+                self._updateFrameStyle(False)
+        return super().eventFilter(watched, event)
+
+    def _onModeChanged(self, index):
+        mode = self.cbMode.currentData()
+        self.modeChanged.emit(mode)
+
+    def _onModelChanged(self, index):
+        self.modelChanged.emit(index)
+
+    def toPlainText(self):
+        return self.edit.toPlainText()
+
+    def clear(self):
+        self.edit.clear()
+
+    def textCursor(self):
+        return self.edit.textCursor()
+
+    def currentMode(self) -> AiChatMode:
+        return self.cbMode.currentData()
+
+    def currentModelIndex(self) -> int:
+        return self.cbBots.currentIndex()
+
+    def currentModelId(self) -> str:
+        return self.cbModelNames.currentData()
+
+    def setMode(self, mode: AiChatMode):
+        for i in range(self.cbMode.count()):
+            if self.cbMode.itemData(i) == mode:
+                self.cbMode.setCurrentIndex(i)
+                break
+
+    def userPrompt(self) -> str:
+        return self.edit.toPlainText()
+
+    def switchToModel(self, modelKey: str, modelId: str):
+        """Switch to the specified model"""
+
+        for i in range(self.cbBots.count()):
+            model = self.cbBots.itemData(i)
+            if AiModelFactory.modelKey(model) == modelKey:
+                if self.cbBots.currentIndex() != i:
+                    self.cbBots.setCurrentIndex(i)
+
+                # Set the specific model ID if available
+                if modelId:
+                    for j in range(self.cbModelNames.count()):
+                        if self.cbModelNames.itemData(j) == modelId:
+                            self.cbModelNames.setCurrentIndex(j)
+                            break
+                break
+
+    def setupChatMode(self, model: AiModelBase):
+        modes = model.supportedChatModes()
+        self.cbMode.clear()
+        for mode in modes:
+            self.cbMode.addItem(self._chatModeStr(mode), mode)
+        self.cbMode.setCurrentIndex(0)
+        self.cbMode.setEnabled(len(modes) > 0)
+
+    def setupModelNames(self, model: AiModelBase):
+        self.cbModelNames.clear()
+        defaultId = model.modelId
+        for id, name in model.models():
+            self.cbModelNames.addItem(name, id)
+            if id == defaultId:
+                self.cbModelNames.setCurrentText(name)
+
+    def _chatModeStr(self, mode: AiChatMode):
+        strings = {
+            AiChatMode.Chat: "💬 " + self.tr("Chat"),
+            AiChatMode.CodeReview: "📝 " +self.tr("Code Review"),
+        }
+        return strings[mode]

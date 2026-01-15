@@ -3,30 +3,15 @@
 from typing import Dict, List
 
 from PySide6.QtCore import QEventLoop, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (
-    QComboBox,
-    QDoubleSpinBox,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QScrollBar,
-    QSizePolicy,
-    QSpacerItem,
-    QSpinBox,
-    QSplitter,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtWidgets import QHBoxLayout, QScrollBar, QSplitter, QVBoxLayout, QWidget
 
 from qgitc.aichatbot import AiChatbot
-from qgitc.aichatedit import AiChatEdit
+from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichathistory import AiChatHistory
 from qgitc.aichathistorypanel import AiChatHistoryPanel
 from qgitc.aichattitlegenerator import AiChatTitleGenerator
 from qgitc.applicationbase import ApplicationBase
-from qgitc.colorediconbutton import ColoredIconButton
-from qgitc.common import commitRepoDir, dataDirPath, logger
+from qgitc.common import commitRepoDir, logger
 from qgitc.gitutils import Git
 from qgitc.llm import (
     AiChatMode,
@@ -38,6 +23,7 @@ from qgitc.llm import (
 )
 from qgitc.llmprovider import AiModelProvider
 from qgitc.models.prompts import CODE_REVIEW_PROMPT
+from qgitc.preferences import Preferences
 
 
 class AiChatWidget(QWidget):
@@ -61,7 +47,6 @@ class AiChatWidget(QWidget):
 
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
-        self.usrInput.setFocus()
 
     def _setupHistoryPanel(self):
         self._historyPanel = AiChatHistoryPanel(self)
@@ -85,93 +70,22 @@ class AiChatWidget(QWidget):
             self._onTextBrowserScrollbarChanged)
         layout.addWidget(self._chatBot)
 
-        self.usrInput = AiChatEdit(self)
-        self.usrInput.setPlaceholderText(
-            self.tr("Enter the query prompt here"))
-        self.usrInput.setFocus()
+        self._contextPanel = AiChatContextPanel(self)
+        layout.addWidget(self._contextPanel)
+        self._contextPanel.setFocus()
 
-        self.usrInput.enterPressed.connect(
+        self._contextPanel.enterPressed.connect(
             self._onEnterKeyPressed)
-        self.usrInput.textChanged.connect(
+        self._contextPanel.textChanged.connect(
             self._onUsrInputTextChanged)
 
-        gridLayout = QGridLayout()
-        gridLayout.setContentsMargins(0, 0, 0, 0)
-        gridLayout.setSpacing(4)
-        gridLayout.addWidget(QLabel(self.tr("User")), 1, 0)
-        gridLayout.addWidget(self.usrInput, 1, 1)
+        self._contextPanel.btnSend.clicked.connect(self._onButtonSend)
+        self._contextPanel.btnStop.clicked.connect(self._onButtonStop)
 
-        layout.addLayout(gridLayout)
-
-        hlayout = QHBoxLayout()
-        layout.addLayout(hlayout)
-
-        hlayout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding))
-
-        hlayout.addWidget(QLabel(self.tr("Max Tokens")))
-        self.sbMaxTokens = QSpinBox(self)
-        self.sbMaxTokens.setRange(1, 0x7FFFFFFF)
-        self.sbMaxTokens.setSingleStep(500)
-        self.sbMaxTokens.setValue(4096)
-        self.sbMaxTokens.setToolTip(self.tr("Max tokens to generate"))
-        self.sbMaxTokens.setFixedWidth(80)
-        hlayout.addWidget(self.sbMaxTokens)
-
-        hlayout.addWidget(QLabel(self.tr("Temperature"), self))
-        self.sbTemperature = QDoubleSpinBox(self)
-        self.sbTemperature.setRange(0.0, 1.0)
-        self.sbTemperature.setSingleStep(0.1)
-        self.sbTemperature.setValue(0.1)
-        hlayout.addWidget(self.sbTemperature)
-
-        self.cbBots = QComboBox(self)
-        self.cbBots.setEditable(False)
-        self.cbBots.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        hlayout.addWidget(self.cbBots)
-
-        self.cbModelNames = QComboBox(self)
-        self.cbModelNames.setEditable(False)
-        self.cbModelNames.setMinimumWidth(130)
-        self.cbModelNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-
-        hlayout.addWidget(self.cbModelNames)
-
-        self.cbChatMode = QComboBox(self)
-        self.cbChatMode.setEditable(False)
-        hlayout.addWidget(self.cbChatMode)
-
-        self.cbLang = QComboBox(self)
-        self.cbLang.setEditable(False)
-        self.cbLang.addItem("None")
-        self.cbLang.addItem("python")
-        self.cbLang.addItem("cpp")
-        self.cbLang.addItem("csharp")
-        hlayout.addWidget(self.cbLang)
-        self.cbLang.setEnabled(False)
-        self.cbLang.setCurrentIndex(1)
-
-        sendIcon = QIcon(dataDirPath() + "/icons/send.svg")
-        stopIcon = QIcon(dataDirPath() + "/icons/stop.svg")
-
-        self.btnSend = ColoredIconButton(sendIcon, self.tr("Send"), self)
-        self.btnStop = ColoredIconButton(stopIcon, self.tr("Stop"), self)
-        self.btnStop.setVisible(False)
-        hlayout.addWidget(self.btnSend)
-        hlayout.addWidget(self.btnStop)
-        self.btnSend.setEnabled(False)
-
-        hlayout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding))
-
-        self.btnSend.clicked.connect(self._onButtonSend)
-        self.btnStop.clicked.connect(self._onButtonStop)
-
-        self.cbBots.currentIndexChanged.connect(
+        self._contextPanel.cbBots.currentIndexChanged.connect(
             self._onModelChanged)
-        self.cbChatMode.currentIndexChanged.connect(
-            self._onChatModeChanged)
-
-        QWidget.setTabOrder(self.usrInput, self.btnSend)
-        QWidget.setTabOrder(self.btnSend, self.usrInput)
+        self._contextPanel.btnSettings.clicked.connect(
+            self._onOpenSettings)
 
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
@@ -186,7 +100,7 @@ class AiChatWidget(QWidget):
         currentModelIndex = -1
 
         for i, model in enumerate(aiModels):
-            self.cbBots.addItem(model.name, model)
+            self._contextPanel.cbBots.addItem(model.name, model)
             model.responseAvailable.connect(self._onMessageReady)
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
@@ -196,27 +110,16 @@ class AiChatWidget(QWidget):
             model.modelsReady.connect(self._onModelsReady)
 
         if currentModelIndex != -1:
-            self.cbBots.setCurrentIndex(currentModelIndex)
+            self._contextPanel.cbBots.setCurrentIndex(currentModelIndex)
 
-        self._onModelChanged(self.cbBots.currentIndex())
-
-    def _chatModeStr(self, mode: AiChatMode):
-        strings = {
-            AiChatMode.Chat: self.tr("Chat"),
-            AiChatMode.Completion: self.tr("Completion"),
-            AiChatMode.Infilling: self.tr("Infilling"),
-            AiChatMode.CodeReview: self.tr("Code Review"),
-            AiChatMode.CodeFix: self.tr("Code Fix"),
-            AiChatMode.CodeExplanation: self.tr("Code Explanation"),
-        }
-        return strings[mode]
+        self._onModelChanged(self._contextPanel.cbBots.currentIndex())
 
     def queryClose(self):
         if self._titleGenerator:
             self._titleGenerator.cancel()
 
-        for i in range(self.cbBots.count()):
-            model: AiModelBase = self.cbBots.itemData(i)
+        for i in range(self._contextPanel.cbBots.count()):
+            model: AiModelBase = self._contextPanel.cbBots.itemData(i)
             if model.isRunning():
                 model.requestInterruption()
             model.cleanup()
@@ -225,16 +128,16 @@ class AiChatWidget(QWidget):
         return QSize(800, 600)
 
     def _onButtonSend(self, clicked):
-        prompt = self.usrInput.toPlainText().strip()
+        prompt = self._contextPanel.userPrompt().strip()
         if not prompt:
             return
 
         model = self.currentChatModel()
-        chatMode: AiChatMode = self.cbChatMode.currentData()
+        chatMode: AiChatMode = self._contextPanel.currentMode()
         self._doRequest(
             prompt,
             chatMode,
-            self.cbLang.currentText(),
+            "",
             None)
 
         app = ApplicationBase.instance()
@@ -244,7 +147,7 @@ class AiChatWidget(QWidget):
         })
 
         # Clear input after sending
-        self.usrInput.clear()
+        self._contextPanel.clear()
 
     def _onButtonStop(self):
         model = self.currentChatModel()
@@ -264,14 +167,12 @@ class AiChatWidget(QWidget):
         params.prompt = prompt
         params.sys_prompt = sysPrompt
         params.stream = True
-        params.temperature = self.sbTemperature.value()
-        params.max_tokens = self.sbMaxTokens.value()
+        # TODO: make these configurable
+        params.temperature = 0.1
+        params.max_tokens = 4096
         params.chat_mode = chatMode
         params.language = language
-        params.model = self.cbModelNames.currentData()
-
-        if params.chat_mode == AiChatMode.Infilling:
-            params.fill_point = self.usrInput.textCursor().position()
+        params.model = self._contextPanel.currentModelId()
 
         self._disableAutoScroll = False
 
@@ -283,12 +184,11 @@ class AiChatWidget(QWidget):
                 language=ApplicationBase.instance().uiLanguage())
         self._doMessageReady(model, AiResponse(AiRole.User, params.prompt))
 
-        self.btnSend.setVisible(False)
-        self.btnStop.setVisible(True)
+        self._contextPanel.btnSend.setVisible(False)
+        self._contextPanel.btnStop.setVisible(True)
         self._historyPanel.setEnabled(False)
-        self.cbBots.setEnabled(False)
-
-        self.usrInput.setFocus()
+        self._contextPanel.cbBots.setEnabled(False)
+        self._contextPanel.setFocus()
 
         model.queryAsync(params)
 
@@ -309,7 +209,7 @@ class AiChatWidget(QWidget):
         self._doMessageReady(model, response)
 
     def _doMessageReady(self, model: AiModelBase, response: AiResponse):
-        index = self.cbBots.findData(model)
+        index = self._contextPanel.cbBots.findData(model)
 
         assert (index != -1)
         messages: AiChatbot = self._chatBot
@@ -333,15 +233,15 @@ class AiChatWidget(QWidget):
         self._updateStatus()
 
     def _updateStatus(self):
-        self.btnSend.setVisible(True)
-        self.btnStop.setVisible(False)
+        self._contextPanel.btnSend.setVisible(True)
+        self._contextPanel.btnStop.setVisible(False)
         self._historyPanel.setEnabled(True)
-        self.cbBots.setEnabled(True)
-        self.usrInput.setFocus()
+        self._contextPanel.cbBots.setEnabled(True)
+        self._contextPanel.setFocus()
 
     def _onServiceUnavailable(self):
         model: AiModelBase = self.sender()
-        index = self.cbBots.findData(model)
+        index = self._contextPanel.cbBots.findData(model)
         assert (index != -1)
         messages: AiChatbot = self._chatBot
         messages.appendServiceUnavailable()
@@ -349,36 +249,21 @@ class AiChatWidget(QWidget):
 
     def _onModelChanged(self, index: int):
         model = self.currentChatModel()
-        self.usrInput.setFocus()
-
-        self._initChatMode(model)
-        self._onChatModeChanged(self.cbChatMode.currentIndex())
-
-        self._updateModelNames(model)
+        self._contextPanel.setFocus()
+        self._contextPanel.setupChatMode(model)
+        self._contextPanel.setupModelNames(model)
 
         chatHistory = self._historyPanel.currentHistory()
         if chatHistory:
             self._loadMessagesFromHistory(chatHistory.messages, False)
-
-    def _initChatMode(self, model: AiModelBase):
-        modes = model.supportedChatModes()
-        self.cbChatMode.clear()
-        for mode in modes:
-            self.cbChatMode.addItem(self._chatModeStr(mode), mode)
-        self.cbChatMode.setCurrentIndex(0)
-        self.cbChatMode.setEnabled(len(modes) > 0)
-
-    def _onChatModeChanged(self, index):
-        self.cbLang.setEnabled(
-            self.cbChatMode.currentData() == AiChatMode.Infilling)
 
     def _onEnterKeyPressed(self):
         self._onButtonSend(False)
 
     def _onUsrInputTextChanged(self):
         curChat = self._historyPanel.currentHistory()
-        enabled = curChat is not None and self.usrInput.toPlainText().strip() != ""
-        self.btnSend.setEnabled(enabled)
+        enabled = curChat is not None and self._contextPanel.userPrompt().strip() != ""
+        self._contextPanel.btnSend.setEnabled(enabled)
 
     def _onTextBrowserScrollbarChanged(self, value):
         if self._adjustingSccrollbar:
@@ -394,7 +279,7 @@ class AiChatWidget(QWidget):
         return self._chatBot
 
     def currentChatModel(self) -> AiModelBase:
-        return self.cbBots.currentData()
+        return self._contextPanel.cbBots.currentData()
 
     def isLocalLLM(self):
         return self.currentChatModel().isLocal()
@@ -442,18 +327,10 @@ class AiChatWidget(QWidget):
         self.initialized.connect(loop.quit)
         loop.exec()
 
-    def _updateModelNames(self, model: AiModelBase):
-        self.cbModelNames.clear()
-        defaultId = model.modelId
-        for id, name in model.models():
-            self.cbModelNames.addItem(name, id)
-            if id == defaultId:
-                self.cbModelNames.setCurrentText(name)
-
     def _onModelsReady(self):
         model: AiModelBase = self.sender()
         if model == self.currentChatModel():
-            self._updateModelNames(model)
+            self._contextPanel.setupModelNames(model)
             self._updateChatHistoryModel(model)
 
     def _updateChatHistoryModel(self, model: AiModelBase):
@@ -491,13 +368,14 @@ class AiChatWidget(QWidget):
     def _onNewChatRequested(self):
         """Create a new chat conversation"""
         self._createNewConversation()
-        self.usrInput.setFocus()
+        self._contextPanel.setFocus()
 
     def _createNewConversation(self):
         """Create and switch to a new conversation"""
         model = self.currentChatModel()
         if model is None:
-            logger.warning("Cannot create new conversation: no model available")
+            logger.warning(
+                "Cannot create new conversation: no model available")
             return
 
         history = AiChatHistory()
@@ -531,7 +409,8 @@ class AiChatWidget(QWidget):
             return
 
         # Switch to the correct model if different
-        self._switchToModel(chatHistory.modelKey, chatHistory.modelId)
+        self._contextPanel.switchToModel(
+            chatHistory.modelKey, chatHistory.modelId)
 
         # Clear and load messages
         self._clearCurrentChat()
@@ -543,24 +422,7 @@ class AiChatWidget(QWidget):
         sb = self.messages.verticalScrollBar()
         sb.setValue(sb.maximum())
 
-    def _switchToModel(self, modelKey: str, modelId: str):
-        """Switch to the specified model"""
-        # Find the correct model
-        for i in range(self.cbBots.count()):
-            model = self.cbBots.itemData(i)
-            if AiModelFactory.modelKey(model) == modelKey:
-                if self.cbBots.currentIndex() != i:
-                    self.cbBots.setCurrentIndex(i)
-
-                # Set the specific model ID if available
-                if modelId:
-                    for j in range(self.cbModelNames.count()):
-                        if self.cbModelNames.itemData(j) == modelId:
-                            self.cbModelNames.setCurrentIndex(j)
-                            break
-                break
-
-    def _loadMessagesFromHistory(self, messages: List[Dict], addToChatBot = True):
+    def _loadMessagesFromHistory(self, messages: List[Dict], addToChatBot=True):
         """Load messages from history into the chat"""
         if not messages:
             return
@@ -608,3 +470,9 @@ class AiChatWidget(QWidget):
         # Save to settings
         settings = ApplicationBase.instance().settings()
         settings.saveChatHistory(historyId, chatHistory.toDict())
+
+    def _onOpenSettings(self):
+        settings = ApplicationBase.instance().settings()
+        dlg = Preferences(settings)
+        dlg.ui.tabWidget.setCurrentWidget(dlg.ui.tabLLM)
+        dlg.exec()

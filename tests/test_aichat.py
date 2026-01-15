@@ -29,15 +29,15 @@ class TestAiChat(TestBase):
         pass
 
     def testBots(self):
-        self.assertEqual(2, self.chatWidget.cbBots.count())
+        self.assertEqual(2, self.chatWidget._contextPanel.cbBots.count())
 
     def testLocalLLM(self):
         self.assertIsNotNone(self.chatWidget._historyPanel.currentHistory())
 
-        for i in range(self.chatWidget.cbBots.count()):
-            model: AiModelBase = self.chatWidget.cbBots.itemData(i)
+        for i in range(self.chatWidget._contextPanel.cbBots.count()):
+            model: AiModelBase = self.chatWidget._contextPanel.cbBots.itemData(i)
             if model.isLocal():
-                self.chatWidget.cbBots.setCurrentIndex(i)
+                self.chatWidget._contextPanel.cbBots.setCurrentIndex(i)
                 break
         model = self.chatWidget.currentChatModel()
         self.assertTrue(model.isLocal())
@@ -46,14 +46,14 @@ class TestAiChat(TestBase):
         # blockCount will never be 0
         self.assertEqual(1, chatbot.blockCount())
 
-        self.chatWidget.usrInput.edit.setPlainText("Hello")
+        self.chatWidget._contextPanel.edit.edit.setPlainText("Hello")
 
         with MockLocalLLM(False) as mock:
             spy = QSignalSpy(model.serviceUnavailable)
-            QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)
+            QTest.mouseClick(self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
             self.assertEqual(2, chatbot.blockCount())
 
-            self.assertFalse(self.chatWidget.btnSend.isVisible())
+            self.assertFalse(self.chatWidget._contextPanel.btnSend.isVisible())
 
             self.wait(10000, lambda: spy.count() == 0)
             self.wait(50)
@@ -70,10 +70,10 @@ class TestAiChat(TestBase):
 
         self.chatWidget._clearCurrentChat()
 
-        self.chatWidget.usrInput.edit.setPlainText("Hello")
+        self.chatWidget._contextPanel.edit.edit.setPlainText("Hello")
         with MockLocalLLM(True) as mock:
             spy = QSignalSpy(model.responseAvailable)
-            QTest.mouseClick(self.chatWidget.btnSend, Qt.LeftButton)
+            QTest.mouseClick(self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
             self.assertEqual(2, chatbot.blockCount())
 
             self.wait(10000, lambda: model.isRunning())
@@ -84,9 +84,9 @@ class TestAiChat(TestBase):
                              chatbot.document().lastBlock().text())
 
     def test_sendButtonState(self):
-        self.assertFalse(self.chatWidget.btnSend.isEnabled())
-        self.chatWidget.usrInput.edit.setPlainText("hello")
-        self.assertTrue(self.chatWidget.btnSend.isEnabled())
+        self.assertFalse(self.chatWidget._contextPanel.btnSend.isEnabled())
+        self.chatWidget._contextPanel.edit.edit.setPlainText("hello")
+        self.assertTrue(self.chatWidget._contextPanel.btnSend.isEnabled())
         curChat = self.chatWidget._historyPanel.currentHistory()
         self.assertIsNotNone(curChat)
 
@@ -94,7 +94,7 @@ class TestAiChat(TestBase):
         self.chatWidget._historyPanel._searchEdit.setText("should not match")
         self.assertEqual(1, spy.count())
 
-        self.assertFalse(self.chatWidget.btnSend.isEnabled())
+        self.assertFalse(self.chatWidget._contextPanel.btnSend.isEnabled())
         self.assertIsNone(self.chatWidget._historyPanel.currentHistory())
 
 class TestAiChatFetchModels(TestBase):
