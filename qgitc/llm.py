@@ -62,11 +62,7 @@ class AiParameters:
 class AiChatMode(Enum):
 
     Chat = 0
-    Completion = 1
-    Infilling = 2
-    CodeReview = 3
-    CodeFix = 4
-    CodeExplanation = 5
+    CodeReview = 1
 
 
 def _aiRoleFromString(role: str) -> AiRole:
@@ -120,9 +116,6 @@ class AiModelBase(QObject):
 
     def isLocal(self):
         return False
-
-    def supportedChatModes(self):
-        return [AiChatMode.Chat]
 
     def models(self) -> List[Tuple[str, str]]:
         """Returns a list of model names supported by this AI model.

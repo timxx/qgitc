@@ -80,6 +80,7 @@ class AiChatContextPanel(QFrame):
         self.cbMode = QComboBox(self)
         self.cbMode.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.cbMode.setStyleSheet(comboBoxStyle)
+        self._setupChatMode()
         self.cbMode.currentIndexChanged.connect(self._onModeChanged)
         controlLayout.addWidget(self.cbMode)
 
@@ -188,11 +189,14 @@ class AiChatContextPanel(QFrame):
                             break
                 break
 
-    def setupChatMode(self, model: AiModelBase):
-        modes = model.supportedChatModes()
+    def _setupChatMode(self):
+        modes = {
+            AiChatMode.Chat: "💬 " + self.tr("Chat"),
+            AiChatMode.CodeReview: "📝 " + self.tr("Code Review"),
+        }
         self.cbMode.clear()
-        for mode in modes:
-            self.cbMode.addItem(self._chatModeStr(mode), mode)
+        for mode, label in modes.items():
+            self.cbMode.addItem(label, mode)
         self.cbMode.setCurrentIndex(0)
         self.cbMode.setEnabled(len(modes) > 0)
 
@@ -203,10 +207,3 @@ class AiChatContextPanel(QFrame):
             self.cbModelNames.addItem(name, id)
             if id == defaultId:
                 self.cbModelNames.setCurrentText(name)
-
-    def _chatModeStr(self, mode: AiChatMode):
-        strings = {
-            AiChatMode.Chat: "💬 " + self.tr("Chat"),
-            AiChatMode.CodeReview: "📝 " +self.tr("Code Review"),
-        }
-        return strings[mode]

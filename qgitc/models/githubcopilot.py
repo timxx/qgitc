@@ -285,9 +285,6 @@ class GithubCopilot(AiModelBase):
 
         return super().event(evt)
 
-    def supportedChatModes(self):
-        return [AiChatMode.Chat, AiChatMode.CodeReview]
-
     def _updateModels(self):
         if self._modelFetcher:
             return

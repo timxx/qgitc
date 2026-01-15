@@ -250,7 +250,6 @@ class AiChatWidget(QWidget):
     def _onModelChanged(self, index: int):
         model = self.currentChatModel()
         self._contextPanel.setFocus()
-        self._contextPanel.setupChatMode(model)
         self._contextPanel.setupModelNames(model)
 
         chatHistory = self._historyPanel.currentHistory()

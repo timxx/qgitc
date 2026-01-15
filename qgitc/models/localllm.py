@@ -96,10 +96,6 @@ class LocalLLM(ChatGPTModel):
         self.nameFetcher = None
         self.modelsReady.emit()
 
-    def supportedChatModes(self):
-        return [AiChatMode.Chat,
-                AiChatMode.CodeReview]
-
     def models(self):
         return LocalLLM._models.get(self.url_base, [])
 
