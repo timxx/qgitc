@@ -15,7 +15,6 @@ from PySide6.QtWidgets import (
     QSpacerItem,
     QSpinBox,
     QSplitter,
-    QStatusBar,
     QVBoxLayout,
     QWidget,
 )
@@ -169,12 +168,6 @@ class AiChatWidget(QWidget):
 
         hlayout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Expanding))
 
-        self.statusBar = QStatusBar(self)
-        layout.addWidget(self.statusBar)
-
-        self.lbTokens = QLabel(self)
-        self.statusBar.addPermanentWidget(self.lbTokens)
-
         self.btnSend.clicked.connect(self._onButtonSend)
         self.btnStop.clicked.connect(self._onButtonStop)
 
@@ -265,7 +258,6 @@ class AiChatWidget(QWidget):
             return
 
         model.requestInterruption()
-        self.statusBar.clearMessage()
 
         chatHistory = self._historyPanel.updateCurrentHistory(model)
         if chatHistory:
@@ -302,7 +294,6 @@ class AiChatWidget(QWidget):
         self._historyPanel.setEnabled(False)
         self.cbBots.setEnabled(False)
 
-        self.statusBar.showMessage(self.tr("Work in progress..."))
         self.usrInput.setFocus()
 
         model.queryAsync(params)
@@ -336,10 +327,6 @@ class AiChatWidget(QWidget):
             sb.setValue(sb.maximum())
             self._adjustingSccrollbar = False
 
-        if response.total_tokens is not None:
-            self.statusBar.showMessage(
-                f"Totoal tokens {response.total_tokens}")
-
     def _onResponseFinish(self):
         model = self.currentChatModel()
         chatHistory = self._historyPanel.updateCurrentHistory(model)
@@ -357,7 +344,6 @@ class AiChatWidget(QWidget):
         self._historyPanel.setEnabled(True)
         self.cbBots.setEnabled(True)
         self.usrInput.setFocus()
-        self.statusBar.clearMessage()
 
     def _onServiceUnavailable(self):
         model: AiModelBase = self.sender()
@@ -494,11 +480,7 @@ class AiChatWidget(QWidget):
 
         self._historyPanel.loadHistories(chatHistories)
 
-        # required model to init
-        self.statusBar.showMessage(self.tr("Initializing models..."))
         self._setupModels()
-        self.statusBar.clearMessage()
-
         self._isInitialized = True
         self.initialized.emit()
 
