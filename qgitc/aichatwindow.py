@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
-    QPlainTextEdit,
     QScrollBar,
     QSizePolicy,
     QSpacerItem,
@@ -21,6 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.aichatbot import AiChatbot
+from qgitc.aichatedit import AiChatEdit
 from qgitc.aichathistory import AiChatHistory
 from qgitc.aichathistorypanel import AiChatHistoryPanel
 from qgitc.aichattitlegenerator import AiChatTitleGenerator
@@ -47,77 +47,6 @@ from qgitc.llmprovider import AiModelProvider
 from qgitc.models.prompts import CODE_REVIEW_PROMPT
 from qgitc.statewindow import StateWindow
 from qgitc.submoduleexecutor import SubmoduleExecutor
-
-
-class ChatEdit(QWidget):
-    MaxLines = 5
-    enterPressed = Signal()
-    textChanged = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.edit = QPlainTextEdit(self)
-        layout.addWidget(self.edit)
-
-        font = self.font()
-        font.setPointSize(9)
-        self.setFont(font)
-
-        self.setFocusProxy(self.edit)
-
-        self.edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.edit.document().setDocumentMargin(4)
-
-        self._lineHeight = self.fontMetrics().height()
-
-        self.edit.textChanged.connect(self._onTextChanged)
-        self.edit.textChanged.connect(self.textChanged)
-
-        self._adjustHeight()
-        self.edit.installEventFilter(self)
-
-    def toPlainText(self):
-        return self.edit.toPlainText()
-
-    def clear(self):
-        self.edit.clear()
-
-    def setPlaceholderText(self, text):
-        self.edit.setPlaceholderText(text)
-
-    def textCursor(self):
-        return self.edit.textCursor()
-
-    def _onTextChanged(self):
-        self._adjustHeight()
-
-    def _adjustHeight(self):
-        lineCount = self.edit.document().lineCount()
-        margin = self.edit.document().documentMargin()
-        # see `QLineEdit::sizeHint()`
-        verticalMarin = 2 * 1
-        if lineCount < ChatEdit.MaxLines:
-            height = lineCount * self._lineHeight
-            self.edit.setMinimumHeight(height)
-            self.setFixedHeight(height + margin * 2 + verticalMarin)
-        else:
-            maxHeight = ChatEdit.MaxLines * self._lineHeight
-            self.edit.setMinimumHeight(maxHeight + margin * 2)
-            self.setFixedHeight(maxHeight + margin * 2 + verticalMarin)
-
-    def eventFilter(self, watched, event):
-        if watched == self.edit and event.type() == QEvent.KeyPress:
-            if event.key() in [Qt.Key_Enter, Qt.Key_Return]:
-                if event.modifiers() == Qt.NoModifier:
-                    self.enterPressed.emit()
-                    return True
-                elif event.modifiers() == Qt.ShiftModifier:
-                    return False
-        return super().eventFilter(watched, event)
 
 
 class AiChatWidget(QWidget):
@@ -165,11 +94,11 @@ class AiChatWidget(QWidget):
             self._onTextBrowserScrollbarChanged)
         layout.addWidget(self._chatBot)
 
-        self.sysInput = ChatEdit(self)
+        self.sysInput = AiChatEdit(self)
         self.sysInput.setPlaceholderText(
             self.tr("Enter the system prompt here"))
 
-        self.usrInput = ChatEdit(self)
+        self.usrInput = AiChatEdit(self)
         self.usrInput.setPlaceholderText(
             self.tr("Enter the query prompt here"))
         self.usrInput.setFocus()
