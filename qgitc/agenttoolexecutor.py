@@ -96,6 +96,33 @@ class AgentToolExecutor(QObject):
             return AgentToolResult(tool_name, ok, output)
 
         if tool_name == "git_log":
+            nth = None
+            if isinstance(params, dict) and params.get("nth") is not None:
+                try:
+                    nth = int(params.get("nth"))
+                except Exception:
+                    nth = None
+
+            if nth is not None:
+                if nth < 1:
+                    return AgentToolResult(tool_name, False, "Parameter nth must be >= 1")
+                # Fetch exactly one commit, skipping the first (nth-1) commits.
+                # This avoids returning commits 1..(nth-1) to the UI.
+                args = ["log", "--oneline", "-n", "1", "--skip", str(nth - 1)]
+                ok, output = self._run_git(repo_dir, args)
+                if ok:
+                    line = (output or "").splitlines()[
+                        0].strip() if (output or "").strip() else ""
+                    if line:
+                        # Include explicit metadata so the LLM can trust this is the requested position.
+                        return AgentToolResult(
+                            tool_name,
+                            True,
+                            f"nth={nth} (1-based from HEAD): {line}",
+                        )
+                    return AgentToolResult(tool_name, False, f"No commit found at nth={nth} (1-based from HEAD).")
+                return AgentToolResult(tool_name, False, output)
+
             max_count = 20
             if isinstance(params, dict) and params.get("max_count") is not None:
                 try:

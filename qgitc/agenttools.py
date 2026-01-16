@@ -58,12 +58,22 @@ class AgentToolRegistry:
             ),
             AgentTool(
                 name="git_log",
-                description="Show recent commits (like `git log --oneline`).",
+                description=(
+                    "Show commits. Use `nth` to fetch only the Nth commit from HEAD (1-based) without listing earlier commits. "
+                    "When `nth` is provided, the tool returns exactly one labeled line like 'nth=N (1-based from HEAD): <sha> <subject>'. "
+                    "Do not request commits 1..N just to locate the Nth commit."
+                ),
                 tool_type=ToolType.READ_ONLY,
                 parameters={
                     "type": "object",
                     "properties": {
                         "repo_dir": {"type": "string"},
+                        "nth": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 10000,
+                            "description": "Fetch only the Nth commit from HEAD (1-based). If set, returns exactly one commit.",
+                        },
                         "max_count": {
                             "type": "integer",
                             "minimum": 1,
