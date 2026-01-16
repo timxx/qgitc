@@ -2,7 +2,7 @@
 
 from PySide6.QtCore import QEvent, QSize, Signal
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QVBoxLayout
 
 from qgitc.aichatedit import AiChatEdit
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
@@ -95,12 +95,16 @@ class AiChatContextPanel(QFrame):
                 }
             """)
         else:
-            self.setStyleSheet("""
-                AiChatContextPanel {
-                    border: 1px solid palette(mid);
+            # Use darker border for Fusion style which needs more contrast
+            # Use mid for other styles to avoid too dark borders
+            isFusion = QApplication.style().name().lower() == "fusion"
+            borderColor = "palette(dark)" if isFusion else "palette(mid)"
+            self.setStyleSheet(f"""
+                AiChatContextPanel {{
+                    border: 1px solid {borderColor};
                     border-radius: 4px;
                     background-color: palette(base);
-                }
+                }}
             """)
 
     def eventFilter(self, watched, event: QEvent):
