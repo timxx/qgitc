@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QEventLoop, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import QHBoxLayout, QScrollBar, QSplitter, QVBoxLayout, QWidget
 
+from qgitc.agenttoolexecutor import AgentToolExecutor, AgentToolResult
+from qgitc.agenttools import AgentToolRegistry, ToolType, parseToolArguments
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichathistory import AiChatHistory
@@ -44,6 +46,18 @@ class AiChatWidget(QWidget):
         self._setupChatPanel()
 
         self._titleGenerator: AiChatTitleGenerator = None
+        self._agentExecutor = AgentToolExecutor(self)
+        self._agentExecutor.toolFinished.connect(self._onAgentToolFinished)
+        self._pendingAgentTool: str = None
+
+        # Auto-run queue for READ_ONLY tools.
+        # Each item: (tool_name, params, group_id)
+        self._autoToolQueue: List[Tuple[str, dict, int]] = []
+        # group_id -> {remaining:int, outputs:[str], auto_continue:bool}
+        self._autoToolGroups: Dict[int, Dict[str, object]] = {}
+        self._nextAutoGroupId: int = 1
+        self._pendingToolSource: Optional[str] = None  # 'auto' | 'approved'
+        self._pendingAutoGroupId: Optional[int] = None
 
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
@@ -68,6 +82,8 @@ class AiChatWidget(QWidget):
         self._chatBot = AiChatbot(self)
         self._chatBot.verticalScrollBar().valueChanged.connect(
             self._onTextBrowserScrollbarChanged)
+        self._chatBot.toolConfirmationApproved.connect(self._onToolApproved)
+        self._chatBot.toolConfirmationRejected.connect(self._onToolRejected)
         layout.addWidget(self._chatBot)
 
         self._contextPanel = AiChatContextPanel(self)
@@ -117,6 +133,9 @@ class AiChatWidget(QWidget):
     def queryClose(self):
         if self._titleGenerator:
             self._titleGenerator.cancel()
+
+        if self._agentExecutor:
+            self._agentExecutor.shutdown()
 
         for i in range(self._contextPanel.cbBots.count()):
             model: AiModelBase = self._contextPanel.cbBots.itemData(i)
@@ -178,7 +197,24 @@ class AiChatWidget(QWidget):
 
         model = self.currentChatModel()
         isNewConversation = not model.history
-        if chatMode == AiChatMode.CodeReview:
+
+        if chatMode == AiChatMode.Agent:
+            params.tools = AgentToolRegistry.openai_tools()
+            params.tool_choice = "auto"
+
+            if not Git.REPO_DIR:
+                self._doMessageReady(model, AiResponse(
+                    AiRole.System, self.tr("No repository is currently opened.")))
+                return
+
+            if not sysPrompt:
+                params.sys_prompt = (
+                    "You are a Git assistant inside QGitc. "
+                    "When you need repo information or to perform git actions, call tools. "
+                    "Never assume; use tools like git_status/git_log/git_diff/git_show/git_branch. "
+                    "After a tool result is provided, continue with the user's request."
+                )
+        elif chatMode == AiChatMode.CodeReview:
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
                 language=ApplicationBase.instance().uiLanguage())
@@ -202,7 +238,8 @@ class AiChatWidget(QWidget):
         self._updateChatHistoryModel(model)
 
     def _onMessageReady(self, response: AiResponse):
-        if response.message is None:
+        # tool-only responses can have empty message.
+        if response.message is None and not response.tool_calls:
             return
 
         model: AiModelBase = self.sender()
@@ -213,7 +250,58 @@ class AiChatWidget(QWidget):
 
         assert (index != -1)
         messages: AiChatbot = self._chatBot
-        messages.appendResponse(response)
+        if response.message:
+            messages.appendResponse(response)
+
+        # If the assistant produced tool calls, auto-run READ_ONLY tools and
+        # insert confirmations for WRITE/DANGEROUS tools.
+        if response.role == AiRole.Assistant and response.tool_calls:
+            autoGroupId: Optional[int] = None
+            autoToolsCount = 0
+            hasConfirmations = False
+
+            for tc in response.tool_calls:
+                func = (tc or {}).get("function") or {}
+                toolName = func.get("name")
+                args = parseToolArguments(func.get("arguments"))
+                tool = AgentToolRegistry.tool_by_name(
+                    toolName) if toolName else None
+
+                if toolName and tool and tool.tool_type == ToolType.READ_ONLY:
+                    if autoGroupId is None:
+                        autoGroupId = self._nextAutoGroupId
+                        self._nextAutoGroupId += 1
+                    self._autoToolQueue.append(
+                        (toolName, args or {}, autoGroupId))
+                    autoToolsCount += 1
+                    continue
+
+                # Anything else requires explicit confirmation.
+                if toolName and tool:
+                    hasConfirmations = True
+                    messages.insertToolConfirmation(
+                        toolName=toolName,
+                        params=args,
+                        toolDesc=tool.description,
+                        toolType=tool.tool_type,
+                    )
+                elif toolName:
+                    hasConfirmations = True
+                    messages.insertToolConfirmation(
+                        toolName=toolName,
+                        params=args,
+                        toolDesc=self.tr("Unknown tool requested by model"),
+                    )
+
+            if autoGroupId is not None and autoToolsCount:
+                # Only auto-continue once all READ_ONLY tools finish, and only
+                # if there are no pending confirmations from the same tool-call batch.
+                self._autoToolGroups[autoGroupId] = {
+                    "remaining": autoToolsCount,
+                    "outputs": [],
+                    "auto_continue": not hasConfirmations,
+                }
+                self._startNextAutoToolIfIdle()
 
         if not self._disableAutoScroll:
             sb = messages.verticalScrollBar()
@@ -238,6 +326,93 @@ class AiChatWidget(QWidget):
         self._historyPanel.setEnabled(True)
         self._contextPanel.cbBots.setEnabled(True)
         self._contextPanel.setFocus()
+
+    def _onToolApproved(self, tool_name: str, params: dict):
+        # Prevent overlapping executions.
+        if self._pendingAgentTool:
+            self._doMessageReady(self.currentChatModel(), AiResponse(
+                AiRole.System, self.tr("A tool is already running.")))
+            return
+
+        self._pendingAgentTool = tool_name
+        self._pendingToolSource = "approved"
+        self._pendingAutoGroupId = None
+        started = self._agentExecutor.executeAsync(tool_name, params or {})
+        if not started:
+            self._pendingAgentTool = None
+            self._pendingToolSource = None
+            self._doMessageReady(self.currentChatModel(), AiResponse(
+                AiRole.System, self.tr("Failed to start tool execution.")))
+
+    def _onToolRejected(self, tool_name: str):
+        # Keep it simple: just record and continue.
+        model = self.currentChatModel()
+        msg = self.tr("Tool rejected: {0}").format(tool_name)
+        model.addHistory(AiRole.System, msg)
+        self._doMessageReady(model, AiResponse(AiRole.System, msg))
+
+    def _onAgentToolFinished(self, result: AgentToolResult):
+        model = self.currentChatModel()
+        tool_name = result.tool_name
+        ok = result.ok
+        output = result.output or ""
+
+        source = self._pendingToolSource
+        group_id = self._pendingAutoGroupId
+
+        self._pendingAgentTool = None
+        self._pendingToolSource = None
+        self._pendingAutoGroupId = None
+
+        prefix = "✓" if ok else "✗"
+        tool_msg = f"{prefix} Tool `{tool_name}` result:\n\n{output}" if output else f"{prefix} Tool `{tool_name}` finished."
+        model.addHistory(AiRole.System, tool_msg)
+        self._doMessageReady(model, AiResponse(AiRole.System, tool_msg))
+
+        if source == "auto" and group_id is not None and group_id in self._autoToolGroups:
+            group = self._autoToolGroups[group_id]
+            outputs: list = group.get("outputs", [])
+            outputs.append(tool_msg)
+            group["outputs"] = outputs
+
+            remaining = int(group.get("remaining", 0)) - 1
+            group["remaining"] = remaining
+
+            if remaining <= 0:
+                auto_continue = bool(group.get("auto_continue", True))
+                combined = "\n\n".join(outputs)
+                del self._autoToolGroups[group_id]
+                if auto_continue:
+                    followup = f"Tool results:\n\n{combined}\n\nContinue." if combined else "Continue."
+                    self._doRequest(followup, AiChatMode.Agent)
+
+            # Continue draining the queue.
+            self._startNextAutoToolIfIdle()
+            return
+
+        # Approved (WRITE/DANGEROUS) tools keep the existing behavior: continue immediately.
+        followup = f"Tool `{tool_name}` finished. Output:\n{output}\n\nContinue." if output else f"Tool `{tool_name}` finished. Continue."
+        self._doRequest(followup, AiChatMode.Agent)
+
+    def _startNextAutoToolIfIdle(self):
+        if self._pendingAgentTool:
+            return
+        if not self._autoToolQueue:
+            return
+
+        tool_name, params, group_id = self._autoToolQueue.pop(0)
+        self._pendingAgentTool = tool_name
+        self._pendingToolSource = "auto"
+        self._pendingAutoGroupId = group_id
+
+        started = self._agentExecutor.executeAsync(tool_name, params or {})
+        if not started:
+            # Fall back to a synthetic failure result and keep draining.
+            self._pendingAgentTool = None
+            self._pendingToolSource = None
+            self._pendingAutoGroupId = None
+            self._onAgentToolFinished(AgentToolResult(
+                tool_name, False, self.tr("Failed to start tool execution.")))
 
     def _onServiceUnavailable(self):
         model: AiModelBase = self.sender()

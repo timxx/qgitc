@@ -19,6 +19,10 @@ class ChatGPTModel(AiModelBase):
             "stream": params.stream
         }
 
+        if params.tools:
+            payload["tools"] = params.tools
+            payload["tool_choice"] = params.tool_choice or "auto"
+
         if params.fill_point is not None:
             payload["prefix"] = params.prompt[:params.fill_point]
             payload["suffix"] = params.prompt[params.fill_point:]

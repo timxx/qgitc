@@ -15,13 +15,13 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPlainTextEdit
 
+from qgitc.agenttools import ToolType
 from qgitc.aitoolconfirmation import (
     TOOL_CONFIRMATION_OBJECT_TYPE,
     ButtonType,
     ConfirmationStatus,
     ToolConfirmationData,
     ToolConfirmationInterface,
-    ToolType,
 )
 from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiResponse, AiRole

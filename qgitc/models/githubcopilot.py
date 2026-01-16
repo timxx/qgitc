@@ -164,6 +164,10 @@ class GithubCopilot(AiModelBase):
             "stream": stream
         }
 
+        if params.tools and caps.tool_calls:
+            payload["tools"] = params.tools
+            payload["tool_choice"] = params.tool_choice or "auto"
+
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
@@ -313,7 +317,8 @@ class GithubCopilot(AiModelBase):
         if not self.modelId:
             modelKey = AiModelFactory.modelKey(self)
             settings = ApplicationBase.instance().settings()
-            self.modelId = settings.defaultLlmModelId(modelKey) or fetcher.defaultModel or "gpt-4.1"
+            self.modelId = settings.defaultLlmModelId(
+                modelKey) or fetcher.defaultModel or "gpt-4.1"
 
         self._modelFetcher = None
         self.modelsReady.emit()

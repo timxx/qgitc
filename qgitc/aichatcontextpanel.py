@@ -193,6 +193,7 @@ class AiChatContextPanel(QFrame):
         modes = {
             AiChatMode.Chat: "💬 " + self.tr("Chat"),
             AiChatMode.CodeReview: "📝 " + self.tr("Code Review"),
+            AiChatMode.Agent: "🔧 " + self.tr("Agent"),
         }
         self.cbMode.clear()
         for mode, label in modes.items():

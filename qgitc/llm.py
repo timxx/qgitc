@@ -2,7 +2,7 @@
 
 import json
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
@@ -42,6 +42,9 @@ class AiResponse:
         self.total_tokens = None
         self.is_delta = False
         self.first_delta = False
+        # OpenAI-compatible tool calls (Chat Completions).
+        # Each item is a dict like: {"id": str, "type": "function", "function": {"name": str, "arguments": str}}
+        self.tool_calls: Optional[List[Dict[str, Any]]] = None
 
 
 class AiParameters:
@@ -57,12 +60,17 @@ class AiParameters:
         self.fill_point = None
         self.language = None
         self.model: str = None
+        # OpenAI-compatible tool definitions, e.g. [{"type":"function","function":{...}}]
+        self.tools: Optional[List[Dict[str, Any]]] = None
+        # OpenAI tool choice (e.g. "auto"); leave None to omit.
+        self.tool_choice: Optional[str] = None
 
 
 class AiChatMode(Enum):
 
     Chat = 0
     CodeReview = 1
+    Agent = 2
 
 
 def _aiRoleFromString(role: str) -> AiRole:
@@ -96,6 +104,7 @@ class AiModelBase(QObject):
         self._role = AiRole.Assistant
         self._content = ""
         self._firstDelta = True
+        self._toolCallAcc: Dict[int, Dict[str, Any]] = {}
 
     def clear(self):
         self._history.clear()
@@ -146,6 +155,7 @@ class AiModelBase(QObject):
         self._content = ""
         self._role = AiRole.Assistant
         self._firstDelta = True
+        self._toolCallAcc = {}
 
         if not reply:
             return
@@ -249,12 +259,45 @@ class AiModelBase(QObject):
         if not choices:
             return
 
-        delta = choices[0]["delta"]
+        choice0 = choices[0]
+        delta = choice0.get("delta")
         if not delta:
             return
 
         if "role" in delta and delta["role"]:
             self._role = _aiRoleFromString(delta["role"])
+        # Tool calls can stream as incremental chunks of function.arguments.
+        if "tool_calls" in delta and delta["tool_calls"]:
+            for tc in delta["tool_calls"]:
+                idx = tc.get("index")
+                if idx is None:
+                    continue
+                acc = self._toolCallAcc.get(idx) or {"type": "function"}
+                if tc.get("id"):
+                    acc["id"] = tc.get("id")
+                if tc.get("type"):
+                    acc["type"] = tc.get("type")
+                func = tc.get("function") or {}
+                if func.get("name"):
+                    acc.setdefault("function", {})["name"] = func.get("name")
+                if func.get("arguments"):
+                    acc.setdefault("function", {})
+                    prev = acc["function"].get("arguments", "")
+                    acc["function"]["arguments"] = prev + func.get("arguments")
+                self._toolCallAcc[idx] = acc
+            return
+
+        # If model signaled tool_calls completion in finish_reason, emit a tool-only response.
+        if choice0.get("finish_reason") == "tool_calls" and self._toolCallAcc:
+            aiResponse = AiResponse()
+            aiResponse.is_delta = False
+            aiResponse.role = AiRole.Assistant
+            aiResponse.message = ""
+            aiResponse.tool_calls = [self._toolCallAcc[i]
+                                        for i in sorted(self._toolCallAcc.keys())]
+            self.responseAvailable.emit(aiResponse)
+            return
+
         if "content" in delta:
             if not delta["content"]:
                 return
@@ -280,11 +323,13 @@ class AiModelBase(QObject):
         aiResponse.total_tokens = usage.get("total_tokens", 0)
 
         for choice in data["choices"]:
-            message: dict = choice["message"]
-            content = message["content"]
+            message: dict = choice.get("message") or {}
+            content = message.get("content")
             role = message.get("role", "assistant")
             aiResponse.role = AiRole.Assistant
-            aiResponse.message = content
+            aiResponse.message = content or ""
+            if message.get("tool_calls"):
+                aiResponse.tool_calls = message.get("tool_calls")
             self.responseAvailable.emit(aiResponse)
             break
 

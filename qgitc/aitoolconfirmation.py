@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtCore import QRectF, QSizeF, Qt
-from PySide6.QtGui import QColor, QPainter, QPyTextObject, QTextDocument, QTextFormat
+from PySide6.QtGui import QPainter, QPyTextObject, QTextDocument, QTextFormat
 from PySide6.QtWidgets import QApplication
 
+from qgitc.agenttools import ToolType
 from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchema
-
-
-class ToolType:
-    """Tool type categorization for visual distinction"""
-    READ_ONLY = 0   # Safe operations: status, log, diff
-    WRITE = 1       # Modifying operations: commit, checkout, merge
-    DANGEROUS = 2   # Potentially destructive: reset, force push
 
 
 class ConfirmationStatus:
@@ -211,7 +205,7 @@ class ToolConfirmationInterface(QPyTextObject):
         else:  # DANGEROUS
             return "⚠️"
 
-    def _getColors(self, tool_type: int, hover = False):
+    def _getColors(self, tool_type: int, hover=False):
         """Get background and border colors based on tool type"""
         schema: ColorSchema = ApplicationBase.instance().colorSchema()
         if tool_type == ToolType.READ_ONLY:
