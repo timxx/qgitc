@@ -2,11 +2,12 @@
 
 from PySide6.QtCore import QEvent, QSize, Signal
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 
 from qgitc.aichatedit import AiChatEdit
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
+from qgitc.inlinecombobox import InlineComboBox
 from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory
 
 
@@ -46,40 +47,15 @@ class AiChatContextPanel(QFrame):
         controlLayout.setContentsMargins(4, 4, 4, 4)
         controlLayout.setSpacing(4)
 
-        # Inline combobox style (no frame by default, show on hover)
-        comboBoxStyle = """
-            QComboBox {
-                border: 1px solid transparent;
-                background: transparent;
-            }
-            QComboBox:hover {
-                border: 1px solid palette(mid);
-                border-radius: 2px;
-                background: palette(button);
-            }
-            QComboBox:focus {
-                border: 1px solid palette(highlight);
-                border-radius: 2px;
-            }
-        """
-
-        self.cbBots = QComboBox(self)
-        self.cbBots.setEditable(False)
-        self.cbBots.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.cbBots.setStyleSheet(comboBoxStyle)
+        self.cbBots = InlineComboBox(self)
         self.cbBots.currentIndexChanged.connect(self._onModelChanged)
         controlLayout.addWidget(self.cbBots)
 
-        self.cbModelNames = QComboBox(self)
-        self.cbModelNames.setEditable(False)
-        self.cbModelNames.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.cbModelNames.setStyleSheet(comboBoxStyle)
+        self.cbModelNames = InlineComboBox(self)
         controlLayout.addWidget(self.cbModelNames)
 
         # Mode selector
-        self.cbMode = QComboBox(self)
-        self.cbMode.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.cbMode.setStyleSheet(comboBoxStyle)
+        self.cbMode = InlineComboBox(self)
         self._setupChatMode()
         self.cbMode.currentIndexChanged.connect(self._onModeChanged)
         controlLayout.addWidget(self.cbMode)
