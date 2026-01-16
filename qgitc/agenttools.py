@@ -39,7 +39,10 @@ class AgentToolRegistry:
         return [
             AgentTool(
                 name="git_status",
-                description="Show repository status (like `git status --porcelain -b`).",
+                description=(
+                    "Show repository status (like `git status --porcelain -b`). "
+                    "If there are no changes, the result explicitly includes 'working tree clean (no changes)'."
+                ),
                 tool_type=ToolType.READ_ONLY,
                 parameters={
                     "type": "object",

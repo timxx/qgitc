@@ -93,6 +93,15 @@ class AgentToolExecutor(QObject):
             if not untracked:
                 args.append("--untracked-files=no")
             ok, output = self._run_git(repo_dir, args)
+            if ok:
+                # Porcelain v1 with -b typically includes a branch line like:
+                #   ## main...origin/main [ahead 1]
+                # If that's the only line, the working tree is clean.
+                lines = (output or "").splitlines()
+                if not lines:
+                    output = "working tree clean (no changes)."
+                elif len(lines) == 1 and lines[0].startswith("##"):
+                    output = f"{lines[0]}\nworking tree clean (no changes)."
             return AgentToolResult(tool_name, ok, output)
 
         if tool_name == "git_log":
