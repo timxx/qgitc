@@ -204,6 +204,8 @@ class AiChatWidget(QWidget):
 
             if not Git.REPO_DIR:
                 self._doMessageReady(model, AiResponse(
+                    AiRole.User, params.prompt))
+                self._doMessageReady(model, AiResponse(
                     AiRole.System, self.tr("No repository is currently opened.")))
                 return
 
