@@ -137,6 +137,22 @@ class AgentToolRegistry:
                 },
             ),
             AgentTool(
+                name="git_current_branch",
+                description=(
+                    "Get the current branch name only (no branch listing). "
+                    "Uses `git rev-parse --abbrev-ref HEAD`. "
+                    "If in detached HEAD state, returns a detached HEAD message."
+                ),
+                tool_type=ToolType.READ_ONLY,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "repo_dir": {"type": "string"},
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            AgentTool(
                 name="git_checkout",
                 description="Checkout a branch (like `git checkout <branch>`).",
                 tool_type=ToolType.WRITE,

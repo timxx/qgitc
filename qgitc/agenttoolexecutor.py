@@ -158,6 +158,23 @@ class AgentToolExecutor(QObject):
             ok, output = self._run_git(repo_dir, args)
             return AgentToolResult(tool_name, ok, output)
 
+        if tool_name == "git_current_branch":
+            # Prefer a cheap command that returns only the current branch name.
+            ok, output = self._run_git(
+                repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
+            if not ok:
+                return AgentToolResult(tool_name, False, output)
+            branch = (output or "").strip()
+            if not branch:
+                return AgentToolResult(tool_name, False, "Failed to determine current branch.")
+            if branch == "HEAD":
+                ok2, sha = self._run_git(
+                    repo_dir, ["rev-parse", "--short", "HEAD"])
+                sha = (sha or "").strip() if ok2 else ""
+                msg = f"detached HEAD" + (f" at {sha}" if sha else "")
+                return AgentToolResult(tool_name, True, msg)
+            return AgentToolResult(tool_name, True, branch)
+
         if tool_name == "git_branch":
             all_branches = bool(params.get("all")) if isinstance(
                 params, dict) else False
