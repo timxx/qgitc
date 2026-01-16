@@ -6,6 +6,8 @@ from PySide6.QtCore import QElapsedTimer, QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QVBoxLayout, QWidget
 
+from qgitc.applicationbase import ApplicationBase
+
 
 class InlineComboBox(QWidget):
     """
@@ -163,14 +165,23 @@ class InlineComboBox(QWidget):
         radius = 4
 
         palette = self.palette()
-        if self.hasFocus():
+        if not self.isEnabled():
+            pass
+        elif self.hasFocus():
             pen = QPen(palette.highlight().color())
             pen.setWidth(1)
             painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
             painter.drawRoundedRect(borderRect, radius, radius)
         elif self._isHovered:
-            painter.setPen(Qt.NoPen)
+            app = ApplicationBase.instance()
+            if app.isDarkTheme():
+                outline = palette.window().color()
+            else:
+                outline = palette.window().color().darker(140)
+            pen = QPen(outline)
+            pen.setWidth(1)
+            painter.setPen(pen)
             painter.setBrush(palette.button().color())
             painter.drawRoundedRect(borderRect, radius, radius)
 

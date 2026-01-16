@@ -66,3 +66,6 @@ class ApplicationBase(QApplication):
     @property
     @abc.abstractmethod
     def submodules(self) -> List[str]: ...
+
+    @abc.abstractmethod
+    def isDarkTheme(self) -> bool: ...
