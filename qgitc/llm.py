@@ -15,6 +15,7 @@ class AiRole(Enum):
     User = 0
     Assistant = 1
     System = 2
+    Tool = 3
 
     @staticmethod
     def fromString(role: str) -> 'AiRole':
@@ -25,6 +26,8 @@ class AiRole(Enum):
             return AiRole.Assistant
         if role == "system":
             return AiRole.System
+        if role == "tool":
+            return AiRole.Tool
         return AiRole.Assistant
 
 
@@ -81,6 +84,8 @@ def _aiRoleFromString(role: str) -> AiRole:
         return AiRole.Assistant
     elif role == "system":
         return AiRole.System
+    elif role == "tool":
+        return AiRole.Tool
     else:
         logger.warning("Unknown role: %s", role)
         return AiRole.Assistant
@@ -116,8 +121,12 @@ class AiModelBase(QObject):
         self._history.append(AiChatMessage(role, message))
 
     def toOpenAiMessages(self):
-        return [{"role": history.role.name.lower(), "content": history.message}
-                for history in self._history]
+        # Tool role is UI-only in QGitc and should not be sent to the LLM.
+        return [
+            {"role": history.role.name.lower(), "content": history.message}
+            for history in self._history
+            if history.role != AiRole.Tool
+        ]
 
     @property
     def name(self):
@@ -294,7 +303,7 @@ class AiModelBase(QObject):
             aiResponse.role = AiRole.Assistant
             aiResponse.message = ""
             aiResponse.tool_calls = [self._toolCallAcc[i]
-                                        for i in sorted(self._toolCallAcc.keys())]
+                                     for i in sorted(self._toolCallAcc.keys())]
             self.responseAvailable.emit(aiResponse)
             return
 

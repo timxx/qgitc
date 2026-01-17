@@ -153,11 +153,7 @@ class AiChatWidget(QWidget):
 
         model = self.currentChatModel()
         chatMode: AiChatMode = self._contextPanel.currentMode()
-        self._doRequest(
-            prompt,
-            chatMode,
-            "",
-            None)
+        self._doRequest(prompt, chatMode)
 
         app = ApplicationBase.instance()
         app.trackFeatureUsage("aichat_send", {
@@ -181,7 +177,7 @@ class AiChatWidget(QWidget):
             settings.saveChatHistory(
                 chatHistory.historyId, chatHistory.toDict())
 
-    def _doRequest(self, prompt: str, chatMode: AiChatMode, language="", sysPrompt: str = None):
+    def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
         params = AiParameters()
         params.prompt = prompt
         params.sys_prompt = sysPrompt
@@ -190,7 +186,6 @@ class AiChatWidget(QWidget):
         params.temperature = 0.1
         params.max_tokens = 4096
         params.chat_mode = chatMode
-        params.language = language
         params.model = self._contextPanel.currentModelId()
 
         self._disableAutoScroll = False
@@ -204,12 +199,13 @@ class AiChatWidget(QWidget):
 
             if not Git.REPO_DIR:
                 self._doMessageReady(model, AiResponse(
-                    AiRole.User, params.prompt))
+                    AiRole.User, params.prompt), collapsed)
                 self._doMessageReady(model, AiResponse(
                     AiRole.System, self.tr("No repository is currently opened.")))
                 return
 
-            if not sysPrompt:
+            # Don't add system prompt if there is already one
+            if not sysPrompt and (len(model.history) == 0 or not collapsed):
                 params.sys_prompt = (
                     "You are a Git assistant inside QGitc. "
                     "When you need repo information or to perform git actions, call tools. "
@@ -222,7 +218,8 @@ class AiChatWidget(QWidget):
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
                 language=ApplicationBase.instance().uiLanguage())
-        self._doMessageReady(model, AiResponse(AiRole.User, params.prompt))
+        self._doMessageReady(model, AiResponse(
+            AiRole.User, params.prompt), collapsed)
 
         self._contextPanel.btnSend.setVisible(False)
         self._contextPanel.btnStop.setVisible(True)
@@ -249,13 +246,13 @@ class AiChatWidget(QWidget):
         model: AiModelBase = self.sender()
         self._doMessageReady(model, response)
 
-    def _doMessageReady(self, model: AiModelBase, response: AiResponse):
+    def _doMessageReady(self, model: AiModelBase, response: AiResponse, collapsed=False):
         index = self._contextPanel.cbBots.findData(model)
 
         assert (index != -1)
         messages: AiChatbot = self._chatBot
         if response.message:
-            messages.appendResponse(response)
+            messages.appendResponse(response, collapsed)
 
         # If the assistant produced tool calls, auto-run READ_ONLY tools and
         # insert confirmations for WRITE/DANGEROUS tools.
@@ -341,6 +338,7 @@ class AiChatWidget(QWidget):
         self._pendingAgentTool = tool_name
         self._pendingToolSource = "approved"
         self._pendingAutoGroupId = None
+
         started = self._agentExecutor.executeAsync(tool_name, params or {})
         if not started:
             self._pendingAgentTool = None
@@ -370,13 +368,16 @@ class AiChatWidget(QWidget):
 
         prefix = "✓" if ok else "✗"
         tool_msg = f"{prefix} Tool `{tool_name}` result:\n\n{output}" if output else f"{prefix} Tool `{tool_name}` finished."
-        model.addHistory(AiRole.System, tool_msg)
-        self._doMessageReady(model, AiResponse(AiRole.System, tool_msg))
+
+        model.addHistory(AiRole.Tool, tool_msg)
+        self._doMessageReady(model, AiResponse(
+            AiRole.Tool, tool_msg), collapsed=True)
 
         if source == "auto" and group_id is not None and group_id in self._autoToolGroups:
             group = self._autoToolGroups[group_id]
             outputs: list = group.get("outputs", [])
-            outputs.append(tool_msg)
+            outputs.append(
+                f"[{tool_name}]\n{output}" if output else f"[{tool_name}] (no output)")
             group["outputs"] = outputs
 
             remaining = int(group.get("remaining", 0)) - 1
@@ -387,16 +388,18 @@ class AiChatWidget(QWidget):
                 combined = "\n\n".join(outputs)
                 del self._autoToolGroups[group_id]
                 if auto_continue:
-                    followup = f"Tool results:\n\n{combined}\n\nContinue." if combined else "Continue."
-                    self._doRequest(followup, AiChatMode.Agent)
+                    followup = combined
+                    if followup:
+                        self._doRequest(
+                            followup, AiChatMode.Agent, collapsed=True)
 
             # Continue draining the queue.
             self._startNextAutoToolIfIdle()
             return
 
-        # Approved (WRITE/DANGEROUS) tools keep the existing behavior: continue immediately.
-        followup = f"Tool `{tool_name}` finished. Output:\n{output}\n\nContinue." if output else f"Tool `{tool_name}` finished. Continue."
-        self._doRequest(followup, AiChatMode.Agent)
+        # Approved (WRITE/DANGEROUS) tools: send ONLY the tool output back as a collapsed user message.
+        followup = f"[{tool_name}]\n{output}" if output else f"[{tool_name}] (no output)"
+        self._doRequest(followup, AiChatMode.Agent, collapsed=True)
 
     def _startNextAutoToolIfIdle(self):
         if self._pendingAgentTool:
@@ -611,15 +614,22 @@ class AiChatWidget(QWidget):
         # Clear model history and add messages
         model.clear()
 
+        prevRole = None
         for msg in messages:
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
+
+            # Auto-collapse Tool messages and user messages that follow Tool messages
+            collapsed = (role == AiRole.Tool) or (
+                role == AiRole.User and prevRole == AiRole.Tool)
 
             if content:
                 model.addHistory(role, content)
                 if addToChatBot:
                     response = AiResponse(role, content)
-                    chatbot.appendResponse(response)
+                    chatbot.appendResponse(response, collapsed=collapsed)
+
+            prevRole = role
 
     def _clearCurrentChat(self):
         """Clear the current chat display and model history"""

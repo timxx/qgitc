@@ -63,16 +63,17 @@ class AiChatBotHighlighter(MarkdownHighlighter):
     def _setTitleFormat(self, length: int, role: AiRole):
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
+        schema = ApplicationBase.instance().colorSchema()
         if role == AiRole.User:
-            charFormat.setForeground(
-                ApplicationBase.instance().colorSchema().UserBlockFg)
+            charFormat.setForeground(schema.UserBlockFg)
         elif role == AiRole.Assistant:
-            charFormat.setForeground(
-                ApplicationBase.instance().colorSchema().AssistantBlockFg)
+            charFormat.setForeground(schema.AssistantBlockFg)
         elif role == AiRole.System:
-            charFormat.setForeground(
-                ApplicationBase.instance().colorSchema().SystemBlockFg)
+            charFormat.setForeground(schema.SystemBlockFg)
+        elif role == AiRole.Tool:
+            charFormat.setForeground(schema.ToolBlockFg)
         self.setFormat(0, length, charFormat)
+
 
 class AiChatbot(QPlainTextEdit):
     cornerRadius = 5
@@ -182,6 +183,8 @@ class AiChatbot(QPlainTextEdit):
             return self.tr("User:")
         if role == AiRole.Assistant:
             return self.tr("Assistant:")
+        if role == AiRole.Tool:
+            return self.tr("Tool:")
 
         return self.tr("System:")
 
@@ -250,15 +253,15 @@ class AiChatbot(QPlainTextEdit):
         headerData = self._headerData(headerBlock)
         collapsed = headerData.collapsed if headerData else False
         role = headerData.role if headerData else None
+        schema = ApplicationBase.instance().colorSchema()
         if role == AiRole.User:
-            painter.setPen(
-                ApplicationBase.instance().colorSchema().UserBlockFg)
+            painter.setPen(schema.UserBlockFg)
         elif role == AiRole.Assistant:
-            painter.setPen(
-                ApplicationBase.instance().colorSchema().AssistantBlockFg)
-        else:
-            painter.setPen(
-                ApplicationBase.instance().colorSchema().SystemBlockFg)
+            painter.setPen(schema.AssistantBlockFg)
+        elif role == AiRole.System:
+            painter.setPen(schema.SystemBlockFg)
+        elif role == AiRole.Tool:
+            painter.setPen(schema.ToolBlockFg)
 
         # Triangle icon
         cx = toggleRect.center().x()
@@ -310,15 +313,15 @@ class AiChatbot(QPlainTextEdit):
         if role is None:
             return
 
+        schema = ApplicationBase.instance().colorSchema()
         if role == AiRole.User:
-            painter.setPen(
-                ApplicationBase.instance().colorSchema().UserBlockBorder)
+            painter.setPen(schema.UserBlockBorder)
         elif role == AiRole.Assistant:
-            painter.setPen(ApplicationBase.instance(
-            ).colorSchema().AssistantBlockBorder)
+            painter.setPen(schema.AssistantBlockBorder)
         elif role == AiRole.System:
-            painter.setPen(ApplicationBase.instance(
-            ).colorSchema().SystemBlockBorder)
+            painter.setPen(schema.SystemBlockBorder)
+        elif role == AiRole.Tool:
+            painter.setPen(schema.ToolBlockBorder)
 
         if clipTop:
             # make the top out of viewport
@@ -331,11 +334,16 @@ class AiChatbot(QPlainTextEdit):
             self.cornerRadius)
 
     def _aiBlockBgColor(self, role: Optional[AiRole]):
+        schema = ApplicationBase.instance().colorSchema()
         if role == AiRole.User:
-            return ApplicationBase.instance().colorSchema().UserBlockBg
+            return schema.UserBlockBg
         elif role == AiRole.Assistant:
-            return ApplicationBase.instance().colorSchema().AssistantBlockBg
-        return ApplicationBase.instance().colorSchema().SystemBlockBg
+            return schema.AssistantBlockBg
+        elif role == AiRole.System:
+            return schema.SystemBlockBg
+        elif role == AiRole.Tool:
+            return schema.ToolBlockBg
+        return schema.SystemBlockBg
 
     def insertToolConfirmation(self, toolName: str, params: dict,
                                toolDesc: str = None, toolType: int = ToolType.READ_ONLY):
