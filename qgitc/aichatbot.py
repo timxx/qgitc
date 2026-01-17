@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict
+from typing import Dict, Optional, Tuple
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QFont,
     QMouseEvent,
     QPainter,
+    QPolygonF,
     QTextBlock,
     QTextCharFormat,
     QTextCursor,
@@ -90,6 +91,11 @@ class AiChatBotHighlighter(MarkdownHighlighter):
 class AiChatbot(QPlainTextEdit):
     cornerRadius = 5
 
+    toggleMarginRight = 8
+    toggleMarginTop = 2
+    toggleMinSize = 10
+    toggleMaxSize = 14
+
     # Signals for tool confirmation interaction
     toolConfirmationApproved = Signal(str, dict)  # tool_name, params
     toolConfirmationRejected = Signal(str)  # tool_name
@@ -111,20 +117,40 @@ class AiChatbot(QPlainTextEdit):
         # Track which confirmation is hovered
         self._hoveredConfirmation: ToolConfirmationData = None
 
+        # Track which AI blocks are collapsed
+        # header_block_position -> collapsed
+        self._collapsedBlocks: Dict[int, bool] = {}
+        self._hoveredHeaderPos: Optional[int] = None
+
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
 
-    def appendResponse(self, response: AiResponse):
+    def appendResponse(self, response: AiResponse, collapsed: bool = False):
         cursor = self.textCursor()
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
         docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
+        headerBlock: Optional[QTextBlock] = None
+
         if not response.is_delta or response.first_delta:
-            self._insertRoleBlock(cursor, response.role)
+            headerBlock = self._insertRoleBlock(cursor, response.role)
             cursor.insertBlock()
+            self._collapsedBlocks[headerBlock.position()] = collapsed
+            if collapsed:
+                # Hide the first body block immediately (streaming will append into it).
+                self._setBlockVisible(cursor.block(), False)
         cursor.insertText(response.message)
+
+        # If this is a delta continuation, keep the current group visibility consistent.
+        if response.is_delta and not response.first_delta:
+            activeHeader = self._findHeaderBlock(cursor.block())
+            if activeHeader is not None:
+                isCollapsed = self._collapsedBlocks.get(
+                    activeHeader.position(), False)
+                if isCollapsed:
+                    self._setBlockVisible(cursor.block(), False)
 
         if selectionStart != selectionEnd and selectionEnd == docLength:
             newCursor = self.textCursor()
@@ -154,12 +180,16 @@ class AiChatbot(QPlainTextEdit):
         if self.blockCount() > 1:
             cursor.insertBlock()
         cursor.insertText(self._roleString(role))
-        cursor.block().setUserState(AiChatBotHighlighter.roleToBlockState(role))
+        block = cursor.block()
+        block.setUserState(AiChatBotHighlighter.roleToBlockState(role))
+        return block
 
     def clear(self):
         self._highlighter.clearDirtyBlocks()
         self._confirmations.clear()
         self._hoveredConfirmation = None
+        self._collapsedBlocks.clear()
+        self._hoveredHeaderPos = None
         super().clear()
 
     def event(self, event):
@@ -196,18 +226,21 @@ class AiChatbot(QPlainTextEdit):
             offset.setY(offset.y() + r.height())
 
             blockType = block.userState()
-            if self._isAiBlock(blockType):
+            if self._isHeaderBlock(blockType):
                 painter.setBrush(self._aiBlockBgColor(blockType))
                 painter.setPen(Qt.NoPen)
                 painter.drawRoundedRect(
                     r, self.cornerRadius, self.cornerRadius)
                 painter.setBrush(Qt.NoBrush)
 
-            if currBlockType is None and not self._isAiBlock(blockType):
-                currBlockType = self._findAiBlockType(block)
+                # Draw expand/collapse toggle aligned to the right side of the header line.
+                self._drawHeaderToggle(painter, block)
+
+            if currBlockType is None and not self._isHeaderBlock(blockType):
+                currBlockType = self._findHeaderBlock(block)
                 curClipTop = True
                 blockAreaRect = r
-            elif self._isAiBlock(blockType) and blockType != currBlockType:
+            elif self._isHeaderBlock(blockType) and blockType != currBlockType:
                 self._drawAiBlock(painter, currBlockType,
                                   blockAreaRect, curClipTop)
                 currBlockType = blockType
@@ -228,18 +261,62 @@ class AiChatbot(QPlainTextEdit):
         painter.end()
         super().paintEvent(event)
 
+    def _drawHeaderToggle(self, painter: QPainter, headerBlock: QTextBlock):
+        if not headerBlock.isValid() or not headerBlock.isVisible():
+            return
+
+        toggleRect = self._toggleRectForHeader(headerBlock)
+        if toggleRect is None:
+            return
+
+        collapsed = self._collapsedBlocks.get(headerBlock.position(), False)
+        blockType = headerBlock.userState()
+        if blockType == AiChatBotState.UserBlock:
+            painter.setPen(
+                ApplicationBase.instance().colorSchema().UserBlockFg)
+        elif blockType == AiChatBotState.AssistantBlock:
+            painter.setPen(
+                ApplicationBase.instance().colorSchema().AssistantBlockFg)
+        else:
+            painter.setPen(
+                ApplicationBase.instance().colorSchema().SystemBlockFg)
+
+        # Triangle icon
+        cx = toggleRect.center().x()
+        cy = toggleRect.center().y()
+        s = toggleRect.width() / 2.0
+
+        if collapsed:
+            # Pointing right
+            pts = QPolygonF([
+                QPointF(cx - s * 0.4, cy - s * 0.6),
+                QPointF(cx - s * 0.4, cy + s * 0.6),
+                QPointF(cx + s * 0.6, cy),
+            ])
+        else:
+            # Pointing down
+            pts = QPolygonF([
+                QPointF(cx - s * 0.6, cy - s * 0.4),
+                QPointF(cx + s * 0.6, cy - s * 0.4),
+                QPointF(cx, cy + s * 0.6),
+            ])
+
+        painter.setBrush(painter.pen().color())
+        painter.drawPolygon(pts)
+        painter.setBrush(Qt.NoBrush)
+
     @staticmethod
-    def _isAiBlock(state):
+    def _isHeaderBlock(state):
         return state in [
             AiChatBotState.UserBlock,
             AiChatBotState.AssistantBlock,
             AiChatBotState.SystemBlock]
 
-    def _findAiBlockType(self, block: QTextBlock):
+    def _findHeaderBlock(self, block: QTextBlock):
         prevBlock = QTextBlock(block).previous()
         while prevBlock.isValid():
             prevState = prevBlock.userState()
-            if self._isAiBlock(prevState):
+            if self._isHeaderBlock(prevState):
                 return prevState
             prevBlock = prevBlock.previous()
 
@@ -329,12 +406,16 @@ class AiChatbot(QPlainTextEdit):
         """Handle mouse move for hover effects"""
         mousePos = event.pos()
 
+        hoveredHeaderPos, overToggle = self._getHeaderToggleAtPosition(
+            mousePos)
+
         # Find which confirmation (if any) the mouse is over by checking rectangles
         hoveredButton = ButtonType.NONE
 
         # Update hover state
         needsUpdate = False
-        hoveredConfirmData, hoveredButton = self._getConfirmDataAtPosition(mousePos)
+        hoveredConfirmData, hoveredButton = self._getConfirmDataAtPosition(
+            mousePos)
         if hoveredConfirmData != self._hoveredConfirmation:
             # Clear previous hover
             if self._hoveredConfirmation:
@@ -350,6 +431,15 @@ class AiChatbot(QPlainTextEdit):
 
         # Update button hover state
         cursorShape = Qt.IBeamCursor
+
+        # Toggle hover takes precedence for cursor
+        if overToggle and hoveredHeaderPos is not None:
+            cursorShape = Qt.PointingHandCursor
+
+        if self._hoveredHeaderPos != hoveredHeaderPos:
+            self._hoveredHeaderPos = hoveredHeaderPos
+            needsUpdate = True
+
         if hoveredConfirmData:
             if hoveredConfirmData.hovered_button != hoveredButton:
                 hoveredConfirmData.hovered_button = hoveredButton
@@ -370,7 +460,14 @@ class AiChatbot(QPlainTextEdit):
         if event.button() != Qt.LeftButton:
             return super().mouseReleaseEvent(event)
 
-        confirmData, clickedButton = self._getConfirmDataAtPosition(event.pos())
+        headerPos, overToggle = self._getHeaderToggleAtPosition(event.pos())
+        if overToggle and headerPos is not None:
+            self._toggleCollapsed(headerPos)
+            event.accept()
+            return
+
+        confirmData, clickedButton = self._getConfirmDataAtPosition(
+            event.pos())
         if clickedButton != ButtonType.NONE:
             if clickedButton == ButtonType.APPROVE:
                 confirmData.status = ConfirmationStatus.APPROVED
@@ -387,6 +484,78 @@ class AiChatbot(QPlainTextEdit):
             self.viewport().update()
 
         super().mouseReleaseEvent(event)
+
+    def _toggleRectForHeader(self, headerBlock: QTextBlock) -> Optional[QRectF]:
+        layout = headerBlock.layout()
+        line = layout.lineForTextPosition(0)
+        if not line.isValid():
+            return None
+
+        viewportRect = self.viewport().rect()
+        lineRect = line.rect()
+
+        # blockBoundingGeometry is in document coordinates; translate to viewport.
+        br = self.blockBoundingGeometry(
+            headerBlock).translated(self.contentOffset())
+
+        size = int(min(self.toggleMaxSize, max(
+            self.toggleMinSize, lineRect.height() * 0.75)))
+        x = viewportRect.right() - self.toggleMarginRight - size
+        y = br.y() + lineRect.y() + (lineRect.height() - size) / 2.0
+        y = max(y, br.y() + self.toggleMarginTop)
+
+        return QRectF(x, y, size, size)
+
+    def _getHeaderToggleAtPosition(self, pos: QPoint) -> Tuple[Optional[int], bool]:
+        cursor = self.cursorForPosition(pos)
+        block = cursor.block()
+        if not block.isValid() or not block.isVisible() or not self._isHeaderBlock(block.userState()):
+            return None, False
+
+        toggleRect = self._toggleRectForHeader(block)
+        if toggleRect is None:
+            return None, False
+
+        return block.position(), toggleRect.contains(pos)
+
+    def _toggleCollapsed(self, headerPos: int):
+        headerBlock = self.document().findBlock(headerPos)
+        if not headerBlock.isValid() or not self._isHeaderBlock(headerBlock.userState()):
+            return
+
+        newState = not self._collapsedBlocks.get(headerPos, False)
+        self._collapsedBlocks[headerPos] = newState
+        self._applyCollapsedState(headerBlock)
+
+    def _applyCollapsedState(self, headerBlock: QTextBlock):
+        collapsed = self._collapsedBlocks.get(headerBlock.position(), False)
+        block = headerBlock.next()
+        while block.isValid() and not self._isHeaderBlock(block.userState()):
+            self._setBlockVisible(block, not collapsed)
+            block = block.next()
+
+        # Force relayout and repaint.
+        self.document().markContentsDirty(0, self.document().characterCount())
+        self.viewport().update()
+
+    def _setBlockVisible(self, block: QTextBlock, visible: bool):
+        if not block.isValid():
+            return
+
+        block.setVisible(visible)
+
+    def _findHeaderBlock(self, block: QTextBlock) -> Optional[QTextBlock]:
+        if not block.isValid():
+            return None
+        if self._isHeaderBlock(block.userState()):
+            return block
+
+        prev = QTextBlock(block).previous()
+        while prev.isValid():
+            if self._isHeaderBlock(prev.userState()):
+                return prev
+            prev = prev.previous()
+        return None
 
     def _getConfirmDataAtPosition(self, pos: QPoint):
         # get the block at the mouse position
