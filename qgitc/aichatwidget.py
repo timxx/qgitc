@@ -618,16 +618,17 @@ class AiChatWidget(QWidget):
         for msg in messages:
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
+            if not content:
+                prevRole = role
+                continue
 
-            # Auto-collapse Tool messages and user messages that follow Tool messages
-            collapsed = (role == AiRole.Tool) or (
-                role == AiRole.User and prevRole == AiRole.Tool)
-
-            if content:
-                model.addHistory(role, content)
-                if addToChatBot:
-                    response = AiResponse(role, content)
-                    chatbot.appendResponse(response, collapsed=collapsed)
+            model.addHistory(role, content)
+            if addToChatBot:
+                response = AiResponse(role, content)
+                # Auto-collapse Tool messages and user messages that follow Tool messages
+                collapsed = (role == AiRole.Tool) or (
+                    role == AiRole.User and prevRole == AiRole.Tool)
+                chatbot.appendResponse(response, collapsed=collapsed)
 
             prevRole = role
 

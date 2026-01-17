@@ -116,13 +116,17 @@ class AiChatbot(QPlainTextEdit):
         docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
+        headerBlock = None
         if not response.is_delta or response.first_delta:
-            self._insertRoleBlock(cursor, response.role, collapsed=collapsed)
+            headerBlock = self._insertRoleBlock(
+                cursor, response.role, collapsed=collapsed)
             cursor.insertBlock()
-            if collapsed:
-                # Hide the first body block immediately (streaming will append into it).
-                self._setBlockVisible(cursor.block(), False)
+
         cursor.insertText(response.message)
+
+        # If collapsed, hide all blocks that belong to this header
+        if collapsed and headerBlock:
+            self._applyCollapsedState(headerBlock)
 
         # If this is a delta continuation, keep the current group visibility consistent.
         if response.is_delta and not response.first_delta:
