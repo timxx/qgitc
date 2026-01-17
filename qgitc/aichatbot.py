@@ -158,6 +158,8 @@ class AiChatbot(QPlainTextEdit):
 
     def clear(self):
         self._highlighter.clearDirtyBlocks()
+        self._confirmations.clear()
+        self._hoveredConfirmation = None
         super().clear()
 
     def event(self, event):
