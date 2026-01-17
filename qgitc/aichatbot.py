@@ -9,6 +9,7 @@ from PySide6.QtGui import (
     QPainter,
     QPolygonF,
     QTextBlock,
+    QTextBlockUserData,
     QTextCharFormat,
     QTextCursor,
     QTextDocument,
@@ -29,11 +30,12 @@ from qgitc.llm import AiResponse, AiRole
 from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
 
 
-class AiChatBotState:
+class AiChatHeaderData(QTextBlockUserData):
 
-    UserBlock = 150
-    AssistantBlock = 151
-    SystemBlock = 152
+    def __init__(self, role: AiRole, collapsed: bool = False):
+        super().__init__()
+        self.role = role
+        self.collapsed = collapsed
 
 
 class AiChatBotHighlighter(MarkdownHighlighter):
@@ -42,21 +44,17 @@ class AiChatBotHighlighter(MarkdownHighlighter):
         super().__init__(document)
 
     def highlightBlock(self, text: str):
-        state = self.currentBlockState()
-        if state == AiChatBotState.UserBlock:
-            self._setTitleFormat(len(text), AiRole.User)
-            return
-        if state == AiChatBotState.AssistantBlock:
-            self._setTitleFormat(len(text), AiRole.Assistant)
-            return
-        if state == AiChatBotState.SystemBlock:
-            self._setTitleFormat(len(text), AiRole.System)
+        data = self.currentBlockUserData()
+        if isinstance(data, AiChatHeaderData):
+            self._setTitleFormat(len(text), data.role)
             return
 
         super().highlightBlock(text)
 
         if self.currentBlockState() == HighlighterState.NoState:
-            if self.previousBlockState() == AiChatBotState.SystemBlock:
+            prev = self.currentBlock().previous()
+            prevData = prev.userData() if prev.isValid() else None
+            if isinstance(prevData, AiChatHeaderData) and prevData.role == AiRole.System:
                 charFormat = QTextCharFormat()
                 charFormat.setForeground(
                     ApplicationBase.instance().colorSchema().ErrorText)
@@ -75,18 +73,6 @@ class AiChatBotHighlighter(MarkdownHighlighter):
             charFormat.setForeground(
                 ApplicationBase.instance().colorSchema().SystemBlockFg)
         self.setFormat(0, length, charFormat)
-
-    @staticmethod
-    def roleToBlockState(role: AiRole):
-        if role == AiRole.User:
-            return AiChatBotState.UserBlock
-        elif role == AiRole.Assistant:
-            return AiChatBotState.AssistantBlock
-        elif role == AiRole.System:
-            return AiChatBotState.SystemBlock
-
-        return HighlighterState.NoState
-
 
 class AiChatbot(QPlainTextEdit):
     cornerRadius = 5
@@ -117,27 +103,21 @@ class AiChatbot(QPlainTextEdit):
         # Track which confirmation is hovered
         self._hoveredConfirmation: ToolConfirmationData = None
 
-        # Track which AI blocks are collapsed
-        # header_block_position -> collapsed
-        self._collapsedBlocks: Dict[int, bool] = {}
         self._hoveredHeaderPos: Optional[int] = None
 
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
 
-    def appendResponse(self, response: AiResponse, collapsed: bool = False):
+    def appendResponse(self, response: AiResponse, collapsed=False):
         cursor = self.textCursor()
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
         docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
-        headerBlock: Optional[QTextBlock] = None
-
         if not response.is_delta or response.first_delta:
-            headerBlock = self._insertRoleBlock(cursor, response.role)
+            self._insertRoleBlock(cursor, response.role, collapsed=collapsed)
             cursor.insertBlock()
-            self._collapsedBlocks[headerBlock.position()] = collapsed
             if collapsed:
                 # Hide the first body block immediately (streaming will append into it).
                 self._setBlockVisible(cursor.block(), False)
@@ -147,9 +127,8 @@ class AiChatbot(QPlainTextEdit):
         if response.is_delta and not response.first_delta:
             activeHeader = self._findHeaderBlock(cursor.block())
             if activeHeader is not None:
-                isCollapsed = self._collapsedBlocks.get(
-                    activeHeader.position(), False)
-                if isCollapsed:
+                headerData = self._headerData(activeHeader)
+                if headerData and headerData.collapsed:
                     self._setBlockVisible(cursor.block(), False)
 
         if selectionStart != selectionEnd and selectionEnd == docLength:
@@ -176,19 +155,18 @@ class AiChatbot(QPlainTextEdit):
             newCursor.setPosition(selectionEnd, QTextCursor.KeepAnchor)
             self.setTextCursor(newCursor)
 
-    def _insertRoleBlock(self, cursor: QTextCursor, role: AiRole):
+    def _insertRoleBlock(self, cursor: QTextCursor, role: AiRole, collapsed=False):
         if self.blockCount() > 1:
             cursor.insertBlock()
         cursor.insertText(self._roleString(role))
         block = cursor.block()
-        block.setUserState(AiChatBotHighlighter.roleToBlockState(role))
+        block.setUserData(AiChatHeaderData(role, collapsed=collapsed))
         return block
 
     def clear(self):
         self._highlighter.clearDirtyBlocks()
         self._confirmations.clear()
         self._hoveredConfirmation = None
-        self._collapsedBlocks.clear()
         self._hoveredHeaderPos = None
         super().clear()
 
@@ -218,16 +196,16 @@ class AiChatbot(QPlainTextEdit):
         offset = QPointF(self.contentOffset())
         blockAreaRect = QRectF()
 
-        currBlockType = None
+        currRole: Optional[AiRole] = None
         curClipTop = False
 
         while block.isValid():
             r = self.blockBoundingRect(block).translated(offset)
             offset.setY(offset.y() + r.height())
 
-            blockType = block.userState()
-            if self._isHeaderBlock(blockType):
-                painter.setBrush(self._aiBlockBgColor(blockType))
+            blockRole = self._headerRole(block)
+            if blockRole is not None:
+                painter.setBrush(self._aiBlockBgColor(blockRole))
                 painter.setPen(Qt.NoPen)
                 painter.drawRoundedRect(
                     r, self.cornerRadius, self.cornerRadius)
@@ -236,17 +214,17 @@ class AiChatbot(QPlainTextEdit):
                 # Draw expand/collapse toggle aligned to the right side of the header line.
                 self._drawHeaderToggle(painter, block)
 
-            if currBlockType is None and not self._isHeaderBlock(blockType):
-                currBlockType = self._findHeaderBlock(block)
+            if currRole is None and blockRole is None:
+                currRole = self._findHeaderRole(block)
                 curClipTop = True
                 blockAreaRect = r
-            elif self._isHeaderBlock(blockType) and blockType != currBlockType:
-                self._drawAiBlock(painter, currBlockType,
+            elif blockRole is not None and blockRole != currRole:
+                self._drawAiBlock(painter, currRole,
                                   blockAreaRect, curClipTop)
-                currBlockType = blockType
+                currRole = blockRole
                 curClipTop = False
                 blockAreaRect = r
-            elif currBlockType is not None:
+            elif currRole is not None:
                 blockAreaRect.setHeight(blockAreaRect.height() + r.height())
 
             if offset.y() > viewportRect.height():
@@ -254,8 +232,8 @@ class AiChatbot(QPlainTextEdit):
 
             block = block.next()
 
-        if currBlockType is not None:
-            self._drawAiBlock(painter, currBlockType,
+        if currRole is not None:
+            self._drawAiBlock(painter, currRole,
                               blockAreaRect, curClipTop)
 
         painter.end()
@@ -269,12 +247,13 @@ class AiChatbot(QPlainTextEdit):
         if toggleRect is None:
             return
 
-        collapsed = self._collapsedBlocks.get(headerBlock.position(), False)
-        blockType = headerBlock.userState()
-        if blockType == AiChatBotState.UserBlock:
+        headerData = self._headerData(headerBlock)
+        collapsed = headerData.collapsed if headerData else False
+        role = headerData.role if headerData else None
+        if role == AiRole.User:
             painter.setPen(
                 ApplicationBase.instance().colorSchema().UserBlockFg)
-        elif blockType == AiChatBotState.AssistantBlock:
+        elif role == AiRole.Assistant:
             painter.setPen(
                 ApplicationBase.instance().colorSchema().AssistantBlockFg)
         else:
@@ -305,39 +284,39 @@ class AiChatbot(QPlainTextEdit):
         painter.drawPolygon(pts)
         painter.setBrush(Qt.NoBrush)
 
-    @staticmethod
-    def _isHeaderBlock(state):
-        return state in [
-            AiChatBotState.UserBlock,
-            AiChatBotState.AssistantBlock,
-            AiChatBotState.SystemBlock]
+    def _headerRole(self, block: QTextBlock) -> Optional[AiRole]:
+        if not block.isValid():
+            return None
+        data = block.userData()
+        if isinstance(data, AiChatHeaderData):
+            return data.role
+        return None
 
-    def _findHeaderBlock(self, block: QTextBlock):
+    def _findHeaderRole(self, block: QTextBlock) -> Optional[AiRole]:
         prevBlock = QTextBlock(block).previous()
         while prevBlock.isValid():
-            prevState = prevBlock.userState()
-            if self._isHeaderBlock(prevState):
-                return prevState
+            role = self._headerRole(prevBlock)
+            if role is not None:
+                return role
             prevBlock = prevBlock.previous()
-
         return None
 
     def _drawAiBlock(
             self,
             painter: QPainter,
-            blockType: AiChatBotState,
+            role: Optional[AiRole],
             blockAreaRect: QRectF,
             clipTop: bool):
-        if blockType is None:
+        if role is None:
             return
 
-        if blockType == AiChatBotState.UserBlock:
+        if role == AiRole.User:
             painter.setPen(
                 ApplicationBase.instance().colorSchema().UserBlockBorder)
-        elif blockType == AiChatBotState.AssistantBlock:
+        elif role == AiRole.Assistant:
             painter.setPen(ApplicationBase.instance(
             ).colorSchema().AssistantBlockBorder)
-        elif blockType == AiChatBotState.SystemBlock:
+        elif role == AiRole.System:
             painter.setPen(ApplicationBase.instance(
             ).colorSchema().SystemBlockBorder)
 
@@ -351,10 +330,10 @@ class AiChatbot(QPlainTextEdit):
             self.cornerRadius,
             self.cornerRadius)
 
-    def _aiBlockBgColor(self, blockType):
-        if blockType == AiChatBotState.UserBlock:
+    def _aiBlockBgColor(self, role: Optional[AiRole]):
+        if role == AiRole.User:
             return ApplicationBase.instance().colorSchema().UserBlockBg
-        elif blockType == AiChatBotState.AssistantBlock:
+        elif role == AiRole.Assistant:
             return ApplicationBase.instance().colorSchema().AssistantBlockBg
         return ApplicationBase.instance().colorSchema().SystemBlockBg
 
@@ -509,7 +488,7 @@ class AiChatbot(QPlainTextEdit):
     def _getHeaderToggleAtPosition(self, pos: QPoint) -> Tuple[Optional[int], bool]:
         cursor = self.cursorForPosition(pos)
         block = cursor.block()
-        if not block.isValid() or not block.isVisible() or not self._isHeaderBlock(block.userState()):
+        if not block.isValid() or not block.isVisible() or self._headerRole(block) is None:
             return None, False
 
         toggleRect = self._toggleRectForHeader(block)
@@ -520,17 +499,18 @@ class AiChatbot(QPlainTextEdit):
 
     def _toggleCollapsed(self, headerPos: int):
         headerBlock = self.document().findBlock(headerPos)
-        if not headerBlock.isValid() or not self._isHeaderBlock(headerBlock.userState()):
+        if not headerBlock.isValid() or self._headerRole(headerBlock) is None:
             return
 
-        newState = not self._collapsedBlocks.get(headerPos, False)
-        self._collapsedBlocks[headerPos] = newState
+        headerData = self._headerData(headerBlock)
+        headerData.collapsed = not headerData.collapsed
         self._applyCollapsedState(headerBlock)
 
     def _applyCollapsedState(self, headerBlock: QTextBlock):
-        collapsed = self._collapsedBlocks.get(headerBlock.position(), False)
+        headerData = self._headerData(headerBlock)
+        collapsed = headerData.collapsed if headerData else False
         block = headerBlock.next()
-        while block.isValid() and not self._isHeaderBlock(block.userState()):
+        while block.isValid() and self._headerRole(block) is None:
             self._setBlockVisible(block, not collapsed)
             block = block.next()
 
@@ -547,14 +527,22 @@ class AiChatbot(QPlainTextEdit):
     def _findHeaderBlock(self, block: QTextBlock) -> Optional[QTextBlock]:
         if not block.isValid():
             return None
-        if self._isHeaderBlock(block.userState()):
+        if self._headerRole(block) is not None:
             return block
 
         prev = QTextBlock(block).previous()
         while prev.isValid():
-            if self._isHeaderBlock(prev.userState()):
+            if self._headerRole(prev) is not None:
                 return prev
             prev = prev.previous()
+        return None
+
+    def _headerData(self, headerBlock: Optional[QTextBlock]) -> Optional[AiChatHeaderData]:
+        if headerBlock is None or not headerBlock.isValid():
+            return None
+        data = headerBlock.userData()
+        if isinstance(data, AiChatHeaderData):
+            return data
         return None
 
     def _getConfirmDataAtPosition(self, pos: QPoint):
