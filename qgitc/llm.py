@@ -94,6 +94,7 @@ def _aiRoleFromString(role: str) -> AiRole:
 class AiModelBase(QObject):
     responseAvailable = Signal(AiResponse)
     serviceUnavailable = Signal()
+    networkError = Signal(str)
     modelsReady = Signal()
     finished = Signal()
 
@@ -249,6 +250,9 @@ class AiModelBase(QObject):
     def _handleError(self, code: QNetworkReply.NetworkError):
         if code in [QNetworkReply.ConnectionRefusedError, QNetworkReply.HostNotFoundError]:
             self.serviceUnavailable.emit()
+        elif isinstance(self.sender(), QNetworkReply):
+            reply: QNetworkReply = self.sender()
+            self.networkError.emit(reply.errorString())
 
     def isRunning(self):
         return self._reply is not None and self._reply.isRunning()

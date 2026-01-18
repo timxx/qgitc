@@ -120,6 +120,7 @@ class AiChatWidget(QWidget):
             model.responseAvailable.connect(self._onMessageReady)
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
+            model.networkError.connect(self._onNetworkError)
             if AiModelFactory.modelKey(model) == defaultModelKey:
                 currentModelIndex = i
 
@@ -423,11 +424,13 @@ class AiChatWidget(QWidget):
                 tool_name, False, self.tr("Failed to start tool execution.")))
 
     def _onServiceUnavailable(self):
-        model: AiModelBase = self.sender()
-        index = self._contextPanel.cbBots.findData(model)
-        assert (index != -1)
         messages: AiChatbot = self._chatBot
         messages.appendServiceUnavailable()
+        self._updateStatus()
+
+    def _onNetworkError(self, errorMsg: str):
+        messages: AiChatbot = self._chatBot
+        messages.appendServiceUnavailable(errorMsg)
         self._updateStatus()
 
     def _onModelChanged(self, index: int):
