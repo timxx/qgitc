@@ -289,10 +289,12 @@ class AiChatHistoryPanel(QWidget):
 
         messages = []
         for message in model.history:
-            messages.append({
+            data = {
                 'role': message.role.name.lower(),
-                'content': message.message
-            })
+                'content': message.message,
+                'description': message.description
+            }
+            messages.append(data)
 
         chatHistory: AiChatHistory = self._historyModel.data(
             sourceIndex, Qt.UserRole)

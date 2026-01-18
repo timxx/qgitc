@@ -32,16 +32,19 @@ class AiRole(Enum):
 
 
 class AiChatMessage:
-    def __init__(self, role=AiRole.User, message: str = None):
+    def __init__(self, role=AiRole.User, message: str = None, description: str = None):
         self.role = role
         self.message = message
+        self.description = description
 
 
 class AiResponse:
 
-    def __init__(self, role=AiRole.Assistant, message: str = None):
+    def __init__(self, role=AiRole.Assistant, message: str = None, description: str = None):
         self.role = role
         self.message = message
+        # Optional description displayed after the role header (UI-only).
+        self.description = description
         self.total_tokens = None
         self.is_delta = False
         self.first_delta = False
@@ -118,8 +121,9 @@ class AiModelBase(QObject):
     def queryAsync(self, params: AiParameters):
         pass
 
-    def addHistory(self, role: AiRole, message: str):
-        self._history.append(AiChatMessage(role, message))
+    def addHistory(self, role: AiRole, message: str, description: str = None):
+        self._history.append(AiChatMessage(
+            role, message, description=description))
 
     def toOpenAiMessages(self):
         # Tool role is UI-only in QGitc and should not be sent to the LLM.

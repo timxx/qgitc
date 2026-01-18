@@ -118,8 +118,8 @@ class AiChatbot(QPlainTextEdit):
 
         headerBlock = None
         if not response.is_delta or response.first_delta:
-            headerBlock = self._insertRoleBlock(
-                cursor, response.role, collapsed=collapsed)
+            headerBlock = self._insertHeaderBlock(
+                cursor, response.role, collapsed, response.description)
             cursor.insertBlock()
 
         cursor.insertText(response.message)
@@ -149,7 +149,7 @@ class AiChatbot(QPlainTextEdit):
         docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
-        self._insertRoleBlock(cursor, AiRole.System)
+        self._insertHeaderBlock(cursor, AiRole.System)
 
         cursor.insertBlock()
         cursor.insertText(self.tr("Service Unavailable")
@@ -161,10 +161,18 @@ class AiChatbot(QPlainTextEdit):
             newCursor.setPosition(selectionEnd, QTextCursor.KeepAnchor)
             self.setTextCursor(newCursor)
 
-    def _insertRoleBlock(self, cursor: QTextCursor, role: AiRole, collapsed=False):
+    def _insertHeaderBlock(
+            self,
+            cursor: QTextCursor,
+            role: AiRole,
+            collapsed: bool = False,
+            description: str = None):
         if self.blockCount() > 1:
             cursor.insertBlock()
-        cursor.insertText(self._roleString(role))
+        title = self._roleString(role)
+        if description:
+            title += " " + description
+        cursor.insertText(title)
         block = cursor.block()
         block.setUserData(AiChatHeaderData(role, collapsed=collapsed))
         return block
@@ -369,8 +377,6 @@ class AiChatbot(QPlainTextEdit):
         selectionEnd = cursor.selectionEnd()
         docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
-
-        self._insertRoleBlock(cursor, AiRole.Tool)
         cursor.insertBlock()
 
         # Create confirmation data

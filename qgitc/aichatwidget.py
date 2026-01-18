@@ -171,12 +171,7 @@ class AiChatWidget(QWidget):
             return
 
         model.requestInterruption()
-
-        chatHistory = self._historyPanel.updateCurrentHistory(model)
-        if chatHistory:
-            settings = ApplicationBase.instance().settings()
-            settings.saveChatHistory(
-                chatHistory.historyId, chatHistory.toDict())
+        self._saveChatHistory(model)
 
     def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
         params = AiParameters()
@@ -280,6 +275,14 @@ class AiChatWidget(QWidget):
                     continue
 
                 # Anything else requires explicit confirmation.
+                description = self.tr("{} run `{}`").format(
+                    self._getToolIcon(tool.tool_type), toolName)
+                # TODO: save the tool information in history
+                toolMessage = ""
+                model.addHistory(AiRole.Tool, toolMessage, description=description)
+                messages.appendResponse(AiResponse(
+                    AiRole.Tool, toolMessage, description=description))
+
                 if toolName and tool:
                     hasConfirmations = True
                     messages.insertToolConfirmation(
@@ -314,14 +317,16 @@ class AiChatWidget(QWidget):
 
     def _onResponseFinish(self):
         model = self.currentChatModel()
+        self._saveChatHistory(model)
+        self._updateStatus()
+
+    def _saveChatHistory(self, model: AiModelBase):
         chatHistory = self._historyPanel.updateCurrentHistory(model)
         if chatHistory:
             # Save to settings
             settings = ApplicationBase.instance().settings()
             settings.saveChatHistory(
                 chatHistory.historyId, chatHistory.toDict())
-
-        self._updateStatus()
 
     def _updateStatus(self):
         self._contextPanel.btnSend.setVisible(True)
@@ -369,11 +374,10 @@ class AiChatWidget(QWidget):
         self._pendingAutoGroupId = None
 
         prefix = "✓" if ok else "✗"
-        tool_msg = f"{prefix} Tool `{tool_name}` result:\n\n{output}" if output else f"{prefix} Tool `{tool_name}` finished."
-
-        model.addHistory(AiRole.Tool, tool_msg)
-        self._doMessageReady(model, AiResponse(
-            AiRole.Tool, tool_msg), collapsed=True)
+        toolDesc = self.tr("{} `{}` output").format(prefix, tool_name)
+        model.addHistory(AiRole.Tool, output, description=toolDesc)
+        resp = AiResponse(AiRole.Tool, output, description=toolDesc)
+        self._doMessageReady(model, resp, collapsed=True)
 
         if source == "auto" and group_id is not None and group_id in self._autoToolGroups:
             group = self._autoToolGroups[group_id]
@@ -625,13 +629,11 @@ class AiChatWidget(QWidget):
         for msg in messages:
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
-            if not content:
-                prevRole = role
-                continue
+            description = msg.get('description', None)
 
-            model.addHistory(role, content)
+            model.addHistory(role, content, description=description)
             if addToChatBot:
-                response = AiResponse(role, content)
+                response = AiResponse(role, content, description=description)
                 # Auto-collapse Tool messages and user messages that follow Tool messages
                 collapsed = (role == AiRole.Tool) or (role == AiRole.System) or (
                     role == AiRole.User and prevRole == AiRole.Tool)
@@ -675,3 +677,13 @@ class AiChatWidget(QWidget):
         dlg = Preferences(settings)
         dlg.ui.tabWidget.setCurrentWidget(dlg.ui.tabLLM)
         dlg.exec()
+
+    @staticmethod
+    def _getToolIcon(toolType: int) -> str:
+        """Get emoji icon based on tool type"""
+        if toolType == ToolType.READ_ONLY:
+            return "🔍"
+        elif toolType == ToolType.WRITE:
+            return "✏️"
+        else:  # DANGEROUS
+            return "⚠️"
