@@ -307,19 +307,16 @@ class AiModelBase(QObject):
             self.responseAvailable.emit(aiResponse)
             return
 
-        if "content" in delta:
-            if not delta["content"]:
-                return
+        content = self._getContent(delta)
+        if content:
             aiResponse = AiResponse()
             aiResponse.is_delta = True
             aiResponse.role = AiRole.Assistant
-            aiResponse.message = delta["content"]
+            aiResponse.message = content
             aiResponse.first_delta = self._firstDelta
             self.responseAvailable.emit(aiResponse)
             self._content += aiResponse.message
             self._firstDelta = False
-        elif "role" not in delta:
-            logger.warning(b"Invalid delta: %s", delta)
 
     def handleNonStreamResponse(self, response: bytes):
         try:
@@ -333,7 +330,7 @@ class AiModelBase(QObject):
 
         for choice in data["choices"]:
             message: dict = choice.get("message") or {}
-            content = message.get("content")
+            content = self._getContent(message)
             role = message.get("role", "assistant")
             aiResponse.role = AiRole.Assistant
             aiResponse.message = content or ""
@@ -344,6 +341,19 @@ class AiModelBase(QObject):
 
         self._role = _aiRoleFromString(role)
         self._content = content
+
+    @staticmethod
+    def _getContent(data: dict) -> str:
+        content = data.get("content", None)
+        if content:
+            return content
+
+        content = data.get("reasoning", None)
+        if content:
+            return content
+
+        content = data.get("reasoning_text", None)
+        return content
 
     @property
     def history(self) -> List[AiChatMessage]:
