@@ -214,6 +214,8 @@ class AiChatWidget(QWidget):
                     "Do not call git_log repeatedly to fetch commits 1..N just to locate the Nth commit. "
                     "After a tool result is provided, continue with the user's request."
                 )
+                self._doMessageReady(model, AiResponse(
+                    AiRole.System, params.sys_prompt), True)
         elif chatMode == AiChatMode.CodeReview:
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
@@ -629,7 +631,7 @@ class AiChatWidget(QWidget):
             if addToChatBot:
                 response = AiResponse(role, content)
                 # Auto-collapse Tool messages and user messages that follow Tool messages
-                collapsed = (role == AiRole.Tool) or (
+                collapsed = (role == AiRole.Tool) or (role == AiRole.System) or (
                     role == AiRole.User and prevRole == AiRole.Tool)
                 chatbot.appendResponse(response, collapsed=collapsed)
 
