@@ -13,6 +13,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QFileDialog,
     QLineEdit,
     QListView,
@@ -194,6 +195,7 @@ class AiChatHistoryPanel(QWidget):
         self._historyList = QListView(self)
         self._historyList.setModel(self._filterModel)
         self._historyList.setMinimumWidth(150)
+        self._historyList.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self._historyList.setContextMenuPolicy(Qt.CustomContextMenu)
         self._historyList.customContextMenuRequested.connect(
             self._showContextMenu)
@@ -333,25 +335,40 @@ class AiChatHistoryPanel(QWidget):
     def _showContextMenu(self, position):
         """Show context menu for history list"""
         index = self._historyList.indexAt(position)
-        if not index.isValid():
-            return
-
-        chatHistory = self._filterModel.data(index, Qt.UserRole)
-        if not chatHistory:
-            return
+        selectedIndexes = self._historyList.selectionModel().selectedIndexes()
 
         menu = QMenu(self)
-        exportAction = menu.addAction(self.tr("Export Conversation"))
-        exportAction.triggered.connect(
-            lambda: self._exportHistory(chatHistory))
 
-        menu.addSeparator()
+        # Export action (only for single selection)
+        if index.isValid() and len(selectedIndexes) == 1:
+            chatHistory = self._filterModel.data(index, Qt.UserRole)
+            if chatHistory:
+                exportAction = menu.addAction(self.tr("Export Conversation"))
+                exportAction.triggered.connect(
+                    lambda: self._exportHistory(chatHistory))
+                menu.addSeparator()
 
-        removeAction = menu.addAction(self.tr("Remove Conversation"))
-        removeAction.triggered.connect(
-            lambda: self._removeHistory(index, chatHistory))
+        # Delete selected conversations
+        if selectedIndexes:
+            if len(selectedIndexes) == 1:
+                deleteText = self.tr("Delete Conversation")
+            else:
+                deleteText = self.tr("Delete {} Conversations").format(
+                    len(selectedIndexes))
+            deleteSelectedAction = menu.addAction(deleteText)
+            deleteSelectedAction.triggered.connect(
+                self._removeSelectedHistories)
 
-        menu.exec(self._historyList.mapToGlobal(position))
+        # Delete all conversations
+        if self._historyModel.rowCount() > 0:
+            if selectedIndexes:
+                menu.addSeparator()
+            deleteAllAction = menu.addAction(
+                self.tr("Delete All Conversations"))
+            deleteAllAction.triggered.connect(self._removeAllHistories)
+
+        if menu.actions():
+            menu.exec(self._historyList.mapToGlobal(position))
 
     def _exportHistory(self, chatHistory: AiChatHistory):
         """Export a chat history to JSON file"""
@@ -402,3 +419,80 @@ class AiChatHistoryPanel(QWidget):
                 self._historyModel.removeHistory(sourceIndex.row())
                 # Emit signal for external handling (e.g., delete from storage)
                 self.historyRemoved.emit(chatHistory.historyId)
+
+    def _removeSelectedHistories(self):
+        """Remove all selected chat history items"""
+        selectedIndexes = self._historyList.selectionModel().selectedIndexes()
+        if not selectedIndexes:
+            return
+
+        # Confirm deletion
+        if len(selectedIndexes) == 1:
+            chatHistory = self._filterModel.data(
+                selectedIndexes[0], Qt.UserRole)
+            message = self.tr("Are you sure you want to delete the conversation '{}'?\n\nThis action cannot be undone.").format(
+                chatHistory.title or self.tr("Untitled"))
+            title = self.tr("Delete Conversation")
+        else:
+            message = self.tr("Are you sure you want to delete {} conversations?\n\nThis action cannot be undone.").format(
+                len(selectedIndexes))
+            title = self.tr("Delete Conversations")
+
+        reply = QMessageBox.question(
+            self,
+            title,
+            message,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            # Collect histories to remove and their source rows
+            historiesToRemove = []
+            for filterIndex in selectedIndexes:
+                sourceIndex = self._filterModel.mapToSource(filterIndex)
+                if sourceIndex.isValid():
+                    chatHistory = self._historyModel.data(
+                        sourceIndex, Qt.UserRole)
+                    if chatHistory:
+                        historiesToRemove.append(
+                            (sourceIndex.row(), chatHistory))
+
+            # Sort by row in descending order to remove from bottom to top
+            historiesToRemove.sort(key=lambda x: x[0], reverse=True)
+
+            # Remove histories
+            for row, chatHistory in historiesToRemove:
+                self._historyModel.removeHistory(row)
+                self.historyRemoved.emit(chatHistory.historyId)
+
+    def _removeAllHistories(self):
+        """Remove all chat history items"""
+        totalCount = self._historyModel.rowCount()
+        if totalCount == 0:
+            return
+
+        reply = QMessageBox.question(
+            self,
+            self.tr("Delete All Conversations"),
+            self.tr("Are you sure you want to delete all {} conversations?\n\nThis action cannot be undone.").format(
+                totalCount),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            # Collect all history IDs before clearing
+            historyIds = []
+            for row in range(self._historyModel.rowCount()):
+                index = self._historyModel.index(row, 0)
+                chatHistory = self._historyModel.data(index, Qt.UserRole)
+                if chatHistory:
+                    historyIds.append(chatHistory.historyId)
+
+            # Clear the model
+            self._historyModel.clear()
+
+            # Emit signals for all removed histories
+            for historyId in historyIds:
+                self.historyRemoved.emit(historyId)
