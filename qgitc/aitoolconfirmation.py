@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 from PySide6.QtCore import QRectF, QSizeF, Qt
-from PySide6.QtGui import QPainter, QPyTextObject, QTextDocument, QTextFormat
+from PySide6.QtGui import (
+    QFontMetrics,
+    QPainter,
+    QPyTextObject,
+    QTextDocument,
+    QTextFormat,
+)
 from PySide6.QtWidgets import QApplication
 
 from qgitc.agenttools import ToolType
@@ -54,26 +62,56 @@ class ToolConfirmationInterface(QPyTextObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Layout constants
+        self.cardPadding = 8
+        self.cardCornerRadius = 6
+        self.innerSpacing = 4
+        self.statusHeight = 20
+        self.minCardWidth = 350
+
+        # Extra vertical spacing before action buttons (pending state)
+        self.pendingButtonsTopSpacing = 6
+
         # Button dimensions for hit testing
-        self.buttonWidth = 80
-        self.buttonHeight = 28
+        self.buttonWidth = 72
+        self.buttonHeight = 24
         self.buttonSpacing = 8
+        self.buttonStartMargin = 0
 
     def intrinsicSize(self, doc: QTextDocument, posInDocument, format: QTextFormat):
         """Return the size of the confirmation card"""
-        # Fixed width based on document width, height based on content
-        width = doc.textWidth() - 40  # Leave margins
-        if width < 300:
-            width = 300
-
-        # Get status from format to adjust height
+        width = self.minCardWidth
         data: ToolConfirmationData = format.property(QTextFormat.UserProperty)
-        if data and data.status != ConfirmationStatus.PENDING:
-            # Height without buttons: icon+title(30) + desc(20) + status(20) + padding(24)
-            height = 94
+
+        # Compute height dynamically since params can vary widely.
+        # Layout (inside padded rect):
+        #   description (optional, wrapped)
+        #   params (optional, wrapped)
+        #   status (only when NOT pending)
+        #   buttons (only when pending)
+        height = 0
+        padding = self.cardPadding
+
+        # Base: padding top/bottom
+        height += padding * 2
+
+        fm = QApplication.fontMetrics()
+        lineHeight = fm.height()
+
+        if data.tool_desc:
+            height += lineHeight
+            height += self.innerSpacing
+
+        paramsText = self._formatParamsText(data.params)
+        if paramsText:
+            height += lineHeight
+            height += self.innerSpacing
+
+        if data.status == ConfirmationStatus.PENDING:
+            height += self.pendingButtonsTopSpacing
+            height += self.buttonHeight
         else:
-            # Height with buttons: icon+title(30) + desc(20) + status(20) + spacing(15) + buttons(28) + padding(24)
-            height = 137
+            height += self.statusHeight
 
         return QSizeF(width, height)
 
@@ -100,58 +138,76 @@ class ToolConfirmationInterface(QPyTextObject):
         bgColor, borderColor = self._getColors(data.tool_type, data.hovered)
         painter.setPen(borderColor)
         painter.setBrush(bgColor)
-        painter.drawRoundedRect(rect, 6, 6)
+        painter.drawRoundedRect(
+            rect, self.cardCornerRadius, self.cardCornerRadius)
 
         # Calculate layout areas within the card
-        padding = 12
+        padding = self.cardPadding
         innerRect = rect.adjusted(padding, padding, -padding, -padding)
 
         # Set text color
         textColor = QApplication.palette().windowText().color()
         painter.setPen(textColor)
 
-        # Draw icon and tool name
-        icon = self._getIcon(data.tool_type)
         font = painter.font()
-        font.setBold(True)
-        painter.setFont(font)
-        titleRect = QRectF(innerRect.left(), innerRect.top(),
-                           innerRect.width(), 25)
-        tips = self.tr("{0} AI wants to execute: {1}").format(
-            icon, data.tool_name)
-        painter.drawText(titleRect, Qt.AlignLeft | Qt.AlignTop, tips)
+        y = innerRect.top()
 
-        # Draw description
+        fm = painter.fontMetrics()
+        textWidth = max(1, int(innerRect.width()))
+
+        # Draw description (single line, elided)
         font.setBold(False)
         painter.setFont(font)
         if data.tool_desc:
-            descRect = QRectF(innerRect.left(),
-                              innerRect.top() + 30, innerRect.width(), 20)
-            painter.drawText(descRect, Qt.AlignLeft | Qt.AlignTop,
-                             data.tool_desc)
+            descLine = fm.elidedText(data.tool_desc.replace(
+                "\n", " "), Qt.ElideRight, textWidth)
+            descRect = QRectF(innerRect.left(), y,
+                              innerRect.width(), fm.height())
+            painter.drawText(descRect, Qt.AlignLeft | Qt.AlignTop, descLine)
+            y = descRect.bottom() + self.innerSpacing
 
-        # Draw status text
-        schema: ColorSchema = ApplicationBase.instance().colorSchema()
-        if data.status == ConfirmationStatus.APPROVED:
-            painter.setPen(schema.ApproveText)
-            statusText = self.tr("✓ Approved, executing...")
-        elif data.status == ConfirmationStatus.REJECTED:
-            painter.setPen(schema.RejectText)
-            statusText = self.tr("✗ Rejected")
-        else:
-            painter.setPen(schema.WaitingText)
-            statusText = self.tr("⏳ Waiting for your decision...")
+        # Draw params (single line, elided)
+        paramsText = self._formatParamsText(data.params)
+        if paramsText:
+            paramsLine = fm.elidedText(paramsText, Qt.ElideRight, textWidth)
+            paramsRect = QRectF(innerRect.left(), y,
+                                innerRect.width(), fm.height())
+            painter.drawText(paramsRect, Qt.AlignLeft |
+                             Qt.AlignTop, paramsLine)
+            y = paramsRect.bottom() + self.innerSpacing
 
-        statusRect = QRectF(
-            innerRect.left(), innerRect.top() + 55, innerRect.width(), 20)
-        painter.drawText(statusRect, Qt.AlignLeft | Qt.AlignTop,
-                         statusText)
-
-        # Draw buttons only if pending
         if data.status == ConfirmationStatus.PENDING:
             self._drawButtons(painter, rect, data)
+        else:
+            schema: ColorSchema = ApplicationBase.instance().colorSchema()
+            if data.status == ConfirmationStatus.APPROVED:
+                painter.setPen(schema.ApproveText)
+                statusText = self.tr("✓ Approved, executing...")
+            else:
+                painter.setPen(schema.RejectText)
+                statusText = self.tr("✗ Rejected")
+
+            statusRect = QRectF(innerRect.left(), y,
+                                innerRect.width(), self.statusHeight)
+            painter.drawText(statusRect, Qt.AlignLeft |
+                             Qt.AlignTop, statusText)
 
         painter.restore()
+
+    def _formatParamsText(self, params: dict) -> str:
+        """Format tool params for display inside the confirmation card."""
+        if not params:
+            return ""
+
+        try:
+            # One-line JSON. Any newlines are normalized to spaces.
+            formatted = json.dumps(
+                params, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+        except Exception:
+            formatted = str(params)
+
+        formatted = " ".join(str(formatted).splitlines())
+        return self.tr("Arguments: {0}").format(formatted)
 
     def _drawButtons(self, painter: QPainter, rect: QRectF, data: ToolConfirmationData):
         """Draw approve and reject buttons"""
@@ -183,11 +239,9 @@ class ToolConfirmationInterface(QPyTextObject):
 
     def getButtonRects(self, rect: QRectF):
         """Calculate button rectangles for hit testing"""
-        padding = 12
+        padding = self.cardPadding
         buttonY = rect.bottom() - padding - self.buttonHeight
-
-        totalButtonWidth = self.buttonWidth * 2 + self.buttonSpacing
-        startX = rect.left() + (rect.width() - totalButtonWidth) / 2
+        startX = rect.left() + padding + self.buttonStartMargin
 
         approveRect = QRectF(
             startX, buttonY, self.buttonWidth, self.buttonHeight)
@@ -195,15 +249,6 @@ class ToolConfirmationInterface(QPyTextObject):
                             buttonY, self.buttonWidth, self.buttonHeight)
 
         return approveRect, rejectRect
-
-    def _getIcon(self, tool_type: int) -> str:
-        """Get emoji icon based on tool type"""
-        if tool_type == ToolType.READ_ONLY:
-            return "🔍"
-        elif tool_type == ToolType.WRITE:
-            return "✏️"
-        else:  # DANGEROUS
-            return "⚠️"
 
     def _getColors(self, tool_type: int, hover=False):
         """Get background and border colors based on tool type"""

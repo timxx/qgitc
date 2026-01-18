@@ -95,7 +95,6 @@ class ColorSchema:
     RejectText = QColor()
     RejectButtonBg = QColor()
     RejectButtonHoverBg = QColor()
-    WaitingText = QColor()
 
     # Tool confirmation card colors
     ToolReadOnlyBg = QColor()
@@ -219,7 +218,6 @@ class ColorSchemaLight(ColorSchema):
     RejectText = QColor(240, 126, 116)
     RejectButtonBg = QColor(0xd32f2f)
     RejectButtonHoverBg = QColor(0xe53935)
-    WaitingText = QColor(0x757575)
 
     # Tool confirmation card colors
     ToolReadOnlyBg = QColor(40, 167, 69, 25)
@@ -343,7 +341,6 @@ class ColorSchemaDark(ColorSchema):
     RejectText = QColor(203, 80, 70)
     RejectButtonBg = QColor(0xC62828)
     RejectButtonHoverBg = QColor(0xD32F2F)
-    WaitingText = QColor(0x9e9e9e)
 
     # Tool confirmation card colors
     ToolReadOnlyBg = QColor(40, 167, 69, 35)
