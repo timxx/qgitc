@@ -294,7 +294,6 @@ class AiModelBase(QObject):
                     prev = acc["function"].get("arguments", "")
                     acc["function"]["arguments"] = prev + func.get("arguments")
                 self._toolCallAcc[idx] = acc
-            return
 
         # If model signaled tool_calls completion in finish_reason, emit a tool-only response.
         if choice0.get("finish_reason") == "tool_calls" and self._toolCallAcc:
