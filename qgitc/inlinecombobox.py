@@ -2,7 +2,7 @@
 
 from typing import List, Tuple
 
-from PySide6.QtCore import QElapsedTimer, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QElapsedTimer, QEvent, QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QVBoxLayout, QWidget
 
@@ -238,6 +238,21 @@ class InlineComboBox(QWidget):
         else:
             super().keyPressEvent(event)
 
+    def eventFilter(self, watched, event: QEvent):
+        """Handle events from the popup list widget"""
+        if self._popupVisible and isinstance(watched, QListWidget):
+            if event.type() == QEvent.KeyPress:
+                if event.key() == Qt.Key_Return:
+                    # Select current item and close popup
+                    currentRow = watched.currentRow()
+                    if currentRow >= 0:
+                        self.setCurrentIndex(currentRow)
+                    if self._popup:
+                        self._popup.close()
+                    self.popupClosed.emit()
+                    return True
+        return super().eventFilter(watched, event)
+
     def _showPopup(self):
         """Show the popup list"""
         if self._popupVisible or len(self._items) == 0:
@@ -266,6 +281,8 @@ class InlineComboBox(QWidget):
 
         # Connect signals
         listWidget.itemClicked.connect(self._onPopupItemClicked)
+        # Install event filter to handle Enter key
+        listWidget.installEventFilter(self)
 
         popupLayout.addWidget(listWidget)
 
