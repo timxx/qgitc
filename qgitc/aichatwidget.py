@@ -614,6 +614,9 @@ class AiChatWidget(QWidget):
         # Clear model history and add messages
         model.clear()
 
+        if addToChatBot:
+            chatbot.setHighlighterEnabled(False)
+
         prevRole = None
         for msg in messages:
             role = AiRole.fromString(msg.get('role', 'user'))
@@ -631,6 +634,9 @@ class AiChatWidget(QWidget):
                 chatbot.appendResponse(response, collapsed=collapsed)
 
             prevRole = role
+
+        if addToChatBot:
+            chatbot.setHighlighterEnabled(True)
 
     def _clearCurrentChat(self):
         """Clear the current chat display and model history"""

@@ -601,3 +601,12 @@ class AiChatbot(QPlainTextEdit):
                 button = ButtonType.REJECT
 
         return confirmData, button
+
+    def setHighlighterEnabled(self, enabled: bool):
+        """Enable or disable the syntax highlighter."""
+        if enabled:
+            if self._highlighter is None:
+                self._highlighter = AiChatBotHighlighter(self.document())
+        elif self._highlighter is not None:
+            self._highlighter.setDocument(None)
+            self._highlighter = None

@@ -356,22 +356,29 @@ def isBeginningOfList(front: str):
     return front == '-' or front == '+' or front == '*' or front.isdigit()
 
 
-supportedSchemes = {
-    "http://",  "https://",
-    "file://",  "www.",
-    "ftp://",   "mailto:",
-    "tel:",     "sms:",
-    "smsto:",   "data:",
-    "irc://",   "gopher://",
-    "spotify:", "steam:",
-    "bitcoin:", "magnet:",
-    "ed2k://",  "news:",
-    "ssh://",   "note://"
+schemesByFirstChar = {
+    'd': ['data:'],
+    'm': ['magnet:', 'mailto:'],
+    'g': ['gopher://'],
+    'h': ['http://', 'https://'],
+    't': ['tel:'],
+    's': ['ssh://', 'smsto:', 'sms:', 'spotify:', 'steam:'],
+    'n': ['news:', 'note://'],
+    'f': ['file://', 'ftp://'],
+    'w': ['www.'],
+    'b': ['bitcoin:'],
+    'i': ['irc://'],
+    'e': ['ed2k://']
 }
 
 
 def isLink(text: str):
-    for scheme in supportedSchemes:
+    if not text:
+        return False
+
+    # Only check schemes that start with the same first character
+    schemes = schemesByFirstChar.get(text[0], [])
+    for scheme in schemes:
         if text.startswith(scheme):
             return True
 
@@ -2026,7 +2033,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 i = self.highlightInlineSpans(text, i, currentChar)
             elif currentChar == '<' and i + 4 < len(text) and text[i:i + 4] == "<!--":
                 i = self.highlightInlineComment(text, i)
-            else:
+            elif currentChar in ('[', '<', 'h', 'w', 'f', 'm', 't', 's', 'd', 'i', 'g', 'b', 'e', 'n'):
+                # Only check for links when we see characters that could start a link
+                # [ for markdown links, < for angle bracket links, and first chars of schemes
                 i = self.highlightLinkOrImage(text, i)
             i += 1
         self.highlightEmAndStrong(text, 0)
