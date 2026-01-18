@@ -364,6 +364,9 @@ class AiChatbot(QPlainTextEdit):
             Position where the confirmation was inserted
         """
         cursor = self.textCursor()
+        selectionStart = cursor.selectionStart()
+        selectionEnd = cursor.selectionEnd()
+        docLength = self.document().characterCount() - 1
         cursor.movePosition(QTextCursor.End)
 
         self._insertRoleBlock(cursor, AiRole.Tool)
@@ -386,6 +389,12 @@ class AiChatbot(QPlainTextEdit):
 
         # Store confirmation data for interaction handling
         self._confirmations[position] = confirmData
+
+        if selectionStart != selectionEnd and selectionEnd == docLength:
+            newCursor = self.textCursor()
+            newCursor.setPosition(selectionStart)
+            newCursor.setPosition(selectionEnd, QTextCursor.KeepAnchor)
+            self.setTextCursor(newCursor)
 
         return position
 
