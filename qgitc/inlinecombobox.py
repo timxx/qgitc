@@ -284,8 +284,14 @@ class InlineComboBox(QWidget):
         maxWidth = max(maxWidth, self.width())
 
         # Set size
-        popupHeight = min(listWidget.sizeHintForRow(
-            0) * min(len(self._items), 10) + 4, 300)
+        rowHeight = listWidget.sizeHintForRow(
+            0) if len(self._items) > 0 else 20
+
+        # Calculate exact height needed for items (up to max of 10 visible rows)
+        numVisibleRows = min(len(self._items), 10)
+        viewportHeight = rowHeight * numVisibleRows
+        frameWidth = listWidget.frameWidth() * 2
+        popupHeight = viewportHeight + frameWidth
         self._popup.setFixedSize(maxWidth, popupHeight)
 
         # Position below widget (or above if not enough space)
