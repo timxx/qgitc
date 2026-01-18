@@ -184,7 +184,6 @@ class AiChatWidget(QWidget):
         params.stream = True
         # TODO: make these configurable
         params.temperature = 0.1
-        params.max_tokens = 4096
         params.chat_mode = chatMode
         params.model = self._contextPanel.currentModelId()
 

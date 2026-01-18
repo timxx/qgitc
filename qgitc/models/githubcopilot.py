@@ -149,7 +149,7 @@ class GithubCopilot(AiModelBase):
         if stream and not caps.streaming:
             stream = False
 
-        if params.max_tokens > caps.max_output_tokens:
+        if params.max_tokens is None or params.max_tokens > caps.max_output_tokens:
             params.max_tokens = caps.max_output_tokens
         elif id.startswith("claude-") and "thought" in id:
             # claude-3.7-sonnet-thought seems cannot be 4096

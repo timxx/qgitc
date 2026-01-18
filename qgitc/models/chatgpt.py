@@ -12,7 +12,7 @@ class ChatGPTModel(AiModelBase):
     def queryAsync(self, params: AiParameters):
         payload = {
             "frequency_penalty": 0,
-            "max_tokens": params.max_tokens,
+            "max_tokens": params.max_tokens or 4096,
             "model": params.model or self.modelId or "gpt-4.1",
             "presence_penalty": 0,
             "temperature": params.temperature,
