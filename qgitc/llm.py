@@ -141,6 +141,14 @@ class AiModelBase(QObject):
         """
         return []
 
+    def supportsToolCalls(self, modelId: str) -> bool:
+        """Whether the given model id supports OpenAI-style tool calls.
+
+        Providers that expose per-model capability metadata should override this.
+        For providers without capability metadata, we assume tool calls are supported.
+        """
+        return True
+
     def cleanup(self):
         pass
 

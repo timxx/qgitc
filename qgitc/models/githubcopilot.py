@@ -183,6 +183,11 @@ class GithubCopilot(AiModelBase):
     def name(self):
         return "GitHub Copilot"
 
+    def supportsToolCalls(self, modelId: str) -> bool:
+        caps: AiModelCapabilities = GithubCopilot._capabilities.get(
+            modelId, AiModelCapabilities())
+        return bool(caps.tool_calls)
+
     def _doQuery(self, payload, stream=True):
         headers = _makeHeaders(self._token)
         self.post(

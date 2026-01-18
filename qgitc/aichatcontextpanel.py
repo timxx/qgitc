@@ -122,6 +122,12 @@ class AiChatContextPanel(QFrame):
         mode = self.cbMode.currentData()
         self.modeChanged.emit(mode)
 
+        # Agent mode requires tool-call capable models.
+        # Refresh model-id list on mode changes so the selection stays valid.
+        model = self.cbBots.currentData()
+        if model:
+            self.setupModelNames(model)
+
     def _onModelChanged(self, index):
         self.modelChanged.emit(index)
 
@@ -182,9 +188,30 @@ class AiChatContextPanel(QFrame):
         self.cbMode.setEnabled(len(modes) > 0)
 
     def setupModelNames(self, model: AiModelBase):
+        prevSelectedId = self.cbModelNames.currentData()
         self.cbModelNames.clear()
+
         defaultId = model.modelId
+        mode: AiChatMode = self.currentMode()
+
+        newIndex = -1
+        defaultidIndex = -1
         for id, name in model.models():
+            if mode == AiChatMode.Agent and not model.supportsToolCalls(id):
+                continue
+
             self.cbModelNames.addItem(name, id)
-            if id == defaultId:
-                self.cbModelNames.setCurrentText(name)
+            if newIndex == -1 and id == prevSelectedId:
+                newIndex = self.cbModelNames.count() - 1
+            if defaultidIndex == -1 and id == defaultId:
+                defaultidIndex = self.cbModelNames.count() - 1
+
+        index = 0
+        # Prefer restoring the previous selection if it still exists.
+        if newIndex != -1:
+            index = newIndex
+        elif defaultidIndex != -1:
+            index = defaultidIndex
+
+        if self.cbModelNames.count() > 0:
+            self.cbModelNames.setCurrentIndex(index)
