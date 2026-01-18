@@ -366,9 +366,8 @@ class AiChatbot(QPlainTextEdit):
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
 
-        # Insert a new block for the confirmation
-        if self.document().characterCount() > 1:
-            cursor.insertBlock()
+        self._insertRoleBlock(cursor, AiRole.Tool)
+        cursor.insertBlock()
 
         # Create confirmation data
         confirmData = ToolConfirmationData(
@@ -387,9 +386,6 @@ class AiChatbot(QPlainTextEdit):
 
         # Store confirmation data for interaction handling
         self._confirmations[position] = confirmData
-
-        # Insert a newline after for proper spacing
-        cursor.insertText("\n")
 
         return position
 
