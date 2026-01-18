@@ -102,11 +102,6 @@ class ToolConfirmationInterface(QPyTextObject):
             height += lineHeight
             height += self.innerSpacing
 
-        paramsText = self._formatParamsText(data.params)
-        if paramsText:
-            height += lineHeight
-            height += self.innerSpacing
-
         if data.status == ConfirmationStatus.PENDING:
             height += self.pendingButtonsTopSpacing
             height += self.buttonHeight
@@ -166,16 +161,6 @@ class ToolConfirmationInterface(QPyTextObject):
             painter.drawText(descRect, Qt.AlignLeft | Qt.AlignTop, descLine)
             y = descRect.bottom() + self.innerSpacing
 
-        # Draw params (single line, elided)
-        paramsText = self._formatParamsText(data.params)
-        if paramsText:
-            paramsLine = fm.elidedText(paramsText, Qt.ElideRight, textWidth)
-            paramsRect = QRectF(innerRect.left(), y,
-                                innerRect.width(), fm.height())
-            painter.drawText(paramsRect, Qt.AlignLeft |
-                             Qt.AlignTop, paramsLine)
-            y = paramsRect.bottom() + self.innerSpacing
-
         if data.status == ConfirmationStatus.PENDING:
             self._drawButtons(painter, rect, data)
         else:
@@ -193,21 +178,6 @@ class ToolConfirmationInterface(QPyTextObject):
                              Qt.AlignTop, statusText)
 
         painter.restore()
-
-    def _formatParamsText(self, params: dict) -> str:
-        """Format tool params for display inside the confirmation card."""
-        if not params:
-            return ""
-
-        try:
-            # One-line JSON. Any newlines are normalized to spaces.
-            formatted = json.dumps(
-                params, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-        except Exception:
-            formatted = str(params)
-
-        formatted = " ".join(str(formatted).splitlines())
-        return self.tr("Arguments: {0}").format(formatted)
 
     def _drawButtons(self, painter: QPainter, rect: QRectF, data: ToolConfirmationData):
         """Draw approve and reject buttons"""

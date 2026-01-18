@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 from typing import Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QEventLoop, QSize, Qt, QTimer, Signal
@@ -278,10 +279,10 @@ class AiChatWidget(QWidget):
                 description = self.tr("{} run `{}`").format(
                     self._getToolIcon(tool.tool_type), toolName)
                 # TODO: save the tool information in history
-                toolMessage = ""
-                model.addHistory(AiRole.Tool, toolMessage, description=description)
+                toolMessage = json.dumps(args, ensure_ascii=False)
+                model.addHistory(AiRole.Tool, toolMessage, description)
                 messages.appendResponse(AiResponse(
-                    AiRole.Tool, toolMessage, description=description))
+                    AiRole.Tool, toolMessage, description))
 
                 if toolName and tool:
                     hasConfirmations = True
@@ -418,6 +419,15 @@ class AiChatWidget(QWidget):
         self._pendingToolSource = "auto"
         self._pendingAutoGroupId = group_id
 
+        toolMessage = json.dumps(params or {}, ensure_ascii=False)
+        description = self.tr("{} run `{}`").format(
+            self._getToolIcon(ToolType.READ_ONLY), tool_name)
+        model = self.currentChatModel()
+        model.addHistory(AiRole.Tool, toolMessage, description=description)
+        self._chatBot.appendResponse(AiResponse(
+            AiRole.Tool, toolMessage,
+            description=description),
+            collapsed=True)
         started = self._agentExecutor.executeAsync(tool_name, params or {})
         if not started:
             # Fall back to a synthetic failure result and keep draining.
