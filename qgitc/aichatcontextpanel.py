@@ -49,15 +49,18 @@ class AiChatContextPanel(QFrame):
 
         self.cbBots = InlineComboBox(self)
         self.cbBots.currentIndexChanged.connect(self._onModelChanged)
+        self.cbBots.popupClosed.connect(self._restoreFocus)
         controlLayout.addWidget(self.cbBots)
 
         self.cbModelNames = InlineComboBox(self)
+        self.cbModelNames.popupClosed.connect(self._restoreFocus)
         controlLayout.addWidget(self.cbModelNames)
 
         # Mode selector
         self.cbMode = InlineComboBox(self)
         self._setupChatMode()
         self.cbMode.currentIndexChanged.connect(self._onModeChanged)
+        self.cbMode.popupClosed.connect(self._restoreFocus)
         controlLayout.addWidget(self.cbMode)
 
         settingsIcon = QIcon(dataDirPath() + "/icons/settings.svg")
@@ -130,6 +133,10 @@ class AiChatContextPanel(QFrame):
 
     def _onModelChanged(self, index):
         self.modelChanged.emit(index)
+
+    def _restoreFocus(self):
+        """Restore focus to the edit box after combobox popup closes"""
+        self.edit.setFocus()
 
     def toPlainText(self):
         return self.edit.toPlainText()

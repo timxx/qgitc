@@ -20,6 +20,7 @@ class InlineComboBox(QWidget):
     """
 
     currentIndexChanged = Signal(int)
+    popupClosed = Signal()  # Emitted when popup is closed after selection
 
     ArrowWidth = 8
     Spacing = 4
@@ -319,6 +320,8 @@ class InlineComboBox(QWidget):
         if self._popup:
             self._popup.close()
         self._popupTimer.invalidate()
+        # Emit signal after popup closes so parent can restore focus
+        self.popupClosed.emit()
 
     def _onPopupClosed(self):
         """Handle popup closed"""
