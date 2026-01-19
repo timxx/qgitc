@@ -52,15 +52,6 @@ class AiChatBotHighlighter(MarkdownHighlighter):
 
         super().highlightBlock(text)
 
-        if self.currentBlockState() == HighlighterState.NoState:
-            prev = self.currentBlock().previous()
-            prevData = prev.userData() if prev.isValid() else None
-            if isinstance(prevData, AiChatHeaderData) and prevData.role == AiRole.System:
-                charFormat = QTextCharFormat()
-                charFormat.setForeground(
-                    ApplicationBase.instance().colorSchema().ErrorText)
-                self.setFormat(0, len(text), charFormat)
-
     def _setTitleFormat(self, text: str, data: AiChatHeaderData):
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
