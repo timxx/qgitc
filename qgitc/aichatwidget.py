@@ -294,7 +294,7 @@ class AiChatWidget(QWidget):
                     "outputs": [],
                     "auto_continue": not hasConfirmations,
                 }
-                self._startNextAutoToolIfIdle()
+                QTimer.singleShot(0, self._startNextAutoToolIfIdle)
 
         if not self._disableAutoScroll:
             sb = messages.verticalScrollBar()
