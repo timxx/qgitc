@@ -32,10 +32,11 @@ from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
 
 class AiChatHeaderData(QTextBlockUserData):
 
-    def __init__(self, role: AiRole, collapsed: bool = False):
+    def __init__(self, role: AiRole, collapsed=False, descPos=-1):
         super().__init__()
         self.role = role
         self.collapsed = collapsed
+        self.descPos = descPos
 
 
 class AiChatBotHighlighter(MarkdownHighlighter):
@@ -46,7 +47,7 @@ class AiChatBotHighlighter(MarkdownHighlighter):
     def highlightBlock(self, text: str):
         data = self.currentBlockUserData()
         if isinstance(data, AiChatHeaderData):
-            self._setTitleFormat(len(text), data.role)
+            self._setTitleFormat(text, data)
             return
 
         super().highlightBlock(text)
@@ -60,19 +61,25 @@ class AiChatBotHighlighter(MarkdownHighlighter):
                     ApplicationBase.instance().colorSchema().ErrorText)
                 self.setFormat(0, len(text), charFormat)
 
-    def _setTitleFormat(self, length: int, role: AiRole):
+    def _setTitleFormat(self, text: str, data: AiChatHeaderData):
         charFormat = QTextCharFormat()
         charFormat.setFontWeight(QFont.Bold)
         schema = ApplicationBase.instance().colorSchema()
-        if role == AiRole.User:
+        if data.role == AiRole.User:
             charFormat.setForeground(schema.UserBlockFg)
-        elif role == AiRole.Assistant:
+        elif data.role == AiRole.Assistant:
             charFormat.setForeground(schema.AssistantBlockFg)
-        elif role == AiRole.System:
+        elif data.role == AiRole.System:
             charFormat.setForeground(schema.SystemBlockFg)
-        elif role == AiRole.Tool:
+        elif data.role == AiRole.Tool:
             charFormat.setForeground(schema.ToolBlockFg)
-        self.setFormat(0, length, charFormat)
+
+        if data.descPos != -1:
+            titleLength = data.descPos - 1
+            self.highlightInlineRules(text)
+            self.setFormat(0, titleLength, charFormat)
+        else:
+            self.setFormat(0, len(text), charFormat)
 
 
 class AiChatbot(QPlainTextEdit):
@@ -170,11 +177,13 @@ class AiChatbot(QPlainTextEdit):
         if self.blockCount() > 1:
             cursor.insertBlock()
         title = self._roleString(role)
+        descPos = -1
         if description:
+            descPos = len(title) + 1
             title += " " + description
         cursor.insertText(title)
         block = cursor.block()
-        block.setUserData(AiChatHeaderData(role, collapsed=collapsed))
+        block.setUserData(AiChatHeaderData(role, collapsed, descPos))
         return block
 
     def clear(self):
