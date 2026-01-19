@@ -71,7 +71,9 @@ class LocalLLM(ChatGPTModel):
     _models = {}
 
     def __init__(self, model: str = None, parent=None):
-        url = ApplicationBase.instance().settings().localLlmServer()
+        settings = ApplicationBase.instance().settings()
+        url = settings.localLlmServer()
+        model = model or settings.defaultLlmModelId(self.__class__.__name__)
         super().__init__(url, model, parent)
         self.url = f"{self.url_base}/chat/completions"
 
