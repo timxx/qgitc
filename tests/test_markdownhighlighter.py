@@ -1,7 +1,9 @@
 
+from PySide6.QtGui import QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import QPlainTextEdit
 
 from qgitc.markdownhighlighter import MarkdownHighlighter, isValidEmail
+from qgitc.textline import TextLine
 from tests.base import TestBase
 
 
@@ -13,6 +15,104 @@ class TestMarkdownHighlighter(TestBase):
 
     def doCreateRepo(self):
         pass
+
+    def _toUtf16(self, text: str, pyIndex: int) -> int:
+        tl = TextLine(text, self.edit.font())
+        return tl.mapToUtf16(pyIndex)
+
+    def _getFormatForSelection(self, cursor: QTextCursor):
+        block = cursor.block()
+        for fr in block.layout().formats():
+            start = fr.start
+            end = fr.start + fr.length
+            if start <= cursor.selectionStart() and cursor.selectionEnd() <= end:
+                return QTextCharFormat(fr.format)
+        return None
+
+    def test_inline_code_span_with_emoji(self):
+        text = "🔍 run `git_log`"
+        self.edit.setPlainText(text)
+        self.highlighter.rehighlight()
+
+        cursor = self.edit.textCursor()
+
+        startPy = text.index("git_log")
+        endPy = startPy + len("git_log")
+        start = self._toUtf16(text, startPy)
+        end = self._toUtf16(text, endPy)
+        self.assertNotEqual(startPy, start)
+        self.assertNotEqual(endPy, end)
+
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "git_log")
+
+        fmt = self._getFormatForSelection(cursor)
+        self.assertIsNotNone(fmt)
+        self.assertEqual(
+            fmt.foreground().color(),
+            self.app.colorSchema().InlineCode,
+        )
+
+        # Ensure surrounding plain text isn't incorrectly marked as inline code
+        runStartPy = text.index("run")
+        runEndPy = runStartPy + len("run")
+        cursor.setPosition(self._toUtf16(text, runStartPy))
+        cursor.setPosition(self._toUtf16(text, runEndPy),
+                           QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "run")
+        fmt2 = self._getFormatForSelection(cursor)
+        self.assertTrue(fmt2 is None or fmt2.foreground().color()
+                        != self.app.colorSchema().InlineCode)
+
+    def test_emphasis_with_emoji(self):
+        text = "🔍 *run*"
+        self.edit.setPlainText(text)
+        self.highlighter.rehighlight()
+
+        cursor = self.edit.textCursor()
+        startPy = text.index("run")
+        endPy = startPy + len("run")
+        cursor.setPosition(self._toUtf16(text, startPy))
+        cursor.setPosition(self._toUtf16(text, endPy), QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "run")
+
+        fmt = self._getFormatForSelection(cursor)
+        self.assertIsNotNone(fmt)
+        self.assertTrue(fmt.fontItalic())
+
+    def test_angle_link_with_emoji(self):
+        text = "🔍 <https://example.com>"
+        self.edit.setPlainText(text)
+        self.highlighter.rehighlight()
+
+        cursor = self.edit.textCursor()
+        startPy = text.index("https://")
+        endPy = text.index(">")
+        cursor.setPosition(self._toUtf16(text, startPy))
+        cursor.setPosition(self._toUtf16(text, endPy), QTextCursor.KeepAnchor)
+        self.assertTrue(cursor.selectedText().startswith("https://"))
+
+        fmt = self._getFormatForSelection(cursor)
+        self.assertIsNotNone(fmt)
+        self.assertTrue(fmt.fontUnderline())
+
+    def test_inline_comment_with_emoji(self):
+        text = "🔍 <!-- comment -->"
+        self.edit.setPlainText(text)
+        self.highlighter.rehighlight()
+
+        cursor = self.edit.textCursor()
+        startPy = text.index("comment")
+        endPy = startPy + len("comment")
+        cursor.setPosition(self._toUtf16(text, startPy))
+        cursor.setPosition(self._toUtf16(text, endPy), QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "comment")
+
+        fmt = self._getFormatForSelection(cursor)
+        self.assertIsNotNone(fmt)
+        self.assertEqual(fmt.foreground().color(),
+                         self.app.colorSchema().Comment)
 
     def testSqlHighlighter(self):
         try:

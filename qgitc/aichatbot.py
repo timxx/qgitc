@@ -65,12 +65,13 @@ class AiChatBotHighlighter(MarkdownHighlighter):
         elif data.role == AiRole.Tool:
             charFormat.setForeground(schema.ToolBlockFg)
 
+        self.initUtf16IndexMapper(text)
         if data.descPos != -1:
             titleLength = data.descPos - 1
             self.highlightInlineRules(text)
-            self.setFormat(0, titleLength, charFormat)
+            self.setFormatPy(0, titleLength, charFormat)
         else:
-            self.setFormat(0, len(text), charFormat)
+            self.setFormatPy(0, len(text), charFormat)
 
 
 class AiChatbot(QPlainTextEdit):

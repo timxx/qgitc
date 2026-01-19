@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import bisect
 import string
 from enum import Enum, Flag, IntEnum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from PySide6.QtCore import (
     QFlag,
@@ -165,6 +166,64 @@ class InlineRange:
         self.begin = begin
         self.end = end
         self.type = type
+
+
+class _Utf16IndexMapper:
+    __slots__ = ("_indices",)
+
+    def __init__(self, text: str):
+        self._indices = None
+        if not text:
+            return
+
+        hasAstral = False
+        indices = [0]
+        total = 0
+        for ch in text:
+            if ord(ch) > 0xFFFF:
+                hasAstral = True
+                total += 2
+            else:
+                total += 1
+            indices.append(total)
+
+        if hasAstral:
+            self._indices = indices
+
+    def toUtf16(self, index: int) -> int:
+        if index <= 0:
+            return 0
+
+        if not self._indices:
+            return index
+
+        if index >= len(self._indices):
+            return self._indices[-1]
+
+        return self._indices[index]
+
+    def fromUtf16(self, index: int) -> int:
+        if index <= 0:
+            return 0
+
+        if not self._indices:
+            return index
+
+        i = bisect.bisect_right(self._indices, index)
+        return i - 1
+
+    def rangeToUtf16(self, start: int, length: int) -> tuple[int, int]:
+        if length <= 0:
+            return self.toUtf16(start), 0
+
+        s = self.toUtf16(start)
+        e = self.toUtf16(start + length)
+        return s, e - s
+
+    def lenUtf16(self, pyLen: int) -> int:
+        if not self._indices:
+            return pyLen
+        return self._indices[-1]
 
 
 def getIndentation(text):
@@ -433,6 +492,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._ranges: Dict[int, list] = {}
         self._dirtyTextBlocks: List[QTextBlock] = []
         self._highlightingFinished = True
+        self._utf16IndexMapper: Optional[_Utf16IndexMapper] = None
 
         # Initialize highlighting rules
         self.initHighlightingRules()
@@ -742,6 +802,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self._dirtyTextBlocks.append(block)
 
     def highlightBlock(self, text):
+        # Qt text APIs (QTextLayout/QSyntaxHighlighter) use UTF-16 code units for
+        # positions/lengths. Python's str indices are code points, so emoji (astral
+        # plane) characters can shift ranges. We build a per-block mapper once.
+        self._utf16IndexMapper = _Utf16IndexMapper(text)
+
         if self.currentBlockState() == HighlighterState.HeadlineEnd:
             prevBlock = self.currentBlock().previous()
             prevBlock.setUserState(HighlighterState.NoState)
@@ -752,6 +817,28 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         self.highlightMarkdown(text)
         self._highlightingFinished = True
+
+    def initUtf16IndexMapper(self, text: str):
+        self._utf16IndexMapper = _Utf16IndexMapper(text)
+
+    def setFormatPy(self, start: int, length: int, fmt: QTextCharFormat):
+        if length <= 0:
+            return
+
+        if self._utf16IndexMapper:
+            start, length = self._utf16IndexMapper.rangeToUtf16(start, length)
+
+        super().setFormat(start, length, fmt)
+
+    def _formatPy(self, pos: int) -> QTextCharFormat:
+        if self._utf16IndexMapper:
+            pos = self._utf16IndexMapper.toUtf16(pos)
+        return super().format(pos)
+
+    def _lenUtf16(self, pyLen: int) -> int:
+        if not self._utf16IndexMapper:
+            return pyLen
+        return self._utf16IndexMapper.lenUtf16(pyLen)
 
     def highlightMarkdown(self, text: str):
         # Check if this is a code block
@@ -857,7 +944,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             return
 
         if hasSameChars:
-            self.setFormat(
+            self.setFormatPy(
                 0, len(text), self._formats[HighlighterState.HorizontalRuler])
 
     def highlightHeadline(self, text: str):
@@ -891,11 +978,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 fontSize = self._formats[state].fontPointSize()
                 if fontSize > 0:
                     maskedFormat.setFontPointSize(fontSize)
-                self.setFormat(0, headingLevel, maskedFormat)
+                self.setFormatPy(0, headingLevel, maskedFormat)
 
                 # Set the styling of the rest of the heading
-                self.setFormat(headingLevel + 1, len(text) - 1 - headingLevel,
-                               self._formats[state])
+                self.setFormatPy(headingLevel + 1, len(text) - 1 - headingLevel,
+                                  self._formats[state])
 
                 self.setCurrentBlockState(state)
                 return
@@ -937,14 +1024,14 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             nextHasEqualChars = hasOnlyHeadChars(
                 nextBlockText, '=', nextSpaces)
             if nextHasEqualChars:
-                self.setFormat(
+                self.setFormatPy(
                     0, len(text), self._formats[HighlighterState.H1])
                 self.setCurrentBlockState(HighlighterState.H1)
         elif nextBlockText[nextSpaces] == '-' and nextSpaces < 4 and isCurrentParagraph:
             nextHasMinusChars = hasOnlyHeadChars(
                 nextBlockText, '-', nextSpaces)
             if nextHasMinusChars:
-                self.setFormat(
+                self.setFormatPy(
                     0, len(text), self._formats[HighlighterState.H2])
                 self.setCurrentBlockState(HighlighterState.H2)
 
@@ -975,7 +1062,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             return
 
         self.setCurrentBlockState(HighlighterState.CodeBlockIndented)
-        self.setFormat(0, len(text), self._formats[HighlighterState.CodeBlock])
+        self.setFormatPy(
+            0, len(text), self._formats[HighlighterState.CodeBlock])
 
     def highlightCodeFence(self, text: str):
         # already in tilde block
@@ -1007,7 +1095,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if fontSize > 0:
                 currentMaskedFormat.setFontPointSize(fontSize)
 
-            self.setFormat(0, len(text), currentMaskedFormat)
+            self.setFormatPy(0, len(text), currentMaskedFormat)
             self.setCurrentBlockState(HighlighterState.HeadlineEnd)
 
             # we want to re-highlight the previous block
@@ -1028,12 +1116,12 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             # if someone decides to put these on the same line
             # interpret it as inline code, not code block
             if text.endswith("```") and len(text) > 3:
-                self.setFormat(3, len(text) - 3,
-                               self._formats[HighlighterState.InlineCodeBlock])
-                self.setFormat(
+                self.setFormatPy(3, len(text) - 3,
+                                  self._formats[HighlighterState.InlineCodeBlock])
+                self.setFormatPy(
                     0, 3, self._formats[HighlighterState.NoState])
-                self.setFormat(len(text) - 3, 3,
-                               self._formats[HighlighterState.NoState])
+                self.setFormatPy(len(text) - 3, 3,
+                                  self._formats[HighlighterState.NoState])
                 return
 
             if ((self.previousBlockState() != HighlighterState.CodeBlock and
@@ -1061,7 +1149,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             maskedFormat.setFontPointSize(
                 self._formats[HighlighterState.CodeBlock].fontPointSize())
 
-            self.setFormat(0, len(text), maskedFormat)
+            self.setFormatPy(0, len(text), maskedFormat)
         elif self.isCodeBlock(self.previousBlockState()):
             self.setCurrentBlockState(self.previousBlockState())
             self.highlightSyntax(text)
@@ -1090,7 +1178,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         literals = {}
 
         # apply the default code block format first
-        self.setFormat(0, textLen, self._formats[HighlighterState.CodeBlock])
+        self.setFormatPy(
+            0, textLen, self._formats[HighlighterState.CodeBlock])
 
         state = self.currentBlockState()
         if state in [HighlighterState.CodeCpp,
@@ -1997,8 +2086,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if ((text[number] == '.' or text[number] == ')') and
                     text[number + 1] == ' '):
                 self.setCurrentBlockState(HighlighterState.List)
-                self.setFormat(curPos, number - curPos + 1,
-                               self._formats[HighlighterState.List])
+                self.setFormatPy(curPos, number - curPos + 1,
+                                  self._formats[HighlighterState.List])
                 # highlight checkbox if any
                 self.highlightCheckbox(text, number)
             return
@@ -2015,7 +2104,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # Unordered List
         self.setCurrentBlockState(HighlighterState.List)
-        self.setFormat(curPos, 1, self._formats[HighlighterState.List])
+        self.setFormatPy(curPos, 1, self._formats[HighlighterState.List])
 
     def highlightInlineRules(self, text: str):
         """
@@ -2068,7 +2157,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
 
         # get existing format if any
         # we want to append to the existing format, not overwrite it
-        fmt = self.format(start + 1)
+        fmt = self._formatPy(start + 1)
         inlineFmt = QTextCharFormat()
 
         # select appropriate format for current text
@@ -2093,11 +2182,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 InlineRange(start, next, RangeType.CodeSpan))
 
         # format the text
-        self.setFormat(start + length, next - (start + length), inlineFmt)
+        self.setFormatPy(start + length, next - (start + length), inlineFmt)
 
         # format backticks as masked
-        self.setFormat(start, length, inlineFmt)
-        self.setFormat(next, length, inlineFmt)
+        self.setFormatPy(start, length, inlineFmt)
+        self.setFormatPy(next, length, inlineFmt)
 
         i = next + length
         return i
@@ -2116,8 +2205,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             return pos
 
         commentEnd += 3
-        self.setFormat(start, commentEnd - start,
-                       self._formats[HighlighterState.Comment])
+        self.setFormatPy(start, commentEnd - start,
+                          self._formats[HighlighterState.Comment])
 
         return commentEnd - 1
 
@@ -2172,7 +2261,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 underline = (self._highlightingOptions & HighlightingOptions.Underline) and \
                     startDelim.marker == "_"
                 while k != (startDelim.pos + boldLen):
-                    fmt = self.format(k)
+                    fmt = self._formatPy(k)
                     fontFamilies = self._formats[HighlighterState.Bold].fontFamilies(
                     )
                     if fontFamilies:
@@ -2194,7 +2283,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                             self._formats[HighlighterState.StUnderline].fontUnderline())
                     elif self._formats[HighlighterState.Bold].font().bold():
                         fmt.setFontWeight(QFont.Bold)
-                    self.setFormat(k, 1, fmt)
+                    self.setFormatPy(k, 1, fmt)
                     k += 1
 
                 masked.append((startDelim.pos - 1, 2))
@@ -2215,7 +2304,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     startDelim.marker == "_"
                 itLen = endDelim.pos - startDelim.pos
                 while k != startDelim.pos + itLen:
-                    fmt = self.format(k)
+                    fmt = self._formatPy(k)
                     fontFamilies = self._formats[HighlighterState.Italic].fontFamilies(
                     )
                     if fontFamilies:
@@ -2232,7 +2321,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     else:
                         fmt.setFontItalic(
                             self._formats[HighlighterState.Italic].fontItalic())
-                    self.setFormat(k, 1, fmt)
+                    self.setFormatPy(k, 1, fmt)
                     k += 1
                 masked.append((startDelim.pos, 1))
                 masked.append((endDelim.pos, 1))
@@ -2250,7 +2339,7 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             if self._formats[state].fontPointSize() > 0:
                 maskedFmt.setFontPointSize(
                     self._formats[state].fontPointSize())
-            self.setFormat(masked[i][0], masked[i][1], maskedFmt)
+            self.setFormatPy(masked[i][0], masked[i][1], maskedFmt)
 
     def forthHighlighter(self, text: str):
         """ The Forth highlighter """
@@ -2477,30 +2566,30 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                     fmt = HighlighterState.CheckBoxChecked
             else:
                 fmt = HighlighterState.MaskedSyntax
-            self.setFormat(start, length, self._formats[fmt])
+            self.setFormatPy(start, length, self._formats[fmt])
 
     def formatAndMaskRemaining(self, formatBegin, formatLength, beginningText, endText, format: QTextCharFormat):
         afterFormat = formatBegin + formatLength
 
         maskedSyntax = QTextCharFormat(
             self._formats[HighlighterState.MaskedSyntax])
-        fontSize = self.format(beginningText).fontPointSize()
+        fontSize = self._formatPy(beginningText).fontPointSize()
         if fontSize > 0:
             maskedSyntax.setFontPointSize(fontSize)
 
         # highlight before the link
-        self.setFormat(beginningText, formatBegin -
-                       beginningText, maskedSyntax)
+        self.setFormatPy(beginningText, formatBegin -
+                          beginningText, maskedSyntax)
 
         # highlight the link if we are not in a heading
         if not self.isHeading(self.currentBlockState()):
-            self.setFormat(formatBegin, formatLength, format)
+            self.setFormatPy(formatBegin, formatLength, format)
 
         # highlight after the link
-        fontSize = self.format(afterFormat).fontPointSize()
+        fontSize = self._formatPy(afterFormat).fontPointSize()
         if fontSize > 0:
             maskedSyntax.setFontPointSize(fontSize)
-        self.setFormat(afterFormat, endText - afterFormat, maskedSyntax)
+        self.setFormatPy(afterFormat, endText - afterFormat, maskedSyntax)
 
         self._ranges.setdefault(self.currentBlock().blockNumber(), []).append(
             InlineRange(beginningText, formatBegin, RangeType.Link))
@@ -2571,8 +2660,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 self._ranges.setdefault(blockNum, []).append(
                     InlineRange(startIndex + 6, hrefEnd, RangeType.Link))
 
-                self.setFormat(startIndex + 6, hrefEnd - startIndex -
-                               6, self._formats[HighlighterState.Link])
+                self.setFormatPy(startIndex + 6, hrefEnd - startIndex -
+                                  6, self._formats[HighlighterState.Link])
                 return hrefEnd
 
             link = text[startIndex:space-1]
@@ -2585,8 +2674,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             self._ranges.setdefault(blockNum, []).append(
                 InlineRange(startIndex, startIndex + linkLength, RangeType.Link))
 
-            self.setFormat(startIndex, linkLength + 1,
-                           self._formats[HighlighterState.Link])
+            self.setFormatPy(startIndex, linkLength + 1,
+                              self._formats[HighlighterState.Link])
             return space
 
         # Find the index of the closing ']' character
@@ -2728,4 +2817,4 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             tcFormat.setForeground(
                 ApplicationBase.instance().colorSchema().Newline)
 
-        self.setFormat(0, len(text), tcFormat)
+        self.setFormatPy(0, len(text), tcFormat)
