@@ -25,7 +25,7 @@ from qgitc.llm import (
     AiRole,
 )
 from qgitc.llmprovider import AiModelProvider
-from qgitc.models.prompts import CODE_REVIEW_PROMPT
+from qgitc.models.prompts import AGENT_SYS_PROMPT, CODE_REVIEW_PROMPT
 from qgitc.preferences import Preferences
 
 
@@ -195,14 +195,7 @@ class AiChatWidget(QWidget):
 
             # Don't add system prompt if there is already one
             if not sysPrompt and (len(model.history) == 0 or not collapsed):
-                params.sys_prompt = (
-                    "You are a Git assistant inside QGitc. "
-                    "When you need repo information or to perform git actions, call tools. "
-                    "Never assume; use tools like git_status/git_log/git_diff/git_show/git_current_branch/git_branch. "
-                    "If the user asks for the Nth commit, call git_log with the 'nth' parameter; the tool returns a labeled single-line result that you should trust. "
-                    "Do not call git_log repeatedly to fetch commits 1..N just to locate the Nth commit. "
-                    "After a tool result is provided, continue with the user's request."
-                )
+                params.sys_prompt = AGENT_SYS_PROMPT
                 self._doMessageReady(model, AiResponse(
                     AiRole.System, params.sys_prompt), True)
         elif chatMode == AiChatMode.CodeReview:
