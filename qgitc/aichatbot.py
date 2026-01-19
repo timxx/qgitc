@@ -297,9 +297,12 @@ class AiChatbot(QPlainTextEdit):
                 QPointF(cx, cy + s * 0.6),
             ])
 
+        oldHint = painter.renderHints()
+        painter.setRenderHint(QPainter.Antialiasing, True)
         painter.setBrush(painter.pen().color())
         painter.drawPolygon(pts)
         painter.setBrush(Qt.NoBrush)
+        painter.setRenderHints(oldHint)
 
     def _headerRole(self, block: QTextBlock) -> Optional[AiRole]:
         if not block.isValid():
