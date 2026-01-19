@@ -205,9 +205,9 @@ class ColorSchemaLight(ColorSchema):
     SystemBlockBg = QColor(0xF3E8FD)
     SystemBlockFg = QColor(0x673AB7)
 
-    ToolBlockBorder = QColor(0xE65100)
-    ToolBlockBg = QColor(0xFFF3E0)
-    ToolBlockFg = QColor(0xE65100)
+    ToolBlockBorder = QColor(0x607D8B)
+    ToolBlockBg = QColor(0xF5F7FA)
+    ToolBlockFg = QColor(0x37474F)
 
     ConflictFg = QColor(0xe57373)
     ResolvedFg = QColor(0x81c784)
@@ -328,9 +328,9 @@ class ColorSchemaDark(ColorSchema):
     SystemBlockBg = QColor(0x362B4F)
     SystemBlockFg = QColor(0xB39DDB)
 
-    ToolBlockBorder = QColor(0xFFB74D)
-    ToolBlockBg = QColor(0x4A3826)
-    ToolBlockFg = QColor(0xFFB74D)
+    ToolBlockBorder = QColor(0x90A4AE)
+    ToolBlockBg = QColor(0x2F3942)
+    ToolBlockFg = QColor(0xECEFF1)
 
     ConflictFg = QColor(0xff5555)
     ResolvedFg = QColor(0x50fa7b)
