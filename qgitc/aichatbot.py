@@ -379,7 +379,8 @@ class AiChatbot(QPlainTextEdit):
         cursor = self.textCursor()
         selectionStart = cursor.selectionStart()
         selectionEnd = cursor.selectionEnd()
-        docLength = self.document().characterCount() - 1
+        doc = self.document()
+        docLength = doc.characterCount() - 1
         cursor.movePosition(QTextCursor.End)
         cursor.insertBlock()
 
@@ -400,6 +401,15 @@ class AiChatbot(QPlainTextEdit):
 
         # Store confirmation data for interaction handling
         self._confirmations[position] = confirmData
+
+        # doc.markContentsDirty(0, doc.characterCount())
+        # doc.adjustSize()
+        # self.updateGeometry()
+        # self.viewport().update()
+        # Fix vertical scrollbar range not updating correctly
+        # The above calls don't seem to help (even with delay)
+        # setDocument internal will relayoutDocument/adjustScrollbars
+        self.setDocument(doc)
 
         if selectionStart != selectionEnd and selectionEnd == docLength:
             newCursor = self.textCursor()
