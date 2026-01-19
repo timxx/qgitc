@@ -193,13 +193,6 @@ class AiChatWidget(QWidget):
             params.tools = AgentToolRegistry.openai_tools()
             params.tool_choice = "auto"
 
-            if not Git.REPO_DIR:
-                self._doMessageReady(model, AiResponse(
-                    AiRole.User, params.prompt), collapsed)
-                self._doMessageReady(model, AiResponse(
-                    AiRole.System, self.tr("No repository is currently opened.")))
-                return
-
             # Don't add system prompt if there is already one
             if not sysPrompt and (len(model.history) == 0 or not collapsed):
                 params.sys_prompt = (
