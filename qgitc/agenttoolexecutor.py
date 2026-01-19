@@ -140,13 +140,60 @@ class AgentToolExecutor(QObject):
                     max_count = 20
             max_count = max(1, min(200, max_count))
             args = ["log", "--oneline", "-n", str(max_count)]
+            if isinstance(params, dict):
+                since = params.get("since")
+                until = params.get("until")
+                if since:
+                    args += ["--since", str(since)]
+                if until:
+                    args += ["--until", str(until)]
             ok, output = self._run_git(repo_dir, args)
             return AgentToolResult(tool_name, ok, output)
 
         if tool_name == "git_diff":
-            staged = bool(params.get("staged")) if isinstance(
-                params, dict) else False
-            args = ["diff"] + (["--staged"] if staged else [])
+            if not isinstance(params, dict):
+                return AgentToolResult(tool_name, False, "Invalid parameters for git_diff.")
+            rev = params.get("rev")
+            if not rev:
+                return AgentToolResult(tool_name, False, "Missing required parameter: rev")
+            files = params.get("files")
+            args = ["diff-tree", "-r", "--root", rev,
+                    "-p", "--textconv", "--submodule",
+                    "-C", "--no-commit-id", "-U3"]
+            if files and isinstance(files, list):
+                args += ["--"] + [str(f) for f in files]
+            ok, output = self._run_git(repo_dir, args)
+            return AgentToolResult(tool_name, ok, output)
+
+        if tool_name == "git_diff_unstaged":
+            name_only = False
+            files = None
+            if isinstance(params, dict):
+                name_only = bool(params.get("name_only"))
+                files = params.get("files")
+            if name_only:
+                args = ["diff", "--name-only"]
+            else:
+                args = ["diff-files", "-p", "--textconv",
+                        "--submodule", "-C", "-U3"]
+            if files and isinstance(files, list):
+                args += ["--"] + [str(f) for f in files]
+            ok, output = self._run_git(repo_dir, args)
+            return AgentToolResult(tool_name, ok, output)
+
+        if tool_name == "git_diff_staged":
+            name_only = False
+            if isinstance(params, dict):
+                name_only = bool(params.get("name_only"))
+                files = params.get("files")
+            if name_only:
+                args = ["diff", "--name-only", "--cached"]
+            else:
+                args = ["diff-index", "--cached",
+                        "HEAD", "-p", "--textconv",
+                        "--submodule", "-C", "-U3"]
+            if files and isinstance(files, list):
+                args += ["--"] + [str(f) for f in files]
             ok, output = self._run_git(repo_dir, args)
             return AgentToolResult(tool_name, ok, output)
 
@@ -196,6 +243,24 @@ class AgentToolExecutor(QObject):
             if not commits or not isinstance(commits, list):
                 return AgentToolResult(tool_name, False, "Missing required parameter: commits")
             args = ["cherry-pick"] + [str(c) for c in commits]
+            ok, output = self._run_git(repo_dir, args)
+            return AgentToolResult(tool_name, ok, output)
+
+        if tool_name == "git_commit":
+            message = params.get("message") if isinstance(
+                params, dict) else None
+            if not message:
+                return AgentToolResult(tool_name, False, "Missing required parameter: message")
+            args = ["commit", "-m", str(message), "--no-edit"]
+            ok, output = self._run_git(repo_dir, args)
+            return AgentToolResult(tool_name, ok, output)
+
+        if tool_name == "git_add":
+            files = params.get("files") if isinstance(
+                params, dict) else None
+            if not files or not isinstance(files, list):
+                return AgentToolResult(tool_name, False, "Missing required parameter: files")
+            args = ["add"] + [str(f) for f in files]
             ok, output = self._run_git(repo_dir, args)
             return AgentToolResult(tool_name, ok, output)
 

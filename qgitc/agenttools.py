@@ -40,7 +40,7 @@ class AgentToolRegistry:
             AgentTool(
                 name="git_status",
                 description=(
-                    "Show repository status (like `git status --porcelain -b`). "
+                    "Shows the working tree status. "
                     "If there are no changes, the result explicitly includes 'working tree clean (no changes)'."
                 ),
                 tool_type=ToolType.READ_ONLY,
@@ -62,9 +62,7 @@ class AgentToolRegistry:
             AgentTool(
                 name="git_log",
                 description=(
-                    "Show commits. Use `nth` to fetch only the Nth commit from HEAD (1-based) without listing earlier commits. "
-                    "When `nth` is provided, the tool returns exactly one labeled line like 'nth=N (1-based from HEAD): <sha> <subject>'. "
-                    "Do not request commits 1..N just to locate the Nth commit."
+                    "Show commit logs. Can filter by date range and limit number of commits."
                 ),
                 tool_type=ToolType.READ_ONLY,
                 parameters={
@@ -83,21 +81,77 @@ class AgentToolRegistry:
                             "maximum": 200,
                             "description": "Number of commits to show (default 20).",
                         },
+                        "since": {
+                            "type": "string",
+                            "description": "Show commits more recent than a specific date (e.g., '2 weeks ago', '2023-01-01').",
+                        },
+                        "until": {
+                            "type": "string",
+                            "description": "Show commits older than a specific date.",
+                        },
                     },
                     "additionalProperties": False,
                 },
             ),
             AgentTool(
                 name="git_diff",
-                description="Show working tree diff (optionally staged).",
+                description="Get the diff of a specific commit",
                 tool_type=ToolType.READ_ONLY,
                 parameters={
                     "type": "object",
                     "properties": {
                         "repo_dir": {"type": "string"},
-                        "staged": {
+                        "rev": {
+                            "type": "string",
+                            "description": "The commit SHA or revision range to diff",
+                        },
+                        "files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "If provided, limits the diff to these files.",
+                        },
+                    },
+                    "required": ["rev"],
+                    "additionalProperties": False,
+                },
+            ),
+            AgentTool(
+                name="git_diff_unstaged",
+                description="Shows changes in the working directory that are not yet staged",
+                tool_type=ToolType.READ_ONLY,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "repo_dir": {"type": "string"},
+                        "name_only": {
                             "type": "boolean",
-                            "description": "If true, show staged diff (`--staged`).",
+                            "description": "If true, shows only names of changed files.",
+                        },
+                        "files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "If provided, limits the diff to these files.",
+                        },
+                    },
+                    "additionalProperties": False,
+                },
+            ),
+            AgentTool(
+                name="git_diff_staged",
+                description="Shows changes that are staged for commit",
+                tool_type=ToolType.READ_ONLY,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "repo_dir": {"type": "string"},
+                        "name_only": {
+                            "type": "boolean",
+                            "description": "If true, shows only names of changed files.",
+                        },
+                        "files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "If provided, limits the diff to these files.",
                         },
                     },
                     "additionalProperties": False,
@@ -105,7 +159,7 @@ class AgentToolRegistry:
             ),
             AgentTool(
                 name="git_show",
-                description="Show a commit (like `git show <rev>`).",
+                description="Show the contents of a commit",
                 tool_type=ToolType.READ_ONLY,
                 parameters={
                     "type": "object",
@@ -122,7 +176,7 @@ class AgentToolRegistry:
             ),
             AgentTool(
                 name="git_branch",
-                description="List branches (like `git branch` / `git branch -a`).",
+                description="List Git branches",
                 tool_type=ToolType.READ_ONLY,
                 parameters={
                     "type": "object",
@@ -139,8 +193,7 @@ class AgentToolRegistry:
             AgentTool(
                 name="git_current_branch",
                 description=(
-                    "Get the current branch name only (no branch listing). "
-                    "Uses `git rev-parse --abbrev-ref HEAD`. "
+                    "Get the current branch name. "
                     "If in detached HEAD state, returns a detached HEAD message."
                 ),
                 tool_type=ToolType.READ_ONLY,
@@ -154,7 +207,7 @@ class AgentToolRegistry:
             ),
             AgentTool(
                 name="git_checkout",
-                description="Checkout a branch (like `git checkout <branch>`).",
+                description="Switch branches",
                 tool_type=ToolType.WRITE,
                 parameters={
                     "type": "object",
@@ -181,6 +234,39 @@ class AgentToolRegistry:
                         },
                     },
                     "required": ["commits"],
+                    "additionalProperties": False,
+                },
+            ),
+            AgentTool(
+                name="git_commit",
+                description="Record changes to the repository",
+                tool_type=ToolType.WRITE,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "repo_dir": {"type": "string"},
+                        "message": {"type": "string"},
+                    },
+                    "required": ["message"],
+                    "additionalProperties": False,
+                },
+            ),
+            AgentTool(
+                name="git_add",
+                description="Add file contents to the index",
+                tool_type=ToolType.WRITE,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "repo_dir": {"type": "string"},
+                        "files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "minItems": 1,
+                            "description": "List of file paths to stage.",
+                        },
+                    },
+                    "required": ["files"],
                     "additionalProperties": False,
                 },
             ),
