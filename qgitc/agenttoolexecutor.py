@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 
@@ -30,6 +30,21 @@ class AgentToolExecutor(QObject):
         super().__init__(parent)
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._inflight: Optional[Future] = None
+        self._tool_handlers: Dict[str, Callable[[str, Dict], AgentToolResult]] = {
+            "git_status": self._handle_git_status,
+            "git_log": self._handle_git_log,
+            "git_diff": self._handle_git_diff,
+            "git_diff_unstaged": self._handle_git_diff_unstaged,
+            "git_diff_staged": self._handle_git_diff_staged,
+            "git_show": self._handle_git_show,
+            "git_current_branch": self._handle_git_current_branch,
+            "git_branch": self._handle_git_branch,
+            "git_checkout": self._handle_git_checkout,
+            "git_cherry_pick": self._handle_git_cherry_pick,
+            "git_commit": self._handle_git_commit,
+            "git_add": self._handle_git_add,
+            "run_command": self._handle_run_command,
+        }
 
     def executeAsync(self, tool_name: str, params: Dict) -> bool:
         if self._inflight and not self._inflight.done():
@@ -84,245 +99,264 @@ class AgentToolExecutor(QObject):
         if not tool:
             return AgentToolResult(tool_name, False, f"Unknown tool: {tool_name}")
 
-        repo_dir = self._repo_dir(params)
-
-        if tool_name == "git_status":
-            untracked = True
-            if isinstance(params, dict) and "untracked" in params:
-                untracked = bool(params.get("untracked"))
-            args = ["status", "--porcelain=v1", "-b"]
-            if not untracked:
-                args.append("--untracked-files=no")
-            ok, output = self._run_git(repo_dir, args)
-            if ok:
-                # Porcelain v1 with -b typically includes a branch line like:
-                #   ## main...origin/main [ahead 1]
-                # If that's the only line, the working tree is clean.
-                lines = (output or "").splitlines()
-                if not lines:
-                    output = "working tree clean (no changes)."
-                elif len(lines) == 1 and lines[0].startswith("##"):
-                    output = f"{lines[0]}\nworking tree clean (no changes)."
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_log":
-            nth = None
-            if isinstance(params, dict) and params.get("nth") is not None:
-                try:
-                    nth = int(params.get("nth"))
-                except Exception:
-                    nth = None
-
-            if nth is not None:
-                if nth < 1:
-                    return AgentToolResult(tool_name, False, "Parameter nth must be >= 1")
-                # Fetch exactly one commit, skipping the first (nth-1) commits.
-                # This avoids returning commits 1..(nth-1) to the UI.
-                args = ["log", "--oneline", "-n", "1", "--skip", str(nth - 1)]
-                ok, output = self._run_git(repo_dir, args)
-                if ok:
-                    line = (output or "").splitlines()[
-                        0].strip() if (output or "").strip() else ""
-                    if line:
-                        # Include explicit metadata so the LLM can trust this is the requested position.
-                        return AgentToolResult(
-                            tool_name,
-                            True,
-                            f"nth={nth} (1-based from HEAD): {line}",
-                        )
-                    return AgentToolResult(tool_name, False, f"No commit found at nth={nth} (1-based from HEAD).")
-                return AgentToolResult(tool_name, False, output)
-
-            max_count = 20
-            if isinstance(params, dict) and params.get("max_count") is not None:
-                try:
-                    max_count = int(params.get("max_count"))
-                except Exception:
-                    max_count = 20
-            max_count = max(1, min(200, max_count))
-            args = ["log", "--oneline", "-n", str(max_count)]
-            if isinstance(params, dict):
-                since = params.get("since")
-                until = params.get("until")
-                if since:
-                    args += ["--since", str(since)]
-                if until:
-                    args += ["--until", str(until)]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_diff":
-            if not isinstance(params, dict):
-                return AgentToolResult(tool_name, False, "Invalid parameters for git_diff.")
-            rev = params.get("rev")
-            if not rev:
-                return AgentToolResult(tool_name, False, "Missing required parameter: rev")
-            files = params.get("files")
-            args = ["diff-tree", "-r", "--root", rev,
-                    "-p", "--textconv", "--submodule",
-                    "-C", "--no-commit-id", "-U3"]
-            if files and isinstance(files, list):
-                args += ["--"] + [str(f) for f in files]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_diff_unstaged":
-            name_only = False
-            files = None
-            if isinstance(params, dict):
-                name_only = bool(params.get("name_only"))
-                files = params.get("files")
-            if name_only:
-                args = ["diff", "--name-only"]
-            else:
-                args = ["diff-files", "-p", "--textconv",
-                        "--submodule", "-C", "-U3"]
-            if files and isinstance(files, list):
-                args += ["--"] + [str(f) for f in files]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_diff_staged":
-            name_only = False
-            if isinstance(params, dict):
-                name_only = bool(params.get("name_only"))
-                files = params.get("files")
-            if name_only:
-                args = ["diff", "--name-only", "--cached"]
-            else:
-                args = ["diff-index", "--cached",
-                        "HEAD", "-p", "--textconv",
-                        "--submodule", "-C", "-U3"]
-            if files and isinstance(files, list):
-                args += ["--"] + [str(f) for f in files]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_show":
-            rev = params.get("rev") if isinstance(params, dict) else None
-            if not rev:
-                return AgentToolResult(tool_name, False, "Missing required parameter: rev")
-            args = ["show", str(rev)]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_current_branch":
-            # Prefer a cheap command that returns only the current branch name.
-            ok, output = self._run_git(
-                repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
-            if not ok:
-                return AgentToolResult(tool_name, False, output)
-            branch = (output or "").strip()
-            if not branch:
-                return AgentToolResult(tool_name, False, "Failed to determine current branch.")
-            if branch == "HEAD":
-                ok2, sha = self._run_git(
-                    repo_dir, ["rev-parse", "--short", "HEAD"])
-                sha = (sha or "").strip() if ok2 else ""
-                msg = f"detached HEAD" + (f" at {sha}" if sha else "")
-                return AgentToolResult(tool_name, True, msg)
-            return AgentToolResult(tool_name, True, branch)
-
-        if tool_name == "git_branch":
-            all_branches = bool(params.get("all")) if isinstance(
-                params, dict) else False
-            args = ["branch"] + (["-a"] if all_branches else [])
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_checkout":
-            branch = params.get("branch") if isinstance(params, dict) else None
-            if not branch:
-                return AgentToolResult(tool_name, False, "Missing required parameter: branch")
-            args = ["checkout", str(branch)]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_cherry_pick":
-            commits = params.get("commits") if isinstance(
-                params, dict) else None
-            if not commits or not isinstance(commits, list):
-                return AgentToolResult(tool_name, False, "Missing required parameter: commits")
-            args = ["cherry-pick"] + [str(c) for c in commits]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_commit":
-            message = params.get("message") if isinstance(
-                params, dict) else None
-            if not message:
-                return AgentToolResult(tool_name, False, "Missing required parameter: message")
-            args = ["commit", "-m", str(message), "--no-edit"]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "git_add":
-            files = params.get("files") if isinstance(
-                params, dict) else None
-            if not files or not isinstance(files, list):
-                return AgentToolResult(tool_name, False, "Missing required parameter: files")
-            args = ["add"] + [str(f) for f in files]
-            ok, output = self._run_git(repo_dir, args)
-            return AgentToolResult(tool_name, ok, output)
-
-        if tool_name == "run_command":
-            command = params.get("command") if isinstance(
-                params, dict) else None
-            if not command:
-                return AgentToolResult(tool_name, False, "Missing required parameter: command")
-
-            working_dir = params.get("working_dir") if isinstance(
-                params, dict) else None
-            if not working_dir:
-                working_dir = repo_dir
-
-            timeout = params.get("timeout") if isinstance(
-                params, dict) else None
-            if timeout is None:
-                timeout = 60
-            else:
-                try:
-                    timeout = int(timeout)
-                    timeout = max(1, min(300, timeout))
-                except Exception:
-                    timeout = 60
-
-            try:
-                # Run the command using subprocess
-                process = subprocess.Popen(
-                    command,
-                    shell=True,
-                    cwd=working_dir,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-
-                try:
-                    stdout, stderr = process.communicate(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    stdout, stderr = process.communicate()
-                    return AgentToolResult(
-                        tool_name,
-                        False,
-                        f"Command timed out after {timeout} seconds.\nPartial output:\n{stdout}\n{stderr}"
-                    )
-
-                ok = process.returncode == 0
-                output = (stdout or "")
-                if stderr:
-                    if output:
-                        output += "\n"
-                    output += stderr
-                output = output.strip("\n")
-
-                if not output:
-                    output = f"Command executed {'successfully' if ok else 'with errors'} (no output)."
-
-                return AgentToolResult(tool_name, ok, output)
-
-            except Exception as e:
-                return AgentToolResult(tool_name, False, f"Failed to execute command: {e}")
+        handler = self._tool_handlers.get(tool_name)
+        if handler:
+            return handler(tool_name, params)
 
         return AgentToolResult(tool_name, False, f"Tool not implemented: {tool_name}")
+
+    def _handle_git_status(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        untracked = True
+        if isinstance(params, dict) and "untracked" in params:
+            untracked = bool(params.get("untracked"))
+        args = ["status", "--porcelain=v1", "-b"]
+        if not untracked:
+            args.append("--untracked-files=no")
+        ok, output = self._run_git(repo_dir, args)
+        if ok:
+            # Porcelain v1 with -b typically includes a branch line like:
+            #   ## main...origin/main [ahead 1]
+            # If that's the only line, the working tree is clean.
+            lines = (output or "").splitlines()
+            if not lines:
+                output = "working tree clean (no changes)."
+            elif len(lines) == 1 and lines[0].startswith("##"):
+                output = f"{lines[0]}\nworking tree clean (no changes)."
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_log(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        nth = None
+        if isinstance(params, dict) and params.get("nth") is not None:
+            try:
+                nth = int(params.get("nth"))
+            except Exception:
+                nth = None
+
+        if nth is not None:
+            if nth < 1:
+                return AgentToolResult(tool_name, False, "Parameter nth must be >= 1")
+            # Fetch exactly one commit, skipping the first (nth-1) commits.
+            # This avoids returning commits 1..(nth-1) to the UI.
+            args = ["log", "--oneline", "-n", "1", "--skip", str(nth - 1)]
+            ok, output = self._run_git(repo_dir, args)
+            if ok:
+                line = (output or "").splitlines()[
+                    0].strip() if (output or "").strip() else ""
+                if line:
+                    # Include explicit metadata so the LLM can trust this is the requested position.
+                    return AgentToolResult(
+                        tool_name,
+                        True,
+                        f"nth={nth} (1-based from HEAD): {line}",
+                    )
+                return AgentToolResult(tool_name, False, f"No commit found at nth={nth} (1-based from HEAD).")
+            return AgentToolResult(tool_name, False, output)
+
+        max_count = 20
+        if isinstance(params, dict) and params.get("max_count") is not None:
+            try:
+                max_count = int(params.get("max_count"))
+            except Exception:
+                max_count = 20
+        max_count = max(1, min(200, max_count))
+        args = ["log", "--oneline", "-n", str(max_count)]
+        if isinstance(params, dict):
+            since = params.get("since")
+            until = params.get("until")
+            if since:
+                args += ["--since", str(since)]
+            if until:
+                args += ["--until", str(until)]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_diff(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        if not isinstance(params, dict):
+            return AgentToolResult(tool_name, False, "Invalid parameters for git_diff.")
+        rev = params.get("rev")
+        if not rev:
+            return AgentToolResult(tool_name, False, "Missing required parameter: rev")
+        files = params.get("files")
+        args = ["diff-tree", "-r", "--root", rev,
+                "-p", "--textconv", "--submodule",
+                "-C", "--no-commit-id", "-U3"]
+        if files and isinstance(files, list):
+            args += ["--"] + [str(f) for f in files]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_diff_unstaged(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        name_only = False
+        files = None
+        if isinstance(params, dict):
+            name_only = bool(params.get("name_only"))
+            files = params.get("files")
+        if name_only:
+            args = ["diff", "--name-only"]
+        else:
+            args = ["diff-files", "-p", "--textconv",
+                    "--submodule", "-C", "-U3"]
+        if files and isinstance(files, list):
+            args += ["--"] + [str(f) for f in files]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_diff_staged(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        name_only = False
+        files = None
+        if isinstance(params, dict):
+            name_only = bool(params.get("name_only"))
+            files = params.get("files")
+        if name_only:
+            args = ["diff", "--name-only", "--cached"]
+        else:
+            args = ["diff-index", "--cached",
+                    "HEAD", "-p", "--textconv",
+                    "--submodule", "-C", "-U3"]
+        if files and isinstance(files, list):
+            args += ["--"] + [str(f) for f in files]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_show(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        rev = params.get("rev") if isinstance(params, dict) else None
+        if not rev:
+            return AgentToolResult(tool_name, False, "Missing required parameter: rev")
+        args = ["show", str(rev)]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_current_branch(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        # Prefer a cheap command that returns only the current branch name.
+        ok, output = self._run_git(
+            repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
+        if not ok:
+            return AgentToolResult(tool_name, False, output)
+        branch = (output or "").strip()
+        if not branch:
+            return AgentToolResult(tool_name, False, "Failed to determine current branch.")
+        if branch == "HEAD":
+            ok2, sha = self._run_git(
+                repo_dir, ["rev-parse", "--short", "HEAD"])
+            sha = (sha or "").strip() if ok2 else ""
+            msg = f"detached HEAD" + (f" at {sha}" if sha else "")
+            return AgentToolResult(tool_name, True, msg)
+        return AgentToolResult(tool_name, True, branch)
+
+    def _handle_git_branch(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        all_branches = bool(params.get("all")) if isinstance(
+            params, dict) else False
+        args = ["branch"] + (["-a"] if all_branches else [])
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_checkout(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        branch = params.get("branch") if isinstance(params, dict) else None
+        if not branch:
+            return AgentToolResult(tool_name, False, "Missing required parameter: branch")
+        args = ["checkout", str(branch)]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_cherry_pick(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        commits = params.get("commits") if isinstance(
+            params, dict) else None
+        if not commits or not isinstance(commits, list):
+            return AgentToolResult(tool_name, False, "Missing required parameter: commits")
+        args = ["cherry-pick"] + [str(c) for c in commits]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_commit(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        message = params.get("message") if isinstance(
+            params, dict) else None
+        if not message:
+            return AgentToolResult(tool_name, False, "Missing required parameter: message")
+        args = ["commit", "-m", str(message), "--no-edit"]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_add(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        files = params.get("files") if isinstance(
+            params, dict) else None
+        if not files or not isinstance(files, list):
+            return AgentToolResult(tool_name, False, "Missing required parameter: files")
+        args = ["add"] + [str(f) for f in files]
+        ok, output = self._run_git(repo_dir, args)
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_run_command(self, tool_name: str, params: Dict) -> AgentToolResult:
+        repo_dir = self._repo_dir(params)
+        command = params.get("command") if isinstance(
+            params, dict) else None
+        if not command:
+            return AgentToolResult(tool_name, False, "Missing required parameter: command")
+
+        working_dir = params.get("working_dir") if isinstance(
+            params, dict) else None
+        if not working_dir:
+            working_dir = repo_dir
+
+        if not working_dir or not os.path.isdir(working_dir):
+            return AgentToolResult(tool_name, False, f"Invalid working directory: {working_dir}")
+
+        timeout = params.get("timeout") if isinstance(
+            params, dict) else None
+        if timeout is None:
+            timeout = 60
+        else:
+            try:
+                timeout = int(timeout)
+                timeout = max(1, min(300, timeout))
+            except Exception:
+                timeout = 60
+
+        try:
+            # Run the command using subprocess
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                cwd=working_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                return AgentToolResult(
+                    tool_name,
+                    False,
+                    f"Command timed out after {timeout} seconds.\nPartial output:\n{stdout}\n{stderr}"
+                )
+
+            ok = process.returncode == 0
+            output = (stdout or "")
+            if stderr:
+                if output:
+                    output += "\n"
+                output += stderr
+            output = output.strip("\n")
+
+            if not output:
+                output = f"Command executed {'successfully' if ok else 'with errors'} (no output)."
+
+            return AgentToolResult(tool_name, ok, output)
+
+        except Exception as e:
+            return AgentToolResult(tool_name, False, f"Failed to execute command: {e}")
