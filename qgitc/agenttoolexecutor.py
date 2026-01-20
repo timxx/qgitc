@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Dict, Optional, Tuple
@@ -263,5 +264,65 @@ class AgentToolExecutor(QObject):
             args = ["add"] + [str(f) for f in files]
             ok, output = self._run_git(repo_dir, args)
             return AgentToolResult(tool_name, ok, output)
+
+        if tool_name == "run_command":
+            command = params.get("command") if isinstance(
+                params, dict) else None
+            if not command:
+                return AgentToolResult(tool_name, False, "Missing required parameter: command")
+
+            working_dir = params.get("working_dir") if isinstance(
+                params, dict) else None
+            if not working_dir:
+                working_dir = repo_dir
+
+            timeout = params.get("timeout") if isinstance(
+                params, dict) else None
+            if timeout is None:
+                timeout = 60
+            else:
+                try:
+                    timeout = int(timeout)
+                    timeout = max(1, min(300, timeout))
+                except Exception:
+                    timeout = 60
+
+            try:
+                # Run the command using subprocess
+                process = subprocess.Popen(
+                    command,
+                    shell=True,
+                    cwd=working_dir,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+
+                try:
+                    stdout, stderr = process.communicate(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    stdout, stderr = process.communicate()
+                    return AgentToolResult(
+                        tool_name,
+                        False,
+                        f"Command timed out after {timeout} seconds.\nPartial output:\n{stdout}\n{stderr}"
+                    )
+
+                ok = process.returncode == 0
+                output = (stdout or "")
+                if stderr:
+                    if output:
+                        output += "\n"
+                    output += stderr
+                output = output.strip("\n")
+
+                if not output:
+                    output = f"Command executed {'successfully' if ok else 'with errors'} (no output)."
+
+                return AgentToolResult(tool_name, ok, output)
+
+            except Exception as e:
+                return AgentToolResult(tool_name, False, f"Failed to execute command: {e}")
 
         return AgentToolResult(tool_name, False, f"Tool not implemented: {tool_name}")

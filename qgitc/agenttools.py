@@ -270,6 +270,36 @@ class AgentToolRegistry:
                     "additionalProperties": False,
                 },
             ),
+            AgentTool(
+                name="run_command",
+                description=(
+                    "Execute an arbitrary command in the repository directory or a specified directory. "
+                    "This tool allows running any shell command when needed. Use with caution as "
+                    "it can execute potentially destructive commands."
+                ),
+                tool_type=ToolType.DANGEROUS,
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "command": {
+                            "type": "string",
+                            "description": "The command to execute. This should be a complete shell command.",
+                        },
+                        "working_dir": {
+                            "type": "string",
+                            "description": "Optional working directory. If not specified, uses the repository directory.",
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 300,
+                            "description": "Maximum execution time in seconds (default 60, max 300).",
+                        },
+                    },
+                    "required": ["command"],
+                    "additionalProperties": False,
+                },
+            ),
         ]
 
     @staticmethod
