@@ -214,10 +214,21 @@ class MainWindow(StateWindow):
         # Add dock widget to main window
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
 
+        self.ui.acShowAIAssistant.setChecked(self._aiChat.isVisible())
+        self._aiChat.visibilityChanged.connect(self._onAiChatVisibilityChanged)
+
     def toggleAiChatDock(self):
         """Toggle the AI chat dock visibility"""
-        if self._aiChat:
-            self._aiChat.setVisible(not self._aiChat.isVisible())
+        self._aiChat.setVisible(not self._aiChat.isVisible())
+        if self._aiChat.isVisible():
+            self._aiChat.chatWidget().contextPanel.setFocus()
+
+    def _onAiChatVisibilityChanged(self, visible):
+        """Update action state when dock visibility changes"""
+        if visible:
+            self.ui.acShowAIAssistant.setText(self.tr("Hide AI &Assistant"))
+        else:
+            self.ui.acShowAIAssistant.setText(self.tr("Show AI &Assistant"))
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -536,6 +547,8 @@ class MainWindow(StateWindow):
         if self.gitViewB:
             self.gitViewB.saveState(sett, False)
 
+        self._aiChat.saveState(self)
+
         return True
 
     def restoreState(self):
@@ -548,6 +561,8 @@ class MainWindow(StateWindow):
         self.ui.gitViewA.restoreState(sett, True)
         if self.gitViewB:
             self.gitViewB.restoreState(sett, False)
+
+        self._aiChat.restoreState(self)
 
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
         self.ui.acVisualizeWhitespace.setChecked(

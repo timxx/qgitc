@@ -5,6 +5,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDockWidget, QHBoxLayout, QLabel, QMenu, QWidget
 
 from qgitc.aichatwidget import AiChatWidget
+from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
 
@@ -51,6 +52,14 @@ class AiChatDockWidget(QDockWidget):
             ColoredIconToolButton.MenuButtonPopup)
 
         self._titleBarLayout.addWidget(self._btnNewConversation)
+
+        closeIcon = QIcon(dataDirPath() + "/icons/close.svg")
+        btnClose = ColoredIconToolButton(
+            closeIcon, QSize(20, 20), self._titleBarWidget)
+        btnClose.setToolTip(self.tr("Close"))
+        btnClose.clicked.connect(self.hide)
+
+        self._titleBarLayout.addWidget(btnClose)
         self.setTitleBarWidget(self._titleBarWidget)
 
     def chatWidget(self):
@@ -66,6 +75,19 @@ class AiChatDockWidget(QDockWidget):
         """Open a new standalone chat window (placeholder for future implementation)"""
         # TODO: Implement new chat window functionality
         pass
+
+    def saveState(self, window):
+        """Save the visibility state"""
+        settings = ApplicationBase.instance().settings()
+        key = f"{window.__class__.__name__}/aiChatDockVisible"
+        settings.setValue(key, self.isVisible())
+
+    def restoreState(self, window):
+        """Restore the visibility state"""
+        settings = ApplicationBase.instance().settings()
+        key = f"{window.__class__.__name__}/aiChatDockVisible"
+        isVisible = settings.value(key, True, type=bool)
+        self.setVisible(isVisible)
 
     def queryClose(self):
         """Clean up when closing"""

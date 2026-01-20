@@ -711,3 +711,7 @@ class AiChatWidget(QWidget):
             return "✏️"
         else:  # DANGEROUS
             return "⚠️"
+
+    @property
+    def contextPanel(self) -> AiChatContextPanel:
+        return self._contextPanel
