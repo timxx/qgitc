@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QDockWidget, QHBoxLayout, QLabel, QMenu, QWidget
+
+from qgitc.aichatwidget import AiChatWidget
+from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.common import dataDirPath
+
+
+class AiChatDockWidget(QDockWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle(self.tr("AI Assistant"))
+        self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+
+        self._aiChatWidget = AiChatWidget(self, embedded=True)
+        self.setWidget(self._aiChatWidget)
+
+        # Create custom title bar with title and combo button
+        self._titleBarWidget = QWidget(self)
+        self._titleBarLayout = QHBoxLayout(self._titleBarWidget)
+        self._titleBarLayout.setContentsMargins(8, 2, 4, 2)
+        self._titleBarLayout.setSpacing(4)
+
+        # Add title label on the left
+        self._titleLabel = QLabel(
+            self.tr("AI Assistant"), self._titleBarWidget)
+        self._titleBarLayout.addWidget(self._titleLabel)
+        self._titleBarLayout.addStretch()
+
+        icon = QIcon(dataDirPath() + "/icons/add.svg")
+        self._btnNewConversation = ColoredIconToolButton(
+            icon, QSize(20, 20), self._titleBarWidget)
+        self._btnNewConversation.setIcon(icon)
+        self._btnNewConversation.setToolTip(self.tr("New Conversation"))
+        self._btnNewConversation.clicked.connect(self._onNewConversation)
+
+        newMenu = QMenu(self._btnNewConversation)
+        acNewConversation = newMenu.addAction(self.tr("New Conversation"))
+        acNewConversation.triggered.connect(self._onNewConversation)
+
+        acNewChatWindow = newMenu.addAction(self.tr("New Chat Window"))
+        acNewChatWindow.triggered.connect(self._onNewChatWindow)
+
+        self._btnNewConversation.setMenu(newMenu)
+        self._btnNewConversation.setPopupMode(
+            ColoredIconToolButton.MenuButtonPopup)
+
+        self._titleBarLayout.addWidget(self._btnNewConversation)
+        self.setTitleBarWidget(self._titleBarWidget)
+
+    def chatWidget(self):
+        """Get the embedded AI chat widget"""
+        return self._aiChatWidget
+
+    def _onNewConversation(self):
+        """Create a new conversation in embedded AI chat"""
+        # TODO: Implement new conversation functionality
+        pass
+
+    def _onNewChatWindow(self):
+        """Open a new standalone chat window (placeholder for future implementation)"""
+        # TODO: Implement new chat window functionality
+        pass
+
+    def queryClose(self):
+        """Clean up when closing"""
+        self._aiChatWidget.queryClose()

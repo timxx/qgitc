@@ -11,14 +11,10 @@ from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
 from qgitc.aboutdialog import AboutDialog
+from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.applicationbase import ApplicationBase
 from qgitc.diffview import PatchViewer
-from qgitc.events import (
-    RequestCommitEvent,
-    ShowAiAssistantEvent,
-    ShowBranchCompareEvent,
-    ShowPickBranchEvent,
-)
+from qgitc.events import RequestCommitEvent, ShowBranchCompareEvent, ShowPickBranchEvent
 from qgitc.findwidget import FindWidget
 from qgitc.gitutils import Git
 from qgitc.gitview import GitView
@@ -85,6 +81,10 @@ class MainWindow(StateWindow):
         self._reloadingRepo = False
 
         self._aiModel: AiModelBase = None
+
+        # AI Chat Dock Widget
+        self._aiChat: AiChatDockWidget = None
+        self._setupAiChatDock()
 
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
@@ -206,6 +206,18 @@ class MainWindow(StateWindow):
             self._onCodeReview)
         self.ui.acChangeCommitAuthor.triggered.connect(
             self._onChangeCommitAuthor)
+
+    def _setupAiChatDock(self):
+        """Setup AI Chat dock widget with embedded mode"""
+        self._aiChat = AiChatDockWidget(self)
+
+        # Add dock widget to main window
+        self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
+
+    def toggleAiChatDock(self):
+        """Toggle the AI chat dock visibility"""
+        if self._aiChat:
+            self._aiChat.setVisible(not self._aiChat.isVisible())
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -595,6 +607,10 @@ class MainWindow(StateWindow):
         if self.gitViewB is not None:
             self.gitViewB.queryClose()
 
+        # Clean up AI chat widget if embedded
+        if self._aiChat:
+            self._aiChat.queryClose()
+
         self.cancel(True)
         super().closeEvent(event)
 
@@ -710,8 +726,8 @@ class MainWindow(StateWindow):
             self.gitViewB.ui.logView.reloadLogs()
 
     def _onShowAiAssistant(self):
-        ApplicationBase.instance().postEvent(
-            ApplicationBase.instance(), ShowAiAssistantEvent())
+        # Toggle embedded AI chat dock
+        self.toggleAiChatDock()
 
     def cancel(self, force=False):
         self._delayTimer.stop()

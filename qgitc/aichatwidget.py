@@ -33,8 +33,10 @@ class AiChatWidget(QWidget):
 
     initialized = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, embedded=False):
         super().__init__(parent)
+
+        self._embedded = embedded
 
         mainLayout = QHBoxLayout(self)
         mainLayout.setContentsMargins(4, 4, 4, 4)
@@ -70,6 +72,10 @@ class AiChatWidget(QWidget):
             self._onHistorySelectionChanged)
         self._historyPanel.historyRemoved.connect(self._onHistoryRemoved)
         self.splitter.addWidget(self._historyPanel)
+
+        # Hide history panel in embedded mode
+        if self._embedded:
+            self._historyPanel.setVisible(False)
 
         # wait until history loaded
         self._historyPanel.setEnabled(False)
@@ -108,7 +114,11 @@ class AiChatWidget(QWidget):
         self._adjustingSccrollbar = False
 
         self.splitter.addWidget(chatWidget)
-        self.splitter.setSizes([200, 600])
+        if self._embedded:
+            # In embedded mode, only chat panel is visible
+            self.splitter.setSizes([0, 400])
+        else:
+            self.splitter.setSizes([200, 600])
 
     def _setupModels(self):
         aiModels: List[AiModelBase] = [
@@ -146,7 +156,25 @@ class AiChatWidget(QWidget):
             model.cleanup()
 
     def sizeHint(self):
+        if self._embedded:
+            return QSize(400, 600)
         return QSize(800, 600)
+
+    def isEmbedded(self):
+        return self._embedded
+
+    def setEmbedded(self, embedded: bool):
+        if self._embedded == embedded:
+            return
+        self._embedded = embedded
+        self._historyPanel.setVisible(not embedded)
+        if embedded:
+            self.splitter.setSizes([0, 400])
+        else:
+            self.splitter.setSizes([200, 600])
+
+    def historyPanel(self):
+        return self._historyPanel
 
     def _onButtonSend(self, clicked):
         prompt = self._contextPanel.userPrompt().strip()
