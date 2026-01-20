@@ -10,7 +10,23 @@ from typing import Callable, Dict, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 
-from qgitc.agenttools import AgentToolRegistry
+from qgitc.agenttools import (
+    AgentToolRegistry,
+    GitAddParams,
+    GitBranchParams,
+    GitCheckoutParams,
+    GitCherryPickParams,
+    GitCommitParams,
+    GitCurrentBranchParams,
+    GitDiffParams,
+    GitDiffStagedParams,
+    GitDiffUnstagedParams,
+    GitLogParams,
+    GitShowParams,
+    GitStatusParams,
+    RunCommandParams,
+)
+from qgitc.basemodel import ValidationError
 from qgitc.gitutils import Git
 
 
@@ -70,13 +86,6 @@ class AgentToolExecutor(QObject):
         self.toolFinished.emit(result)
 
     @staticmethod
-    def _repo_dir(params: Dict) -> Optional[str]:
-        repo_dir = params.get("repo_dir") if isinstance(params, dict) else None
-        if repo_dir:
-            return repo_dir
-        return Git.REPO_DIR
-
-    @staticmethod
     def _run_git(repo_dir: str, args: list) -> Tuple[bool, str]:
         if not repo_dir:
             return False, "No repository is currently opened."
@@ -106,12 +115,14 @@ class AgentToolExecutor(QObject):
         return AgentToolResult(tool_name, False, f"Tool not implemented: {tool_name}")
 
     def _handle_git_status(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        untracked = True
-        if isinstance(params, dict) and "untracked" in params:
-            untracked = bool(params.get("untracked"))
+        try:
+            validated = GitStatusParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
         args = ["status", "--porcelain=v1", "-b"]
-        if not untracked:
+        if not validated.untracked:
             args.append("--untracked-files=no")
         ok, output = self._run_git(repo_dir, args)
         if ok:
@@ -126,20 +137,18 @@ class AgentToolExecutor(QObject):
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_log(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        nth = None
-        if isinstance(params, dict) and params.get("nth") is not None:
-            try:
-                nth = int(params.get("nth"))
-            except Exception:
-                nth = None
+        try:
+            validated = GitLogParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        if nth is not None:
-            if nth < 1:
-                return AgentToolResult(tool_name, False, "Parameter nth must be >= 1")
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+
+        if validated.nth is not None:
             # Fetch exactly one commit, skipping the first (nth-1) commits.
             # This avoids returning commits 1..(nth-1) to the UI.
-            args = ["log", "--oneline", "-n", "1", "--skip", str(nth - 1)]
+            args = ["log", "--oneline", "-n", "1",
+                    "--skip", str(validated.nth - 1)]
             ok, output = self._run_git(repo_dir, args)
             if ok:
                 line = (output or "").splitlines()[
@@ -149,91 +158,87 @@ class AgentToolExecutor(QObject):
                     return AgentToolResult(
                         tool_name,
                         True,
-                        f"nth={nth} (1-based from HEAD): {line}",
+                        f"nth={validated.nth} (1-based from HEAD): {line}",
                     )
-                return AgentToolResult(tool_name, False, f"No commit found at nth={nth} (1-based from HEAD).")
+                return AgentToolResult(tool_name, False, f"No commit found at nth={validated.nth} (1-based from HEAD).")
             return AgentToolResult(tool_name, False, output)
 
-        max_count = 20
-        if isinstance(params, dict) and params.get("max_count") is not None:
-            try:
-                max_count = int(params.get("max_count"))
-            except Exception:
-                max_count = 20
-        max_count = max(1, min(200, max_count))
-        args = ["log", "--oneline", "-n", str(max_count)]
-        if isinstance(params, dict):
-            since = params.get("since")
-            until = params.get("until")
-            if since:
-                args += ["--since", str(since)]
-            if until:
-                args += ["--until", str(until)]
+        args = ["log", "--oneline", "-n", str(validated.max_count)]
+        if validated.since:
+            args += ["--since", str(validated.since)]
+        if validated.until:
+            args += ["--until", str(validated.until)]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        if not isinstance(params, dict):
-            return AgentToolResult(tool_name, False, "Invalid parameters for git_diff.")
-        rev = params.get("rev")
-        if not rev:
-            return AgentToolResult(tool_name, False, "Missing required parameter: rev")
-        files = params.get("files")
-        args = ["diff-tree", "-r", "--root", rev,
+        try:
+            validated = GitDiffParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["diff-tree", "-r", "--root", validated.rev,
                 "-p", "--textconv", "--submodule",
                 "-C", "--no-commit-id", "-U3"]
-        if files and isinstance(files, list):
-            args += ["--"] + [str(f) for f in files]
+        if validated.files:
+            args += ["--"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff_unstaged(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        name_only = False
-        files = None
-        if isinstance(params, dict):
-            name_only = bool(params.get("name_only"))
-            files = params.get("files")
-        if name_only:
+        try:
+            validated = GitDiffUnstagedParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        if validated.name_only:
             args = ["diff", "--name-only"]
         else:
             args = ["diff-files", "-p", "--textconv",
                     "--submodule", "-C", "-U3"]
-        if files and isinstance(files, list):
-            args += ["--"] + [str(f) for f in files]
+        if validated.files:
+            args += ["--"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff_staged(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        name_only = False
-        files = None
-        if isinstance(params, dict):
-            name_only = bool(params.get("name_only"))
-            files = params.get("files")
-        if name_only:
+        try:
+            validated = GitDiffStagedParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        if validated.name_only:
             args = ["diff", "--name-only", "--cached"]
         else:
             args = ["diff-index", "--cached",
                     "HEAD", "-p", "--textconv",
                     "--submodule", "-C", "-U3"]
-        if files and isinstance(files, list):
-            args += ["--"] + [str(f) for f in files]
+        if validated.files:
+            args += ["--"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_show(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        rev = params.get("rev") if isinstance(params, dict) else None
-        if not rev:
-            return AgentToolResult(tool_name, False, "Missing required parameter: rev")
-        args = ["show", str(rev)]
+        try:
+            validated = GitShowParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["show", str(validated.rev)]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_current_branch(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
+        try:
+            validated = GitCurrentBranchParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
         # Prefer a cheap command that returns only the current branch name.
         ok, output = self._run_git(
             repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
@@ -251,82 +256,75 @@ class AgentToolExecutor(QObject):
         return AgentToolResult(tool_name, True, branch)
 
     def _handle_git_branch(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        all_branches = bool(params.get("all")) if isinstance(
-            params, dict) else False
-        args = ["branch"] + (["-a"] if all_branches else [])
+        try:
+            validated = GitBranchParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["branch"] + (["-a"] if validated.all else [])
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_checkout(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        branch = params.get("branch") if isinstance(params, dict) else None
-        if not branch:
-            return AgentToolResult(tool_name, False, "Missing required parameter: branch")
-        args = ["checkout", str(branch)]
+        try:
+            validated = GitCheckoutParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["checkout", str(validated.branch)]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_cherry_pick(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        commits = params.get("commits") if isinstance(
-            params, dict) else None
-        if not commits or not isinstance(commits, list):
-            return AgentToolResult(tool_name, False, "Missing required parameter: commits")
-        args = ["cherry-pick"] + [str(c) for c in commits]
+        try:
+            validated = GitCherryPickParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["cherry-pick"] + [str(c) for c in validated.commits]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_commit(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        message = params.get("message") if isinstance(
-            params, dict) else None
-        if not message:
-            return AgentToolResult(tool_name, False, "Missing required parameter: message")
-        args = ["commit", "-m", str(message), "--no-edit"]
+        try:
+            validated = GitCommitParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["commit", "-m", str(validated.message), "--no-edit"]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_add(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        files = params.get("files") if isinstance(
-            params, dict) else None
-        if not files or not isinstance(files, list):
-            return AgentToolResult(tool_name, False, "Missing required parameter: files")
-        args = ["add"] + [str(f) for f in files]
+        try:
+            validated = GitAddParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        args = ["add"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_run_command(self, tool_name: str, params: Dict) -> AgentToolResult:
-        repo_dir = self._repo_dir(params)
-        command = params.get("command") if isinstance(
-            params, dict) else None
-        if not command:
-            return AgentToolResult(tool_name, False, "Missing required parameter: command")
+        try:
+            validated = RunCommandParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        working_dir = params.get("working_dir") if isinstance(
-            params, dict) else None
-        if not working_dir:
-            working_dir = repo_dir
+        working_dir = validated.working_dir or Git.REPO_DIR
 
         if not working_dir or not os.path.isdir(working_dir):
             return AgentToolResult(tool_name, False, f"Invalid working directory: {working_dir}")
 
-        timeout = params.get("timeout") if isinstance(
-            params, dict) else None
-        if timeout is None:
-            timeout = 60
-        else:
-            try:
-                timeout = int(timeout)
-                timeout = max(1, min(300, timeout))
-            except Exception:
-                timeout = 60
-
         try:
             # Run the command using subprocess
             process = subprocess.Popen(
-                command,
+                validated.command,
                 shell=True,
                 cwd=working_dir,
                 stdout=subprocess.PIPE,
@@ -335,14 +333,14 @@ class AgentToolExecutor(QObject):
             )
 
             try:
-                stdout, stderr = process.communicate(timeout=timeout)
+                stdout, stderr = process.communicate(timeout=validated.timeout)
             except subprocess.TimeoutExpired:
                 process.kill()
                 stdout, stderr = process.communicate()
                 return AgentToolResult(
                     tool_name,
                     False,
-                    f"Command timed out after {timeout} seconds.\nPartial output:\n{stdout}\n{stderr}"
+                    f"Command timed out after {validated.timeout} seconds.\nPartial output:\n{stdout}\n{stderr}"
                 )
 
             ok = process.returncode == 0

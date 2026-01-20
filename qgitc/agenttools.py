@@ -2,7 +2,9 @@
 
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type
+
+from qgitc.basemodel import BaseModel, Field
 
 
 class ToolType:
@@ -18,6 +20,7 @@ class AgentTool:
     description: str
     tool_type: int
     parameters: Dict[str, Any]
+    model_class: Optional[Type[BaseModel]] = None
 
     def to_openai_tool(self) -> Dict[str, Any]:
         return {
@@ -30,247 +33,223 @@ class AgentTool:
         }
 
 
+class GitStatusParams(BaseModel):
+    """Parameters for git_status tool."""
+    repo_dir: Optional[str] = Field(
+        None, description="Optional repo directory. Defaults to current repo.")
+    untracked: bool = Field(
+        True, description="Include untracked files (default true).")
+
+
+class GitLogParams(BaseModel):
+    """Parameters for git_log tool."""
+    repo_dir: Optional[str] = None
+    nth: Optional[int] = Field(
+        None, ge=1, le=10000, description="Fetch only the Nth commit from HEAD (1-based). If set, returns exactly one commit.")
+    max_count: Optional[int] = Field(
+        20, ge=1, le=200, description="Number of commits to show (default 20).")
+    since: Optional[str] = Field(
+        None, description="Show commits more recent than a specific date (e.g., '2 weeks ago', '2023-01-01').")
+    until: Optional[str] = Field(
+        None, description="Show commits older than a specific date.")
+
+
+class GitDiffParams(BaseModel):
+    """Parameters for git_diff tool."""
+    repo_dir: Optional[str] = None
+    rev: str = Field(...,
+                     description="The commit SHA or revision range to diff")
+    files: Optional[List[str]] = Field(
+        None, description="If provided, limits the diff to these files.")
+
+
+class GitDiffUnstagedParams(BaseModel):
+    """Parameters for git_diff_unstaged tool."""
+    repo_dir: Optional[str] = None
+    name_only: bool = Field(
+        False, description="If true, shows only names of changed files.")
+    files: Optional[List[str]] = Field(
+        None, description="If provided, limits the diff to these files.")
+
+
+class GitDiffStagedParams(BaseModel):
+    """Parameters for git_diff_staged tool."""
+    repo_dir: Optional[str] = None
+    name_only: bool = Field(
+        False, description="If true, shows only names of changed files.")
+    files: Optional[List[str]] = Field(
+        None, description="If provided, limits the diff to these files.")
+
+
+class GitShowParams(BaseModel):
+    """Parameters for git_show tool."""
+    repo_dir: Optional[str] = None
+    rev: str = Field(...,
+                     description="Commit-ish to show (sha, HEAD, tag, etc.).")
+
+
+class GitCurrentBranchParams(BaseModel):
+    """Parameters for git_current_branch tool."""
+    repo_dir: Optional[str] = None
+
+
+class GitBranchParams(BaseModel):
+    """Parameters for git_branch tool."""
+    repo_dir: Optional[str] = None
+    all: bool = Field(False, description="If true, include remotes (`-a`).")
+
+
+class GitCheckoutParams(BaseModel):
+    """Parameters for git_checkout tool."""
+    repo_dir: Optional[str] = None
+    branch: str = Field(..., description="Branch name to checkout")
+
+
+class GitCherryPickParams(BaseModel):
+    """Parameters for git_cherry_pick tool."""
+    repo_dir: Optional[str] = None
+    commits: List[str] = Field(..., min_length=1,
+                               description="List of commit SHAs to cherry-pick")
+
+
+class GitCommitParams(BaseModel):
+    """Parameters for git_commit tool."""
+    repo_dir: Optional[str] = None
+    message: str = Field(..., description="Commit message")
+
+
+class GitAddParams(BaseModel):
+    """Parameters for git_add tool."""
+    repo_dir: Optional[str] = None
+    files: List[str] = Field(..., min_length=1,
+                             description="List of file paths to stage.")
+
+
+class RunCommandParams(BaseModel):
+    """Parameters for run_command tool."""
+    command: str = Field(
+        ..., description="The command to execute. This should be a complete shell command.")
+    working_dir: Optional[str] = Field(
+        None, description="Optional working directory. If not specified, uses the repository directory.")
+    timeout: int = Field(
+        60, ge=1, le=300, description="Maximum execution time in seconds (default 60, max 300).")
+
+
+# ==================== Helper Function ====================
+
+def create_tool_from_model(
+    name: str,
+    description: str,
+    tool_type: int,
+    model_class: Type[BaseModel]
+) -> AgentTool:
+    """Create an AgentTool from a BaseModel."""
+    schema = model_class.model_json_schema()
+    # Convert BaseModel schema to OpenAI tool schema
+    parameters = {
+        "type": "object",
+        "properties": schema.get("properties", {}),
+        "additionalProperties": False,
+    }
+    if "required" in schema:
+        parameters["required"] = schema["required"]
+
+    return AgentTool(
+        name=name,
+        description=description,
+        tool_type=tool_type,
+        parameters=parameters,
+        model_class=model_class,
+    )
+
+
 class AgentToolRegistry:
     """Registry of git tools exposed to the LLM in Agent mode."""
 
+    _openai_tools: Optional[List[Dict[str, Any]]] = None
+
     @staticmethod
     def tools() -> List[AgentTool]:
-        # Keep this list small and safe; expand in future phases.
         return [
-            AgentTool(
+            create_tool_from_model(
                 name="git_status",
                 description=(
                     "Shows the working tree status. "
                     "If there are no changes, the result explicitly includes 'working tree clean (no changes)'."
                 ),
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {
-                            "type": "string",
-                            "description": "Optional repo directory. Defaults to current repo.",
-                        },
-                        "untracked": {
-                            "type": "boolean",
-                            "description": "Include untracked files (default true).",
-                        },
-                    },
-                    "additionalProperties": False,
-                },
+                model_class=GitStatusParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_log",
-                description=(
-                    "Show commit logs. Can filter by date range and limit number of commits."
-                ),
+                description="Show commit logs. Can filter by date range and limit number of commits.",
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "nth": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 10000,
-                            "description": "Fetch only the Nth commit from HEAD (1-based). If set, returns exactly one commit.",
-                        },
-                        "max_count": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 200,
-                            "description": "Number of commits to show (default 20).",
-                        },
-                        "since": {
-                            "type": "string",
-                            "description": "Show commits more recent than a specific date (e.g., '2 weeks ago', '2023-01-01').",
-                        },
-                        "until": {
-                            "type": "string",
-                            "description": "Show commits older than a specific date.",
-                        },
-                    },
-                    "additionalProperties": False,
-                },
+                model_class=GitLogParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_diff",
                 description="Get the diff of a specific commit",
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "rev": {
-                            "type": "string",
-                            "description": "The commit SHA or revision range to diff",
-                        },
-                        "files": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "If provided, limits the diff to these files.",
-                        },
-                    },
-                    "required": ["rev"],
-                    "additionalProperties": False,
-                },
+                model_class=GitDiffParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_diff_unstaged",
                 description="Shows changes in the working directory that are not yet staged",
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "name_only": {
-                            "type": "boolean",
-                            "description": "If true, shows only names of changed files.",
-                        },
-                        "files": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "If provided, limits the diff to these files.",
-                        },
-                    },
-                    "additionalProperties": False,
-                },
+                model_class=GitDiffUnstagedParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_diff_staged",
                 description="Shows changes that are staged for commit",
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "name_only": {
-                            "type": "boolean",
-                            "description": "If true, shows only names of changed files.",
-                        },
-                        "files": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "If provided, limits the diff to these files.",
-                        },
-                    },
-                    "additionalProperties": False,
-                },
+                model_class=GitDiffStagedParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_show",
                 description="Show the contents of a commit",
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "rev": {
-                            "type": "string",
-                            "description": "Commit-ish to show (sha, HEAD, tag, etc.).",
-                        },
-                    },
-                    "required": ["rev"],
-                    "additionalProperties": False,
-                },
+                model_class=GitShowParams,
             ),
-            AgentTool(
-                name="git_branch",
-                description="List Git branches",
-                tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "all": {
-                            "type": "boolean",
-                            "description": "If true, include remotes (`-a`).",
-                        },
-                    },
-                    "additionalProperties": False,
-                },
-            ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_current_branch",
                 description=(
                     "Get the current branch name. "
                     "If in detached HEAD state, returns a detached HEAD message."
                 ),
                 tool_type=ToolType.READ_ONLY,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                    },
-                    "additionalProperties": False,
-                },
+                model_class=GitCurrentBranchParams,
             ),
-            AgentTool(
+            create_tool_from_model(
+                name="git_branch",
+                description="List Git branches",
+                tool_type=ToolType.READ_ONLY,
+                model_class=GitBranchParams,
+            ),
+            create_tool_from_model(
                 name="git_checkout",
                 description="Switch branches",
                 tool_type=ToolType.WRITE,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "branch": {"type": "string"},
-                    },
-                    "required": ["branch"],
-                    "additionalProperties": False,
-                },
+                model_class=GitCheckoutParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_cherry_pick",
                 description="Cherry-pick one or more commits onto the current branch.",
                 tool_type=ToolType.WRITE,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "commits": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "minItems": 1,
-                        },
-                    },
-                    "required": ["commits"],
-                    "additionalProperties": False,
-                },
+                model_class=GitCherryPickParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_commit",
                 description="Record changes to the repository",
                 tool_type=ToolType.WRITE,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "message": {"type": "string"},
-                    },
-                    "required": ["message"],
-                    "additionalProperties": False,
-                },
+                model_class=GitCommitParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="git_add",
                 description="Add file contents to the index",
                 tool_type=ToolType.WRITE,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "repo_dir": {"type": "string"},
-                        "files": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "minItems": 1,
-                            "description": "List of file paths to stage.",
-                        },
-                    },
-                    "required": ["files"],
-                    "additionalProperties": False,
-                },
+                model_class=GitAddParams,
             ),
-            AgentTool(
+            create_tool_from_model(
                 name="run_command",
                 description=(
                     "Execute an arbitrary command in the repository directory or a specified directory. "
@@ -278,27 +257,7 @@ class AgentToolRegistry:
                     "it can execute potentially destructive commands."
                 ),
                 tool_type=ToolType.DANGEROUS,
-                parameters={
-                    "type": "object",
-                    "properties": {
-                        "command": {
-                            "type": "string",
-                            "description": "The command to execute. This should be a complete shell command.",
-                        },
-                        "working_dir": {
-                            "type": "string",
-                            "description": "Optional working directory. If not specified, uses the repository directory.",
-                        },
-                        "timeout": {
-                            "type": "integer",
-                            "minimum": 1,
-                            "maximum": 300,
-                            "description": "Maximum execution time in seconds (default 60, max 300).",
-                        },
-                    },
-                    "required": ["command"],
-                    "additionalProperties": False,
-                },
+                model_class=RunCommandParams,
             ),
         ]
 
@@ -311,7 +270,11 @@ class AgentToolRegistry:
 
     @staticmethod
     def openai_tools() -> List[Dict[str, Any]]:
-        return [t.to_openai_tool() for t in AgentToolRegistry.tools()]
+        if AgentToolRegistry._openai_tools is None:
+            AgentToolRegistry._openai_tools = [
+                t.to_openai_tool() for t in AgentToolRegistry.tools()
+            ]
+        return AgentToolRegistry._openai_tools
 
 
 def parseToolArguments(arguments: Any) -> Dict[str, Any]:
