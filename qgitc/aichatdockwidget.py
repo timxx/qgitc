@@ -8,6 +8,7 @@ from qgitc.aichatwidget import AiChatWidget
 from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
+from qgitc.separatorwidget import SeparatorWidget
 
 
 class AiChatDockWidget(QDockWidget):
@@ -61,6 +62,9 @@ class AiChatDockWidget(QDockWidget):
         btnClose.setToolTip(self.tr("Close"))
         btnClose.clicked.connect(self.hide)
 
+        separator = SeparatorWidget(self._titleBarWidget)
+        separator.setFixedSize(QSize(8, 16))
+        self._titleBarLayout.addWidget(separator)
         self._titleBarLayout.addWidget(btnClose)
         self.setTitleBarWidget(self._titleBarWidget)
 
