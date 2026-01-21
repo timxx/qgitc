@@ -6,6 +6,8 @@ from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtGui import QIcon, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QStyle, QStyleOptionToolButton, QStylePainter, QToolButton
 
+from qgitc.drawutils import makeColoredIconPixmap
+
 
 class ColoredIconToolButton(QToolButton):
 
@@ -85,7 +87,7 @@ class ColoredIconToolButton(QToolButton):
         if self._icon.isNull():
             return
 
-        pixmap = self._makePixmap()
+        pixmap = makeColoredIconPixmap(self, self._icon, self.iconSize())
         rect = QRect(QPoint(0, 0), opt.iconSize)
 
         style = self.toolButtonStyle()
@@ -163,19 +165,6 @@ class ColoredIconToolButton(QToolButton):
             self._hoverOnButton = False
             self.update()
         super().leaveEvent(event)
-
-    def _makePixmap(self):
-        pixmap = self._icon.pixmap(self.iconSize(), self.devicePixelRatio())
-
-        p = QPainter(pixmap)
-        p.setPen(Qt.NoPen)
-
-        brush = self.palette().windowText()
-        p.setCompositionMode(QPainter.CompositionMode_SourceIn)
-        p.fillRect(pixmap.rect(), brush)
-        p.end()
-
-        return pixmap
 
     def sizeHint(self):
         size = self.iconSize() + QSize(2, 2)
