@@ -3,11 +3,15 @@
 import typing
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
-from PySide6.QtGui import QIcon, QPainter, QPen
+from PySide6.QtGui import QIcon, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QStyle, QStyleOptionToolButton, QStylePainter, QToolButton
 
 
 class ColoredIconToolButton(QToolButton):
+
+    paddingLeft = 1
+    paddingRight = 2
+    extraSpacing = 1
 
     @typing.overload
     def __init__(self, icon: QIcon, iconSize: QSize, parent=None): ...
@@ -35,6 +39,14 @@ class ColoredIconToolButton(QToolButton):
         self._icon = icon
         self.update()
 
+    def chevronSize(self) -> int:
+        return max(3, min(self.height() // 5, 4))
+
+    def _menuIndicatorWidth(self) -> int:
+        chevronSize = self.chevronSize()
+        arrowWidth = chevronSize * 2
+        return max(arrowWidth + self.paddingLeft + self.paddingRight + self.extraSpacing, 9)
+
     def paintEvent(self, event):
         painter = QStylePainter(self)
 
@@ -43,11 +55,7 @@ class ColoredIconToolButton(QToolButton):
         hasMenu = opt.features & QStyleOptionToolButton.Menu
         buttonRect = self.rect()
 
-        # Calculate menu button indicator width
-        menuButtonIndicatorWidth = 0
-        if hasMenu:
-            menuButtonIndicatorWidth = self.style().pixelMetric(
-                QStyle.PM_MenuButtonIndicator, opt, self)
+        menuButtonIndicatorWidth = self._menuIndicatorWidth() if hasMenu else 0
 
         # Draw split hover states if enabled and has menu
         if (opt.state & QStyle.State_MouseOver) and (opt.state & QStyle.State_Enabled):
@@ -59,9 +67,9 @@ class ColoredIconToolButton(QToolButton):
                 painter.drawPrimitive(QStyle.PE_PanelButtonTool, opt)
                 opt.rect = buttonRect
             elif self._hoverOnArrow:
-                arrowPartRect = QRect(buttonRect.right() - menuButtonIndicatorWidth,
+                arrowPartRect = QRect(buttonRect.right() - menuButtonIndicatorWidth - 3,
                                         buttonRect.top(),
-                                        menuButtonIndicatorWidth,
+                                        menuButtonIndicatorWidth + 3,
                                         buttonRect.height())
                 opt.rect = arrowPartRect
                 painter.drawPrimitive(QStyle.PE_PanelButtonTool, opt)
@@ -103,12 +111,15 @@ class ColoredIconToolButton(QToolButton):
             painter.setRenderHint(QPainter.Antialiasing, False)
             painter.setPen(QPen(self.palette().windowText().color(), 1))
 
-            arrowHeight = min(buttonRect.height() // 3, 6)
-            chevronSize = arrowHeight
+            chevronSize = self.chevronSize()
             arrowWidth = chevronSize * 2
 
-            arrowX = buttonRect.right() - menuButtonIndicatorWidth // 2 - chevronSize
-            arrowY = buttonRect.top() + (buttonRect.height() - chevronSize) / 2 + 1
+            indicatorLeft = buttonRect.right() - menuButtonIndicatorWidth
+            availableWidth = max(0, menuButtonIndicatorWidth - self.paddingLeft - self.paddingRight)
+            centeredOffset = max(0, (availableWidth - arrowWidth) // 2)
+            biasToLeft = 1
+            arrowX = int(indicatorLeft + self.paddingLeft + max(0, centeredOffset - biasToLeft))
+            arrowY = int(buttonRect.top() + ((buttonRect.height() - chevronSize) // 2) + 1)
 
             painter.drawLine(arrowX, arrowY, arrowX +
                              chevronSize, arrowY + chevronSize)
@@ -119,18 +130,17 @@ class ColoredIconToolButton(QToolButton):
             opt.rect.setLeft(opt.iconSize.width())
             painter.drawControl(QStyle.CE_ToolButtonLabel, opt)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent):
         """Track which part of the button is hovered"""
         opt = QStyleOptionToolButton()
         self.initStyleOption(opt)
         hasMenu = opt.features & QStyleOptionToolButton.Menu
 
         if hasMenu:
-            menuButtonIndicatorWidth = self.style().pixelMetric(
-                QStyle.PM_MenuButtonIndicator, opt, self)
+            menuButtonIndicatorWidth = self._menuIndicatorWidth()
             splitX = self.rect().right() - menuButtonIndicatorWidth
 
-            if event.pos().x() >= splitX:
+            if event.position().x() >= splitX:
                 if not self._hoverOnArrow:
                     self._hoverOnArrow = True
                     self._hoverOnButton = False
@@ -178,8 +188,7 @@ class ColoredIconToolButton(QToolButton):
         opt = QStyleOptionToolButton()
         self.initStyleOption(opt)
         if opt.features & QStyleOptionToolButton.Menu:
-            menuButtonIndicatorWidth = self.style().pixelMetric(
-                QStyle.PM_MenuButtonIndicator, opt, self)
+            menuButtonIndicatorWidth = self._menuIndicatorWidth()
             size.setWidth(size.width() + menuButtonIndicatorWidth)
 
         return size
