@@ -56,15 +56,24 @@ class AiChatDockWidget(QDockWidget):
 
         self._titleBarLayout.addWidget(self._btnNewConversation)
 
+        settingsIcon = QIcon(dataDirPath() + "/icons/settings.svg")
+        btnSettings = ColoredIconToolButton(
+            settingsIcon, QSize(16, 16), self)
+        btnSettings.setFixedSize(QSize(20, 20))
+        btnSettings.setToolTip(self.tr("Configure Chat"))
+        btnSettings.clicked.connect(self._aiChatWidget.onOpenSettings)
+        self._titleBarLayout.addWidget(btnSettings)
+
+        separator = SeparatorWidget(self._titleBarWidget)
+        separator.setFixedSize(QSize(8, 16))
+        self._titleBarLayout.addWidget(separator)
+
         closeIcon = QIcon(dataDirPath() + "/icons/close.svg")
         btnClose = ColoredIconToolButton(
             closeIcon, QSize(20, 20), self._titleBarWidget)
         btnClose.setToolTip(self.tr("Close"))
         btnClose.clicked.connect(self.hide)
 
-        separator = SeparatorWidget(self._titleBarWidget)
-        separator.setFixedSize(QSize(8, 16))
-        self._titleBarLayout.addWidget(separator)
         self._titleBarLayout.addWidget(btnClose)
         self.setTitleBarWidget(self._titleBarWidget)
 

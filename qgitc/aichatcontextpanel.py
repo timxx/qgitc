@@ -17,7 +17,7 @@ class AiChatContextPanel(QFrame):
     textChanged = Signal()
     modelChanged = Signal(int)
 
-    def __init__(self, parent=None):
+    def __init__(self, showSettings=True, parent=None):
         super().__init__(parent)
 
         self.setFrameShape(QFrame.StyledPanel)
@@ -63,11 +63,12 @@ class AiChatContextPanel(QFrame):
         self.cbMode.popupClosed.connect(self._restoreFocus)
         controlLayout.addWidget(self.cbMode)
 
-        settingsIcon = QIcon(dataDirPath() + "/icons/settings.svg")
-        self.btnSettings = ColoredIconToolButton(
-            settingsIcon, QSize(16, 16), self)
-        self.btnSettings.setToolTip(self.tr("Open Settings"))
-        controlLayout.addWidget(self.btnSettings)
+        if showSettings:
+            settingsIcon = QIcon(dataDirPath() + "/icons/settings.svg")
+            self.btnSettings = ColoredIconToolButton(
+                settingsIcon, QSize(16, 16), self)
+            self.btnSettings.setToolTip(self.tr("Configure Chat"))
+            controlLayout.addWidget(self.btnSettings)
 
         controlLayout.addStretch()
 

@@ -93,7 +93,8 @@ class AiChatWidget(QWidget):
         self._chatBot.toolConfirmationRejected.connect(self._onToolRejected)
         layout.addWidget(self._chatBot)
 
-        self._contextPanel = AiChatContextPanel(self)
+        showSettings = not self._embedded
+        self._contextPanel = AiChatContextPanel(showSettings, self)
         layout.addWidget(self._contextPanel)
         self._contextPanel.setFocus()
 
@@ -107,8 +108,10 @@ class AiChatWidget(QWidget):
 
         self._contextPanel.cbBots.currentIndexChanged.connect(
             self._onModelChanged)
-        self._contextPanel.btnSettings.clicked.connect(
-            self._onOpenSettings)
+
+        if showSettings:
+            self._contextPanel.btnSettings.clicked.connect(
+                self.onOpenSettings)
 
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
@@ -696,7 +699,7 @@ class AiChatWidget(QWidget):
         settings = ApplicationBase.instance().settings()
         settings.saveChatHistory(historyId, chatHistory.toDict())
 
-    def _onOpenSettings(self):
+    def onOpenSettings(self):
         settings = ApplicationBase.instance().settings()
         dlg = Preferences(settings)
         dlg.ui.tabWidget.setCurrentWidget(dlg.ui.tabLLM)
