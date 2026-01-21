@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QEvent, QSize, Signal
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QVBoxLayout
+from typing import Dict, List, Optional, Set
 
+from PySide6.QtCore import QEvent, QSize, Signal
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QMenu, QVBoxLayout
+
+from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
 from qgitc.aichatedit import AiChatEdit
+from qgitc.aicontexttoolbutton import AiContextToolButton
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
+from qgitc.flowlayout import FlowLayout
 from qgitc.inlinecombobox import InlineComboBox
 from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory
 
@@ -16,6 +21,8 @@ class AiChatContextPanel(QFrame):
     modeChanged = Signal(AiChatMode)
     textChanged = Signal()
     modelChanged = Signal(int)
+    contextSelectionChanged = Signal(list)
+    contextActivated = Signal(str)
 
     def __init__(self, showSettings=True, parent=None):
         super().__init__(parent)
@@ -29,6 +36,12 @@ class AiChatContextPanel(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(2, 2, 2, 2)
         layout.setSpacing(0)
+
+        self._availableContexts: Dict[str, AiContextDescriptor] = {}
+        self._defaultContextIds: List[str] = []
+        self._selectedContextIds: List[str] = []
+        self._contextProvider: Optional[AiChatContextProvider] = None
+        self._contextChipsLayout: Optional[FlowLayout] = None
 
         # Text input (auto-expanding) at top
         self.edit = AiChatEdit(self)
@@ -87,6 +100,153 @@ class AiChatContextPanel(QFrame):
 
         layout.addLayout(controlLayout)
         self.setFocusProxy(self.edit)
+
+    def _setupContextBar(self, parentLayout: QVBoxLayout):
+        self._contextChipsLayout = FlowLayout(None, margin=0, spacing=2)
+        attachIcon = QIcon(dataDirPath() + "/icons/attach-add.svg")
+        btnAttachContext = ColoredIconToolButton(
+            attachIcon, QSize(16, 16), self)
+        btnAttachContext.setFixedSize(QSize(20, 20))
+        btnAttachContext.setToolTip(self.tr("Add context"))
+        btnAttachContext.setPopupMode(ColoredIconToolButton.InstantPopup)
+        self._attachMenu = QMenu(btnAttachContext)
+        btnAttachContext.setMenu(self._attachMenu)
+        self._attachMenu.aboutToShow.connect(self.refreshContexts)
+        self._attachMenu.aboutToHide.connect(self._restoreFocus)
+
+        self._contextChipsLayout.addWidget(btnAttachContext)
+        parentLayout.insertLayout(0, self._contextChipsLayout)
+
+    def setContextProvider(self, provider: Optional[AiChatContextProvider]):
+        if self._contextProvider == provider:
+            return
+
+        if self._contextChipsLayout is None:
+            self._setupContextBar(self.layout())
+
+        if self._contextProvider is not None:
+            self._contextProvider.contextsChanged.disconnect(
+                self.refreshContexts)
+
+        self._contextProvider = provider
+        if self._contextProvider is not None:
+            self._contextProvider.contextsChanged.connect(self.refreshContexts)
+
+        self.refreshContexts()
+
+    def contextProvider(self) -> Optional[AiChatContextProvider]:
+        return self._contextProvider
+
+    def refreshContexts(self):
+        """Re-query available/default contexts from provider.
+
+        Context availability can change by commit/scene, so this is called whenever
+        the attach menu opens and whenever provider emits contextsChanged.
+        """
+        if self._contextProvider is None:
+            self._availableContexts = {}
+            self._defaultContextIds = []
+        else:
+            contexts = self._contextProvider.availableContexts() or []
+            self._availableContexts = {c.id: c for c in contexts}
+            self._defaultContextIds = list(
+                self._contextProvider.defaultContextIds() or [])
+
+        newSelected = []
+        for id in self._selectedContextIds:
+            if id in self._availableContexts:
+                newSelected.append(id)
+        self._selectedContextIds = newSelected
+        self._rebuildAttachMenu()
+        self._refreshContextChips()
+
+    def selectedContextIds(self) -> List[str]:
+        return self._selectedContextIds
+
+    def toggleContext(self, contextId: str):
+        if contextId not in self._availableContexts:
+            return
+        if contextId in self._selectedContextIds:
+            self._selectedContextIds.remove(contextId)
+        else:
+            self._selectedContextIds.append(contextId)
+
+        self._rebuildAttachMenu()
+        self._refreshContextChips()
+        self.contextSelectionChanged.emit(self.selectedContextIds())
+        self._restoreFocus()
+
+    def _rebuildAttachMenu(self):
+        self._attachMenu.clear()
+
+        for ctx in self._availableContexts.values():
+            action = QAction(ctx.icon or QIcon(), ctx.label, self._attachMenu)
+            if ctx.tooltip:
+                action.setToolTip(ctx.tooltip)
+            action.setCheckable(True)
+            action.setChecked(ctx.id in self._selectedContextIds)
+            action.triggered.connect(
+                lambda checked=False, cid=ctx.id: self.toggleContext(cid))
+            self._attachMenu.addAction(action)
+
+    def _clearContextChips(self):
+        # The first widget is always the attach button, keep it.
+        item = self._contextChipsLayout.takeAt(1)
+        while item is not None:
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+            item = self._contextChipsLayout.takeAt(1)
+
+    def _displayedContextIds(self) -> List[str]:
+        defaults = [cid for cid in self._defaultContextIds if cid in self._availableContexts]
+
+        # Default contexts are "pinned": always display them so they are not removable.
+        selected = [cid for cid in self._selectedContextIds
+                    if cid in self._availableContexts and cid not in defaults]
+        if defaults:
+            return defaults + selected
+        return selected
+
+    def _refreshContextChips(self):
+        self._clearContextChips()
+
+        displayed = self._displayedContextIds()
+        hasSelection = bool(self._selectedContextIds)
+        for cid in displayed:
+            ctx = self._availableContexts.get(cid)
+            if not ctx:
+                continue
+
+            isSelected = cid in self._selectedContextIds
+            # If nothing is selected, defaults are displayed in "not selected" state.
+            if not hasSelection:
+                isSelected = False
+
+            btn = self._createContextChip(ctx, isSelected)
+            self._contextChipsLayout.addWidget(btn)
+
+        # self._contextChipsLayout.updateGeometry()
+
+    def _createContextChip(self, ctx: AiContextDescriptor, selected: bool) -> AiContextToolButton:
+        addIcon = QIcon(dataDirPath() + "/icons/add.svg")
+        closeIcon = QIcon(dataDirPath() + "/icons/close.svg")
+
+        btn = AiContextToolButton(
+            ctx.id,
+            ctx.label,
+            addIcon,
+            closeIcon,
+            QSize(16, 16),
+            self,
+        )
+        btn.setFixedHeight(20)
+        btn.setSelected(selected)
+        btn.setToolTip(ctx.tooltip or ctx.label)
+
+        btn.toggleRequested.connect(self.toggleContext)
+        btn.activated.connect(self.contextActivated.emit)
+        return btn
 
     def _updateFrameStyle(self, focused):
         """Update frame border color based on focus state"""

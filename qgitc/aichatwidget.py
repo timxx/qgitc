@@ -10,6 +10,7 @@ from qgitc.agenttoolexecutor import AgentToolExecutor, AgentToolResult
 from qgitc.agenttools import AgentToolRegistry, ToolType, parseToolArguments
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
+from qgitc.aichatcontextprovider import AiChatContextProvider
 from qgitc.aichathistory import AiChatHistory
 from qgitc.aichathistorypanel import AiChatHistoryPanel
 from qgitc.aichattitlegenerator import AiChatTitleGenerator
@@ -122,6 +123,12 @@ class AiChatWidget(QWidget):
             self.splitter.setSizes([0, 400])
         else:
             self.splitter.setSizes([200, 600])
+
+    def setContextProvider(self, provider: AiChatContextProvider | None):
+        self._contextPanel.setContextProvider(provider)
+
+    def contextProvider(self) -> AiChatContextProvider | None:
+        return self._contextPanel.contextProvider()
 
     def _setupModels(self):
         aiModels: List[AiModelBase] = [
