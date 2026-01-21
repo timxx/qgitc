@@ -38,11 +38,13 @@ class AiChatDockWidget(QDockWidget):
             icon, QSize(20, 20), self._titleBarWidget)
         self._btnNewConversation.setIcon(icon)
         self._btnNewConversation.setToolTip(self.tr("New Conversation"))
-        self._btnNewConversation.clicked.connect(self._onNewConversation)
+        self._btnNewConversation.clicked.connect(
+            self._aiChatWidget.onNewChatRequested)
 
         newMenu = QMenu(self._btnNewConversation)
         acNewConversation = newMenu.addAction(self.tr("New Conversation"))
-        acNewConversation.triggered.connect(self._onNewConversation)
+        acNewConversation.triggered.connect(
+            self._aiChatWidget.onNewChatRequested)
 
         acNewChatWindow = newMenu.addAction(self.tr("New Chat Window"))
         acNewChatWindow.triggered.connect(self._onNewChatWindow)
@@ -62,19 +64,20 @@ class AiChatDockWidget(QDockWidget):
         self._titleBarLayout.addWidget(btnClose)
         self.setTitleBarWidget(self._titleBarWidget)
 
+        self._chatWindows = []
+
     def chatWidget(self):
         """Get the embedded AI chat widget"""
         return self._aiChatWidget
 
-    def _onNewConversation(self):
-        """Create a new conversation in embedded AI chat"""
-        # TODO: Implement new conversation functionality
-        pass
-
     def _onNewChatWindow(self):
-        """Open a new standalone chat window (placeholder for future implementation)"""
-        # TODO: Implement new chat window functionality
-        pass
+        """Open a new AI chat window"""
+        from qgitc.aichatwindow import AiChatWindow
+        chatWindow = AiChatWindow()
+        chatWindow.show()
+        chatWindow.destroyed.connect(
+            lambda: self._chatWindows.remove(chatWindow))
+        self._chatWindows.append(chatWindow)
 
     def saveState(self, window):
         """Save the visibility state"""

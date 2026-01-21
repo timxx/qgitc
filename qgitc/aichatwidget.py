@@ -67,7 +67,7 @@ class AiChatWidget(QWidget):
 
     def _setupHistoryPanel(self):
         self._historyPanel = AiChatHistoryPanel(self)
-        self._historyPanel.requestNewChat.connect(self._onNewChatRequested)
+        self._historyPanel.requestNewChat.connect(self.onNewChatRequested)
         self._historyPanel.historySelectionChanged.connect(
             self._onHistorySelectionChanged)
         self._historyPanel.historyRemoved.connect(self._onHistoryRemoved)
@@ -578,7 +578,7 @@ class AiChatWidget(QWidget):
 
         self._historyPanel.setEnabled(True)
 
-    def _onNewChatRequested(self):
+    def onNewChatRequested(self):
         """Create a new chat conversation"""
         self._createNewConversation()
         self._contextPanel.setFocus()
