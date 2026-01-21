@@ -177,11 +177,11 @@ class InlineComboBox(QWidget):
         elif self._isHovered:
             app = ApplicationBase.instance()
             if app.isDarkTheme():
-                outline = palette.window().color()
+                pen = Qt.NoPen
             else:
                 outline = palette.window().color().darker(140)
-            pen = QPen(outline)
-            pen.setWidth(1)
+                pen = QPen(outline)
+                pen.setWidth(1)
             painter.setPen(pen)
             painter.setBrush(palette.button().color())
             painter.drawRoundedRect(borderRect, radius, radius)
