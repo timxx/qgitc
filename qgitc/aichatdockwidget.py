@@ -87,7 +87,10 @@ class AiChatDockWidget(QDockWidget):
         """Open a new AI chat window"""
         from qgitc.aichatwindow import AiChatWindow
         chatWindow = AiChatWindow()
-        chatWindow.show()
+        if chatWindow.restoreState():
+            chatWindow.show()
+        else:
+            chatWindow.showMaximized()
         chatWindow.destroyed.connect(
             lambda: self._chatWindows.remove(chatWindow))
         self._chatWindows.append(chatWindow)
