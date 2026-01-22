@@ -425,18 +425,11 @@ class AiChatWidget(QWidget):
             group["remaining"] = remaining
 
             if remaining <= 0:
-                auto_continue = bool(group.get("auto_continue", True))
-                combined = "\n\n".join(outputs)
                 del self._autoToolGroups[group_id]
-                if auto_continue:
-                    followup = combined
-                    if followup:
-                        self._doRequest(
-                            followup, AiChatMode.Agent, collapsed=True)
-
-            # Continue draining the queue.
-            self._startNextAutoToolIfIdle()
-            return
+            else:
+                # Continue draining the queue.
+                self._startNextAutoToolIfIdle()
+                return
 
         # Approved (WRITE/DANGEROUS) tools: send ONLY the tool output back as a collapsed user message.
         followup = f"[{tool_name}]\n{output}" if output else f"[{tool_name}] (no output)"
