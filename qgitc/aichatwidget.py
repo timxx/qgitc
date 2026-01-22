@@ -236,7 +236,9 @@ class AiChatWidget(QWidget):
 
             # Don't add system prompt if there is already one
             if not sysPrompt and (len(model.history) == 0 or not collapsed):
-                params.sys_prompt = AGENT_SYS_PROMPT
+                provider = self.contextProvider()
+                overridePrompt = provider.agentSystemPrompt() if provider is not None else None
+                params.sys_prompt = overridePrompt or AGENT_SYS_PROMPT
                 self._doMessageReady(model, AiResponse(
                     AiRole.System, params.sys_prompt), True)
         elif chatMode == AiChatMode.CodeReview:
@@ -247,10 +249,9 @@ class AiChatWidget(QWidget):
         provider = self.contextProvider()
         if not collapsed and provider is not None:
             selectedIds = self._contextPanel.selectedContextIds()
-            if selectedIds:
-                contextText = provider.buildContextText(selectedIds)
-                if contextText:
-                    params.prompt = f"<context>\n{contextText}\n</context>\n\n" + params.prompt
+            contextText = provider.buildContextText(selectedIds)
+            if contextText:
+                params.prompt = f"<context>\n{contextText}\n</context>\n\n" + params.prompt
 
         self._doMessageReady(model, AiResponse(
             AiRole.User, params.prompt), collapsed)

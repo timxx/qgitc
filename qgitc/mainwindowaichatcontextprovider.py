@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
 
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
+from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, dataDirPath
 from qgitc.diffview import FileListModel
 from qgitc.drawutils import makeColoredIconPixmap
@@ -18,7 +19,6 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
     CTX_ACTIVE_COMMIT = "commit.active"
     CTX_SELECTED_COMMITS = "commit.selected"
     CTX_SELECTED_FILES = "files.selected"
-    CTX_ACTIVE_BRANCH = "branch.active"
     CTX_DIFF_SELECTION = "diff.selection"
 
     def __init__(self, mainWindow, parent: QObject | None = None):
@@ -51,6 +51,11 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
         gitView.ui.cbBranch.currentIndexChanged.connect(
             self._scheduleChanged)
 
+        cbSub = self._mainWindow.ui.cbSubmodule
+        cbSub.currentIndexChanged.connect(self._scheduleChanged)
+        ApplicationBase.instance().submoduleAvailable.connect(
+            lambda *_: self._scheduleChanged())
+
         # File list selection
         selModel = gitView.ui.diffView.fileListView.selectionModel()
         if selModel:
@@ -78,6 +83,13 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
             return ""
 
         return gitView.currentBranch()
+
+    def _submodules(self) -> List[str]:
+        return ApplicationBase.instance().submodules or []
+
+    def _activeSubmodule(self) -> str:
+        cb = self._mainWindow.ui.cbSubmodule
+        return cb.currentText()
 
     def _selectedCommits(self) -> List[Commit]:
         gitView = self._gitView()
@@ -131,17 +143,7 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
 
         icoCommit = self._themedIcon("commit.svg")
         icoFiles = self._themedIcon("filter-list.svg")
-        icoBranch = self._themedIcon("arrow-forward.svg")
         icoSelect = self._themedIcon("select-all.svg")
-
-        branch = self._activeBranch()
-        if branch:
-            contexts.append(AiContextDescriptor(
-                id=self.CTX_ACTIVE_BRANCH,
-                label=self.tr("Active branch"),
-                icon=icoBranch,
-                tooltip=branch,
-            ))
 
         active = self._activeCommit()
         if active and active.isValid():
@@ -197,13 +199,22 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
     def buildContextText(self, contextIds: List[str]) -> str:
         blocks: List[str] = []
 
-        for cid in contextIds:
-            if cid == self.CTX_ACTIVE_BRANCH:
-                branch = self._activeBranch()
-                if branch:
-                    blocks.append(f"Active branch: {branch}")
+        today = datetime.date.today().isoformat()
+        blocks.append(f"The current date is {today}")
+        branch = self._activeBranch()
+        if branch:
+            blocks.append(f"Active branch (UI): {branch}")
 
-            elif cid == self.CTX_ACTIVE_COMMIT:
+        submodules = [s for s in (self._submodules() or []) if s]
+        submoduleCount = len([s for s in submodules if s != "."])
+        activeSub = self._activeSubmodule()
+        if submoduleCount > 0 or activeSub:
+            blocks.append(f"Submodules: {submoduleCount}")
+            if activeSub:
+                blocks.append(f"Active submodule (UI): {activeSub}")
+
+        for cid in contextIds:
+            if cid == self.CTX_ACTIVE_COMMIT:
                 c = self._activeCommit()
                 if c is not None and c.isValid():
                     blocks.append(
@@ -241,4 +252,21 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
                     blocks.append(
                         "Selected diff excerpt:\n```diff\n" + text + "\n```")
 
-        return "\n\n".join(b for b in blocks if b).strip()
+        return "\n".join(b for b in blocks if b).strip()
+
+    def agentSystemPrompt(self) -> str | None:
+        return """You are a Git assistant inside QGitc log view.
+
+In log view user can explore git logs (commit sha1, messages, author, dates etc) and the selected commit's diff (and its file list). User can also switch branches and submodules (if any).
+
+When the user provides context (inside <context></context> tags), use it first.
+- If the question can be answered from context (especially UI state like active branch/submodule), answer directly and do NOT call tools.
+- Only call tools when context is missing/unclear or when the user explicitly asks you to run a git command.
+
+Branch/submodule semantics:
+- Prefer 'Active branch (UI)' from context when asked about the current/active branch.
+- Do NOT call git_current_branch just to answer branch questions if the UI branch is present, unless explicitly requested.
+- The repository's checked-out HEAD branch may differ from the UI-selected branch.
+
+If you need repo information or to perform git actions, call tools. Never assume.
+"""
