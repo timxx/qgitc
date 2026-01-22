@@ -52,6 +52,7 @@ class TextViewer(QAbstractScrollArea):
     linkActivated = Signal(Link)
     findResultAvailable = Signal(list, int)
     findFinished = Signal()
+    selectionChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -74,6 +75,7 @@ class TextViewer(QAbstractScrollArea):
         self._highlightFind: List[TextCursor] = []
 
         self._cursor = TextCursor(self)
+        self._lastSelectionKey = None
         self._clickTimer = QElapsedTimer()
 
         self.viewport().setMouseTracking(True)
@@ -106,6 +108,23 @@ class TextViewer(QAbstractScrollArea):
         self.verticalScrollBar().setSingleStep(1)
 
         self.findResultAvailable.connect(self._onFindResultAvailable)
+
+    def _selectionKey(self):
+        if not self._cursor.hasSelection():
+            return None
+        return (
+            self._cursor.beginLine(),
+            self._cursor.beginPos(),
+            self._cursor.endLine(),
+            self._cursor.endPos(),
+        )
+
+    def _maybeEmitSelectionChanged(self):
+        key = self._selectionKey()
+        if key == self._lastSelectionKey:
+            return
+        self._lastSelectionKey = key
+        self.selectionChanged.emit()
 
     def updateFont(self, font):
         self._font = font
@@ -208,6 +227,7 @@ class TextViewer(QAbstractScrollArea):
         self._maxWidth = 0
         self._highlightLines.clear()
         self._cursor.clear()
+        self._maybeEmitSelectionChanged()
         self._clickOnLink = False
         self._link = None
         self._similarWordPattern = None
@@ -367,6 +387,7 @@ class TextViewer(QAbstractScrollArea):
         lastLine = self.textLineCount() - 1
         self._cursor.selectTo(lastLine, len(self.textLineAt(lastLine).text()))
         self._invalidateSelection()
+        self._maybeEmitSelectionChanged()
 
     def select(self, cursor):
         if not cursor.isValid():
@@ -376,6 +397,7 @@ class TextViewer(QAbstractScrollArea):
         self._cursor.selectTo(cursor.endLine(), cursor.endPos())
         self.ensureCursorVisible()
         self.viewport().update()
+        self._maybeEmitSelectionChanged()
 
     def ensureCursorVisible(self, lineOnly=False):
         if not self.hasTextLines():
@@ -954,10 +976,12 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.moveTo(textLine.lineNo(), 0)
             self._cursor.selectTo(textLine.lineNo(), len(textLine.text()))
             self._invalidateSelection()
+            self._maybeEmitSelectionChanged()
         else:
             offset = textLine.offsetForPos(
                 self.mapToContents(event.position()))
             self._cursor.moveTo(textLine.lineNo(), offset)
+            self._maybeEmitSelectionChanged()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.source() == Qt.MouseEventNotSynthesized and \
@@ -973,6 +997,7 @@ class TextViewer(QAbstractScrollArea):
         self._clickOnLink = False
         if not self.hasTextLines() or \
                 self._cursor.hasSelection():
+            self._maybeEmitSelectionChanged()
             return
 
         textLine = self.textLineForPos(event.position())
@@ -980,6 +1005,7 @@ class TextViewer(QAbstractScrollArea):
             return
 
         self.textLineClicked.emit(textLine)
+        self._maybeEmitSelectionChanged()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if event.button() != Qt.LeftButton:
@@ -990,6 +1016,7 @@ class TextViewer(QAbstractScrollArea):
         self._clickTimer.restart()
         self._invalidateSelection()
         self._cursor.clear()
+        self._maybeEmitSelectionChanged()
 
         textLine = self.textLineForPos(event.position())
         if not textLine:
@@ -1023,6 +1050,7 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.moveTo(textLine.lineNo(), begin)
             self._cursor.selectTo(textLine.lineNo(), end)
             self._invalidateSelection()
+            self._maybeEmitSelectionChanged()
 
             word = word.strip()
             if word:
@@ -1054,6 +1082,8 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.selectTo(n, offset)
 
             self._invalidateSelection()
+
+            self._maybeEmitSelectionChanged()
 
             if event.source() == Qt.MouseEventNotSynthesized:
                 visibleRect = self.viewport().rect()
@@ -1098,18 +1128,22 @@ class TextViewer(QAbstractScrollArea):
             self._cursor.selectNextChar()
             self.ensureSelectionVisible()
             self.viewport().update()
+            self._maybeEmitSelectionChanged()
         elif event.matches(QKeySequence.StandardKey.SelectPreviousChar):
             self._cursor.selectPreviousChar()
             self.ensureSelectionVisible()
             self.viewport().update()
+            self._maybeEmitSelectionChanged()
         elif event.matches(QKeySequence.StandardKey.SelectNextLine):
             self._cursor.selectNextLine()
             self.ensureSelectionVisible()
             self.viewport().update()
+            self._maybeEmitSelectionChanged()
         elif event.matches(QKeySequence.StandardKey.SelectPreviousLine):
             self._cursor.selectPreviousLine()
             self.ensureSelectionVisible()
             self.viewport().update()
+            self._maybeEmitSelectionChanged()
         elif event.matches(QKeySequence.StandardKey.Find):
             self.executeFind()
         else:

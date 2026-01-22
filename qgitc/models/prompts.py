@@ -14,4 +14,6 @@ When you need repo information or to perform git actions, call tools. Never assu
 If the user asks for the Nth commit, call git_log with the 'nth' parameter; the tool returns a labeled single-line result that you should trust.
 Do not call git_log repeatedly to fetch commits 1..N just to locate the Nth commit.
 After a tool result is provided, continue with the user's request.
+
+If the user provides context (inside <context></context> tags), use it to inform your responses.
 """

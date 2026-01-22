@@ -227,6 +227,9 @@ class AiChatWidget(QWidget):
         model = self.currentChatModel()
         isNewConversation = not model.history
 
+        # Keep title generation based on the user's original prompt (no injected context).
+        titleSeed = (params.sys_prompt + "\n" + prompt) if params.sys_prompt else prompt
+
         if chatMode == AiChatMode.Agent:
             params.tools = AgentToolRegistry.openai_tools()
             params.tool_choice = "auto"
@@ -240,6 +243,15 @@ class AiChatWidget(QWidget):
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
                 language=ApplicationBase.instance().uiLanguage())
+
+        provider = self.contextProvider()
+        if not collapsed and provider is not None:
+            selectedIds = self._contextPanel.selectedContextIds()
+            if selectedIds:
+                contextText = provider.buildContextText(selectedIds)
+                if contextText:
+                    params.prompt = f"<context>\n{contextText}\n</context>\n\n" + params.prompt
+
         self._doMessageReady(model, AiResponse(
             AiRole.User, params.prompt), collapsed)
 
@@ -251,12 +263,9 @@ class AiChatWidget(QWidget):
 
         model.queryAsync(params)
 
-        if isNewConversation and not ApplicationBase.instance().testing and model.history:
-            message = model.history[0].message
-            if model.history[0].role == AiRole.System and len(model.history) > 1:
-                message += "\n" + model.history[1].message
+        if isNewConversation and not ApplicationBase.instance().testing and titleSeed:
             self._generateChatTitle(
-                self._historyPanel.currentHistory().historyId, message)
+                self._historyPanel.currentHistory().historyId, titleSeed)
 
         self._updateChatHistoryModel(model)
 

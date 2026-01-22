@@ -21,6 +21,7 @@ from qgitc.gitview import GitView
 from qgitc.llm import AiModelBase, AiParameters, AiResponse
 from qgitc.llmprovider import AiModelProvider
 from qgitc.logview import LogView
+from qgitc.mainwindowaichatcontextprovider import MainWindowAiChatContextProvider
 from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_mainwindow import Ui_MainWindow
@@ -210,6 +211,9 @@ class MainWindow(StateWindow):
     def _setupAiChatDock(self):
         """Setup AI Chat dock widget with embedded mode"""
         self._aiChat = AiChatDockWidget(self)
+
+        aiChatContextProvider = MainWindowAiChatContextProvider(self, parent=self)
+        self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
 
         # Add dock widget to main window
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)

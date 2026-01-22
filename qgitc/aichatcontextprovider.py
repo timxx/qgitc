@@ -29,3 +29,11 @@ class AiChatContextProvider(QObject):
 
     def defaultContextIds(self) -> List[str]:
         return []
+
+    def buildContextText(self, contextIds: List[str]) -> str:
+        """Build LLM-ready context text for the given context ids.
+
+        The returned string will be embedded into the user's prompt (e.g. wrapped
+        in a <context>...</context> block).
+        """
+        return ""
