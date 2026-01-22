@@ -847,15 +847,17 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                             text.startswith("~~~"))
 
         if text and not isBlockCodeBlock:
-            self.highlightAdditionalRules(self._highlightingRules, text)
-
-            self.highlightThematicBreak(text)
-
-            # needs to be called after the horizontal ruler highlighting
-            self.highlightHeadline(text)
             self.highlightIndentedCodeBlock(text)
-            self.highlightLists(text)
-            self.highlightInlineRules(text)
+            # text can be indented code block, don't highlight other rules then
+            if self.currentBlockState() != HighlighterState.CodeBlockIndented:
+                self.highlightAdditionalRules(self._highlightingRules, text)
+
+                self.highlightThematicBreak(text)
+
+                # needs to be called after the horizontal ruler highlighting
+                self.highlightHeadline(text)
+                self.highlightLists(text)
+                self.highlightInlineRules(text)
 
         self.highlightCommentBlock(text)
         if isBlockCodeBlock:

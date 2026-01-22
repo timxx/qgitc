@@ -1713,3 +1713,10 @@ Line break above.
 """
         self._test_markdown_highlighting(
             comprehensive_doc, "comprehensive markdown document")
+
+    def test_indented_code(self):
+        text = """     def __init__(self, parent: QObject | None = None):"""
+        try:
+            self.edit.setPlainText(text)
+        except Exception as e:
+            self.fail(f"Setting plain text caused an exception: {e}")
