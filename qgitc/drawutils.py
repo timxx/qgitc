@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter
+from PySide6.QtCore import QRectF, QSize, Qt
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath
 from PySide6.QtWidgets import QWidget
 
 from qgitc.applicationbase import ApplicationBase
@@ -45,3 +45,28 @@ def makeColoredIconPixmap(widget: QWidget, icon: QIcon, iconSize: QSize, brush: 
     p.end()
 
     return pixmap
+
+
+def drawRoundedRect(
+        painter: QPainter, rect: QRectF, radius: float,
+        borderColor: QColor, borderWidth: float = 1.0,
+        borderStyle: Qt.BrushStyle = Qt.SolidPattern):
+    painter.save()
+
+    painter.setRenderHint(QPainter.Antialiasing)
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(QBrush(borderColor, borderStyle))
+
+    outerPath = toRoundedPath(rect, radius)
+    innerRect = rect.adjusted(borderWidth, borderWidth, -borderWidth, -borderWidth)
+    innerPath = toRoundedPath(innerRect, max(0, radius - borderWidth))
+
+    painter.drawPath(outerPath.subtracted(innerPath))
+
+    painter.restore()
+
+
+def toRoundedPath(rect: QRectF, radius: float):
+    path = QPainterPath()
+    path.addRoundedRect(rect, radius, radius)
+    return path
