@@ -48,6 +48,7 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
+from qgitc.commitwindowaichatcontextprovider import CommitWindowAiChatContextProvider
 from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView
@@ -382,9 +383,10 @@ class CommitWindow(StateWindow):
         """Setup AI Chat dock widget with embedded mode"""
         self._aiChat = AiChatDockWidget(self)
 
-        # Context provider will be implemented later
-        # aiChatContextProvider = CommitWindowAiChatContextProvider(self, parent=self)
-        # self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
+        # Setup context provider for commit window
+        aiChatContextProvider = CommitWindowAiChatContextProvider(
+            self, parent=self)
+        self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
 
         # Add dock widget to commit window
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
@@ -1873,3 +1875,6 @@ class CommitWindow(StateWindow):
 
     def _onToggleRunCommitActions(self, checked: bool):
         ApplicationBase.instance().settings().setRunCommitActions(checked)
+
+    def currentBranch(self) -> str:
+        return self._branchLabel.text()
