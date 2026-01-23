@@ -111,11 +111,11 @@ class AiChatDockWidget(QDockWidget):
         key = f"{window.__class__.__name__}/aiChatDockVisible"
         settings.setValue(key, self.isVisible())
 
-    def restoreState(self, window):
+    def restoreState(self, window, visible=True):
         """Restore the visibility state"""
         settings = ApplicationBase.instance().settings()
         key = f"{window.__class__.__name__}/aiChatDockVisible"
-        isVisible = settings.value(key, True, type=bool)
+        isVisible = settings.value(key, visible, type=bool)
         self.setVisible(isVisible)
 
     def queryClose(self):

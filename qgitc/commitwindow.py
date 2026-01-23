@@ -41,6 +41,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.actionrunner import ActionRunner
+from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.aicommitmessage import AiCommitMessage
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
@@ -336,9 +337,19 @@ class CommitWindow(StateWindow):
 
         icon = QIcon(iconsPath + "/reviews.svg")
         self.ui.btnCodeReview.setIcon(icon)
+        self.ui.btnCodeReview.setIconSize(QSize(16, 16))
         self.ui.btnCodeReview.clicked.connect(
             self._onCodeReviewClicked)
         self.ui.btnCodeReview.setEnabled(False)
+
+        self.ui.btnChat.setIcon(QIcon(iconsPath + "chat.svg"))
+        self.ui.btnChat.setIconSize(QSize(16, 16))
+        self.ui.btnChat.setToolTip(self.tr("Chat"))
+        self.ui.btnChat.clicked.connect(self._onChatClicked)
+
+        # Setup AI Chat dock widget
+        self._aiChat: AiChatDockWidget = None
+        self._setupAiChatDock()
 
         icon = QIcon(iconsPath + "/commit.svg")
         self.ui.btnShowLog.setIcon(icon)
@@ -366,6 +377,23 @@ class CommitWindow(StateWindow):
         spinner.setLineLength(height)
         spinner.setInnerRadius(height)
         spinner.setNumberOfLines(14)
+
+    def _setupAiChatDock(self):
+        """Setup AI Chat dock widget with embedded mode"""
+        self._aiChat = AiChatDockWidget(self)
+
+        # Context provider will be implemented later
+        # aiChatContextProvider = CommitWindowAiChatContextProvider(self, parent=self)
+        # self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
+
+        # Add dock widget to commit window
+        self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
+
+    def _onChatClicked(self):
+        """Toggle the AI chat dock visibility"""
+        self._aiChat.setVisible(not self._aiChat.isVisible())
+        if self._aiChat.isVisible():
+            self._aiChat.chatWidget().contextPanel.setFocus()
 
     def _loadLocalChanges(self):
         submodules = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
@@ -1079,6 +1107,8 @@ class CommitWindow(StateWindow):
         if state:
             self.ui.splitterRight.restoreState(state)
 
+        self._aiChat.restoreState(self, visible=False)
+
         return True
 
     def saveState(self):
@@ -1093,6 +1123,8 @@ class CommitWindow(StateWindow):
             "cw.splitterRight", self.ui.splitterRight.saveState())
         sett.saveSplitterState(
             "cw.splitterMain", self.ui.splitterMain.saveState())
+
+        self._aiChat.saveState(self)
 
         return True
 

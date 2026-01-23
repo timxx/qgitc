@@ -394,6 +394,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="ColoredIconToolButton" name="btnChat">
+                 <property name="text">
+                  <string/>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="ColoredIconToolButton" name="btnShowLog">
                  <property name="toolTip">
                   <string>Show Log Window</string>
