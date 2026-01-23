@@ -421,7 +421,7 @@ class AiChatbot(QPlainTextEdit):
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move for hover effects"""
-        mousePos = event.pos()
+        mousePos = event.position().toPoint()
 
         hoveredHeaderPos, overToggle = self._getHeaderToggleAtPosition(
             mousePos)
@@ -477,14 +477,14 @@ class AiChatbot(QPlainTextEdit):
         if event.button() != Qt.LeftButton:
             return super().mouseReleaseEvent(event)
 
-        headerPos, overToggle = self._getHeaderToggleAtPosition(event.pos())
+        pos = event.position().toPoint()
+        headerPos, overToggle = self._getHeaderToggleAtPosition(pos)
         if overToggle and headerPos is not None:
             self._toggleCollapsed(headerPos)
             event.accept()
             return
 
-        confirmData, clickedButton = self._getConfirmDataAtPosition(
-            event.pos())
+        confirmData, clickedButton = self._getConfirmDataAtPosition(pos)
         if clickedButton != ButtonType.NONE:
             if clickedButton == ButtonType.APPROVE:
                 confirmData.status = ConfirmationStatus.APPROVED
@@ -495,7 +495,7 @@ class AiChatbot(QPlainTextEdit):
                 self.toolConfirmationRejected.emit(
                     confirmData.tool_name)
 
-            cursor = self.cursorForPosition(event.pos())
+            cursor = self.cursorForPosition(pos)
             pos = cursor.block().position()
             self.document().markContentsDirty(pos, 1)
             self.viewport().update()
