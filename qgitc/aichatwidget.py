@@ -71,8 +71,17 @@ class AiChatWidget(QWidget):
         self._pendingToolSource: Optional[str] = None  # 'auto' | 'approved'
         self._pendingAutoGroupId: Optional[int] = None
 
+        # Track OpenAI tool_call_id values that have been requested by the
+        # assistant but do not yet have corresponding tool *results*.
+        # We must NOT call `_continueAgentConversation` until this is empty.
+        self._awaitingToolResults: set[str] = set()
+
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
+
+    def _markToolResultComplete(self, tool_call_id: Optional[str]):
+        if tool_call_id:
+            self._awaitingToolResults.discard(tool_call_id)
 
     def _setupHistoryPanel(self):
         self._historyPanel = AiChatHistoryPanel(self)
@@ -230,6 +239,10 @@ class AiChatWidget(QWidget):
         if model is None:
             return
 
+        # Never continue while any tool_call_id is still awaiting results.
+        if self._awaitingToolResults:
+            return
+
         # Wait until the model has finished recording the assistant tool_calls
         # message; otherwise sending tool messages with tool_call_id can 400.
         if model.isRunning():
@@ -358,6 +371,12 @@ class AiChatWidget(QWidget):
         # If the assistant produced tool calls, auto-run READ_ONLY tools and
         # insert confirmations for WRITE/DANGEROUS tools.
         if response.role == AiRole.Assistant and response.tool_calls:
+            # Track tool_call_id values so we only continue when *all* results exist.
+            for tc in response.tool_calls:
+                tcid = (tc or {}).get("id")
+                if tcid:
+                    self._awaitingToolResults.add(tcid)
+
             autoGroupId: Optional[int] = None
             autoToolsCount = 0
             hasConfirmations = False
@@ -455,11 +474,9 @@ class AiChatWidget(QWidget):
 
         started = self._agentExecutor.executeAsync(tool_name, params or {})
         if not started:
-            self._pendingAgentTool = None
-            self._pendingToolSource = None
-            self._pendingToolCallId = None
-            self._doMessageReady(self.currentChatModel(), AiResponse(
-                AiRole.System, self.tr("Failed to start tool execution.")))
+            # Produce a correlated tool result so the conversation can continue.
+            self._onAgentToolFinished(AgentToolResult(
+                tool_name, False, self.tr("Failed to start tool execution.")))
 
     def _onToolRejected(self, tool_name: str, tool_call_id: str):
         # Keep it simple: just record and continue.
@@ -475,8 +492,10 @@ class AiChatWidget(QWidget):
             msg = self.tr("User rejected")
             self._doMessageReady(model, AiResponse(
                 AiRole.Tool, msg, description=description))
-        # Let the agent continue and pick an alternative.
-        self._continueAgentConversation(delayMs=0)
+            self._markToolResultComplete(tool_call_id)
+        # Only continue when all tool_call_id results are present.
+        if not self._awaitingToolResults:
+            self._continueAgentConversation(delayMs=0)
 
     def _onAgentToolFinished(self, result: AgentToolResult):
         model = self.currentChatModel()
@@ -501,6 +520,9 @@ class AiChatWidget(QWidget):
         resp = AiResponse(AiRole.Tool, output, description=toolDesc)
         self._doMessageReady(model, resp, collapsed=True)
 
+        # Mark this tool_call_id as having a corresponding tool result.
+        self._markToolResultComplete(tool_call_id)
+
         if source == "auto" and group_id is not None and group_id in self._autoToolGroups:
             group = self._autoToolGroups[group_id]
             outputs: list = group.get("outputs", [])
@@ -512,14 +534,20 @@ class AiChatWidget(QWidget):
             group["remaining"] = remaining
 
             if remaining <= 0:
+                auto_continue = bool(group.get("auto_continue", True))
                 del self._autoToolGroups[group_id]
+                # If this batch had pending confirmations, do not continue yet.
+                if not auto_continue:
+                    return
             else:
                 # Continue draining the queue.
                 self._startNextAutoToolIfIdle()
                 return
 
-        # Continue the agent conversation using proper tool-call continuation,
-        # without injecting a synthetic user follow-up.
+        # Continue the agent conversation only when all tool_call_id results exist.
+        if self._awaitingToolResults:
+            return
+
         self._continueAgentConversation(delayMs=0)
 
     def _startNextAutoToolIfIdle(self):
@@ -546,10 +574,6 @@ class AiChatWidget(QWidget):
         started = self._agentExecutor.executeAsync(tool_name, params or {})
         if not started:
             # Fall back to a synthetic failure result and keep draining.
-            self._pendingAgentTool = None
-            self._pendingToolSource = None
-            self._pendingAutoGroupId = None
-            self._pendingToolCallId = None
             self._onAgentToolFinished(AgentToolResult(
                 tool_name, False, self.tr("Failed to start tool execution.")))
 
@@ -799,6 +823,7 @@ class AiChatWidget(QWidget):
         model = self.currentChatModel()
         if model:
             model.clear()
+        self._awaitingToolResults.clear()
         self.messages.clear()
 
     def _setEmbeddedRecentListVisible(self, visible: bool):

@@ -65,7 +65,7 @@ class TestAgentMode(TestBase):
         # Intercept tool execution and follow-up request.
         self.chatWidget._agentExecutor.executeAsync = MagicMock(
             return_value=True)
-        self.chatWidget._doRequest = MagicMock()
+        model.queryAsync = MagicMock()
         self.chatWidget.messages.insertToolConfirmation = MagicMock()
 
         resp = self._assistant_tool_call_response("git_status", "{}")
@@ -85,11 +85,12 @@ class TestAgentMode(TestBase):
                             "## main\nworking tree clean (no changes).")
         )
 
-        # Auto-run batch should continue automatically.
-        self.assertTrue(self.chatWidget._doRequest.called)
-        args, kwargs = self.chatWidget._doRequest.call_args
-        self.assertEqual(args[1], AiChatMode.Agent)
-        self.assertIn("[git_status]", args[0])
+        # Auto-run batch should continue automatically via a continuation request.
+        self.assertTrue(model.queryAsync.called)
+        args, _ = model.queryAsync.call_args
+        params = args[0]
+        self.assertTrue(getattr(params, "continue_only", False))
+        self.assertEqual(getattr(params, "chat_mode", None), AiChatMode.Agent)
 
     def test_agent_mixed_tools_requires_confirmation_no_autocontinue(self):
         self.chatWidget._contextPanel.setMode(AiChatMode.Agent)
@@ -98,7 +99,7 @@ class TestAgentMode(TestBase):
 
         self.chatWidget._agentExecutor.executeAsync = MagicMock(
             return_value=True)
-        self.chatWidget._doRequest = MagicMock()
+        self.chatWidget._continueAgentConversation = MagicMock()
         self.chatWidget.messages.insertToolConfirmation = MagicMock()
 
         resp = AiResponse(role=AiRole.Assistant, message="")
@@ -119,7 +120,59 @@ class TestAgentMode(TestBase):
         self.chatWidget.messages.insertToolConfirmation.assert_called_once()
 
         # Because confirmations exist, auto batch should NOT auto-continue.
-        self.chatWidget._doRequest.assert_not_called()
+        self.chatWidget._continueAgentConversation.assert_not_called()
+
+    def test_agent_mixed_confirm_and_autorun_waits_for_all_tool_results(self):
+        """Regression: if assistant requests 2 tools, only continue after both results.
+
+        Scenario:
+        - tool #1 requires confirmation (WRITE)
+        - tool #2 is READ_ONLY (auto-run)
+        When the READ_ONLY tool finishes first, we must NOT continue yet.
+        """
+        self.chatWidget._contextPanel.setMode(AiChatMode.Agent)
+        model = self.chatWidget.currentChatModel()
+
+        self.chatWidget._agentExecutor.executeAsync = MagicMock(
+            return_value=True)
+        self.chatWidget._continueAgentConversation = MagicMock()
+        self.chatWidget.messages.insertToolConfirmation = MagicMock()
+
+        resp = AiResponse(role=AiRole.Assistant, message="")
+        resp.tool_calls = [
+            {
+                "id": "call_confirm",
+                "type": "function",
+                "function": {"name": "git_checkout", "arguments": '{"branch":"main"}'},
+            },
+            {
+                "id": "call_auto",
+                "type": "function",
+                "function": {"name": "git_status", "arguments": "{}"},
+            },
+        ]
+
+        self.chatWidget._doMessageReady(model, resp)
+        self.wait(50)
+
+        # READ_ONLY tool should auto-run; WRITE tool should require confirmation.
+        self.chatWidget._agentExecutor.executeAsync.assert_called_once_with(
+            "git_status", {})
+        self.chatWidget.messages.insertToolConfirmation.assert_called_once()
+
+        # Finish the READ_ONLY tool first: must NOT continue yet.
+        self.chatWidget._onAgentToolFinished(
+            AgentToolResult("git_status", True, "clean")
+        )
+        self.chatWidget._continueAgentConversation.assert_not_called()
+
+        # Now approve and finish the confirmed tool: continuation should happen.
+        self.chatWidget._onToolApproved(
+            "git_checkout", {"branch": "main"}, "call_confirm")
+        self.chatWidget._onAgentToolFinished(
+            AgentToolResult("git_checkout", True, "ok")
+        )
+        self.assertTrue(self.chatWidget._continueAgentConversation.called)
 
     def test_agent_tools_include_current_branch(self):
         # Sanity check the registry includes the dedicated current-branch tool,
