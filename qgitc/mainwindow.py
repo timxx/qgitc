@@ -541,8 +541,6 @@ class MainWindow(StateWindow):
         if self.gitViewB:
             self.gitViewB.saveState(sett, False)
 
-        self._aiChat.saveState(self)
-
         return True
 
     def restoreState(self):
@@ -555,8 +553,6 @@ class MainWindow(StateWindow):
         self.ui.gitViewA.restoreState(sett, True)
         if self.gitViewB:
             self.gitViewB.restoreState(sett, False)
-
-        self._aiChat.restoreState(self)
 
         self.__onIgnoreWhitespaceChanged(sett.ignoreWhitespace())
         self.ui.acVisualizeWhitespace.setChecked(

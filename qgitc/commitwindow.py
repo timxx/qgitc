@@ -390,6 +390,7 @@ class CommitWindow(StateWindow):
 
         # Add dock widget to commit window
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
+        self._aiChat.hide()
 
     def _onChatClicked(self):
         """Toggle the AI chat dock visibility"""
@@ -1109,8 +1110,6 @@ class CommitWindow(StateWindow):
         if state:
             self.ui.splitterRight.restoreState(state)
 
-        self._aiChat.restoreState(self, visible=False)
-
         return True
 
     def saveState(self):
@@ -1125,8 +1124,6 @@ class CommitWindow(StateWindow):
             "cw.splitterRight", self.ui.splitterRight.saveState())
         sett.saveSplitterState(
             "cw.splitterMain", self.ui.splitterMain.saveState())
-
-        self._aiChat.saveState(self)
 
         return True
 

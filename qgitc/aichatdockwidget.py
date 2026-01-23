@@ -19,6 +19,7 @@ class AiChatDockWidget(QDockWidget):
 
         self.setWindowTitle(self.tr("Chat"))
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.setObjectName("AiChatDockWidget")
 
         self._aiChatWidget = AiChatWidget(self, embedded=True)
         self.setWidget(self._aiChatWidget)
@@ -104,19 +105,6 @@ class AiChatDockWidget(QDockWidget):
         chatWindow.destroyed.connect(
             lambda: self._chatWindows.remove(chatWindow))
         self._chatWindows.append(chatWindow)
-
-    def saveState(self, window):
-        """Save the visibility state"""
-        settings = ApplicationBase.instance().settings()
-        key = f"{window.__class__.__name__}/aiChatDockVisible"
-        settings.setValue(key, self.isVisible())
-
-    def restoreState(self, window, visible=True):
-        """Restore the visibility state"""
-        settings = ApplicationBase.instance().settings()
-        key = f"{window.__class__.__name__}/aiChatDockVisible"
-        isVisible = settings.value(key, visible, type=bool)
-        self.setVisible(isVisible)
 
     def queryClose(self):
         """Clean up when closing"""
