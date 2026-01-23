@@ -32,10 +32,11 @@ class AiRole(Enum):
 
 
 class AiChatMessage:
-    def __init__(self, role=AiRole.User, message: str = None, description: str = None):
+    def __init__(self, role=AiRole.User, message: str = None, description: str = None, toolCalls=None):
         self.role = role
         self.message = message
         self.description = description
+        self.toolCalls = toolCalls
 
 
 class AiResponse:
@@ -114,6 +115,7 @@ class AiModelBase(QObject):
         self._content = ""
         self._firstDelta = True
         self._toolCallAcc: Dict[int, Dict[str, Any]] = {}
+        self._toolCalls = []
 
     def clear(self):
         self._history.clear()
@@ -121,17 +123,25 @@ class AiModelBase(QObject):
     def queryAsync(self, params: AiParameters):
         pass
 
-    def addHistory(self, role: AiRole, message: str, description: str = None):
+    def addHistory(self, role: AiRole, message: str, description: str = None, toolCalls=None):
         self._history.append(AiChatMessage(
-            role, message, description=description))
+            role, message, description=description,
+            toolCalls=toolCalls))
 
     def toOpenAiMessages(self):
         # Tool role is UI-only in QGitc and should not be sent to the LLM.
-        return [
-            {"role": history.role.name.lower(), "content": history.message}
-            for history in self._history
-            if history.role != AiRole.Tool
-        ]
+        messages = []
+        for history in self._history:
+            if history.role == AiRole.Tool:
+                continue
+
+            msg = {"role": history.role.name.lower(),
+                   "content": history.message}
+            if history.toolCalls:
+                msg["tool_calls"] = history.toolCalls
+            messages.append(msg)
+
+        return messages
 
     @property
     def name(self):
@@ -178,6 +188,7 @@ class AiModelBase(QObject):
         self._role = AiRole.Assistant
         self._firstDelta = True
         self._toolCallAcc = {}
+        self._toolCalls = []
 
         if not reply:
             return
@@ -228,6 +239,7 @@ class AiModelBase(QObject):
         self.finished.emit()
         self._isStreaming = False
         self._content = ""
+        self._toolCalls = []
 
     def _handleData(self, data: bytes):
         if self._isStreaming:
@@ -248,8 +260,9 @@ class AiModelBase(QObject):
             self.handleNonStreamResponse(data)
 
     def _handleFinished(self):
-        """Implement this method to handle the finished state of the network reply."""
-        pass
+        if self._content or self._toolCalls:
+            self.addHistory(self._role, self._content,
+                            toolCalls=self._toolCalls)
 
     def _handleError(self, code: QNetworkReply.NetworkError):
         if code in [QNetworkReply.ConnectionRefusedError, QNetworkReply.HostNotFoundError]:
@@ -319,6 +332,7 @@ class AiModelBase(QObject):
             aiResponse.message = ""
             aiResponse.tool_calls = [self._toolCallAcc[i]
                                      for i in sorted(self._toolCallAcc.keys())]
+            self._toolCalls = aiResponse.tool_calls
             self.responseAvailable.emit(aiResponse)
             return
 
@@ -351,6 +365,7 @@ class AiModelBase(QObject):
             aiResponse.message = content or ""
             if message.get("tool_calls"):
                 aiResponse.tool_calls = message.get("tool_calls")
+                self._toolCalls = aiResponse.tool_calls
             self.responseAvailable.emit(aiResponse)
             break
 

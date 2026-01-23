@@ -46,7 +46,3 @@ class ChatGPTModel(AiModelBase):
             b"Content-Type": b"application/json; charset=utf-8"
         }
         self.post(self.url, headers=headers, data=payload, stream=stream)
-
-    def _handleFinished(self):
-        if self._content:
-            self.addHistory(self._role, self._content)

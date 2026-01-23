@@ -321,7 +321,8 @@ class AiChatHistoryPanel(QWidget):
             data = {
                 'role': message.role.name.lower(),
                 'content': message.message,
-                'description': message.description
+                'description': message.description,
+                'tool_calls': message.toolCalls
             }
             messages.append(data)
 

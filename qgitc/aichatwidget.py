@@ -322,7 +322,6 @@ class AiChatWidget(QWidget):
                 # Anything else requires explicit confirmation.
                 description = self.tr("{} run `{}`").format(
                     self._getToolIcon(tool.tool_type), toolName)
-                # TODO: save the tool information in history
                 toolMessage = json.dumps(args, ensure_ascii=False)
                 model.addHistory(AiRole.Tool, toolMessage, description)
                 messages.appendResponse(AiResponse(
@@ -683,9 +682,11 @@ class AiChatWidget(QWidget):
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
             description = msg.get('description', None)
+            toolCalls = msg.get('tool_calls', None)
 
-            model.addHistory(role, content, description=description)
-            if addToChatBot:
+            model.addHistory(role, content, description=description, toolCalls=toolCalls)
+            # Don't add tool calls from history to chatbot
+            if addToChatBot and (role != AiRole.Assistant or not toolCalls):
                 response = AiResponse(role, content, description=description)
                 # Auto-collapse Tool messages and user messages that follow Tool messages
                 collapsed = (role == AiRole.Tool) or (role == AiRole.System) or (

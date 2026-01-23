@@ -340,10 +340,6 @@ class GithubCopilot(AiModelBase):
             self._modelFetcher.requestInterruption()
             self._modelFetcher = None
 
-    def _handleFinished(self):
-        if self._content:
-            self.addHistory(self._role, self._content)
-
     def requestInterruption(self):
         if self._eventLoop:
             self._eventLoop.quit()
