@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.aichatwindow import AiChatWidget
-from qgitc.llm import AiModelBase
+from qgitc.llm import AiChatMode, AiModelBase
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
 from tests.mocklocalllm import MockLocalLLM
@@ -16,6 +16,9 @@ class TestAiChat(TestBase):
         super().setUp()
         self.window = self.app.getWindow(WindowType.AiAssistant)
         self.chatWidget: AiChatWidget = self.window.centralWidget()
+        self.chatWidget.contextPanel.cbMode.setCurrentIndex(1)
+        self.assertTrue(
+            self.chatWidget.contextPanel.currentMode() == AiChatMode.Chat)
         self.window.show()
         QTest.qWaitForWindowExposed(self.window)
         # wait for creating new conversation

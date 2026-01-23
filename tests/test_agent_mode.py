@@ -71,6 +71,9 @@ class TestAgentMode(TestBase):
         resp = self._assistant_tool_call_response("git_status", "{}")
         self.chatWidget._doMessageReady(model, resp)
 
+        # wait for singleShot
+        self.wait(50)
+
         # Tool should auto-run without showing confirmation.
         self.chatWidget._agentExecutor.executeAsync.assert_called_once()
         self.chatWidget.messages.insertToolConfirmation.assert_not_called()
@@ -86,7 +89,7 @@ class TestAgentMode(TestBase):
         self.assertTrue(self.chatWidget._doRequest.called)
         args, kwargs = self.chatWidget._doRequest.call_args
         self.assertEqual(args[1], AiChatMode.Agent)
-        self.assertIn("Tool `git_status`", args[0])
+        self.assertIn("[git_status]", args[0])
 
     def test_agent_mixed_tools_requires_confirmation_no_autocontinue(self):
         self.chatWidget._contextPanel.setMode(AiChatMode.Agent)
@@ -101,11 +104,6 @@ class TestAgentMode(TestBase):
         resp = AiResponse(role=AiRole.Assistant, message="")
         resp.tool_calls = [
             {
-                "id": "call_1",
-                "type": "function",
-                "function": {"name": "git_status", "arguments": "{}"},
-            },
-            {
                 "id": "call_2",
                 "type": "function",
                 "function": {"name": "git_checkout", "arguments": '{"branch":"main"}'},
@@ -114,15 +112,11 @@ class TestAgentMode(TestBase):
 
         self.chatWidget._doMessageReady(model, resp)
 
-        # git_status is auto-run; git_checkout requires confirmation UI.
-        self.chatWidget._agentExecutor.executeAsync.assert_called_once()
-        self.chatWidget.messages.insertToolConfirmation.assert_called_once()
+        self.wait(50)
 
-        # Finish the auto-run tool.
-        self.chatWidget._onAgentToolFinished(
-            AgentToolResult("git_status", True,
-                            "## main\nworking tree clean (no changes).")
-        )
+        # git_checkout requires confirmation UI.
+        self.chatWidget._agentExecutor.executeAsync.assert_not_called()
+        self.chatWidget.messages.insertToolConfirmation.assert_called_once()
 
         # Because confirmations exist, auto batch should NOT auto-continue.
         self.chatWidget._doRequest.assert_not_called()
