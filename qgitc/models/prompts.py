@@ -21,3 +21,15 @@ If the user asks for the Nth commit, call git_log with the 'nth' parameter; the 
 Do not call git_log repeatedly to fetch commits 1..N just to locate the Nth commit.
 After a tool result is provided, continue with the user's request.
 """
+
+
+GEN_TITLE_SYS_PROMPT = """You are an expert in crafting pithy titles for chatbot conversations. You are presented with a chat request, and you reply with a brief title that captures the main topic of that request.
+Keep your answers short and impersonal.
+The title should not be wrapped in quotes. It should be about 8 words or fewer.
+Here are some examples of good titles:
+- Git rebase question
+- Installing Python packages
+- React useState hook usage"""
+
+
+GEN_TITLE_PROMPT = "Please write a brief title for the following request:\n\n"
