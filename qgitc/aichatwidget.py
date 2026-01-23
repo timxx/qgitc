@@ -4,7 +4,14 @@ import json
 from typing import Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QEventLoop, QSize, Qt, QTimer, Signal
-from PySide6.QtWidgets import QHBoxLayout, QScrollBar, QSplitter, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QScrollBar,
+    QSizePolicy,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 
 from qgitc.agenttoolexecutor import AgentToolExecutor, AgentToolResult
 from qgitc.agenttools import AgentToolRegistry, ToolType, parseToolArguments
@@ -38,13 +45,12 @@ class AiChatWidget(QWidget):
         super().__init__(parent)
 
         self._embedded = embedded
-
-        mainLayout = QHBoxLayout(self)
-        mainLayout.setContentsMargins(4, 4, 4, 4)
-        mainLayout.setSpacing(4)
-
-        self.splitter = QSplitter(Qt.Horizontal, self)
-        mainLayout.addWidget(self.splitter)
+        if not embedded:
+            mainLayout = QHBoxLayout(self)
+            mainLayout.setContentsMargins(4, 4, 4, 4)
+            mainLayout.setSpacing(4)
+            self.splitter = QSplitter(Qt.Horizontal, self)
+            mainLayout.addWidget(self.splitter)
 
         self._setupHistoryPanel()
         self._setupChatPanel()
@@ -72,20 +78,33 @@ class AiChatWidget(QWidget):
         self._historyPanel.historySelectionChanged.connect(
             self._onHistorySelectionChanged)
         self._historyPanel.historyRemoved.connect(self._onHistoryRemoved)
-        self.splitter.addWidget(self._historyPanel)
 
-        # Hide history panel in embedded mode
-        if self._embedded:
-            self._historyPanel.setVisible(False)
+        if not self._embedded:
+            self.splitter.addWidget(self._historyPanel)
+        else:
+            # Embedded mode: show history panel at the top in compact mode.
+            self._historyPanel.setCompactMode(True)
+            self._historyPanel.setMaxVisibleRows(3)
 
         # wait until history loaded
         self._historyPanel.setEnabled(False)
 
     def _setupChatPanel(self):
-        chatWidget = QWidget(self)
-        layout = QVBoxLayout(chatWidget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        if not self._embedded:
+            chatWidget = QWidget(self)
+            layout = QVBoxLayout(chatWidget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            self.splitter.addWidget(chatWidget)
+            self.splitter.setSizes([200, 600])
+        else:  # as main layout
+            layout = QVBoxLayout(self)
+            layout.setContentsMargins(4, 4, 4, 4)
+            layout.setSpacing(0)
+
+            # Embedded mode: mount the existing history panel at the top.
+            layout.addWidget(self._historyPanel)
+            self._historyPanel.setSizePolicy(
+                QSizePolicy.Preferred, QSizePolicy.Fixed)
 
         self._chatBot = AiChatbot(self)
         self._chatBot.verticalScrollBar().valueChanged.connect(
@@ -93,9 +112,17 @@ class AiChatWidget(QWidget):
         self._chatBot.toolConfirmationApproved.connect(self._onToolApproved)
         self._chatBot.toolConfirmationRejected.connect(self._onToolRejected)
         layout.addWidget(self._chatBot)
+        self._chatBot.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         showSettings = not self._embedded
         self._contextPanel = AiChatContextPanel(showSettings, self)
+
+        if self._embedded:
+            self._contextPanel.setSizePolicy(
+                QSizePolicy.Preferred, QSizePolicy.Fixed)
+            layout.addSpacing(4)
+
         layout.addWidget(self._contextPanel)
         self._contextPanel.setFocus()
 
@@ -116,13 +143,6 @@ class AiChatWidget(QWidget):
 
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
-
-        self.splitter.addWidget(chatWidget)
-        if self._embedded:
-            # In embedded mode, only chat panel is visible
-            self.splitter.setSizes([0, 400])
-        else:
-            self.splitter.setSizes([200, 600])
 
     def setContextProvider(self, provider: AiChatContextProvider | None):
         self._contextPanel.setContextProvider(provider)
@@ -170,19 +190,6 @@ class AiChatWidget(QWidget):
             return QSize(400, 600)
         return QSize(800, 600)
 
-    def isEmbedded(self):
-        return self._embedded
-
-    def setEmbedded(self, embedded: bool):
-        if self._embedded == embedded:
-            return
-        self._embedded = embedded
-        self._historyPanel.setVisible(not embedded)
-        if embedded:
-            self.splitter.setSizes([0, 400])
-        else:
-            self.splitter.setSizes([200, 600])
-
     def historyPanel(self):
         return self._historyPanel
 
@@ -227,8 +234,11 @@ class AiChatWidget(QWidget):
         model = self.currentChatModel()
         isNewConversation = not model.history
 
+        self._setEmbeddedRecentListVisible(False)
+
         # Keep title generation based on the user's original prompt (no injected context).
-        titleSeed = (params.sys_prompt + "\n" + prompt) if params.sys_prompt else prompt
+        titleSeed = (params.sys_prompt + "\n" +
+                     prompt) if params.sys_prompt else prompt
 
         if chatMode == AiChatMode.Agent:
             params.tools = AgentToolRegistry.openai_tools()
@@ -251,7 +261,8 @@ class AiChatWidget(QWidget):
             selectedIds = self._contextPanel.selectedContextIds()
             contextText = provider.buildContextText(selectedIds)
             if contextText:
-                params.prompt = f"<context>\n{contextText}\n</context>\n\n" + params.prompt
+                params.prompt = f"<context>\n{contextText}\n</context>\n\n" + \
+                    params.prompt
 
         self._doMessageReady(model, AiResponse(
             AiRole.User, params.prompt), collapsed)
@@ -590,6 +601,7 @@ class AiChatWidget(QWidget):
             self._createNewConversation()
 
         self._historyPanel.setEnabled(True)
+        self._setEmbeddedRecentListVisible(True)
 
     def onNewChatRequested(self):
         """Create a new chat conversation"""
@@ -611,6 +623,7 @@ class AiChatWidget(QWidget):
 
         # Clear current chat
         self._clearCurrentChat()
+        self._setEmbeddedRecentListVisible(True)
 
     def _onHistorySelectionChanged(self, chatHistory: AiChatHistory):
         """Handle history selection change"""
@@ -628,6 +641,9 @@ class AiChatWidget(QWidget):
         if not currentHistory or currentHistory.historyId == historyId:
             self._createNewConversation()
 
+        self._setEmbeddedRecentListVisible(
+            currentHistory and not currentHistory.messages)
+
     def _loadChatHistory(self, chatHistory: AiChatHistory):
         """Load a specific chat history"""
         if not chatHistory:
@@ -644,6 +660,7 @@ class AiChatWidget(QWidget):
             return
 
         self._loadMessagesFromHistory(chatHistory.messages)
+        self._setEmbeddedRecentListVisible(False)
 
         sb = self.messages.verticalScrollBar()
         sb.setValue(sb.maximum())
@@ -687,6 +704,14 @@ class AiChatWidget(QWidget):
         if model:
             model.clear()
         self.messages.clear()
+
+    def _setEmbeddedRecentListVisible(self, visible: bool):
+        if not self._embedded:
+            return
+
+        if visible:
+            visible = self._historyPanel.historyModel().rowCount() > 0
+        self._historyPanel.setVisible(visible)
 
     def _generateChatTitle(self, historyId: str, firstMessage: str):
         """Generate a title for the conversation"""

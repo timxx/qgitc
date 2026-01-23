@@ -203,6 +203,36 @@ class AiChatHistoryPanel(QWidget):
             self._onHistorySelectionChanged)
         mainLayout.addWidget(self._historyList)
 
+        self._compactMode = False
+
+    def setCompactMode(self, compact: bool):
+        """Compact mode for embedded UI: hides controls and reduces vertical chrome."""
+        self._compactMode = compact
+        self._btnNewChat.setVisible(not self._compactMode)
+        self._searchEdit.setVisible(not self._compactMode)
+
+        layout: QVBoxLayout = self.layout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        if self._compactMode:
+            layout.setSpacing(0)
+        else:
+            layout.setSpacing(4)
+
+    def historyModel(self) -> AiChatHistoryModel:
+        """Access the underlying history model (for shared views)."""
+        return self._historyModel
+
+    def setMaxVisibleRows(self, maxRows: int):
+        """Limit the list height so only ~maxRows are visible (with scroll for the rest)."""
+        maxRows = max(1, int(maxRows))
+        rowHeight = self._historyList.sizeHintForRow(0)
+        if rowHeight <= 0:
+            rowHeight = 30
+        self._historyList.setVerticalScrollMode(
+            QAbstractItemView.ScrollPerPixel)
+        height = maxRows * rowHeight + (maxRows - 1) + 4
+        self._historyList.setFixedHeight(height)
+
     def _onSearchTextChanged(self, text: str):
         """Handle search text change"""
         self._filterModel.setSearchText(text)
