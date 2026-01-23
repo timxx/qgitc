@@ -1,15 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import json
-
 from PySide6.QtCore import QRectF, QSizeF, Qt
-from PySide6.QtGui import (
-    QFontMetrics,
-    QPainter,
-    QPyTextObject,
-    QTextDocument,
-    QTextFormat,
-)
+from PySide6.QtGui import QPainter, QPyTextObject, QTextDocument, QTextFormat
 from PySide6.QtWidgets import QApplication
 
 from qgitc.agenttools import ToolType
@@ -42,11 +34,14 @@ class ToolConfirmationData:
     """
 
     def __init__(self, tool_name: str, params: dict, tool_desc: str = None,
-                 tool_type: int = ToolType.READ_ONLY):
+                 tool_type: int = ToolType.READ_ONLY, tool_call_id: str = None):
         self.tool_name = tool_name
         self.params = params
         self.tool_desc = tool_desc
         self.tool_type = tool_type
+        # OpenAI tool_call_id (when available) so we can map tool results back
+        # to the corresponding assistant tool call.
+        self.tool_call_id = tool_call_id
         self.status = ConfirmationStatus.PENDING
         self.hovered = False  # Track hover state for entire card
         self.hovered_button = ButtonType.NONE  # Track which button is hovered

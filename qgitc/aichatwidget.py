@@ -60,10 +60,11 @@ class AiChatWidget(QWidget):
         self._agentExecutor = AgentToolExecutor(self)
         self._agentExecutor.toolFinished.connect(self._onAgentToolFinished)
         self._pendingAgentTool: str = None
+        self._pendingToolCallId: Optional[str] = None
 
         # Auto-run queue for READ_ONLY tools.
-        # Each item: (tool_name, params, group_id)
-        self._autoToolQueue: List[Tuple[str, dict, int]] = []
+        # Each item: (tool_name, params, group_id, tool_call_id)
+        self._autoToolQueue: List[Tuple[str, dict, int, Optional[str]]] = []
         # group_id -> {remaining:int, outputs:[str], auto_continue:bool}
         self._autoToolGroups: Dict[int, Dict[str, object]] = {}
         self._nextAutoGroupId: int = 1
@@ -218,6 +219,64 @@ class AiChatWidget(QWidget):
         model.requestInterruption()
         self._saveChatHistory(model)
 
+    def _continueAgentConversation(self, delayMs: int = 0, retries: int = 20):
+        """Continue an Agent-mode conversation after tool execution.
+
+        This sends a new LLM request that includes the assistant tool call(s) and
+        the tool result message(s) (with matching tool_call_id) without injecting
+        a synthetic user follow-up.
+        """
+        model = self.currentChatModel()
+        if model is None:
+            return
+
+        # Wait until the model has finished recording the assistant tool_calls
+        # message; otherwise sending tool messages with tool_call_id can 400.
+        if model.isRunning():
+            if retries <= 0:
+                return
+            QTimer.singleShot(max(10, delayMs),
+                              lambda: self._continueAgentConversation(delayMs, retries - 1))
+            return
+
+        def hasToolCallId(tcid: str) -> bool:
+            if not tcid:
+                return True
+            for h in model.history:
+                if h.role != AiRole.Assistant or not h.toolCalls:
+                    continue
+                if isinstance(h.toolCalls, list):
+                    for tc in h.toolCalls:
+                        if isinstance(tc, dict) and tc.get("id") == tcid:
+                            return True
+            return False
+
+        # If we have a pending tool_call_id, ensure it exists in history.
+        if self._pendingToolCallId and not hasToolCallId(self._pendingToolCallId):
+            if retries <= 0:
+                return
+            QTimer.singleShot(max(10, delayMs),
+                              lambda: self._continueAgentConversation(delayMs, retries - 1))
+            return
+
+        params = AiParameters()
+        params.prompt = ""
+        params.temperature = 0.1
+        params.chat_mode = AiChatMode.Agent
+        params.model = self._contextPanel.currentModelId()
+        params.tools = AgentToolRegistry.openai_tools()
+        params.tool_choice = "auto"
+        params.continue_only = True
+
+        self._contextPanel.btnSend.setVisible(False)
+        self._contextPanel.btnStop.setVisible(True)
+        self._historyPanel.setEnabled(False)
+        self._contextPanel.cbBots.setEnabled(False)
+        self._contextPanel.setFocus()
+
+        model.queryAsync(params)
+        self._updateChatHistoryModel(model)
+
     def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
         params = AiParameters()
         params.prompt = prompt
@@ -307,6 +366,7 @@ class AiChatWidget(QWidget):
                 func = (tc or {}).get("function") or {}
                 toolName = func.get("name")
                 args = parseToolArguments(func.get("arguments"))
+                toolCallId = (tc or {}).get("id")
                 tool = AgentToolRegistry.tool_by_name(
                     toolName) if toolName else None
 
@@ -315,7 +375,7 @@ class AiChatWidget(QWidget):
                         autoGroupId = self._nextAutoGroupId
                         self._nextAutoGroupId += 1
                     self._autoToolQueue.append(
-                        (toolName, args or {}, autoGroupId))
+                        (toolName, args or {}, autoGroupId, toolCallId))
                     autoToolsCount += 1
                     continue
 
@@ -334,6 +394,7 @@ class AiChatWidget(QWidget):
                         params=args,
                         toolDesc=tool.description,
                         toolType=tool.tool_type,
+                        toolCallId=toolCallId,
                     )
                 elif toolName:
                     hasConfirmations = True
@@ -341,6 +402,7 @@ class AiChatWidget(QWidget):
                         toolName=toolName,
                         params=args,
                         toolDesc=self.tr("Unknown tool requested by model"),
+                        toolCallId=toolCallId,
                     )
 
             if autoGroupId is not None and autoToolsCount:
@@ -379,7 +441,7 @@ class AiChatWidget(QWidget):
         self._contextPanel.cbBots.setEnabled(True)
         self._contextPanel.setFocus()
 
-    def _onToolApproved(self, tool_name: str, params: dict):
+    def _onToolApproved(self, tool_name: str, params: dict, tool_call_id: str):
         # Prevent overlapping executions.
         if self._pendingAgentTool:
             self._doMessageReady(self.currentChatModel(), AiResponse(
@@ -389,20 +451,32 @@ class AiChatWidget(QWidget):
         self._pendingAgentTool = tool_name
         self._pendingToolSource = "approved"
         self._pendingAutoGroupId = None
+        self._pendingToolCallId = tool_call_id
 
         started = self._agentExecutor.executeAsync(tool_name, params or {})
         if not started:
             self._pendingAgentTool = None
             self._pendingToolSource = None
+            self._pendingToolCallId = None
             self._doMessageReady(self.currentChatModel(), AiResponse(
                 AiRole.System, self.tr("Failed to start tool execution.")))
 
-    def _onToolRejected(self, tool_name: str):
+    def _onToolRejected(self, tool_name: str, tool_call_id: str):
         # Keep it simple: just record and continue.
         model = self.currentChatModel()
-        msg = self.tr("Tool rejected: {0}").format(tool_name)
-        model.addHistory(AiRole.System, msg)
-        self._doMessageReady(model, AiResponse(AiRole.System, msg))
+
+        # If the assistant previously requested a tool via tool_calls, OpenAI-style
+        # chat requires that each tool_call_id gets a corresponding tool message.
+        if tool_call_id:
+            description = self.tr("✗ `{}` rejected").format(tool_name)
+            model.addHistory(AiRole.Tool, "User chose to reject",
+                             description=description,
+                             toolCalls={"tool_call_id": tool_call_id})
+            msg = self.tr("User rejected")
+            self._doMessageReady(model, AiResponse(
+                AiRole.Tool, msg, description=description))
+        # Let the agent continue and pick an alternative.
+        self._continueAgentConversation(delayMs=0)
 
     def _onAgentToolFinished(self, result: AgentToolResult):
         model = self.currentChatModel()
@@ -412,14 +486,18 @@ class AiChatWidget(QWidget):
 
         source = self._pendingToolSource
         group_id = self._pendingAutoGroupId
+        tool_call_id = self._pendingToolCallId
 
         self._pendingAgentTool = None
         self._pendingToolSource = None
         self._pendingAutoGroupId = None
+        self._pendingToolCallId = None
 
         prefix = "✓" if ok else "✗"
         toolDesc = self.tr("{} `{}` output").format(prefix, tool_name)
-        model.addHistory(AiRole.Tool, output, description=toolDesc)
+        toolCalls = {"tool_call_id": tool_call_id} if tool_call_id else None
+        model.addHistory(AiRole.Tool, output,
+                         description=toolDesc, toolCalls=toolCalls)
         resp = AiResponse(AiRole.Tool, output, description=toolDesc)
         self._doMessageReady(model, resp, collapsed=True)
 
@@ -440,9 +518,9 @@ class AiChatWidget(QWidget):
                 self._startNextAutoToolIfIdle()
                 return
 
-        # Approved (WRITE/DANGEROUS) tools: send ONLY the tool output back as a collapsed user message.
-        followup = f"[{tool_name}]\n{output}" if output else f"[{tool_name}] (no output)"
-        self._doRequest(followup, AiChatMode.Agent, collapsed=True)
+        # Continue the agent conversation using proper tool-call continuation,
+        # without injecting a synthetic user follow-up.
+        self._continueAgentConversation(delayMs=0)
 
     def _startNextAutoToolIfIdle(self):
         if self._pendingAgentTool:
@@ -450,10 +528,11 @@ class AiChatWidget(QWidget):
         if not self._autoToolQueue:
             return
 
-        tool_name, params, group_id = self._autoToolQueue.pop(0)
+        tool_name, params, group_id, tool_call_id = self._autoToolQueue.pop(0)
         self._pendingAgentTool = tool_name
         self._pendingToolSource = "auto"
         self._pendingAutoGroupId = group_id
+        self._pendingToolCallId = tool_call_id
 
         toolMessage = json.dumps(params or {}, ensure_ascii=False)
         description = self.tr("{} run `{}`").format(
@@ -470,6 +549,7 @@ class AiChatWidget(QWidget):
             self._pendingAgentTool = None
             self._pendingToolSource = None
             self._pendingAutoGroupId = None
+            self._pendingToolCallId = None
             self._onAgentToolFinished(AgentToolResult(
                 tool_name, False, self.tr("Failed to start tool execution.")))
 
@@ -677,23 +757,20 @@ class AiChatWidget(QWidget):
         if addToChatBot:
             chatbot.setHighlighterEnabled(False)
 
-        prevRole = None
         for msg in messages:
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
             description = msg.get('description', None)
             toolCalls = msg.get('tool_calls', None)
 
-            model.addHistory(role, content, description=description, toolCalls=toolCalls)
+            model.addHistory(
+                role, content, description=description, toolCalls=toolCalls)
             # Don't add tool calls from history to chatbot
             if addToChatBot and (role != AiRole.Assistant or not toolCalls):
                 response = AiResponse(role, content, description=description)
                 # Auto-collapse Tool messages and user messages that follow Tool messages
-                collapsed = (role == AiRole.Tool) or (role == AiRole.System) or (
-                    role == AiRole.User and prevRole == AiRole.Tool)
+                collapsed = (role == AiRole.Tool) or (role == AiRole.System)
                 chatbot.appendResponse(response, collapsed=collapsed)
-
-            prevRole = role
 
         if addToChatBot:
             chatbot.setHighlighterEnabled(True)

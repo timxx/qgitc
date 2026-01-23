@@ -83,8 +83,8 @@ class AiChatbot(QPlainTextEdit):
     toggleMaxSize = 14
 
     # Signals for tool confirmation interaction
-    toolConfirmationApproved = Signal(str, dict)  # tool_name, params
-    toolConfirmationRejected = Signal(str)  # tool_name
+    toolConfirmationApproved = Signal(str, dict, str)  # tool_name, params, tool_call_id
+    toolConfirmationRejected = Signal(str, str)  # tool_name, tool_call_id
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -363,7 +363,8 @@ class AiChatbot(QPlainTextEdit):
         return schema.SystemBlockBg
 
     def insertToolConfirmation(self, toolName: str, params: dict,
-                               toolDesc: str = None, toolType: int = ToolType.READ_ONLY):
+                               toolDesc: str = None, toolType: int = ToolType.READ_ONLY,
+                               toolCallId: str = None):
         """
         Insert a tool confirmation card using QTextObjectInterface.
         
@@ -386,7 +387,7 @@ class AiChatbot(QPlainTextEdit):
 
         # Create confirmation data
         confirmData = ToolConfirmationData(
-            toolName, params, toolDesc, toolType)
+            toolName, params, toolDesc, toolType, tool_call_id=toolCallId)
 
         # Create custom character format with our data
         charFormat = QTextCharFormat()
@@ -489,11 +490,11 @@ class AiChatbot(QPlainTextEdit):
             if clickedButton == ButtonType.APPROVE:
                 confirmData.status = ConfirmationStatus.APPROVED
                 self.toolConfirmationApproved.emit(
-                    confirmData.tool_name, confirmData.params)
+                    confirmData.tool_name, confirmData.params, confirmData.tool_call_id)
             elif clickedButton == ButtonType.REJECT:
                 confirmData.status = ConfirmationStatus.REJECTED
                 self.toolConfirmationRejected.emit(
-                    confirmData.tool_name)
+                    confirmData.tool_name, confirmData.tool_call_id)
 
             cursor = self.cursorForPosition(pos)
             pos = cursor.block().position()

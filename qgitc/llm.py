@@ -67,6 +67,10 @@ class AiParameters:
         self.fill_point = None
         self.language = None
         self.model: str = None
+        # When True, send the current conversation history as-is (including tool
+        # messages) without appending a new user message. This is required for
+        # proper OpenAI tool-calling continuation after tool execution.
+        self.continue_only: bool = False
         # OpenAI-compatible tool definitions, e.g. [{"type":"function","function":{...}}]
         self.tools: Optional[List[Dict[str, Any]]] = None
         # OpenAI tool choice (e.g. "auto"); leave None to omit.
@@ -78,21 +82,6 @@ class AiChatMode(Enum):
     Chat = 0
     CodeReview = 1
     Agent = 2
-
-
-def _aiRoleFromString(role: str) -> AiRole:
-    role = role.lower()
-    if role == "user":
-        return AiRole.User
-    elif role == "assistant":
-        return AiRole.Assistant
-    elif role == "system":
-        return AiRole.System
-    elif role == "tool":
-        return AiRole.Tool
-    else:
-        logger.warning("Unknown role: %s", role)
-        return AiRole.Assistant
 
 
 class AiModelBase(QObject):
@@ -129,16 +118,74 @@ class AiModelBase(QObject):
             toolCalls=toolCalls))
 
     def toOpenAiMessages(self):
-        # Tool role is UI-only in QGitc and should not be sent to the LLM.
-        messages = []
+        """Convert internal chat history to OpenAI Chat Completions messages.
+
+        Notes:
+        - OpenAI only allows `tool_calls` on assistant messages.
+        - If an assistant message contains `tool_calls`, the conversation must
+          include a subsequent `tool` role message for each `tool_call_id`
+          before any later assistant message.
+        - QGitc has UI-only tool messages (tool run previews, confirmations).
+          We only forward tool *results* that have an associated `tool_call_id`.
+        """
+
+        toolResultIds = set()
+        for h in self._history:
+            if h.role != AiRole.Tool or not h.toolCalls:
+                continue
+            if isinstance(h.toolCalls, dict):
+                tcid = h.toolCalls.get("tool_call_id")
+                if tcid:
+                    toolResultIds.add(tcid)
+            elif isinstance(h.toolCalls, str):
+                toolResultIds.add(h.toolCalls)
+
+        messages: List[Dict[str, Any]] = []
         for history in self._history:
+            # Forward tool results only when they can be correlated.
             if history.role == AiRole.Tool:
+                toolCallId = None
+                if isinstance(history.toolCalls, dict):
+                    toolCallId = history.toolCalls.get("tool_call_id")
+                elif isinstance(history.toolCalls, str):
+                    toolCallId = history.toolCalls
+
+                if not toolCallId:
+                    continue
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": toolCallId,
+                    "content": history.message or "",
+                })
                 continue
 
-            msg = {"role": history.role.name.lower(),
-                   "content": history.message}
-            if history.toolCalls:
-                msg["tool_calls"] = history.toolCalls
+            msg: Dict[str, Any] = {"role": history.role.name.lower()}
+
+            # Only assistant messages may include tool_calls.
+            if history.role == AiRole.Assistant and history.toolCalls:
+                # Avoid OpenAI 400s when we don't yet have the corresponding tool results.
+                tool_calls = history.toolCalls
+                ids = []
+                if isinstance(tool_calls, list):
+                    for tc in tool_calls:
+                        if isinstance(tc, dict) and tc.get("id"):
+                            ids.append(tc.get("id"))
+
+                if not ids:
+                    # We can't correlate tool results without ids; keep request valid.
+                    msg["content"] = history.message or "(tool call pending)"
+                elif any(tcid not in toolResultIds for tcid in ids):
+                    # Tool call is unresolved (pending confirmation/execution).
+                    # Send it as plain content so the model has context but the
+                    # request remains valid.
+                    msg["content"] = history.message or "(tool call pending)"
+                else:
+                    msg["tool_calls"] = tool_calls
+                    msg["content"] = history.message or ""
+            else:
+                msg["content"] = history.message or ""
+
             messages.append(msg)
 
         return messages
@@ -303,7 +350,7 @@ class AiModelBase(QObject):
             return
 
         if "role" in delta and delta["role"]:
-            self._role = _aiRoleFromString(delta["role"])
+            self._role = AiRole.fromString(delta["role"])
         # Tool calls can stream as incremental chunks of function.arguments.
         if "tool_calls" in delta and delta["tool_calls"]:
             for tc in delta["tool_calls"]:
@@ -369,7 +416,7 @@ class AiModelBase(QObject):
             self.responseAvailable.emit(aiResponse)
             break
 
-        self._role = _aiRoleFromString(role)
+        self._role = AiRole.fromString(role)
         self._content = content
 
     @staticmethod

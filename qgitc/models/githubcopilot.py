@@ -171,11 +171,14 @@ class GithubCopilot(AiModelBase):
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
-        prompt = params.prompt
-        if params.sys_prompt:
-            self.addHistory(AiRole.System, params.sys_prompt)
-        self.addHistory(AiRole.User, prompt)
-        payload["messages"] = self.toOpenAiMessages()
+        if params.continue_only:
+            payload["messages"] = self.toOpenAiMessages()
+        else:
+            prompt = params.prompt
+            if params.sys_prompt:
+                self.addHistory(AiRole.System, params.sys_prompt)
+            self.addHistory(AiRole.User, prompt)
+            payload["messages"] = self.toOpenAiMessages()
 
         self._doQuery(payload, stream)
 
