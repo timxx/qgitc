@@ -40,6 +40,7 @@ from qgitc.preferences import Preferences
 class AiChatWidget(QWidget):
 
     initialized = Signal()
+    chatTitleReady = Signal()
 
     def __init__(self, parent=None, embedded=False):
         super().__init__(parent)
@@ -119,8 +120,6 @@ class AiChatWidget(QWidget):
         self._contextPanel = AiChatContextPanel(showSettings, self)
 
         if self._embedded:
-            self._contextPanel.setSizePolicy(
-                QSizePolicy.Preferred, QSizePolicy.Fixed)
             layout.addSpacing(4)
 
         layout.addWidget(self._contextPanel)
@@ -733,6 +732,7 @@ class AiChatWidget(QWidget):
         # Save to settings
         settings = ApplicationBase.instance().settings()
         settings.saveChatHistory(historyId, chatHistory.toDict())
+        self.chatTitleReady.emit()
 
     def onOpenSettings(self):
         settings = ApplicationBase.instance().settings()

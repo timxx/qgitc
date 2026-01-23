@@ -194,7 +194,6 @@ class AiChatHistoryPanel(QWidget):
 
         self._historyList = QListView(self)
         self._historyList.setModel(self._filterModel)
-        self._historyList.setMinimumWidth(150)
         self._historyList.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self._historyList.setContextMenuPolicy(Qt.CustomContextMenu)
         self._historyList.customContextMenuRequested.connect(

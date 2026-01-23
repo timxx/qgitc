@@ -2,12 +2,13 @@
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QDockWidget, QHBoxLayout, QLabel, QMenu, QWidget
+from PySide6.QtWidgets import QDockWidget, QHBoxLayout, QMenu, QWidget
 
 from qgitc.aichatwidget import AiChatWidget
 from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
+from qgitc.elidedlabel import ElidedLabel
 from qgitc.separatorwidget import SeparatorWidget
 
 
@@ -29,9 +30,14 @@ class AiChatDockWidget(QDockWidget):
         self._titleBarLayout.setSpacing(4)
 
         # Add title label on the left
-        self._titleLabel = QLabel(
+        titleLabel = ElidedLabel(
             self.tr("AI Assistant"), self._titleBarWidget)
-        self._titleBarLayout.addWidget(self._titleLabel)
+        self._titleBarLayout.addWidget(titleLabel)
+
+        self._chatTitleLabel = ElidedLabel(self._titleBarWidget)
+        self._chatTitleLabel.setTextColor(Qt.gray)
+        self._titleBarLayout.addWidget(self._chatTitleLabel)
+
         self._titleBarLayout.addStretch()
 
         icon = QIcon(dataDirPath() + "/icons/add.svg")
@@ -79,6 +85,11 @@ class AiChatDockWidget(QDockWidget):
 
         self._chatWindows = []
 
+        self._aiChatWidget._historyPanel.historySelectionChanged.connect(
+            self._onHistorySelectionChanged)
+        self._aiChatWidget.chatTitleReady.connect(
+            self._onChatTitleReady)
+
     def chatWidget(self):
         """Get the embedded AI chat widget"""
         return self._aiChatWidget
@@ -111,3 +122,26 @@ class AiChatDockWidget(QDockWidget):
     def queryClose(self):
         """Clean up when closing"""
         self._aiChatWidget.queryClose()
+
+    def _onHistorySelectionChanged(self, chatHistory):
+        """Update title when chat history changes"""
+        if chatHistory and chatHistory.title:
+            self._updateChatTitle(chatHistory.title)
+        else:
+            self._updateChatTitle("")
+
+    def _onChatTitleReady(self):
+        """Update title when history data changes (e.g., title generated)"""
+        currentHistory = self._aiChatWidget._historyPanel.currentHistory()
+        if currentHistory and currentHistory.title:
+            self._updateChatTitle(currentHistory.title)
+        else:
+            self._updateChatTitle("")
+
+    def _updateChatTitle(self, title: str):
+        """Update the chat title label with elided text"""
+        if not title:
+            self._chatTitleLabel.setText("")
+        else:
+            self._chatTitleLabel.setText(f"- {title}")
+            self._chatTitleLabel.setToolTip(title)
