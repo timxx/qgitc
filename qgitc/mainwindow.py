@@ -201,8 +201,8 @@ class MainWindow(StateWindow):
         self.ui.acBranchPick.triggered.connect(
             self._onPickBranchTriggered)
 
-        self.ui.acShowAIAssistant.triggered.connect(
-            self._onShowAiAssistant)
+        self.ui.acToggleChat.triggered.connect(
+            self.toggleAiChatDock)
         self.ui.acCodeReview.triggered.connect(
             self._onCodeReview)
         self.ui.acChangeCommitAuthor.triggered.connect(
@@ -218,21 +218,11 @@ class MainWindow(StateWindow):
         # Add dock widget to main window
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
 
-        self.ui.acShowAIAssistant.setChecked(self._aiChat.isVisible())
-        self._aiChat.visibilityChanged.connect(self._onAiChatVisibilityChanged)
-
     def toggleAiChatDock(self):
         """Toggle the AI chat dock visibility"""
         self._aiChat.setVisible(not self._aiChat.isVisible())
         if self._aiChat.isVisible():
             self._aiChat.chatWidget().contextPanel.setFocus()
-
-    def _onAiChatVisibilityChanged(self, visible):
-        """Update action state when dock visibility changes"""
-        if visible:
-            self.ui.acShowAIAssistant.setText(self.tr("Hide AI &Assistant"))
-        else:
-            self.ui.acShowAIAssistant.setText(self.tr("Show AI &Assistant"))
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -743,10 +733,6 @@ class MainWindow(StateWindow):
         self.ui.gitViewA.ui.logView.reloadLogs()
         if self.gitViewB:
             self.gitViewB.ui.logView.reloadLogs()
-
-    def _onShowAiAssistant(self):
-        # Toggle embedded AI chat dock
-        self.toggleAiChatDock()
 
     def cancel(self, force=False):
         self._delayTimer.stop()

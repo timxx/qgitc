@@ -17,7 +17,7 @@ class AiChatDockWidget(QDockWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.setWindowTitle(self.tr("AI Assistant"))
+        self.setWindowTitle(self.tr("Chat"))
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 
         self._aiChatWidget = AiChatWidget(self, embedded=True)
@@ -30,8 +30,7 @@ class AiChatDockWidget(QDockWidget):
         self._titleBarLayout.setSpacing(4)
 
         # Add title label on the left
-        titleLabel = ElidedLabel(
-            self.tr("AI Assistant"), self._titleBarWidget)
+        titleLabel = ElidedLabel(self.tr("Chat"), self._titleBarWidget)
         self._titleBarLayout.addWidget(titleLabel)
 
         self._chatTitleLabel = ElidedLabel(self._titleBarWidget)
