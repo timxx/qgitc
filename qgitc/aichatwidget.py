@@ -694,6 +694,25 @@ class AiChatWidget(QWidget):
                 "Cannot create new conversation: no model available")
             return
 
+        def isEmptyHistory(h: AiChatHistory | None) -> bool:
+            return h is not None and not h.messages
+
+        def tryActivateHistory(h: AiChatHistory) -> bool:
+            self._historyPanel.setCurrentHistory(h.historyId)
+            cur = self._historyPanel.currentHistory()
+            return cur is not None and cur.historyId == h.historyId
+
+        # If we already have an empty conversation, don't create another one.
+        # Just activate/select it and clear the UI.
+        historyModel = self._historyPanel.historyModel()
+        if historyModel.rowCount() > 0:
+            history = historyModel.getHistory(0)
+            if isEmptyHistory(history):
+                if tryActivateHistory(history):
+                    self._clearCurrentChat()
+                    self._setEmbeddedRecentListVisible(True)
+                return
+
         history = AiChatHistory()
         history.modelKey = AiModelFactory.modelKey(model)
         history.modelId = model.modelId or model.name
