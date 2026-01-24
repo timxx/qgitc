@@ -1395,8 +1395,31 @@ class CommitWindow(StateWindow):
             return
 
         ApplicationBase.instance().trackFeatureUsage("commit.ai_cr")
-        event = CodeReviewEvent(submoduleFiles)
-        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
+
+        chat = self._aiChat.chatWidget()
+        if chat.isBusyForCodeReview():
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle(self.tr("Code Review"))
+            msg.setText(self.tr("AI chat is busy."))
+            msg.setInformativeText(self.tr(
+                "The chat is currently generating a response or waiting for a tool confirmation.\n\n"
+                "To avoid interrupting it, you can run the review in the standalone window instead."))
+
+            btnStandalone = msg.addButton(
+                self.tr("Review in Standalone Window"), QMessageBox.YesRole)
+            btnAbort = msg.addButton(
+                self.tr("Abort current chat"), QMessageBox.NoRole)
+            msg.setDefaultButton(btnStandalone)
+            msg.exec()
+
+            if msg.clickedButton() == btnStandalone:
+                event = CodeReviewEvent(submoduleFiles)
+                ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
+                return
+
+        self._aiChat.setVisible(True)
+        chat.codeReviewForStagedFiles(submoduleFiles)
 
     def cancel(self, force=False):
         self._aiMessage.cancel(force)

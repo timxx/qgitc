@@ -53,7 +53,7 @@ from qgitc.changeauthordialog import ChangeAuthorDialog
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffinder import DiffFinder
-from qgitc.events import CodeReviewEvent, CopyConflictCommit
+from qgitc.events import CodeReviewEvent, CopyConflictCommit, DockCodeReviewEvent
 from qgitc.gitutils import *
 from qgitc.logsfetcher import LogsFetcher
 from qgitc.windowtype import WindowType
@@ -1399,6 +1399,14 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         logWindow = self.logWindow()
         args = logWindow.getFilterArgs() if logWindow else []
+        if logWindow is not None:
+            crEvent = DockCodeReviewEvent(commit, args)
+            crEvent.ignore()  # default to not handled
+            ApplicationBase.instance().sendEvent(logWindow, crEvent)
+            if crEvent.isAccepted():
+                return
+
+        # Fallback: standalone window via application event.
         event = CodeReviewEvent(commit, args)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 

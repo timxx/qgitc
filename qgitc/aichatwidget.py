@@ -3,7 +3,7 @@
 import json
 from typing import Dict, List, Optional, Tuple
 
-from PySide6.QtCore import QEventLoop, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QEventLoop, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QScrollBar,
@@ -22,7 +22,8 @@ from qgitc.aichathistory import AiChatHistory
 from qgitc.aichathistorypanel import AiChatHistoryPanel
 from qgitc.aichattitlegenerator import AiChatTitleGenerator
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import commitRepoDir, logger
+from qgitc.cancelevent import CancelEvent
+from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
 from qgitc.gitutils import Git
 from qgitc.llm import (
     AiChatMode,
@@ -35,6 +36,16 @@ from qgitc.llm import (
 from qgitc.llmprovider import AiModelProvider
 from qgitc.models.prompts import AGENT_SYS_PROMPT, CODE_REVIEW_PROMPT
 from qgitc.preferences import Preferences
+from qgitc.submoduleexecutor import SubmoduleExecutor
+
+
+class DiffAvailableEvent(QEvent):
+
+    Type = QEvent.registerEventType()
+
+    def __init__(self, diff: str):
+        super().__init__(QEvent.Type(DiffAvailableEvent.Type))
+        self.diff = diff
 
 
 class AiChatWidget(QWidget):
@@ -76,12 +87,37 @@ class AiChatWidget(QWidget):
         # We must NOT call `_continueAgentConversation` until this is empty.
         self._awaitingToolResults: set[str] = set()
 
+        # Code review diff collection (staged/local changes)
+        self._codeReviewExecutor: SubmoduleExecutor | None = None
+        self._codeReviewDiffs: List[str] = []
+
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
 
     def _markToolResultComplete(self, tool_call_id: Optional[str]):
         if tool_call_id:
             self._awaitingToolResults.discard(tool_call_id)
+
+    def event(self, event: QEvent):
+        if event.type() == DiffAvailableEvent.Type:
+            if event.diff:
+                self._codeReviewDiffs.append(event.diff)
+            return True
+        return super().event(event)
+
+    def hasPendingToolConfirmation(self) -> bool:
+        """True if the chat is waiting for a tool confirmation action."""
+        return bool(self._awaitingToolResults)
+
+    def isGenerating(self) -> bool:
+        """True if the current model is actively generating a response."""
+        self._waitForInitialization()
+        model = self.currentChatModel()
+        return model is not None and model.isRunning()
+
+    def isBusyForCodeReview(self) -> bool:
+        """True if starting a dock-based code review would be disruptive."""
+        return self.isGenerating() or self.hasPendingToolConfirmation()
 
     def _setupHistoryPanel(self):
         self._historyPanel = AiChatHistoryPanel(self)
@@ -193,6 +229,11 @@ class AiChatWidget(QWidget):
             if model.isRunning():
                 model.requestInterruption()
             model.cleanup()
+
+        if self._codeReviewExecutor:
+            self._codeReviewExecutor.cancel()
+            self._codeReviewExecutor = None
+            self._codeReviewDiffs.clear()
 
     def sizeHint(self):
         if self._embedded:
@@ -653,6 +694,39 @@ class AiChatWidget(QWidget):
         if not curHistory or curHistory.messages:
             self._createNewConversation()
         self._doRequest(diff, AiChatMode.CodeReview)
+
+    def codeReviewForStagedFiles(self, submodules):
+        """Start a code review for staged/local changes across submodules."""
+        self._waitForInitialization()
+        self._ensureCodeReviewExecutor()
+        self._codeReviewDiffs.clear()
+        self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
+
+    def _ensureCodeReviewExecutor(self):
+        if self._codeReviewExecutor is None:
+            self._codeReviewExecutor = SubmoduleExecutor(self)
+            self._codeReviewExecutor.finished.connect(
+                self._onCodeReviewDiffFetchFinished)
+
+    def _onCodeReviewDiffFetchFinished(self):
+        if self._codeReviewDiffs:
+            diff = "\n".join(self._codeReviewDiffs)
+            self.codeReviewForDiff(diff)
+
+    def _fetchStagedDiff(self, submodule: str, files, cancelEvent: CancelEvent):
+        repoDir = fullRepoDir(submodule)
+        repoFiles = [toSubmodulePath(submodule, file) for file in files]
+        data: bytes = Git.commitRawDiff(
+            Git.LCC_SHA1, repoFiles, repoDir=repoDir)
+        if not data:
+            logger.warning("AiChat: no diff for %s", repoDir)
+            return
+
+        if cancelEvent.isSet():
+            return
+
+        diff = data.decode("utf-8", errors="replace")
+        ApplicationBase.instance().postEvent(self, DiffAvailableEvent(diff))
 
     def _waitForInitialization(self, timeout_ms: int = 5000) -> bool:
         if self._isInitialized:

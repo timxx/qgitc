@@ -131,3 +131,18 @@ class ShowPickBranchEvent(QEvent):
         super().__init__(QEvent.Type(ShowPickBranchEvent.Type))
         self.sourceBranch = sourceBranch
         self.targetBranch = targetBranch
+
+
+class DockCodeReviewEvent(QEvent):
+    """Request the owning window to run code review in its dock chat.
+
+    The receiver should call `event.accept()` if handled (even if the user cancels),
+    or leave it ignored to allow the sender to fall back.
+    """
+
+    Type = QEvent.User + 14
+
+    def __init__(self, commit: Commit, args: List[str] = None):
+        super().__init__(QEvent.Type(DockCodeReviewEvent.Type))
+        self.commit = commit
+        self.args = args or []
