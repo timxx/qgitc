@@ -53,6 +53,7 @@ class AiChatWidget(QWidget):
 
     initialized = Signal()
     chatTitleReady = Signal()
+    modelStateChanged = Signal(bool)
 
     def __init__(self, parent=None, embedded=False):
         super().__init__(parent)
@@ -104,6 +105,10 @@ class AiChatWidget(QWidget):
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
 
+    def _setGenerating(self, generating: bool):
+        # we should connect model, but we have many models
+        self.modelStateChanged.emit(generating)
+
     def _markToolResultComplete(self, tool_call_id: Optional[str]):
         if tool_call_id:
             self._awaitingToolResults.discard(tool_call_id)
@@ -124,6 +129,10 @@ class AiChatWidget(QWidget):
         """True if the current model is actively generating a response."""
         model = self.currentChatModel()
         return model is not None and model.isRunning()
+
+    def isHistoryReady(self) -> bool:
+        """True once history has been loaded and the widget is initialized."""
+        return bool(self._isInitialized)
 
     def isBusyForCodeReview(self) -> bool:
         """True if starting a dock-based code review would be disruptive."""
@@ -347,6 +356,7 @@ class AiChatWidget(QWidget):
         self._contextPanel.setFocus()
 
         model.queryAsync(params)
+        self._setGenerating(True)
         self._updateChatHistoryModel(model)
 
     def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
@@ -404,6 +414,7 @@ class AiChatWidget(QWidget):
         self._contextPanel.setFocus()
 
         model.queryAsync(params)
+        self._setGenerating(True)
 
         if isNewConversation and not ApplicationBase.instance().testing and titleSeed:
             self._generateChatTitle(
@@ -535,6 +546,7 @@ class AiChatWidget(QWidget):
         self._historyPanel.setEnabled(True)
         self._contextPanel.cbBots.setEnabled(True)
         self._contextPanel.setFocus()
+        self._setGenerating(False)
 
     def _onToolApproved(self, tool_name: str, params: dict, tool_call_id: str):
         # Prevent overlapping executions.

@@ -60,6 +60,7 @@ class AiChatDockWidget(QDockWidget):
         self._btnNewConversation.setMenu(newMenu)
         self._btnNewConversation.setPopupMode(
             ColoredIconToolButton.MenuButtonPopup)
+        self._btnNewConversation.setEnabled(False)
 
         self._titleBarLayout.addWidget(self._btnNewConversation)
 
@@ -90,6 +91,19 @@ class AiChatDockWidget(QDockWidget):
             self._onHistorySelectionChanged)
         self._aiChatWidget.chatTitleReady.connect(
             self._onChatTitleReady)
+
+        self._aiChatWidget.initialized.connect(
+            self._updateNewConversationButtonState)
+        self._aiChatWidget.modelStateChanged.connect(
+            lambda _isGenerating: self._updateNewConversationButtonState())
+
+        self._updateNewConversationButtonState()
+
+    def _updateNewConversationButtonState(self):
+        """Enable New Conversation only when history is ready and not generating."""
+        isHistoryReady = self._aiChatWidget.isHistoryReady()
+        enabled = isHistoryReady and not self._aiChatWidget.isGenerating()
+        self._btnNewConversation.setEnabled(enabled)
 
     def chatWidget(self):
         """Get the embedded AI chat widget"""
