@@ -2,7 +2,7 @@
 
 from typing import List, Tuple
 
-from PySide6.QtCore import QElapsedTimer, QEvent, QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QElapsedTimer, QEvent, QPoint, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QVBoxLayout, QWidget
 
@@ -161,7 +161,7 @@ class InlineComboBox(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        rect = self.rect().toRectF()
+        rect = QRectF(self.rect())
         borderRect = rect.adjusted(0.5, 0.5, -0.5, -0.5)
         radius = 4
 

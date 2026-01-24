@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-from typing import List
+from typing import List, Optional
 
 from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
@@ -21,7 +21,7 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
     CTX_SELECTED_FILES = "files.selected"
     CTX_DIFF_SELECTION = "diff.selection"
 
-    def __init__(self, mainWindow, parent: QObject | None = None):
+    def __init__(self, mainWindow, parent: QObject = None):
         super().__init__(parent or mainWindow)
         from qgitc.mainwindow import MainWindow
         self._mainWindow: MainWindow = mainWindow
@@ -97,7 +97,7 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
             return []
         return gitView.ui.logView.getSelectedCommits()
 
-    def _activeCommit(self) -> Commit | None:
+    def _activeCommit(self) -> Optional[Commit]:
         gitView = self._gitView()
         if not gitView:
             return None
@@ -254,7 +254,7 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
 
         return "\n".join(b for b in blocks if b).strip()
 
-    def agentSystemPrompt(self) -> str | None:
+    def agentSystemPrompt(self) -> Optional[str]:
         return """You are a Git assistant inside QGitc log view.
 
 In log view user can explore git logs (commit sha1, messages, author, dates etc) and the selected commit's diff (and its file list). User can also switch branches and submodules (if any).

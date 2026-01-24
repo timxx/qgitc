@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import QLayout, QLayoutItem, QSizePolicy, QWidget
 
@@ -12,7 +14,7 @@ class FlowLayout(QLayout):
     Based on the canonical Qt Flow Layout example, adapted for PySide6.
     """
 
-    def __init__(self, parent: QWidget | None = None, margin: int = 0, spacing: int = 4):
+    def __init__(self, parent: QWidget = None, margin: int = 0, spacing: int = 4):
         super().__init__(parent)
         self._items: list[QLayoutItem] = []
         self.setContentsMargins(margin, margin, margin, margin)
@@ -29,12 +31,12 @@ class FlowLayout(QLayout):
     def count(self) -> int:
         return len(self._items)
 
-    def itemAt(self, index: int) -> QLayoutItem | None:
+    def itemAt(self, index: int) -> Optional[QLayoutItem]:
         if 0 <= index < len(self._items):
             return self._items[index]
         return None
 
-    def takeAt(self, index: int) -> QLayoutItem | None:
+    def takeAt(self, index: int) -> Optional[QLayoutItem]:
         if 0 <= index < len(self._items):
             return self._items.pop(index)
         return None

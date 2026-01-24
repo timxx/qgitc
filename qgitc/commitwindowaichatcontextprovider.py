@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-from typing import List
+from typing import List, Optional
 
 from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
@@ -20,7 +20,7 @@ class CommitWindowAiChatContextProvider(AiChatContextProvider):
     CTX_SELECTED_DIFF = "commit.diff"
     CTX_COMMIT_MESSAGE = "commit.message"
 
-    def __init__(self, commitWindow, parent: QObject | None = None):
+    def __init__(self, commitWindow, parent: QObject = None):
         super().__init__(parent or commitWindow)
         from qgitc.commitwindow import CommitWindow
         self._commitWindow: CommitWindow = commitWindow
@@ -221,7 +221,7 @@ class CommitWindowAiChatContextProvider(AiChatContextProvider):
 
         return "\n".join(b for b in blocks if b).strip()
 
-    def agentSystemPrompt(self) -> str | None:
+    def agentSystemPrompt(self) -> Optional[str]:
         return """You are a Git assistant inside QGitc commit window.
 
 In commit window user can:

@@ -3,7 +3,7 @@
 import bisect
 import string
 from enum import Enum, Flag, IntEnum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from PySide6.QtCore import (
     QFlag,
@@ -212,7 +212,7 @@ class _Utf16IndexMapper:
         i = bisect.bisect_right(self._indices, index)
         return i - 1
 
-    def rangeToUtf16(self, start: int, length: int) -> tuple[int, int]:
+    def rangeToUtf16(self, start: int, length: int) -> Tuple[int, int]:
         if length <= 0:
             return self.toUtf16(start), 0
 

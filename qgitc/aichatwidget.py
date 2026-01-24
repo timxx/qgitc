@@ -88,7 +88,7 @@ class AiChatWidget(QWidget):
         self._awaitingToolResults: set[str] = set()
 
         # Code review diff collection (staged/local changes)
-        self._codeReviewExecutor: SubmoduleExecutor | None = None
+        self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
         self._codeReviewDiffs: List[str] = []
 
         self._isInitialized = False
@@ -188,10 +188,10 @@ class AiChatWidget(QWidget):
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
 
-    def setContextProvider(self, provider: AiChatContextProvider | None):
+    def setContextProvider(self, provider: AiChatContextProvider):
         self._contextPanel.setContextProvider(provider)
 
-    def contextProvider(self) -> AiChatContextProvider | None:
+    def contextProvider(self) -> AiChatContextProvider:
         return self._contextPanel.contextProvider()
 
     def _setupModels(self):
@@ -790,7 +790,7 @@ class AiChatWidget(QWidget):
                 "Cannot create new conversation: no model available")
             return
 
-        def isEmptyHistory(h: AiChatHistory | None) -> bool:
+        def isEmptyHistory(h: AiChatHistory) -> bool:
             return h is not None and not h.messages
 
         def tryActivateHistory(h: AiChatHistory) -> bool:

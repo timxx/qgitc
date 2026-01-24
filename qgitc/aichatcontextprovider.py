@@ -38,7 +38,7 @@ class AiChatContextProvider(QObject):
         """
         return ""
 
-    def agentSystemPrompt(self) -> str | None:
+    def agentSystemPrompt(self) -> Optional[str]:
         """Optional Agent-mode system prompt override.
 
         Return None to use the default AGENT_SYS_PROMPT.

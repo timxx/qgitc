@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QIcon, QMouseEvent, QPainter, QPen
+from PySide6.QtCore import QRect, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QIcon, QMouseEvent, QPainter
 from PySide6.QtWidgets import QStyle, QStyleOptionToolButton
 
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
@@ -114,7 +114,7 @@ class AiContextToolButton(ColoredIconToolButton):
         borderStyle = Qt.SolidPattern if self._selected else Qt.Dense4Pattern
         baseColor = QColor(self.palette().windowText().color())
         baseColor.setAlpha(100)
-        drawRoundedRect(painter, self.rect().toRectF(), 4.0, baseColor, 1.0, borderStyle)
+        drawRoundedRect(painter, QRectF(self.rect()), 4.0, baseColor, 1.0, borderStyle)
 
         # Draw hover only for icon part.
         if (opt.state & QStyle.State_Enabled) and (opt.state & QStyle.State_MouseOver) and self._hoverOnIcon:
