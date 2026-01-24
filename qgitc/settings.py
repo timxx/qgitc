@@ -87,6 +87,8 @@ class Settings(QSettings):
 
     def logViewFont(self):
         families = self.value("lvFonts", [])
+        if isinstance(families, str):
+            families = [families]
         fontSize = self.value(
             "lvFontSize", QApplication.font().pointSize(), type=int)
         if not families:
@@ -105,6 +107,8 @@ class Settings(QSettings):
 
     def diffViewFont(self):
         families = self.value("dvFonts", [])
+        if isinstance(families, str):
+            families = [families]
         fontSize = self.value(
             "dvFontSize", QApplication.font().pointSize(), type=int)
         if not families:
@@ -376,6 +380,8 @@ class Settings(QSettings):
         cache = self.value(key, [])
         if cache is None:
             cache = []
+        elif isinstance(cache, str):
+            cache = [cache]
         self.endGroup()
         return cache
 
@@ -462,8 +468,10 @@ class Settings(QSettings):
     def globalCommitActions(self) -> List[CommitAction]:
         self.beginGroup("commit")
         actions = self.value("actions", [])
+        if isinstance(actions, str):
+            actions = [actions]
         self.endGroup()
-        return actions
+        return actions or []
 
     def setGlobalCommitActions(self, actions: List[CommitAction]):
         self.beginGroup("commit")
@@ -543,7 +551,10 @@ class Settings(QSettings):
         return self.value("logLevel", logging.WARNING, type=int)
 
     def aiExcludedFileExtensions(self):
-        return self.value("aiExcludedFileExtensions", [])
+        value = self.value("aiExcludedFileExtensions", [])
+        if isinstance(value, str):
+            return [value]
+        return value or []
 
     def setAiExcludedFileExtensions(self, extensions: List[str]):
         self.setValue("aiExcludedFileExtensions", extensions)
@@ -627,7 +638,11 @@ class Settings(QSettings):
 
     def recentRepositories(self) -> List[str]:
         """Get list of recently visited repositories"""
-        return self.value("recentRepositories", [])
+        # settings type=list here is not working well
+        value = self.value("recentRepositories", [])
+        if isinstance(value, str):
+            return [value]
+        return value or []
 
     def setRecentRepositories(self, repos: List[str]):
         """Set list of recently visited repositories"""
