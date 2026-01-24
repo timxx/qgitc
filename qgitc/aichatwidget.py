@@ -111,7 +111,6 @@ class AiChatWidget(QWidget):
 
     def isGenerating(self) -> bool:
         """True if the current model is actively generating a response."""
-        self._waitForInitialization()
         model = self.currentChatModel()
         return model is not None and model.isRunning()
 
@@ -697,7 +696,6 @@ class AiChatWidget(QWidget):
 
     def codeReviewForStagedFiles(self, submodules):
         """Start a code review for staged/local changes across submodules."""
-        self._waitForInitialization()
         self._ensureCodeReviewExecutor()
         self._codeReviewDiffs.clear()
         self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
