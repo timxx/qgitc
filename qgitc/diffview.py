@@ -651,7 +651,7 @@ class DiffView(QWidget):
             if self._delayCommit:
                 return
 
-            for child in commit.children:
+            for child in commit.children or []:
                 content = self.tr("Child: ") + child.sha1
                 content += self.__commitDesc(child, child.repoDir)
                 self.viewer.addSHA1Line(content, False)

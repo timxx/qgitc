@@ -286,9 +286,9 @@ class AiModelBase(QObject):
         aiResponse = AiResponse()
         aiResponse.total_tokens = usage.get("total_tokens", 0)
 
-        for choice in data["choices"]:
-            message: dict = choice["message"]
-            content = message["content"]
+        for choice in data.get("choices", []):
+            message: dict = choice.get("message", {})
+            content = message.get("content", "")
             role = message.get("role", "assistant")
             aiResponse.role = AiRole.Assistant
             aiResponse.message = content
