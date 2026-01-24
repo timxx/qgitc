@@ -59,6 +59,10 @@ jobs:
         run: |
           python -m coverage json --include="qgitc/*,tests/*"
 
+      - name: Restore files for coverage
+        run: |
+          git checkout -- pyproject.toml requirements.txt
+
       - name: Update Coverage Badge
         if: matrix.python-version == '3.11'
         uses: we-cli/coverage-badge-action@main
