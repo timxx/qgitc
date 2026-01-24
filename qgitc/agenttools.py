@@ -135,6 +135,15 @@ class RunCommandParams(BaseModel):
         60, ge=1, le=300, description="Maximum execution time in seconds (default 60, max 300).")
 
 
+class ReadFileParams(BaseModel):
+    """Parameters for read_file tool."""
+    file_path: str = Field(..., description="Path to the file to read.")
+    start_line: Optional[int] = Field(
+        None, ge=1, description="Starting line number (1-based). If not provided, starts from the beginning.")
+    end_line: Optional[int] = Field(
+        None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
+
+
 # ==================== Helper Function ====================
 
 def create_tool_from_model(
@@ -252,12 +261,21 @@ class AgentToolRegistry:
             create_tool_from_model(
                 name="run_command",
                 description=(
-                    "Execute an arbitrary command in the repository directory or a specified directory. "
+                    "Execute an arbitrary command in the repository directory or a specified directory.\n"
                     "This tool allows running any shell command when needed. Use with caution as "
                     "it can execute potentially destructive commands."
                 ),
                 tool_type=ToolType.DANGEROUS,
                 model_class=RunCommandParams,
+            ),
+            create_tool_from_model(
+                name="read_file",
+                description=(
+                    "Read the contents of a file, optionally specifying line ranges.\n"
+                    "If it is a relative path, treat it as relative to the repository root."
+                ),
+                tool_type=ToolType.READ_ONLY,
+                model_class=ReadFileParams,
             ),
         ]
 

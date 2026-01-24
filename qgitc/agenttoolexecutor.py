@@ -24,6 +24,7 @@ from qgitc.agenttools import (
     GitLogParams,
     GitShowParams,
     GitStatusParams,
+    ReadFileParams,
     RunCommandParams,
 )
 from qgitc.basemodel import ValidationError
@@ -60,6 +61,7 @@ class AgentToolExecutor(QObject):
             "git_commit": self._handle_git_commit,
             "git_add": self._handle_git_add,
             "run_command": self._handle_run_command,
+            "read_file": self._handle_read_file,
         }
 
     def executeAsync(self, tool_name: str, params: Dict) -> bool:
@@ -358,3 +360,48 @@ class AgentToolExecutor(QObject):
 
         except Exception as e:
             return AgentToolResult(tool_name, False, f"Failed to execute command: {e}")
+
+    def _handle_read_file(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = ReadFileParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        file_path = validated.file_path
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(Git.REPO_DIR, file_path)
+        if not os.path.isfile(file_path):
+            return AgentToolResult(tool_name, False, f"File does not exist: {file_path}")
+
+        try:
+            encoding = 'utf-8'
+            # Detect BOM
+            with open(file_path, 'rb') as fb:
+                bom = fb.read(4)
+                if bom.startswith(b'\xff\xfe\x00\x00'):
+                    encoding = 'utf-32-le'
+                elif bom.startswith(b'\x00\x00\xfe\xff'):
+                    encoding = 'utf-32-be'
+                elif bom.startswith(b'\xff\xfe'):
+                    encoding = 'utf-16-le'
+                elif bom.startswith(b'\xfe\xff'):
+                    encoding = 'utf-16-be'
+                elif bom.startswith(b'\xef\xbb\xbf'):
+                    encoding = 'utf-8-sig'
+
+            with open(file_path, 'r', encoding=encoding) as f:
+                lines = f.readlines()
+
+            start_line = validated.start_line - 1 if validated.start_line else 0
+            end_line = validated.end_line if validated.end_line else len(lines)
+
+            if start_line < 0 or end_line > len(lines) or start_line >= end_line:
+                return AgentToolResult(tool_name, False, "Invalid line range specified.")
+
+            selected_lines = lines[start_line:end_line]
+            output = ''.join(selected_lines).strip('\n')
+
+            return AgentToolResult(tool_name, True, output)
+
+        except Exception as e:
+            return AgentToolResult(tool_name, False, f"Failed to read file: {e}")
