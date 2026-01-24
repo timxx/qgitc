@@ -21,6 +21,7 @@ from qgitc.aichatcontextprovider import AiChatContextProvider
 from qgitc.aichathistory import AiChatHistory
 from qgitc.aichathistorypanel import AiChatHistoryPanel
 from qgitc.aichattitlegenerator import AiChatTitleGenerator
+from qgitc.aitoolconfirmation import ConfirmationStatus
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
@@ -87,6 +88,15 @@ class AiChatWidget(QWidget):
         # We must NOT call `_continueAgentConversation` until this is empty.
         self._awaitingToolResults: set[str] = set()
 
+        # tool_call_id -> metadata used for persistence/cancellation.
+        # Populated when tool calls are first received and when history is restored.
+        self._toolCallMeta: Dict[str, Dict[str, object]] = {}
+
+        # Tool_call_ids that have been intentionally cancelled/ignored.
+        # If a tool finishes later (because we cannot truly cancel the subprocess),
+        # we will drop the result to avoid duplicate tool outputs.
+        self._ignoredToolCallIds: set[str] = set()
+
         # Code review diff collection (staged/local changes)
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
         self._codeReviewDiffs: List[str] = []
@@ -97,6 +107,7 @@ class AiChatWidget(QWidget):
     def _markToolResultComplete(self, tool_call_id: Optional[str]):
         if tool_call_id:
             self._awaitingToolResults.discard(tool_call_id)
+            self._toolCallMeta.pop(tool_call_id, None)
 
     def event(self, event: QEvent):
         if event.type() == DiffAvailableEvent.Type:
@@ -246,6 +257,14 @@ class AiChatWidget(QWidget):
         prompt = self._contextPanel.userPrompt().strip()
         if not prompt:
             return
+
+        # If the user types a new message while there are pending tool confirmations,
+        # treat them as rejected to keep the conversation history consistent.
+        # (Otherwise, switching chats / continuing can lose the confirmation UI and
+        # later requests may lack required tool results.)
+        if self.hasPendingToolConfirmation():
+            if not self._autoRejectPendingConfirmationsForNewUserMessage():
+                return
 
         model = self.currentChatModel()
         chatMode: AiChatMode = self._contextPanel.currentMode()
@@ -417,6 +436,23 @@ class AiChatWidget(QWidget):
                 if tcid:
                     self._awaitingToolResults.add(tcid)
 
+                # Cache metadata for later cancellation/restore logic.
+                func = (tc or {}).get("function") or {}
+                toolName = func.get("name")
+                args = parseToolArguments(func.get("arguments"))
+                tool = AgentToolRegistry.tool_by_name(
+                    toolName) if toolName else None
+                toolType = tool.tool_type if tool else ToolType.WRITE
+                toolDesc = tool.description if tool else self.tr(
+                    "Unknown tool requested by model")
+                if tcid:
+                    self._toolCallMeta[tcid] = {
+                        "tool_name": toolName or "",
+                        "params": args or {},
+                        "tool_type": toolType,
+                        "tool_desc": toolDesc,
+                    }
+
             autoGroupId: Optional[int] = None
             autoToolsCount = 0
             hasConfirmations = False
@@ -537,6 +573,73 @@ class AiChatWidget(QWidget):
         if not self._awaitingToolResults:
             self._continueAgentConversation(delayMs=0)
 
+    def _autoRejectPendingConfirmationsForNewUserMessage(self) -> bool:
+        """Auto-reject pending confirmations before sending a new user message.
+
+        Returns False if we should block sending (e.g. because there are still
+        pending READ_ONLY tool results we cannot reject).
+        """
+        model = self.currentChatModel()
+        if model is None:
+            return True
+
+        pendingIds = set(self._awaitingToolResults)
+        if not pendingIds:
+            return True
+
+        # Resolve all pending tool_call_ids so the next request is always valid.
+        # - WRITE/DANGEROUS: reject
+        # - READ_ONLY: cancel/ignore
+        for tcid in list(pendingIds):
+            info = self._toolCallMeta.get(tcid, {})
+            toolType = info.get("tool_type", ToolType.WRITE)
+            toolName = info.get("tool_name", "")
+
+            if toolType == ToolType.READ_ONLY:
+                desc = self.tr("✗ `{}` cancelled").format(
+                    toolName or self.tr("tool"))
+                model.addHistory(
+                    AiRole.Tool,
+                    "Cancelled by user",
+                    description=desc,
+                    toolCalls={"tool_call_id": tcid},
+                )
+                self._doMessageReady(
+                    model,
+                    AiResponse(AiRole.Tool, self.tr(
+                        "Cancelled"), description=desc),
+                    collapsed=True,
+                )
+                self._ignoredToolCallIds.add(tcid)
+                self._markToolResultComplete(tcid)
+                continue
+
+            # Anything else is treated as requiring confirmation.
+            self._chatBot.setToolConfirmationStatus(
+                tcid, ConfirmationStatus.REJECTED)
+            description = self.tr("✗ `{}` rejected").format(toolName)
+            model.addHistory(
+                AiRole.Tool,
+                "User chose to reject",
+                description=description,
+                toolCalls={"tool_call_id": tcid},
+            )
+            self._doMessageReady(
+                model,
+                AiResponse(AiRole.Tool, self.tr("User rejected"),
+                           description=description),
+                collapsed=True,
+            )
+            self._markToolResultComplete(tcid)
+
+        # Stop draining auto tools from the previous prompt.
+        self._autoToolQueue.clear()
+        self._autoToolGroups.clear()
+
+        # Allow sending immediately.
+        self._awaitingToolResults.clear()
+        return True
+
     def _onAgentToolFinished(self, result: AgentToolResult):
         model = self.currentChatModel()
         tool_name = result.tool_name
@@ -551,6 +654,13 @@ class AiChatWidget(QWidget):
         self._pendingToolSource = None
         self._pendingAutoGroupId = None
         self._pendingToolCallId = None
+
+        # If this tool_call_id was cancelled/ignored, drop late results to avoid
+        # duplicate tool outputs and unexpected auto-continues.
+        if tool_call_id and tool_call_id in self._ignoredToolCallIds:
+            self._ignoredToolCallIds.discard(tool_call_id)
+            self._markToolResultComplete(tool_call_id)
+            return
 
         prefix = "✓" if ok else "✗"
         toolDesc = self.tr("{} `{}` output").format(prefix, tool_name)
@@ -872,7 +982,18 @@ class AiChatWidget(QWidget):
         if addToChatBot:
             chatbot.setHighlighterEnabled(False)
 
-        for msg in messages:
+        # Rebuild pending tool_call_id state from history.
+        self._awaitingToolResults.clear()
+        self._toolCallMeta.clear()
+
+        # Rebuild auto-run queue state from history for pending READ_ONLY tool calls.
+        self._autoToolQueue.clear()
+        self._autoToolGroups.clear()
+        self._nextAutoGroupId = 1
+
+        i = 0
+        while i < len(messages):
+            msg = messages[i]
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
             description = msg.get('description', None)
@@ -887,8 +1008,94 @@ class AiChatWidget(QWidget):
                 collapsed = (role == AiRole.Tool) or (role == AiRole.System)
                 chatbot.appendResponse(response, collapsed=collapsed)
 
+            # Restore tool confirmation UI for pending tool calls.
+            if role == AiRole.Assistant and isinstance(toolCalls, list) and toolCalls:
+                autoGroupId: Optional[int] = None
+                autoToolsCount = 0
+                hasConfirmations = False
+
+                toolCallResultIds = self._collecToolCallResultIds(
+                    i + 1, messages)
+                for tc in toolCalls:
+                    if not isinstance(tc, dict):
+                        continue
+                    tcid = tc.get("id")
+                    # Already have result
+                    if not tcid or tcid in toolCallResultIds:
+                        continue
+
+                    func = (tc.get("function") or {})
+                    toolName = func.get("name")
+                    args = parseToolArguments(func.get("arguments"))
+                    tool = AgentToolRegistry.tool_by_name(
+                        toolName) if toolName else None
+
+                    toolType = tool.tool_type if tool else ToolType.WRITE
+
+                    # Track as awaiting result so the session knows a confirmation is pending.
+                    self._awaitingToolResults.add(tcid)
+                    self._toolCallMeta[tcid] = {
+                        "tool_name": toolName or "",
+                        "params": args or {},
+                        "tool_type": toolType,
+                        "tool_desc": tool.description if tool else self.tr(
+                            "Unknown tool requested by model"),
+                    }
+
+                    # Resume auto-run READ_ONLY tools.
+                    if toolName and toolType == ToolType.READ_ONLY:
+                        if autoGroupId is None:
+                            autoGroupId = self._nextAutoGroupId
+                            self._nextAutoGroupId += 1
+                        self._autoToolQueue.append(
+                            (toolName, args or {}, autoGroupId, tcid))
+                        autoToolsCount += 1
+                        continue
+
+                    # Anything else requires explicit confirmation.
+                    hasConfirmations = True
+
+                    if addToChatBot:
+                        toolDesc = tool.description if tool else self.tr(
+                            "Unknown tool requested by model")
+                        chatbot.insertToolConfirmation(
+                            toolName=toolName or "",
+                            params=args or {},
+                            toolDesc=toolDesc,
+                            toolType=toolType,
+                            toolCallId=tcid,
+                        )
+
+                if autoGroupId is not None and autoToolsCount:
+                    self._autoToolGroups[autoGroupId] = {
+                        "remaining": autoToolsCount,
+                        "outputs": [],
+                        "auto_continue": not hasConfirmations,
+                    }
+            i += 1
+
         if addToChatBot:
             chatbot.setHighlighterEnabled(True)
+
+        # Start/resume any pending READ_ONLY tools after restoring history.
+        if self._autoToolQueue:
+            QTimer.singleShot(0, self._startNextAutoToolIfIdle)
+
+    def _collecToolCallResultIds(self, i: int, messages: List[Dict]):
+        """Collect pending tool_call_id values from history starting at index i"""
+        callIds = set()
+        while i < len(messages):
+            msg = messages[i]
+            role = AiRole.fromString(msg.get('role', 'user'))
+            if role != AiRole.Tool:
+                return callIds
+            toolCalls = msg.get('tool_calls', None)
+            if isinstance(toolCalls, dict):
+                tcid = toolCalls.get("tool_call_id")
+                if tcid:
+                    callIds.add(tcid)
+            i += 1
+        return callIds
 
     def _clearCurrentChat(self):
         """Clear the current chat display and model history"""
@@ -896,6 +1103,11 @@ class AiChatWidget(QWidget):
         if model:
             model.clear()
         self._awaitingToolResults.clear()
+        self._toolCallMeta.clear()
+        self._ignoredToolCallIds.clear()
+        self._autoToolQueue.clear()
+        self._autoToolGroups.clear()
+        self._nextAutoGroupId = 1
         self.messages.clear()
 
     def _setEmbeddedRecentListVisible(self, visible: bool):

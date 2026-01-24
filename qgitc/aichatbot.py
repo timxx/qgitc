@@ -83,7 +83,8 @@ class AiChatbot(QPlainTextEdit):
     toggleMaxSize = 14
 
     # Signals for tool confirmation interaction
-    toolConfirmationApproved = Signal(str, dict, str)  # tool_name, params, tool_call_id
+    # tool_name, params, tool_call_id
+    toolConfirmationApproved = Signal(str, dict, str)
     toolConfirmationRejected = Signal(str, str)  # tool_name, tool_call_id
 
     def __init__(self, parent=None):
@@ -419,6 +420,26 @@ class AiChatbot(QPlainTextEdit):
             self.setTextCursor(newCursor)
 
         return position
+
+    def setToolConfirmationStatus(self, toolCallId: str, status: ConfirmationStatus) -> bool:
+        """Update confirmation card status by OpenAI tool_call_id.
+
+        Returns True if at least one confirmation was updated.
+        """
+        if not toolCallId:
+            return False
+
+        updated = False
+        for pos, confirmData in self._confirmations.items():
+            if confirmData and confirmData.tool_call_id == toolCallId:
+                confirmData.status = status
+                updated = True
+                # Repaint that block.
+                self.document().markContentsDirty(pos, 1)
+
+        if updated:
+            self.viewport().update()
+        return updated
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move for hover effects"""

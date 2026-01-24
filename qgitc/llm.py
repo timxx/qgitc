@@ -129,64 +129,107 @@ class AiModelBase(QObject):
           We only forward tool *results* that have an associated `tool_call_id`.
         """
 
-        toolResultIds = set()
-        for h in self._history:
-            if h.role != AiRole.Tool or not h.toolCalls:
-                continue
-            if isinstance(h.toolCalls, dict):
-                tcid = h.toolCalls.get("tool_call_id")
-                if tcid:
-                    toolResultIds.add(tcid)
-            elif isinstance(h.toolCalls, str):
-                toolResultIds.add(h.toolCalls)
-
         messages: List[Dict[str, Any]] = []
-        for history in self._history:
-            # Forward tool results only when they can be correlated.
-            if history.role == AiRole.Tool:
+
+        i = 0
+        while i < len(self._history):
+            h = self._history[i]
+
+            # Tool results must only appear immediately after a corresponding assistant tool_calls.
+            # Ignore any orphan/out-of-order tool results to prevent OpenAI 400s.
+            if h.role == AiRole.Tool:
                 toolCallId = None
-                if isinstance(history.toolCalls, dict):
-                    toolCallId = history.toolCalls.get("tool_call_id")
-                elif isinstance(history.toolCalls, str):
-                    toolCallId = history.toolCalls
+                if isinstance(h.toolCalls, dict):
+                    toolCallId = h.toolCalls.get("tool_call_id")
+                elif isinstance(h.toolCalls, str):
+                    toolCallId = h.toolCalls
 
-                if not toolCallId:
-                    continue
-
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": toolCallId,
-                    "content": history.message or "",
-                })
+                if toolCallId:
+                    logger.warning(
+                        "Ignoring orphan tool result tool_call_id=%s (no active tool_calls)",
+                        toolCallId,
+                    )
+                i += 1
                 continue
 
-            msg: Dict[str, Any] = {"role": history.role.name.lower()}
-
-            # Only assistant messages may include tool_calls.
-            if history.role == AiRole.Assistant and history.toolCalls:
-                # Avoid OpenAI 400s when we don't yet have the corresponding tool results.
-                tool_calls = history.toolCalls
-                ids = []
-                if isinstance(tool_calls, list):
-                    for tc in tool_calls:
-                        if isinstance(tc, dict) and tc.get("id"):
-                            ids.append(tc.get("id"))
+            # Assistant tool_calls need their tool results before the next assistant.
+            if h.role == AiRole.Assistant and isinstance(h.toolCalls, list) and h.toolCalls:
+                tool_calls = h.toolCalls
+                ids: List[str] = []
+                for tc in tool_calls:
+                    if isinstance(tc, dict) and tc.get("id"):
+                        ids.append(tc.get("id"))
 
                 if not ids:
-                    # We can't correlate tool results without ids; keep request valid.
-                    msg["content"] = history.message or "(tool call pending)"
-                elif any(tcid not in toolResultIds for tcid in ids):
-                    # Tool call is unresolved (pending confirmation/execution).
-                    # Send it as plain content so the model has context but the
-                    # request remains valid.
-                    msg["content"] = history.message or "(tool call pending)"
-                else:
-                    msg["tool_calls"] = tool_calls
-                    msg["content"] = history.message or ""
-            else:
-                msg["content"] = history.message or ""
+                    messages.append({
+                        "role": "assistant",
+                        "content": h.message or "(tool call pending)",
+                    })
+                    i += 1
+                    continue
 
+                expected = set(ids)
+                found: set[str] = set()
+                tool_msgs: List[Dict[str, Any]] = []
+
+                j = i + 1
+                while j < len(self._history):
+                    n = self._history[j]
+                    if n.role != AiRole.Tool:
+                        break
+
+                    if n.toolCalls:
+                        tcid = None
+                        if isinstance(n.toolCalls, dict):
+                            tcid = n.toolCalls.get("tool_call_id")
+                        elif isinstance(n.toolCalls, str):
+                            tcid = n.toolCalls
+
+                        if tcid:
+                            if tcid in expected:
+                                found.add(tcid)
+                                tool_msgs.append({
+                                    "role": "tool",
+                                    "tool_call_id": tcid,
+                                    "content": n.message or "",
+                                })
+                            else:
+                                logger.warning(
+                                    "Ignoring out-of-order tool result tool_call_id=%s (does not match current tool_calls)",
+                                    tcid,
+                                )
+                    j += 1
+
+                missing = expected - found
+                if missing:
+                    # Invalid/incomplete: do not emit tool_calls (or partial tool results).
+                    if j < len(self._history):
+                        logger.warning(
+                            "Assistant tool_calls missing results before next assistant; ignoring tool_calls ids=%s",
+                            sorted(missing),
+                        )
+                    messages.append({
+                        "role": "assistant",
+                        "content": h.message or "(tool call pending)",
+                    })
+                    i += 1
+                    continue
+
+                # Valid: emit assistant tool_calls followed by tool results.
+                messages.append({
+                    "role": "assistant",
+                    "content": h.message or "",
+                    "tool_calls": tool_calls,
+                })
+                messages.extend(tool_msgs)
+                i = j
+                continue
+
+            # Default: forward as plain message.
+            msg: Dict[str, Any] = {
+                "role": h.role.name.lower(), "content": h.message or ""}
             messages.append(msg)
+            i += 1
 
         return messages
 
