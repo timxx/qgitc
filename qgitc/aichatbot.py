@@ -619,7 +619,7 @@ class AiChatbot(QPlainTextEdit):
             return None, button
 
         layout = block.layout()
-        br = self.blockBoundingGeometry(block)
+        br = self.blockBoundingGeometry(block).translated(self.contentOffset())
         line = layout.lineForTextPosition(0)
         if not line.isValid():
             return None, button
@@ -627,7 +627,7 @@ class AiChatbot(QPlainTextEdit):
         cursor.setPosition(block.position())
         charFormat = cursor.charFormat()
         objSize = self._toolConfirmInterface.intrinsicSize(
-            self.document(), pos, charFormat)
+            self.document(), block.position(), charFormat)
         lineRect = line.rect()
         objRect = QRectF(
             br.x() + lineRect.x(),
@@ -637,15 +637,15 @@ class AiChatbot(QPlainTextEdit):
         )
 
         # Check if mouse is within this confirmation's rectangle
-        if not objRect.contains(pos):
+        if not objRect.contains(QPointF(pos)):
             return None, button
 
         if confirmData.status == ConfirmationStatus.PENDING:
             approveRect, rejectRect = self._toolConfirmInterface.getButtonRects(
                 objRect)
-            if approveRect.contains(pos):
+            if approveRect.contains(QPointF(pos)):
                 button = ButtonType.APPROVE
-            elif rejectRect.contains(pos):
+            elif rejectRect.contains(QPointF(pos)):
                 button = ButtonType.REJECT
 
         return confirmData, button

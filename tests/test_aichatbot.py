@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
+from PySide6.QtCore import QPoint
 from PySide6.QtGui import QTextCursor
 from PySide6.QtTest import QTest
 
+from qgitc.agenttools import ToolType
 from qgitc.aichatbot import AiChatbot
+from qgitc.aitoolconfirmation import ButtonType
 from qgitc.llm import AiResponse, AiRole
 from tests.base import TestBase
 
@@ -110,3 +113,139 @@ class TestAiChatbot(TestBase):
         actualCursor = self.chatbot.textCursor()
         self.assertEqual(cursorPos, actualCursor.position())
         self.assertFalse(actualCursor.hasSelection())
+
+    def testGetConfirmDataAtPosition_WithScrolling(self):
+        """Test that _getConfirmDataAtPosition works correctly when document is scrolled"""
+        # Add a lot of initial content to enable scrolling
+        for i in range(30):
+            response = AiResponse(
+                role=AiRole.Assistant, message=f"Line {i}\n" * 5)
+            response.is_delta = False
+            self.chatbot.appendResponse(response)
+
+        # Insert a tool confirmation at the end
+        toolName = "test_tool"
+        params = {"param1": "value1"}
+        toolDesc = "Test tool description"
+        toolType = ToolType.READ_ONLY
+        toolCallId = "test_call_123"
+
+        pos = self.chatbot.insertToolConfirmation(
+            toolName, params, toolDesc, toolType, toolCallId)
+
+        # Ensure the chatbot is visible and sized
+        self.chatbot.resize(400, 300)
+        QTest.qWait(100)  # Wait for layout
+
+        # Scroll to the top (making contentOffset non-zero when we later look at the bottom)
+        cursor = self.chatbot.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+        self.chatbot.setTextCursor(cursor)
+        self.chatbot.ensureCursorVisible()
+        QTest.qWait(50)
+
+        # Now scroll to the bottom where the confirmation is
+        cursor.movePosition(QTextCursor.End)
+        self.chatbot.setTextCursor(cursor)
+        self.chatbot.ensureCursorVisible()
+        QTest.qWait(50)
+
+        # Find the confirmation block
+        doc = self.chatbot.document()
+        confirmBlock = doc.findBlock(pos)
+        self.assertTrue(confirmBlock.isValid())
+
+        # Get the block's bounding rect in viewport coordinates
+        blockGeometry = self.chatbot.blockBoundingGeometry(confirmBlock)
+        blockRect = blockGeometry.translated(self.chatbot.contentOffset())
+
+        # Create a point that should be within the confirmation object
+        # (middle of the block vertically, left side horizontally)
+        testPoint = QPoint(
+            int(blockRect.left() + 50),
+            int(blockRect.top() + blockRect.height() / 2)
+        )
+
+        # Verify the point is within viewport bounds
+        viewportRect = self.chatbot.viewport().rect()
+        self.assertTrue(viewportRect.contains(testPoint),
+                        f"Test point {testPoint} not in viewport {viewportRect}")
+
+        # Test _getConfirmDataAtPosition - should find the confirmation
+        confirmData, button = self.chatbot._getConfirmDataAtPosition(
+            testPoint)
+
+        # Verify we found the confirmation data
+        self.assertIsNotNone(
+            confirmData, "Failed to find confirmation data at position")
+        self.assertEqual(confirmData.tool_name, toolName)
+        self.assertEqual(confirmData.params, params)
+        self.assertEqual(confirmData.tool_desc, toolDesc)
+        self.assertEqual(confirmData.tool_type, toolType)
+        self.assertEqual(confirmData.tool_call_id, toolCallId)
+
+        # Test that hovering over the buttons works
+        # Get button rectangles
+        cursor.setPosition(pos)
+        charFormat = cursor.charFormat()
+        objSize = self.chatbot._toolConfirmInterface.intrinsicSize(
+            doc, pos, charFormat)
+
+        lineLayout = confirmBlock.layout()
+        line = lineLayout.lineForTextPosition(0)
+        self.assertTrue(line.isValid())
+
+        lineRect = line.rect()
+        objRect = blockRect.adjusted(
+            lineRect.x(),
+            lineRect.y(),
+            lineRect.x() - blockRect.width() + objSize.width(),
+            lineRect.y() - blockRect.height() + objSize.height()
+        )
+
+        approveRect, rejectRect = self.chatbot._toolConfirmInterface.getButtonRects(
+            objRect)
+
+        # Test clicking on approve button
+        approvePoint = QPoint(
+            int(approveRect.center().x()),
+            int(approveRect.center().y())
+        )
+
+        confirmData2, button2 = self.chatbot._getConfirmDataAtPosition(
+            approvePoint)
+        self.assertIsNotNone(confirmData2)
+        self.assertEqual(button2, ButtonType.APPROVE)
+
+        # Test clicking on reject button
+        rejectPoint = QPoint(
+            int(rejectRect.center().x()),
+            int(rejectRect.center().y())
+        )
+
+        confirmData3, button3 = self.chatbot._getConfirmDataAtPosition(
+            rejectPoint)
+        self.assertIsNotNone(confirmData3)
+        self.assertEqual(button3, ButtonType.REJECT)
+
+    def testGetConfirmDataAtPosition_OutsideObject(self):
+        """Test that _getConfirmDataAtPosition returns None for points outside the confirmation"""
+        # Add some content
+        response = AiResponse(role=AiRole.Assistant, message="Test message")
+        response.is_delta = False
+        self.chatbot.appendResponse(response)
+
+        # Insert a tool confirmation
+        pos = self.chatbot.insertToolConfirmation(
+            "test_tool", {"param": "value"}, "Test tool", ToolType.READ_ONLY)
+
+        QTest.qWait(50)
+
+        # Test a point far outside the confirmation area
+        outsidePoint = QPoint(10, 5)
+        confirmData, button = self.chatbot._getConfirmDataAtPosition(
+            outsidePoint)
+
+        # Should return None since point is outside
+        self.assertIsNone(confirmData)
+        self.assertEqual(button, ButtonType.NONE)
