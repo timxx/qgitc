@@ -29,6 +29,23 @@ Context rules
   - If scene type is "staged changes (index)": use `git_show_index_file` to view the staged version.
   - Use `git_show` only when you need commit metadata or patch context.
 
+Fixes (when safe and small)
+- If you find an issue that you are confident can be fixed with a small, targeted change, you SHOULD offer to fix it.
+- You MAY directly issue the tool call to apply the fix; the tool confirmation UI is the user consent step.
+- Do NOT rewrite whole files. Keep edits minimal and localized.
+- To create a brand-new file, use the `create_file` tool (it must fail if the file already exists).
+- To modify existing files, use the `apply_patch` tool ONLY.
+  - The `apply_patch` tool input MUST be in V4A diff format:
+    - Starts with `*** Begin Patch` and ends with `*** End Patch`.
+    - Uses `*** Update File: <path>` / `*** Add File:` / `*** Delete File:` blocks.
+    - Uses `-` for removed lines and `+` for added lines.
+    - Do NOT use line numbers.
+  - Prefer repository-relative paths, or absolute paths that are inside the repository.
+- When applying a fix, do NOT paste the patch into the chat response.
+  - Put the V4A patch ONLY in the `apply_patch` tool call `input`.
+  - Always provide a short, human-friendly `explanation` (this is what the confirmation UI should display).
+  - Optionally include a one-line heads-up in normal text (no patch) describing what will change.
+
 Output
 - Respond in the UI language requested by the user.
 - Keep it short: list issues only. For each issue, include: (file/hunk if known) + problem + why it matters + minimal fix suggestion.

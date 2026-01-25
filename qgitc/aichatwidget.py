@@ -530,10 +530,15 @@ class AiChatWidget(QWidget):
 
                 if toolName and tool:
                     hasConfirmations = True
+                    toolDesc = tool.description
+                    if toolName == "apply_patch" and isinstance(args, dict):
+                        expl = (args.get("explanation") or "").strip()
+                        if expl:
+                            toolDesc = expl
                     messages.insertToolConfirmation(
                         toolName=toolName,
                         params=args,
-                        toolDesc=tool.description,
+                        toolDesc=toolDesc,
                         toolType=tool.tool_type,
                         toolCallId=toolCallId,
                     )
@@ -1149,12 +1154,13 @@ class AiChatWidget(QWidget):
 
                     # Track as awaiting result so the session knows a confirmation is pending.
                     self._awaitingToolResults.add(tcid)
+                    toolDesc = tool.description if tool else self.tr(
+                        "Unknown tool requested by model")
                     self._toolCallMeta[tcid] = {
                         "tool_name": toolName or "",
                         "params": args or {},
                         "tool_type": toolType,
-                        "tool_desc": tool.description if tool else self.tr(
-                            "Unknown tool requested by model"),
+                        "tool_desc": toolDesc,
                     }
 
                     # Resume auto-run READ_ONLY tools.
@@ -1171,8 +1177,10 @@ class AiChatWidget(QWidget):
                     hasConfirmations = True
 
                     if addToChatBot:
-                        toolDesc = tool.description if tool else self.tr(
-                            "Unknown tool requested by model")
+                        if toolName == "apply_patch" and isinstance(args, dict):
+                            expl = (args.get("explanation") or "").strip()
+                            if expl:
+                                toolDesc = expl
                         chatbot.insertToolConfirmation(
                             toolName=toolName or "",
                             params=args or {},
