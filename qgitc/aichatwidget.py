@@ -382,12 +382,12 @@ class AiChatWidget(QWidget):
         self._updateChatHistoryModel(model)
 
     def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
+        settings = ApplicationBase.instance().settings()
         params = AiParameters()
         params.prompt = prompt
         params.sys_prompt = sysPrompt
         params.stream = True
-        # TODO: make these configurable
-        params.temperature = 0.1
+        params.temperature = settings.llmTemperature()
         params.chat_mode = chatMode
         params.model = self._contextPanel.currentModelId()
 
@@ -395,6 +395,9 @@ class AiChatWidget(QWidget):
 
         model = self.currentChatModel()
         isNewConversation = not model.history
+
+        if model.isLocal():
+            params.max_tokens = settings.llmMaxTokens()
 
         self._setEmbeddedRecentListVisible(False)
 

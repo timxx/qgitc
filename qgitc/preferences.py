@@ -511,6 +511,9 @@ class Preferences(QDialog):
             if AiModelFactory.modelKey(model) == prefer:
                 self.ui.cbModels.setCurrentIndex(i)
 
+        self.ui.sbMaxTokens.setValue(self.settings.llmMaxTokens())
+        self.ui.sbTemperature.setValue(self.settings.llmTemperature())
+
         self.ui.cbModels.currentIndexChanged.connect(self._onModelChanged)
         self._onModelChanged(self.ui.cbModels.currentIndex())
 
@@ -537,6 +540,8 @@ class Preferences(QDialog):
             if id == defaultId:
                 self.ui.cbModelIds.setCurrentText(name)
 
+        self.ui.sbMaxTokens.setEnabled(model.isLocal())
+
     def _saveLLMTab(self):
         self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
 
@@ -546,6 +551,9 @@ class Preferences(QDialog):
 
         self.settings.setDefaultLlmModelId(
             modelKey, self.ui.cbModelIds.currentData())
+
+        self.settings.setLlmMaxTokens(self.ui.sbMaxTokens.value())
+        self.settings.setLlmTemperature(self.ui.sbTemperature.value())
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):

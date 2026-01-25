@@ -339,6 +339,28 @@ class Settings(QSettings):
         self.endGroup()
         self.endGroup()
 
+    def llmMaxTokens(self):
+        self.beginGroup("llm")
+        value = self.value("maxTokens", 4096, type=int)
+        self.endGroup()
+        return value
+
+    def setLlmMaxTokens(self, tokens: int):
+        self.beginGroup("llm")
+        self.setValue("maxTokens", tokens)
+        self.endGroup()
+
+    def llmTemperature(self):
+        self.beginGroup("llm")
+        value = self.value("temperature", 0.1, type=float)
+        self.endGroup()
+        return value
+
+    def setLlmTemperature(self, temperature: float):
+        self.beginGroup("llm")
+        self.setValue("temperature", temperature)
+        self.endGroup()
+
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)
 
