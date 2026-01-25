@@ -167,6 +167,18 @@ class ReadFileParams(BaseModel):
         None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
 
 
+class CreateFileParams(BaseModel):
+    """Parameters for create_file tool."""
+    filePath: str = Field(..., description="The absolute path to the file to create.")
+    content: str = Field(..., description="The content to write to the file.")
+
+
+class ApplyPatchParams(BaseModel):
+    """Parameters for apply_patch tool (V4A diff format)."""
+    input: str = Field(..., description="The edit patch to apply (V4A format).")
+    explanation: str = Field(..., description="A short description of what the patch is aiming to achieve.")
+
+
 # ==================== Helper Function ====================
 
 def create_tool_from_model(
@@ -319,6 +331,28 @@ class AgentToolRegistry:
                 ),
                 tool_type=ToolType.READ_ONLY,
                 model_class=ReadFileParams,
+            ),
+
+            create_tool_from_model(
+                name="create_file",
+                description=(
+                    "Create a new file with the given content. The directory will be created if it does not already exist. Never use this tool to edit a file that already exists."
+                ),
+                tool_type=ToolType.WRITE,
+                model_class=CreateFileParams,
+            ),
+            create_tool_from_model(
+                name="apply_patch",
+                description=(
+                    'Edit text files. `apply_patch` allows you to execute a diff/patch against a text file, but the format of the diff specification is unique to this task, so pay careful attention to these instructions.\n'
+                    'To use the `apply_patch` command, you should pass a message of the following structure as "input":\n\n*** Begin Patch\n[YOUR_PATCH]\n*** End Patch\n\n'
+                    'Where [YOUR_PATCH] is the actual content of your patch, specified in the following V4A diff format.\n\n*** [ACTION] File: [/absolute/path/to/file] -> ACTION can be one of Add, Update, or Delete.\n'
+                    'An example of a message that you might pass as "input" to this function, in order to apply a patch, is shown below.\n\n'
+                    '*** Begin Patch\n*** Update File: /Users/someone/pygorithm/searching/binary_search.py\n@@class BaseClass\n@@    def search():\n-        pass\n+        raise NotImplementedError()\n\n@@class Subclass\n@@    def search():\n-        pass\n+        raise NotImplementedError()\n\n*** End Patch\n'
+                    'Do not use line numbers in this diff format.'
+                ),
+                tool_type=ToolType.WRITE,
+                model_class=ApplyPatchParams,
             ),
         ]
 
