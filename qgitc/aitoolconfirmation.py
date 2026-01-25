@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtCore import QRectF, QSizeF, Qt
-from PySide6.QtGui import QPainter, QPyTextObject, QTextDocument, QTextFormat
-from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import (
+    QFontMetrics,
+    QPainter,
+    QPyTextObject,
+    QTextDocument,
+    QTextFormat,
+)
+from PySide6.QtWidgets import QApplication, QPlainTextEdit
 
 from qgitc.agenttools import ToolType
 from qgitc.applicationbase import ApplicationBase
@@ -62,7 +68,7 @@ class ToolConfirmationInterface(QPyTextObject):
         self.cardCornerRadius = 6
         self.innerSpacing = 4
         self.statusHeight = 20
-        self.minCardWidth = 350
+        self.minCardWidth = 170
 
         # Extra vertical spacing before action buttons (pending state)
         self.pendingButtonsTopSpacing = 6
@@ -73,9 +79,16 @@ class ToolConfirmationInterface(QPyTextObject):
         self.buttonSpacing = 8
         self.buttonStartMargin = 0
 
+    def viewportWidth(self):
+        """Get the width of the viewport for layout purposes"""
+        edit = self.parent()
+        if isinstance(edit, QPlainTextEdit):
+            return edit.viewport().width()
+        return 0
+
     def intrinsicSize(self, doc: QTextDocument, posInDocument, format: QTextFormat):
         """Return the size of the confirmation card"""
-        width = self.minCardWidth
+        width = max(self.minCardWidth, self.viewportWidth() - self.cardPadding)
         data: ToolConfirmationData = format.property(QTextFormat.UserProperty)
 
         # Compute height dynamically since params can vary widely.
@@ -90,7 +103,11 @@ class ToolConfirmationInterface(QPyTextObject):
         # Base: padding top/bottom
         height += padding * 2
 
-        fm = QApplication.fontMetrics()
+        edit = self.parent()
+        if isinstance(edit, QPlainTextEdit):
+            fm = edit.fontMetrics()
+        else:
+            fm = QFontMetrics(QApplication.font())
         lineHeight = fm.height()
 
         if data.tool_desc:
