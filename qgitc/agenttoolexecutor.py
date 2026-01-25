@@ -22,6 +22,8 @@ from qgitc.agenttools import (
     GitDiffStagedParams,
     GitDiffUnstagedParams,
     GitLogParams,
+    GitShowFileParams,
+    GitShowIndexFileParams,
     GitShowParams,
     GitStatusParams,
     ReadFileParams,
@@ -54,6 +56,8 @@ class AgentToolExecutor(QObject):
             "git_diff_unstaged": self._handle_git_diff_unstaged,
             "git_diff_staged": self._handle_git_diff_staged,
             "git_show": self._handle_git_show,
+            "git_show_file": self._handle_git_show_file,
+            "git_show_index_file": self._handle_git_show_index_file,
             "git_current_branch": self._handle_git_current_branch,
             "git_branch": self._handle_git_branch,
             "git_checkout": self._handle_git_checkout,
@@ -234,6 +238,44 @@ class AgentToolExecutor(QObject):
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
+    def _handle_git_show_file(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = GitShowFileParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        spec = f"{validated.rev}:{validated.path}"
+        ok, output = self._run_git(repo_dir, ["show", spec])
+        if not ok:
+            return AgentToolResult(tool_name, ok, output)
+
+        lines = output.splitlines()
+        start_line = validated.start_line - 1 if validated.start_line else 0
+        end_line = validated.end_line if validated.end_line else len(lines)
+        output = "\n".join(lines[start_line:end_line])
+
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_show_index_file(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = GitShowIndexFileParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repo_dir = validated.repo_dir or Git.REPO_DIR
+        spec = f":{validated.path}"
+        ok, output = self._run_git(repo_dir, ["show", spec])
+        if not ok:
+            return AgentToolResult(tool_name, ok, output)
+
+        lines = output.splitlines()
+        start_line = validated.start_line - 1 if validated.start_line else 0
+        end_line = validated.end_line if validated.end_line else len(lines)
+        output = "\n".join(lines[start_line:end_line])
+
+        return AgentToolResult(tool_name, ok, output)
+
     def _handle_git_current_branch(self, tool_name: str, params: Dict) -> AgentToolResult:
         try:
             validated = GitCurrentBranchParams(**params)
@@ -394,9 +436,6 @@ class AgentToolExecutor(QObject):
 
             start_line = validated.start_line - 1 if validated.start_line else 0
             end_line = validated.end_line if validated.end_line else len(lines)
-
-            if start_line < 0 or end_line > len(lines) or start_line >= end_line:
-                return AgentToolResult(tool_name, False, "Invalid line range specified.")
 
             selected_lines = lines[start_line:end_line]
             output = ''.join(selected_lines).strip('\n')

@@ -88,6 +88,29 @@ class GitShowParams(BaseModel):
                      description="Commit-ish to show (sha, HEAD, tag, etc.).")
 
 
+class GitShowFileParams(BaseModel):
+    """Parameters for git_show_file tool."""
+    repo_dir: Optional[str] = None
+    rev: str = Field(...,
+                     description="Commit-ish to read from (sha, HEAD, tag, etc.).")
+    path: str = Field(...,
+                      description="File path within the repository at that revision.")
+    start_line: Optional[int] = Field(
+        None, ge=1, description="Starting line number (1-based). If not provided, starts from the beginning.")
+    end_line: Optional[int] = Field(
+        None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
+
+
+class GitShowIndexFileParams(BaseModel):
+    """Parameters for git_show_index_file tool."""
+    repo_dir: Optional[str] = None
+    path: str = Field(..., description="File path within the repository to read from the index (staged).")
+    start_line: Optional[int] = Field(
+        None, ge=1, description="Starting line number (1-based). If not provided, starts from the beginning.")
+    end_line: Optional[int] = Field(
+        None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
+
+
 class GitCurrentBranchParams(BaseModel):
     """Parameters for git_current_branch tool."""
     repo_dir: Optional[str] = None
@@ -218,6 +241,26 @@ class AgentToolRegistry:
                 description="Show the contents of a commit",
                 tool_type=ToolType.READ_ONLY,
                 model_class=GitShowParams,
+            ),
+            create_tool_from_model(
+                name="git_show_file",
+                description=(
+                    "Show the contents of a file at a specific revision (e.g. 'HEAD:path/to/file').\n"
+                    "Useful for code review when the working tree may differ from the commit being reviewed.\n"
+                    "Supports optional line range selection."
+                ),
+                tool_type=ToolType.READ_ONLY,
+                model_class=GitShowFileParams,
+            ),
+            create_tool_from_model(
+                name="git_show_index_file",
+                description=(
+                    "Show the contents of a staged (index) file (equivalent to 'git show :path').\n"
+                    "Useful when reviewing staged changes where the working tree may differ.\n"
+                    "Supports optional line range selection."
+                ),
+                tool_type=ToolType.READ_ONLY,
+                model_class=GitShowIndexFileParams,
             ),
             create_tool_from_model(
                 name="git_current_branch",
