@@ -24,7 +24,7 @@ from qgitc.aichattitlegenerator import AiChatTitleGenerator
 from qgitc.aitoolconfirmation import ConfirmationStatus
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
-from qgitc.common import commitRepoDir, fullRepoDir, logger, toSubmodulePath
+from qgitc.common import Commit, commitRepoDir, fullRepoDir, logger, toSubmodulePath
 from qgitc.gitutils import Git
 from qgitc.llm import (
     AiChatMode,
@@ -35,7 +35,11 @@ from qgitc.llm import (
     AiRole,
 )
 from qgitc.llmprovider import AiModelProvider
-from qgitc.models.prompts import AGENT_SYS_PROMPT, CODE_REVIEW_PROMPT
+from qgitc.models.prompts import (
+    AGENT_SYS_PROMPT,
+    CODE_REVIEW_PROMPT,
+    CODE_REVIEW_SYS_PROMPT,
+)
 from qgitc.preferences import Preferences
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
@@ -47,6 +51,15 @@ class DiffAvailableEvent(QEvent):
     def __init__(self, diff: str):
         super().__init__(QEvent.Type(DiffAvailableEvent.Type))
         self.diff = diff
+
+
+class CodeReviewSceneEvent(QEvent):
+
+    Type = QEvent.registerEventType()
+
+    def __init__(self, scene_line: str):
+        super().__init__(QEvent.Type(CodeReviewSceneEvent.Type))
+        self.scene_line = scene_line
 
 
 class AiChatWidget(QWidget):
@@ -101,6 +114,7 @@ class AiChatWidget(QWidget):
         # Code review diff collection (staged/local changes)
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
         self._codeReviewDiffs: List[str] = []
+        self._codeReviewScene: str = None
 
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
@@ -118,6 +132,13 @@ class AiChatWidget(QWidget):
         if event.type() == DiffAvailableEvent.Type:
             if event.diff:
                 self._codeReviewDiffs.append(event.diff)
+            return True
+        if event.type() == CodeReviewSceneEvent.Type:
+            if event.scene_line:
+                if not self._codeReviewScene:
+                    self._codeReviewScene = event.scene_line
+                else:
+                    self._codeReviewScene += "\n" + event.scene_line
             return True
         return super().event(event)
 
@@ -253,6 +274,7 @@ class AiChatWidget(QWidget):
             self._codeReviewExecutor.cancel()
             self._codeReviewExecutor = None
             self._codeReviewDiffs.clear()
+            self._codeReviewScene = None
 
     def sizeHint(self):
         if self._embedded:
@@ -389,11 +411,17 @@ class AiChatWidget(QWidget):
                 provider = self.contextProvider()
                 overridePrompt = provider.agentSystemPrompt() if provider is not None else None
                 params.sys_prompt = overridePrompt or AGENT_SYS_PROMPT
-                self._doMessageReady(model, AiResponse(
-                    AiRole.System, params.sys_prompt), True)
         elif chatMode == AiChatMode.CodeReview:
+            # Code review can also use tools to fetch missing context.
+            # (Models that don't support tool calls will simply ignore them.)
+            params.tools = AgentToolRegistry.openai_tools()
+            params.tool_choice = "auto"
+            params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
+
+            scene = (self._codeReviewScene or "").strip() or "(no scene metadata)"
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
+                scene=scene,
                 language=ApplicationBase.instance().uiLanguage())
 
         provider = self.contextProvider()
@@ -403,6 +431,10 @@ class AiChatWidget(QWidget):
             if contextText:
                 params.prompt = f"<context>\n{contextText}\n</context>\n\n" + \
                     params.prompt
+
+        if params.sys_prompt:
+            self._doMessageReady(model, AiResponse(
+                AiRole.System, params.sys_prompt), True)
 
         self._doMessageReady(model, AiResponse(
             AiRole.User, params.prompt), collapsed)
@@ -785,7 +817,31 @@ class AiChatWidget(QWidget):
     def isLocalLLM(self):
         return self.currentChatModel().isLocal()
 
-    def codeReview(self, commit, args):
+    @staticmethod
+    def _extractDiffFilePaths(diff: str, limit: int = 50) -> List[str]:
+        """Best-effort extraction of changed file paths from a unified diff."""
+        if not diff:
+            return []
+        files: List[str] = []
+        seen = set()
+        for line in diff.splitlines():
+            if not line.startswith("diff --git "):
+                continue
+            # Format: diff --git a/path b/path
+            parts = line.split()
+            if len(parts) < 4:
+                continue
+            b_path = parts[3]
+            if b_path.startswith("b/"):
+                b_path = b_path[2:]
+            if b_path and b_path not in seen:
+                seen.add(b_path)
+                files.append(b_path)
+                if len(files) >= limit:
+                    break
+        return files
+
+    def codeReview(self, commit: Commit, args: List[str]):
         repoDir = commitRepoDir(commit)
         data: bytes = Git.commitRawDiff(
             commit.sha1, gitArgs=args, repoDir=repoDir)
@@ -801,11 +857,38 @@ class AiChatWidget(QWidget):
 
         diff = data.decode("utf-8", errors="replace")
 
+        sha1 = commit.sha1
+        subject = Git.commitSubject(sha1, repoDir=repoDir).decode("utf-8", errors="replace")
+        scene_lines = [
+            "type: commit",
+            f"sha1: {sha1}",
+            f"subject: {subject.strip()}",
+        ]
+
+        if commit.subCommits:
+            scene_lines.append(f"subcommits: {len(commit.subCommits)}")
+            shas = [c.sha1 for c in commit.subCommits]
+            shas = [s for s in shas if s]
+            if shas:
+                preview = ", ".join(shas[:5])
+                more = "" if len(shas) <= 5 else f" (+{len(shas) - 5} more)"
+                scene_lines.append(f"subcommit_shas: {preview}{more}")
+        scene = "\n".join(scene_lines)
+
+        # Add a compact changed-files summary (helps the model orient quickly).
+        changed_files = self._extractDiffFilePaths(diff)
+        if changed_files:
+            more = "" if len(changed_files) <= 20 else f" (+{len(changed_files) - 20} more)"
+            scene += "\n" + f"files_changed: {len(changed_files)}" + "\n" + (
+                "files_preview: " + ", ".join(changed_files[:20]) + more
+            )
+
         self._waitForInitialization()
         # create a new conversation if current one is not empty
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
             self._createNewConversation()
+        self._codeReviewScene = scene
         self._doRequest(diff, AiChatMode.CodeReview)
 
     def codeReviewForDiff(self, diff: str):
@@ -820,6 +903,7 @@ class AiChatWidget(QWidget):
         """Start a code review for staged/local changes across submodules."""
         self._ensureCodeReviewExecutor()
         self._codeReviewDiffs.clear()
+        self._codeReviewScene = None
         self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
 
     def _ensureCodeReviewExecutor(self):
@@ -831,11 +915,27 @@ class AiChatWidget(QWidget):
     def _onCodeReviewDiffFetchFinished(self):
         if self._codeReviewDiffs:
             diff = "\n".join(self._codeReviewDiffs)
+            scene_lines = "type: staged changes (index)"
+            if self._codeReviewScene:
+                self._codeReviewScene += "\n" + scene_lines
+            else:
+                self._codeReviewScene = scene_lines
             self.codeReviewForDiff(diff)
 
     def _fetchStagedDiff(self, submodule: str, files, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
+
+        # Send human-readable scene metadata to the UI thread.
+        preview_n = 12
+        preview = ", ".join(repoFiles[:preview_n]) if repoFiles else "(files unavailable)"
+        more = "" if len(repoFiles) <= preview_n else f" (+{len(repoFiles) - preview_n} more)"
+        joined = preview + more
+        ApplicationBase.instance().postEvent(
+            self,
+            CodeReviewSceneEvent(
+                f'submodule: {submodule or "."} | files: {joined}'),
+        )
         data: bytes = Git.commitRawDiff(
             Git.LCC_SHA1, repoFiles, repoDir=repoDir)
         if not data:
@@ -1120,6 +1220,8 @@ class AiChatWidget(QWidget):
         self._autoToolQueue.clear()
         self._autoToolGroups.clear()
         self._nextAutoGroupId = 1
+        self._codeReviewDiffs.clear()
+        self._codeReviewScene = None
         self.messages.clear()
 
     def _setEmbeddedRecentListVisible(self, visible: bool):
