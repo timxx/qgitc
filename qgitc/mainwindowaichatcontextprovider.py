@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import datetime
 from typing import List, Optional
 
 from PySide6.QtCore import QObject, QSize, QTimer
@@ -197,10 +196,7 @@ class MainWindowAiChatContextProvider(AiChatContextProvider):
         return []
 
     def buildContextText(self, contextIds: List[str]) -> str:
-        blocks: List[str] = []
-
-        today = datetime.date.today().isoformat()
-        blocks.append(f"The current date is {today}")
+        blocks: List[str] = self.commonContext()
         branch = self._activeBranch()
         if branch:
             blocks.append(f"Active branch (UI): {branch}")

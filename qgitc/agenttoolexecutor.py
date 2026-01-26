@@ -644,12 +644,17 @@ class AgentToolExecutor(QObject):
         file_path = validated.file_path
         if not os.path.isabs(file_path):
             file_path = os.path.join(Git.REPO_DIR, file_path)
-        if not os.path.isfile(file_path):
-            return AgentToolResult(tool_name, False, f"File does not exist: {file_path}")
+
+        ok, abs_path = self._resolve_repo_path(Git.REPO_DIR, file_path)
+        if not ok:
+            return AgentToolResult(tool_name, False, abs_path)
+
+        if not os.path.isfile(abs_path):
+            return AgentToolResult(tool_name, False, f"File does not exist: {abs_path}")
 
         try:
-            encoding = AgentToolExecutor._detect_bom(file_path)[1]
-            with open(file_path, 'r', encoding=encoding) as f:
+            encoding = AgentToolExecutor._detect_bom(abs_path)[1]
+            with open(abs_path, 'r', encoding=encoding) as f:
                 lines = f.readlines()
 
             start_line = validated.start_line - 1 if validated.start_line else 0

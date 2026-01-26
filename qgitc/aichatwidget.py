@@ -406,6 +406,8 @@ class AiChatWidget(QWidget):
         titleSeed = (params.sys_prompt + "\n" +
                      prompt) if params.sys_prompt else prompt
 
+        codeReviewContext: Optional[str] = None
+
         if chatMode == AiChatMode.Agent:
             params.tools = AgentToolRegistry.openai_tools()
             params.tool_choice = "auto"
@@ -422,16 +424,27 @@ class AiChatWidget(QWidget):
             params.tool_choice = "auto"
             params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
 
-            scene = (self._codeReviewScene or "").strip() or "(no scene metadata)"
+            scene = (self._codeReviewScene or "").strip(
+            ) or "(no scene metadata)"
+            codeReviewContext = "CODE REVIEW SCENE (metadata)\n" + scene
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
-                scene=scene,
                 language=ApplicationBase.instance().uiLanguage())
 
         provider = self.contextProvider()
-        if not collapsed and provider is not None:
-            selectedIds = self._contextPanel.selectedContextIds()
-            contextText = provider.buildContextText(selectedIds)
+        if not collapsed:
+            selectedIds = self._contextPanel.selectedContextIds() if provider is not None else []
+            contextText = provider.buildContextText(
+                selectedIds) if provider is not None else ""
+
+            if chatMode == AiChatMode.CodeReview and codeReviewContext:
+                merged = (contextText or "").strip()
+                if merged:
+                    merged += "\n\n" + codeReviewContext
+                else:
+                    merged = codeReviewContext
+                contextText = merged
+
             if contextText:
                 params.prompt = f"<context>\n{contextText}\n</context>\n\n" + \
                     params.prompt
@@ -565,10 +578,12 @@ class AiChatWidget(QWidget):
             self._adjustingSccrollbar = False
 
     @typing.overload
-    def _makeUiToolCallResponse(self, tool: AgentTool, args: Union[str, dict]): ...
+    def _makeUiToolCallResponse(
+        self, tool: AgentTool, args: Union[str, dict]): ...
 
     @typing.overload
-    def _makeUiToolCallResponse(self, toolName: str, args: Union[str, dict]): ...
+    def _makeUiToolCallResponse(
+        self, toolName: str, args: Union[str, dict]): ...
 
     def _makeUiToolCallResponse(self, *args):
         if isinstance(args[0], str):
@@ -837,7 +852,7 @@ class AiChatWidget(QWidget):
         return self.currentChatModel().isLocal()
 
     @staticmethod
-    def _extractDiffFilePaths(diff: str, limit: int = 50) -> List[str]:
+    def _extractDiffFilePaths(diff: str) -> List[str]:
         """Best-effort extraction of changed file paths from a unified diff."""
         if not diff:
             return []
@@ -856,51 +871,59 @@ class AiChatWidget(QWidget):
             if b_path and b_path not in seen:
                 seen.add(b_path)
                 files.append(b_path)
-                if len(files) >= limit:
-                    break
         return files
 
     def codeReview(self, commit: Commit, args: List[str]):
         repoDir = commitRepoDir(commit)
-        data: bytes = Git.commitRawDiff(
+        commitDiffData: bytes = Git.commitRawDiff(
             commit.sha1, gitArgs=args, repoDir=repoDir)
-        if not data:
+        if not commitDiffData:
             return
 
-        for subCommit in commit.subCommits:
-            repoDir = commitRepoDir(subCommit)
-            subData = Git.commitRawDiff(
-                subCommit.sha1, gitArgs=args, repoDir=repoDir)
-            if subData:
-                data += b"\n" + subData
+        commitDiff = commitDiffData.decode("utf-8", errors="replace")
 
-        diff = data.decode("utf-8", errors="replace")
+        subDiffs: List[Tuple[str, str, str]] = []  # (repoLabel, sha1, diff)
+        for subCommit in commit.subCommits:
+            subRepoDir = commitRepoDir(subCommit)
+            subData = Git.commitRawDiff(
+                subCommit.sha1, gitArgs=args, repoDir=subRepoDir)
+            if not subData:
+                continue
+            subRepoLabel = subCommit.repoDir or "."
+            subDiffs.append(subRepoLabel, subCommit.sha1,
+                            subData.decode("utf-8", errors="replace"))
+        parts = [commitDiff]
+        parts.extend([d for _, _, d in subDiffs])
+        diff = "\n".join([p for p in parts if p])
 
         sha1 = commit.sha1
-        subject = Git.commitSubject(sha1, repoDir=repoDir).decode("utf-8", errors="replace")
-        scene_lines = [
-            "type: commit",
-            f"sha1: {sha1}",
-            f"subject: {subject.strip()}",
+        subject = Git.commitSubject(sha1, repoDir=repoDir).decode(
+            "utf-8", errors="replace")
+
+        sceneLines = [
+            "type: commit  ",
+            f"subject: {subject.strip()}  ",
         ]
 
-        if commit.subCommits:
-            scene_lines.append(f"subcommits: {len(commit.subCommits)}")
-            shas = [c.sha1 for c in commit.subCommits]
-            shas = [s for s in shas if s]
-            if shas:
-                preview = ", ".join(shas[:5])
-                more = "" if len(shas) <= 5 else f" (+{len(shas) - 5} more)"
-                scene_lines.append(f"subcommit_shas: {preview}{more}")
-        scene = "\n".join(scene_lines)
+        def _appendRepoFileSummary(repoLabel: str, sha1: str, repoDiff: str):
+            files = self._extractDiffFilePaths(repoDiff)
+            if not files:
+                return
 
-        # Add a compact changed-files summary (helps the model orient quickly).
-        changed_files = self._extractDiffFilePaths(diff)
-        if changed_files:
-            more = "" if len(changed_files) <= 20 else f" (+{len(changed_files) - 20} more)"
-            scene += "\n" + f"files_changed: {len(changed_files)}" + "\n" + (
-                "files_preview: " + ", ".join(changed_files[:20]) + more
-            )
+            sceneLines.extend([
+                "",
+                "---",
+                f"repo: {repoLabel}  ",
+                f"sha1: {sha1}  ",
+                f"files_changed:\n{self._makeFileList(files)}",
+            ])
+
+        _appendRepoFileSummary((commit.repoDir or ".").replace(
+            "\\", "/"), commit.sha1, commitDiff)
+        for subRepo, subSha1, subDiff in subDiffs:
+            _appendRepoFileSummary(subRepo.replace("\\", "/"), subSha1, subDiff)
+
+        scene = "\n".join(sceneLines)
 
         self._waitForInitialization()
         # create a new conversation if current one is not empty
@@ -909,6 +932,13 @@ class AiChatWidget(QWidget):
             self._createNewConversation()
         self._codeReviewScene = scene
         self._doRequest(diff, AiChatMode.CodeReview)
+
+    def _makeFileList(self, files: List[str]) -> str:
+        l = []
+        for file in files:
+            file = file.replace('\\', '/')
+            l.append(f"- {file}")
+        return "\n".join(l)
 
     def codeReviewForDiff(self, diff: str):
         self._waitForInitialization()
@@ -922,7 +952,7 @@ class AiChatWidget(QWidget):
         """Start a code review for staged/local changes across submodules."""
         self._ensureCodeReviewExecutor()
         self._codeReviewDiffs.clear()
-        self._codeReviewScene = None
+        self._codeReviewScene = "type: staged changes (index)\n"
         self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
 
     def _ensureCodeReviewExecutor(self):
@@ -934,27 +964,21 @@ class AiChatWidget(QWidget):
     def _onCodeReviewDiffFetchFinished(self):
         if self._codeReviewDiffs:
             diff = "\n".join(self._codeReviewDiffs)
-            scene_lines = "type: staged changes (index)"
-            if self._codeReviewScene:
-                self._codeReviewScene += "\n" + scene_lines
-            else:
-                self._codeReviewScene = scene_lines
             self.codeReviewForDiff(diff)
 
     def _fetchStagedDiff(self, submodule: str, files, cancelEvent: CancelEvent):
         repoDir = fullRepoDir(submodule)
         repoFiles = [toSubmodulePath(submodule, file) for file in files]
 
-        # Send human-readable scene metadata to the UI thread.
-        preview_n = 12
-        preview = ", ".join(repoFiles[:preview_n]) if repoFiles else "(files unavailable)"
-        more = "" if len(repoFiles) <= preview_n else f" (+{len(repoFiles) - preview_n} more)"
-        joined = preview + more
-        ApplicationBase.instance().postEvent(
-            self,
-            CodeReviewSceneEvent(
-                f'submodule: {submodule or "."} | files: {joined}'),
-        )
+        # Send human-readable, repo-disambiguating scene metadata to the UI thread.
+        repoLabel = (submodule or ".").replace("\\", "/")
+        scene = "\n".join([
+            "",
+            "---",
+            f"repo: {repoLabel}  ",
+            f"files_changed:\n{self._makeFileList(repoFiles)}",
+        ])
+        ApplicationBase.instance().postEvent(self, CodeReviewSceneEvent(scene))
         data: bytes = Git.commitRawDiff(
             Git.LCC_SHA1, repoFiles, repoDir=repoDir)
         if not data:
@@ -1151,7 +1175,8 @@ class AiChatWidget(QWidget):
                         continue
                     tcid = tc.get("id")
                     if not tcid:
-                        logger.warning("Invalid tool call entry in history: missing id")
+                        logger.warning(
+                            "Invalid tool call entry in history: missing id")
                         continue
 
                     func = (tc.get("function") or {})
@@ -1162,7 +1187,8 @@ class AiChatWidget(QWidget):
                     toolType = tool.tool_type if tool else ToolType.WRITE
 
                     if addToChatBot:
-                        uiResponse = self._makeUiToolCallResponse(toolName, func.get("arguments"))
+                        uiResponse = self._makeUiToolCallResponse(
+                            toolName, func.get("arguments"))
                         collapsed = bool(
                             responseMsg) or toolType == ToolType.READ_ONLY
                         chatbot.appendResponse(uiResponse, collapsed)

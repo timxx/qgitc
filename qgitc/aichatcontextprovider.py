@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import List, NamedTuple, Optional
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
+
+from qgitc.gitutils import Git
 
 
 class AiContextDescriptor(NamedTuple):
@@ -44,3 +47,11 @@ class AiChatContextProvider(QObject):
         Return None to use the default AGENT_SYS_PROMPT.
         """
         return None
+
+    def commonContext(self) -> List[str]:
+        blocks = []
+        today = datetime.date.today().isoformat()
+        blocks.append(f"The current date is {today}")
+        blocks.append(f"Main repo dir: {Git.REPO_DIR}")
+
+        return blocks
