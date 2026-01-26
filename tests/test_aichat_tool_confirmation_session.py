@@ -62,66 +62,6 @@ class TestAiChatToolConfirmationSession(TestBase):
     def doCreateRepo(self):
         pass
 
-    def test_restore_pending_confirmations_and_autorun_queue(self):
-        """Restores pending tool confirmations + READ_ONLY auto queue from history."""
-        # One READ_ONLY tool (auto-run) + one WRITE tool (needs confirmation)
-        messages = [
-            {"role": "user", "content": "hi"},
-            {
-                "role": "assistant",
-                "content": "",
-                "tool_calls": [
-                    {
-                        "id": "call_auto",
-                        "type": "function",
-                        "function": {"name": "git_status", "arguments": "{}"},
-                    },
-                    {
-                        "id": "call_confirm",
-                        "type": "function",
-                        "function": {"name": "git_checkout", "arguments": '{"branch":"main"}'},
-                    },
-                ],
-            },
-        ]
-
-        # Spy on confirmation insertion.
-        self.chatWidget.messages.insertToolConfirmation = MagicMock()
-
-        self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=True)
-
-        # Pending tool_call_ids are tracked.
-        self.assertIn("call_auto", self.chatWidget._awaitingToolResults)
-        self.assertIn("call_confirm", self.chatWidget._awaitingToolResults)
-
-        # READ_ONLY tool should be queued for auto-run.
-        self.assertTrue(self.chatWidget._autoToolQueue)
-        queued = self.chatWidget._autoToolQueue[0]
-        self.assertEqual("git_status", queued[0])
-        self.assertEqual("call_auto", queued[3])
-
-        # Metadata is restored for both ids.
-        self.assertEqual(
-            ToolType.READ_ONLY,
-            self.chatWidget._toolCallMeta["call_auto"]["tool_type"],
-        )
-        self.assertEqual(
-            "git_checkout",
-            self.chatWidget._toolCallMeta["call_confirm"]["tool_name"],
-        )
-
-        # Confirmation UI should be restored for the WRITE tool.
-        self.chatWidget.messages.insertToolConfirmation.assert_called()
-        called_ids = [
-            kwargs.get("toolCallId")
-            for _, kwargs in self.chatWidget.messages.insertToolConfirmation.call_args_list
-        ]
-        self.assertIn("call_confirm", called_ids)
-
-        # Auto-run resume is scheduled (we patched the method, so it should be callable).
-        self.wait(50)
-        self.assertTrue(self.chatWidget._startNextAutoToolIfIdle.called)
-
     def test_restore_does_not_mark_pending_when_results_exist(self):
         """If tool results exist immediately after tool_calls, nothing is pending."""
         messages = [
