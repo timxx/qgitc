@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+from unittest import skipIf
 
 from qgitc.agenttoolexecutor import AgentToolExecutor
 from qgitc.gitutils import Git
@@ -194,6 +195,7 @@ class TestApplyPatchTool(TestBase):
         self.assertNotIn(
             "            elif rejectRect.contains(pos):\n", content)
 
+    @skipIf(os.name != 'nt', "Unix-style path test only relevant on Windows")
     def test_apply_unix_path(self):
         path = os.path.join(Git.REPO_DIR, "sample.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as f:
