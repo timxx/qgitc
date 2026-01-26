@@ -193,3 +193,21 @@ class TestApplyPatchTool(TestBase):
             "            elif rejectRect.contains(QPointF(pos)):\n", content)
         self.assertNotIn(
             "            elif rejectRect.contains(pos):\n", content)
+
+    def test_apply_unix_path(self):
+        path = os.path.join(Git.REPO_DIR, "sample.txt")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("hello")
+
+        patch = """*** Begin Patch
+*** Update File: /{}
+-hello
+*** End Patch""".format(path.replace("\\", "/").upper())
+
+        path = path.replace("\\", "/")
+        executor = AgentToolExecutor()
+        result = executor._handle_apply_patch("apply_patch", {
+            "input": patch,
+            "explanation": "Fix bug",
+        })
+        self.assertTrue(result.ok, msg=result.output)

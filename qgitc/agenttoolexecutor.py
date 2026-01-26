@@ -262,6 +262,10 @@ class AgentToolExecutor(QObject):
         if not repo_dir or not os.path.isdir(repo_dir):
             return False, f"Invalid repo_dir: {repo_dir}"
 
+        if os.name == 'nt' and file_path.startswith('/') and file_path.find(':') != 1:
+            # Handle Unix-style absolute paths on Windows (e.g. /C:/path/to/file).
+            file_path = file_path.lstrip('/')
+
         if os.path.isabs(file_path):
             abs_path = os.path.abspath(file_path)
         else:
