@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import patch
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 
+from qgitc.aichathistory import AiChatHistory
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.llm import AiChatMode, AiModelBase
 from qgitc.windowtype import WindowType
@@ -22,7 +23,8 @@ class TestAiChat(TestBase):
         self.window.show()
         QTest.qWaitForWindowExposed(self.window)
         # wait for creating new conversation
-        self.wait(200, lambda:self.chatWidget._historyPanel.currentHistory() is None)
+        self.wait(
+            200, lambda: self.chatWidget._historyPanel.currentHistory() is None)
 
     def tearDown(self):
         self.window.close()
@@ -38,7 +40,8 @@ class TestAiChat(TestBase):
         self.assertIsNotNone(self.chatWidget._historyPanel.currentHistory())
 
         for i in range(self.chatWidget._contextPanel.cbBots.count()):
-            model: AiModelBase = self.chatWidget._contextPanel.cbBots.itemData(i)
+            model: AiModelBase = self.chatWidget._contextPanel.cbBots.itemData(
+                i)
             if model.isLocal():
                 self.chatWidget._contextPanel.cbBots.setCurrentIndex(i)
                 break
@@ -53,7 +56,8 @@ class TestAiChat(TestBase):
 
         with MockLocalLLM(False) as mock:
             spy = QSignalSpy(model.serviceUnavailable)
-            QTest.mouseClick(self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
+            QTest.mouseClick(
+                self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
             self.assertEqual(2, chatbot.blockCount())
 
             self.assertFalse(self.chatWidget._contextPanel.btnSend.isVisible())
@@ -76,7 +80,8 @@ class TestAiChat(TestBase):
         self.chatWidget._contextPanel.edit.edit.setPlainText("Hello")
         with MockLocalLLM(True) as mock:
             spy = QSignalSpy(model.responseAvailable)
-            QTest.mouseClick(self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
+            QTest.mouseClick(
+                self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
             self.assertEqual(2, chatbot.blockCount())
 
             self.wait(10000, lambda: model.isRunning())
@@ -99,6 +104,40 @@ class TestAiChat(TestBase):
 
         self.assertFalse(self.chatWidget._contextPanel.btnSend.isEnabled())
         self.assertIsNone(self.chatWidget._historyPanel.currentHistory())
+
+    def test_setCurrentHistory_clears_previous_selection(self):
+        panel = self.chatWidget._historyPanel
+
+        panel.insertHistoryAtTop(AiChatHistory(title="Second"), select=False)
+        self.processEvents()
+
+        idx0 = panel._filterModel.index(0, 0)
+        idx1 = panel._filterModel.index(1, 0)
+        self.assertTrue(idx0.isValid())
+        self.assertTrue(idx1.isValid())
+
+        hist0 = panel._filterModel.data(idx0, Qt.UserRole)
+        hist1 = panel._filterModel.data(idx1, Qt.UserRole)
+        self.assertIsNotNone(hist0)
+        self.assertIsNotNone(hist1)
+
+        selModel = panel._historyList.selectionModel()
+        # Select two items (mimics ExtendedSelection Ctrl+click).
+        selModel.setCurrentIndex(
+            idx0, QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Current)
+        selModel.select(idx1, QItemSelectionModel.Select)
+        self.processEvents()
+        self.assertEqual(len(selModel.selectedIndexes()), 2)
+
+        # Now switch history programmatically; old selections should be cleared.
+        panel.setCurrentHistory(hist1.historyId)
+        self.processEvents()
+
+        selected = selModel.selectedIndexes()
+        self.assertEqual(1, len(selected))
+        self.assertEqual(idx1.row(), selected[0].row())
+        self.assertEqual(hist1.historyId, panel.currentHistory().historyId)
+
 
 class TestAiChatFetchModels(TestBase):
 

@@ -6,6 +6,7 @@ from typing import List
 
 from PySide6.QtCore import (
     QAbstractListModel,
+    QItemSelectionModel,
     QModelIndex,
     QSortFilterProxyModel,
     Qt,
@@ -240,7 +241,27 @@ class AiChatHistoryPanel(QWidget):
             self._historyModel.rowCount() > 0
             and not self._historyList.currentIndex().isValid()
         ):
-            self._historyList.setCurrentIndex(self._filterModel.index(0, 0))
+            self._selectSingleIndex(self._filterModel.index(0, 0))
+
+    def _selectSingleIndex(self, filterIndex: QModelIndex):
+        """Select exactly one row in the filtered view.
+
+        The history list uses ExtendedSelection to support multi-delete, but
+        programmatic navigation (switching chats) should behave like a single
+        selection and clear any previous selection highlights.
+        """
+        if not filterIndex.isValid():
+            return
+
+        selModel = self._historyList.selectionModel()
+        if selModel is None:
+            self._historyList.setCurrentIndex(filterIndex)
+            return
+
+        selModel.setCurrentIndex(
+            filterIndex,
+            QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Current,
+        )
 
     def _onHistorySelectionChanged(self, current: QModelIndex, previous: QModelIndex):
         """Handle history selection change"""
@@ -342,7 +363,7 @@ class AiChatHistoryPanel(QWidget):
             newSourceIndex = self._historyModel.index(newRow, 0)
             newFilterIndex = self._filterModel.mapFromSource(newSourceIndex)
             if newFilterIndex.isValid():
-                self._historyList.setCurrentIndex(newFilterIndex)
+                self._selectSingleIndex(newFilterIndex)
 
         return chatHistory
 
@@ -353,7 +374,7 @@ class AiChatHistoryPanel(QWidget):
             sourceIndex = self._historyModel.index(row, 0)
             filterIndex = self._filterModel.mapFromSource(sourceIndex)
             if filterIndex.isValid():
-                self._historyList.setCurrentIndex(filterIndex)
+                self._selectSingleIndex(filterIndex)
 
     def insertHistoryAtTop(self, history: AiChatHistory, select: bool = True):
         self._historyModel.insertHistory(0, history)
@@ -362,7 +383,7 @@ class AiChatHistoryPanel(QWidget):
             sourceIndex = self._historyModel.index(0, 0)
             filterIndex = self._filterModel.mapFromSource(sourceIndex)
             if filterIndex.isValid():
-                self._historyList.setCurrentIndex(filterIndex)
+                self._selectSingleIndex(filterIndex)
 
     def _showContextMenu(self, position):
         """Show context menu for history list"""
