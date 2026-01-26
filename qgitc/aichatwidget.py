@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import json
-from typing import Dict, List, Optional, Tuple
+import typing
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QEvent, QEventLoop, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
@@ -14,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.agenttoolexecutor import AgentToolExecutor, AgentToolResult
-from qgitc.agenttools import AgentToolRegistry, ToolType, parseToolArguments
+from qgitc.agenttools import AgentTool, AgentToolRegistry, ToolType, parseToolArguments
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichatcontextprovider import AiChatContextProvider
@@ -521,12 +522,8 @@ class AiChatWidget(QWidget):
                     continue
 
                 # Anything else requires explicit confirmation.
-                description = self.tr("{} run `{}`").format(
-                    self._getToolIcon(tool.tool_type), toolName)
-                toolMessage = json.dumps(args, ensure_ascii=False)
-                model.addHistory(AiRole.Tool, toolMessage, description)
-                messages.appendResponse(AiResponse(
-                    AiRole.Tool, toolMessage, description))
+                uiResponse = self._makeUiToolCallResponse(tool, args)
+                messages.appendResponse(uiResponse)
 
                 if toolName and tool:
                     hasConfirmations = True
@@ -566,6 +563,27 @@ class AiChatWidget(QWidget):
             self._adjustingSccrollbar = True
             sb.setValue(sb.maximum())
             self._adjustingSccrollbar = False
+
+    @typing.overload
+    def _makeUiToolCallResponse(self, tool: AgentTool, args: Union[str, dict]): ...
+
+    @typing.overload
+    def _makeUiToolCallResponse(self, toolName: str, args: Union[str, dict]): ...
+
+    def _makeUiToolCallResponse(self, *args):
+        if isinstance(args[0], str):
+            tool = AgentToolRegistry.tool_by_name(args[0])
+        else:
+            tool = args[0]
+
+        icon = self._getToolIcon(tool.tool_type)
+        title = self.tr("{} run `{}`").format(icon, tool.name)
+
+        if isinstance(args[1], str):
+            body = args[1]
+        else:
+            body = json.dumps(args[1], ensure_ascii=False)
+        return AiResponse(AiRole.Tool, body, title)
 
     def _onResponseFinish(self):
         model = self.currentChatModel()
@@ -614,7 +632,7 @@ class AiChatWidget(QWidget):
         # chat requires that each tool_call_id gets a corresponding tool message.
         if tool_call_id:
             description = self.tr("✗ `{}` rejected").format(tool_name)
-            model.addHistory(AiRole.Tool, "User chose to reject",
+            model.addHistory(AiRole.Tool, "Rejected by user",
                              description=description,
                              toolCalls={"tool_call_id": tool_call_id})
             msg = self.tr("User rejected")
@@ -672,7 +690,7 @@ class AiChatWidget(QWidget):
             description = self.tr("✗ `{}` rejected").format(toolName)
             model.addHistory(
                 AiRole.Tool,
-                "User chose to reject",
+                "Rejected by user",
                 description=description,
                 toolCalls={"tool_call_id": tcid},
             )
@@ -764,15 +782,8 @@ class AiChatWidget(QWidget):
         self._pendingAutoGroupId = group_id
         self._pendingToolCallId = tool_call_id
 
-        toolMessage = json.dumps(params or {}, ensure_ascii=False)
-        description = self.tr("{} run `{}`").format(
-            self._getToolIcon(ToolType.READ_ONLY), tool_name)
-        model = self.currentChatModel()
-        model.addHistory(AiRole.Tool, toolMessage, description=description)
-        self._chatBot.appendResponse(AiResponse(
-            AiRole.Tool, toolMessage,
-            description=description),
-            collapsed=True)
+        uiResponse = self._makeUiToolCallResponse(tool_name, params or {})
+        self._chatBot.appendResponse(uiResponse, collapsed=True)
         started = self._agentExecutor.executeAsync(tool_name, params or {})
         if not started:
             # Fall back to a synthetic failure result and keep draining.
@@ -1121,36 +1132,52 @@ class AiChatWidget(QWidget):
 
             model.addHistory(
                 role, content, description=description, toolCalls=toolCalls)
-            # Don't add tool calls from history to chatbot
-            if addToChatBot and (role != AiRole.Assistant or not toolCalls):
-                response = AiResponse(role, content, description=description)
-                # Auto-collapse Tool messages and user messages that follow Tool messages
-                collapsed = (role == AiRole.Tool) or (role == AiRole.System)
+            # Don't add tool calls to UI (both for assistant and tool roles)
+            if addToChatBot and not toolCalls:
+                response = AiResponse(role, content)
+                collapsed = (role == AiRole.Tool) or (role == AiRole.System) or \
+                    (role == AiRole.Assistant and toolCalls)
                 chatbot.appendResponse(response, collapsed=collapsed)
 
-            # Restore tool confirmation UI for pending tool calls.
             if role == AiRole.Assistant and isinstance(toolCalls, list) and toolCalls:
                 autoGroupId: Optional[int] = None
                 autoToolsCount = 0
                 hasConfirmations = False
 
-                toolCallResultIds = self._collecToolCallResultIds(
+                toolCallResult = self._collectToolCallResult(
                     i + 1, messages)
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
                         continue
                     tcid = tc.get("id")
-                    # Already have result
-                    if not tcid or tcid in toolCallResultIds:
+                    if not tcid:
+                        logger.warning("Invalid tool call entry in history: missing id")
                         continue
 
                     func = (tc.get("function") or {})
                     toolName = func.get("name")
-                    args = parseToolArguments(func.get("arguments"))
+                    responseMsg: Dict[str, Any] = toolCallResult.get(tcid)
                     tool = AgentToolRegistry.tool_by_name(
                         toolName) if toolName else None
-
                     toolType = tool.tool_type if tool else ToolType.WRITE
+
+                    if addToChatBot:
+                        uiResponse = self._makeUiToolCallResponse(toolName, func.get("arguments"))
+                        collapsed = bool(
+                            responseMsg) or toolType == ToolType.READ_ONLY
+                        chatbot.appendResponse(uiResponse, collapsed)
+
+                    # Already have result
+                    if responseMsg:
+                        if addToChatBot:
+                            toolContent = responseMsg.get("content", "")
+                            toolDesc = responseMsg.get("description", "")
+                            response = AiResponse(
+                                AiRole.Tool, toolContent, toolDesc)
+                            chatbot.appendResponse(response, collapsed=True)
+                        continue
+
+                    args = parseToolArguments(func.get("arguments"))
 
                     # Track as awaiting result so the session knows a confirmation is pending.
                     self._awaitingToolResults.add(tcid)
@@ -1204,21 +1231,21 @@ class AiChatWidget(QWidget):
         if self._autoToolQueue:
             QTimer.singleShot(0, self._startNextAutoToolIfIdle)
 
-    def _collecToolCallResultIds(self, i: int, messages: List[Dict]):
+    def _collectToolCallResult(self, i: int, messages: List[Dict]):
         """Collect pending tool_call_id values from history starting at index i"""
-        callIds = set()
+        callResult = {}
         while i < len(messages):
             msg = messages[i]
             role = AiRole.fromString(msg.get('role', 'user'))
             if role != AiRole.Tool:
-                return callIds
+                return callResult
             toolCalls = msg.get('tool_calls', None)
             if isinstance(toolCalls, dict):
                 tcid = toolCalls.get("tool_call_id")
                 if tcid:
-                    callIds.add(tcid)
+                    callResult[tcid] = msg
             i += 1
-        return callIds
+        return callResult
 
     def _clearCurrentChat(self):
         """Clear the current chat display and model history"""

@@ -211,9 +211,16 @@ class AgentToolRegistry:
     """Registry of git tools exposed to the LLM in Agent mode."""
 
     _openai_tools: Optional[List[Dict[str, Any]]] = None
+    _cached_tools: Optional[List[AgentTool]] = None
 
     @staticmethod
     def tools() -> List[AgentTool]:
+        if AgentToolRegistry._cached_tools is None:
+            AgentToolRegistry._cached_tools = AgentToolRegistry._createTools()
+        return AgentToolRegistry._cached_tools
+
+    @staticmethod
+    def _createTools() -> List[AgentTool]:
         return [
             create_tool_from_model(
                 name="git_status",

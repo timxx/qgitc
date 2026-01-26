@@ -125,8 +125,6 @@ class AiModelBase(QObject):
         - If an assistant message contains `tool_calls`, the conversation must
           include a subsequent `tool` role message for each `tool_call_id`
           before any later assistant message.
-        - QGitc has UI-only tool messages (tool run previews, confirmations).
-          We only forward tool *results* that have an associated `tool_call_id`.
         """
 
         messages: List[Dict[str, Any]] = []
