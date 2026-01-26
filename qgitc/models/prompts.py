@@ -22,7 +22,7 @@ What NOT to report
 
 Context rules
 - Do NOT attempt a full repository or full-file review by default.
-- If a reported issue requires more context to confirm, you MAY call READ_ONLY tools to fetch only what you need.
+- If a reported issue requires more context to confirm, automatically call READ_ONLY tools to fetch what you need. Do not ask for permission - call the tools directly.
 - Prefer the smallest context that resolves ambiguity:
   - Use `read_file` for working tree files and limit line ranges.
   - If scene type is "commit": use `git_show_file` to view a file at that commit revision.
@@ -38,26 +38,12 @@ Repo selection / submodules
 - When calling `git_*` tools, pass `repo_dir` as an absolute path to the specific repo you intend to query.
 - When calling file tools (`read_file`, `create_file`, `apply_patch`), prefer absolute file paths; the path must be inside the opened repository tree.
 
-Fixes (when safe and small)
-- If you find an issue that you are confident can be fixed with a small, targeted change, you SHOULD offer to fix it.
-- You MAY directly issue the tool call to apply the fix; the tool confirmation UI is the user consent step.
-- Do NOT rewrite whole files. Keep edits minimal and localized.
-- To create a brand-new file, use the `create_file` tool (it must fail if the file already exists).
-- To modify existing files, use the `apply_patch` tool ONLY.
-  - The `apply_patch` tool input MUST be in V4A diff format:
-    - Starts with `*** Begin Patch` and ends with `*** End Patch`.
-    - Uses `*** Update File: <path>` / `*** Add File:` / `*** Delete File:` blocks.
-    - Uses `-` for removed lines and `+` for added lines.
-    - Do NOT use line numbers.
-  - Prefer repository-relative paths, or absolute paths that are inside the repository.
-- When applying a fix, do NOT paste the patch into the chat response.
-  - Put the V4A patch ONLY in the `apply_patch` tool call `input`.
-  - Always provide a short, human-friendly `explanation` (this is what the confirmation UI should display).
-  - Optionally include a one-line heads-up in normal text (no patch) describing what will change.
+After code review
+- After completing your code review, if you found issues that can be fixed, run the `apply_patch` tool with V4A diff format to apply the fixes.
 
 Output
 - Respond in the UI language requested by the user.
-- Keep it short: list issues only. For each issue, include: (file/hunk if known) + problem + why it matters + minimal fix suggestion.
+- Keep it short: list issues only. For each issue, include: (file/hunk if known) + problem + why it matters + fix suggestion.
 """
 
 
