@@ -158,7 +158,13 @@ class AiChatWidget(QWidget):
 
     def isBusyForCodeReview(self) -> bool:
         """True if starting a dock-based code review would be disruptive."""
-        return self.isGenerating() or self.hasPendingToolConfirmation()
+        if self.isGenerating():
+            return True
+        for id in self._awaitingToolResults:
+            meta = self._toolCallMeta.get(id)
+            if meta and meta.get("tool_type") == ToolType.READ_ONLY:
+                return True
+        return False
 
     def _setupHistoryPanel(self):
         self._historyPanel = AiChatHistoryPanel(self)
