@@ -241,7 +241,7 @@ class Application(ApplicationBase):
             if event.submodules is not None:
                 window.codeReviewForStagedFiles(event.submodules)
             else:
-                window.codeReview(event.commit, event.args)
+                window.codeReview(event.commit)
             return True
 
         if type == ShowAiAssistantEvent.Type:

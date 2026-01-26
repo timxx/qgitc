@@ -13,8 +13,8 @@ class AiChatWindow(StateWindow):
         centralWidget = AiChatWidget(self)
         self.setCentralWidget(centralWidget)
 
-    def codeReview(self, commit, args=None):
-        self.centralWidget().codeReview(commit, args)
+    def codeReview(self, commit):
+        self.centralWidget().codeReview(commit)
 
     def codeReviewForStagedFiles(self, submodules: Union[list, dict]):
         self.centralWidget().codeReviewForStagedFiles(submodules)

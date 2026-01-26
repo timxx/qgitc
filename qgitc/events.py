@@ -58,7 +58,7 @@ class CodeReviewEvent(QEvent):
     Type = QEvent.User + 6
 
     @overload
-    def __init__(self, commit: Commit, args: List[str] = None): ...
+    def __init__(self, commit: Commit): ...
 
     @overload
     def __init__(self, submodules: List[str]): ...
@@ -69,12 +69,13 @@ class CodeReviewEvent(QEvent):
     def __init__(self, *args):
         super().__init__(QEvent.Type(CodeReviewEvent.Type))
 
-        if len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], dict)):
+        if isinstance(args[0], list) or isinstance(args[0], dict):
             self.submodules = args[0]
-        else:
+        elif isinstance(args[0], Commit):
             self.submodules = None
             self.commit = args[0]
-            self.args = args[1] if len(args) > 1 else None
+        else:
+            raise TypeError("Invalid argument type for CodeReviewEvent")
 
 
 class RequestCommitEvent(QEvent):
@@ -142,7 +143,6 @@ class DockCodeReviewEvent(QEvent):
 
     Type = QEvent.User + 14
 
-    def __init__(self, commit: Commit, args: List[str] = None):
+    def __init__(self, commit: Commit):
         super().__init__(QEvent.Type(DockCodeReviewEvent.Type))
         self.commit = commit
-        self.args = args or []

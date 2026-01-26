@@ -1398,16 +1398,15 @@ class LogView(QAbstractScrollArea, CommitSource):
             return
 
         logWindow = self.logWindow()
-        args = logWindow.getFilterArgs() if logWindow else []
         if logWindow is not None:
-            crEvent = DockCodeReviewEvent(commit, args)
+            crEvent = DockCodeReviewEvent(commit)
             crEvent.ignore()  # default to not handled
             ApplicationBase.instance().sendEvent(logWindow, crEvent)
             if crEvent.isAccepted():
                 return
 
         # Fallback: standalone window via application event.
-        event = CodeReviewEvent(commit, args)
+        event = CodeReviewEvent(commit)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def __onFindResultAvailable(self):

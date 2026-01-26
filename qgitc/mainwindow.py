@@ -729,7 +729,7 @@ class MainWindow(StateWindow):
     def event(self, event: QEvent):
         if event.type() == DockCodeReviewEvent.Type:
             # Always accept if we decide to handle it here (including user cancel).
-            self.startCodeReviewForCommit(event.commit, event.args)
+            self.startCodeReviewForCommit(event.commit)
             event.accept()
             return True
         return super().event(event)
@@ -859,7 +859,7 @@ class MainWindow(StateWindow):
 
         ApplicationBase.instance().trackFeatureUsage("menu.code_review")
 
-    def startCodeReviewForCommit(self, commit, args=None):
+    def startCodeReviewForCommit(self, commit):
         """Run code review in this window's AI chat dock.
 
         Falls back to the standalone AI assistant window if the dock chat is busy
@@ -884,11 +884,11 @@ class MainWindow(StateWindow):
 
             if msg.clickedButton() == btnStandalone:
                 app = ApplicationBase.instance()
-                app.postEvent(app, CodeReviewEvent(commit, args or []))
+                app.postEvent(app, CodeReviewEvent(commit))
                 return
 
         self._aiChat.setVisible(True)
-        chat.codeReview(commit, args)
+        chat.codeReview(commit)
 
     def _onChangeCommitAuthor(self):
         """Handle changing commit author from Git menu"""

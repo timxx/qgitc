@@ -873,10 +873,9 @@ class AiChatWidget(QWidget):
                 files.append(b_path)
         return files
 
-    def codeReview(self, commit: Commit, args: List[str]):
+    def codeReview(self, commit: Commit):
         repoDir = commitRepoDir(commit)
-        commitDiffData: bytes = Git.commitRawDiff(
-            commit.sha1, gitArgs=args, repoDir=repoDir)
+        commitDiffData: bytes = Git.commitRawDiff(commit.sha1, repoDir=repoDir)
         if not commitDiffData:
             return
 
@@ -885,13 +884,12 @@ class AiChatWidget(QWidget):
         subDiffs: List[Tuple[str, str, str]] = []  # (repoLabel, sha1, diff)
         for subCommit in commit.subCommits:
             subRepoDir = commitRepoDir(subCommit)
-            subData = Git.commitRawDiff(
-                subCommit.sha1, gitArgs=args, repoDir=subRepoDir)
+            subData = Git.commitRawDiff(subCommit.sha1, repoDir=subRepoDir)
             if not subData:
                 continue
             subRepoLabel = subCommit.repoDir or "."
-            subDiffs.append(subRepoLabel, subCommit.sha1,
-                            subData.decode("utf-8", errors="replace"))
+            subDiffs.append((subRepoLabel, subCommit.sha1,
+                            subData.decode("utf-8", errors="replace")))
         parts = [commitDiff]
         parts.extend([d for _, _, d in subDiffs])
         diff = "\n".join([p for p in parts if p])
