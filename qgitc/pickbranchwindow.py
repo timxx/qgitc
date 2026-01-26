@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QProgressDialog,
 )
 
+from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, dataDirPath, fullRepoDir
 from qgitc.events import ShowCommitEvent
@@ -69,6 +70,9 @@ class PickBranchWindow(StateWindow):
 
         # Setup DiffView with vertical orientation (file list on bottom)
         self.ui.diffView.setFileListOrientation(Qt.Vertical)
+
+        # Initialize AI Chat dock widget (not setup by default)
+        self._aiChat: AiChatDockWidget = None
 
     def _setupUi(self):
         """Setup UI components"""
@@ -537,3 +541,28 @@ class PickBranchWindow(StateWindow):
     def _updateStatus(self, message: str):
         """Update status label"""
         self.ui.labelStatus.setText(message)
+
+    def _setupAiChatDock(self):
+        """Setup AI Chat dock widget with embedded mode"""
+        if self._aiChat is not None:
+            return
+
+        self._aiChat = AiChatDockWidget(self)
+
+        # TODO: Setup context provider for pick branch window if needed
+        # aiChatContextProvider = PickBranchWindowAiChatContextProvider(
+        #     self, parent=self)
+        # self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
+
+        # Add dock widget to pick branch window
+        self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
+
+    def _onChatClicked(self):
+        """Toggle the AI chat dock visibility"""
+        # Setup the chat dock if not already done
+        if self._aiChat is None:
+            self._setupAiChatDock()
+
+        self._aiChat.setVisible(not self._aiChat.isVisible())
+        if self._aiChat.isVisible():
+            self._aiChat.chatWidget().contextPanel.setFocus()
