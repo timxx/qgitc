@@ -925,7 +925,8 @@ class AiChatWidget(QWidget):
         _appendRepoFileSummary((commit.repoDir or ".").replace(
             "\\", "/"), commit.sha1, commitDiff)
         for subRepo, subSha1, subDiff in subDiffs:
-            _appendRepoFileSummary(subRepo.replace("\\", "/"), subSha1, subDiff)
+            _appendRepoFileSummary(
+                subRepo.replace("\\", "/"), subSha1, subDiff)
 
         scene = "\n".join(sceneLines)
 
@@ -1168,12 +1169,9 @@ class AiChatWidget(QWidget):
                 chatbot.appendResponse(response, collapsed=collapsed)
 
             if role == AiRole.Assistant and isinstance(toolCalls, list) and toolCalls:
-                autoGroupId: Optional[int] = None
-                autoToolsCount = 0
-                hasConfirmations = False
-
-                toolCallResult = self._collectToolCallResult(
+                toolCallResult, hasMoreMessages = self._collectToolCallResult(
                     i + 1, messages)
+                
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
                         continue
@@ -1209,7 +1207,28 @@ class AiChatWidget(QWidget):
 
                     args = parseToolArguments(func.get("arguments"))
 
-                    # Track as awaiting result so the session knows a confirmation is pending.
+                    # No result found - decide whether to cancel or restore confirmation
+                    # If there are more messages after this tool call block, cancel it
+                    # (the conversation moved on without executing this tool)
+                    if hasMoreMessages or toolType == ToolType.READ_ONLY:
+                        cancelDesc = self.tr(
+                            "✗ `{}` cancelled").format(toolName)
+                        model.addHistory(
+                            AiRole.Tool,
+                            "Cancelled",
+                            description=cancelDesc,
+                            toolCalls={"tool_call_id": tcid},
+                        )
+                        if addToChatBot:
+                            response = AiResponse(
+                                AiRole.Tool,
+                                self.tr("Cancelled"),
+                                description=cancelDesc
+                            )
+                            chatbot.appendResponse(response, collapsed=True)
+                        continue
+
+                    # For WRITE/DANGEROUS tools at end of history: restore confirmation UI
                     self._awaitingToolResults.add(tcid)
                     toolDesc = tool.description if tool else self.tr(
                         "Unknown tool requested by model")
@@ -1219,19 +1238,6 @@ class AiChatWidget(QWidget):
                         "tool_type": toolType,
                         "tool_desc": toolDesc,
                     }
-
-                    # Resume auto-run READ_ONLY tools.
-                    if toolName and toolType == ToolType.READ_ONLY:
-                        if autoGroupId is None:
-                            autoGroupId = self._nextAutoGroupId
-                            self._nextAutoGroupId += 1
-                        self._autoToolQueue.append(
-                            (toolName, args or {}, autoGroupId, tcid))
-                        autoToolsCount += 1
-                        continue
-
-                    # Anything else requires explicit confirmation.
-                    hasConfirmations = True
 
                     if addToChatBot:
                         if toolName == "apply_patch" and isinstance(args, dict):
@@ -1246,36 +1252,34 @@ class AiChatWidget(QWidget):
                             toolCallId=tcid,
                         )
 
-                if autoGroupId is not None and autoToolsCount:
-                    self._autoToolGroups[autoGroupId] = {
-                        "remaining": autoToolsCount,
-                        "outputs": [],
-                        "auto_continue": not hasConfirmations,
-                    }
             i += 1
 
         if addToChatBot:
             chatbot.setHighlighterEnabled(True)
 
-        # Start/resume any pending READ_ONLY tools after restoring history.
-        if self._autoToolQueue:
-            QTimer.singleShot(0, self._startNextAutoToolIfIdle)
-
-    def _collectToolCallResult(self, i: int, messages: List[Dict]):
-        """Collect pending tool_call_id values from history starting at index i"""
+    def _collectToolCallResult(self, i: int, messages: List[Dict]) -> Tuple[Dict[str, Dict], bool]:
+        """Collect pending tool_call_id values from history starting at index i.
+        
+        Returns:
+            Tuple of (callResult dict, hasMoreMessages bool):
+            - callResult: Dict mapping tool_call_id to tool result message
+            - hasMoreMessages: True if there are non-tool messages after tool results
+        """
         callResult = {}
         while i < len(messages):
             msg = messages[i]
             role = AiRole.fromString(msg.get('role', 'user'))
             if role != AiRole.Tool:
-                return callResult
+                # Found a non-tool message, so there are more messages after tools
+                return callResult, True
             toolCalls = msg.get('tool_calls', None)
             if isinstance(toolCalls, dict):
                 tcid = toolCalls.get("tool_call_id")
                 if tcid:
                     callResult[tcid] = msg
             i += 1
-        return callResult
+        # Reached end of messages - no more messages after tool results
+        return callResult, False
 
     def _clearCurrentChat(self):
         """Clear the current chat display and model history"""
