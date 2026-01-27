@@ -34,10 +34,10 @@ class StateWindow(QMainWindow):
 
         state, geometry, isMaximized = sett.windowState(
             self.__class__.__name__, self.isMaximizedByDefault())
-        if state:
-            super().restoreState(state)
         if geometry:
             self.restoreGeometry(geometry)
+        if state:
+            super().restoreState(state)
 
         if isMaximized:
             self.setWindowState(self.windowState() | Qt.WindowMaximized)
