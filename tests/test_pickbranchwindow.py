@@ -335,7 +335,7 @@ class TestPickBranchWindow(TestBase):
         self.processEvents()
 
         # Should show message about no filters
-        self.assertIn("No filters", self.window.ui.labelStatus.text())
+        self.assertIn("No commits matched the filter criteria", self.window.ui.labelStatus.text())
 
     def testFilterCommitsWithPattern(self):
         """Test filtering commits with text patterns"""
