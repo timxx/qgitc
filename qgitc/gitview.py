@@ -170,13 +170,11 @@ class GitView(QWidget):
         if isinstance(index, str) and not index:
             return
 
-        self.ui.logView.clear()
-        self.ui.diffView.clear()
-
         branch = self.ui.cbBranch.currentText()
         branchDir = Git.branchDir(branch)
         self.ui.diffView.setBranchDir(branchDir)
 
+        self.ui.diffView.clear()
         self.ui.logView.showLogs(
             branch,
             branchDir,

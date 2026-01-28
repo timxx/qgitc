@@ -791,6 +791,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.args = args
         self._finder.reset()
         self._branchDir = branchDir
+        self.clear()
 
         submodules = []
         app = ApplicationBase.instance()
@@ -1286,7 +1287,6 @@ class LogView(QAbstractScrollArea, CommitSource):
         progress.setValue(len(commits))
 
         # FIXME: fetch the new one only?
-        self.clear()
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
         app = ApplicationBase.instance()
@@ -2669,7 +2669,6 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.viewport().update()
             return
 
-        self.clear()
         self._branchDir = Git.branchDir(self.curBranch)
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
@@ -2682,7 +2681,6 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.__onCompositeModeChanged()
 
     def reloadLogs(self):
-        self.clear()
         self.showLogs(self.curBranch, self._branchDir, self.args)
 
     def logWindow(self):
