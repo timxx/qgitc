@@ -18,14 +18,14 @@ class TestApplyPatchTool(TestBase):
         patch = (
             "*** Begin Patch\n"
             f"*** Update File: {patch_path}\n"
-            "line1\n"
-            "line2\n"
-            "line3\n"
+            " line1\n"
+            " line2\n"
+            " line3\n"
             "-old_line\n"
             "+new_line\n"
-            "line5\n"
-            "line6\n"
-            "line7\n"
+            " line5\n"
+            " line6\n"
+            " line7\n"
             "*** End Patch\n"
         )
 

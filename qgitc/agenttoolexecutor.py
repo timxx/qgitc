@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 
@@ -33,6 +33,7 @@ from qgitc.agenttools import (
 )
 from qgitc.basemodel import ValidationError
 from qgitc.gitutils import Git
+from qgitc.tools.applypatch import DiffError, process_patch
 
 
 class AgentToolResult:
@@ -77,184 +78,6 @@ class AgentToolExecutor(QObject):
         # Accept Windows paths from tool output and normalize quotes.
         p = (path or "").strip().strip('"').strip("'")
         return p
-
-    @staticmethod
-    def _read_text_file_lines(path: str) -> Tuple[List[str], bool, Optional[bytes], str]:
-        """Return (lines_without_newlines, endswith_newline, bom_bytes, encoding)."""
-        bom, encoding = AgentToolExecutor._detect_bom(path)
-        with open(path, 'r', encoding=encoding) as f:
-            text = f.read()
-        endswith_newline = text.endswith('\n')
-        lines = text.splitlines()
-        return lines, endswith_newline, bom, encoding
-
-    @staticmethod
-    def _write_text_file_lines(path: str, lines: List[str], endswith_newline: bool, bom: Optional[bytes], encoding: str):
-        text = "\n".join(lines)
-        if endswith_newline:
-            text += "\n"
-        if bom is not None:
-            encoded = text.encode(encoding.replace('-sig', ''))
-            with open(path, 'wb') as f:
-                f.write(bom)
-                f.write(encoded)
-        else:
-            with open(path, 'w', encoding='utf-8', newline='\n') as f:
-                f.write(text)
-
-    @staticmethod
-    def _find_subsequence(haystack: List[str], needle: List[str]) -> List[int]:
-        if not needle:
-            return []
-        hits: List[int] = []
-        n = len(needle)
-        for i in range(0, len(haystack) - n + 1):
-            if haystack[i:i + n] == needle:
-                hits.append(i)
-        return hits
-
-    @staticmethod
-    def _parse_v4a_patch(patch_text: str) -> Tuple[bool, str, List[Tuple[str, str, List[str]]]]:
-        """Parse V4A patch and return list of (action, file_path, block_lines)."""
-        text = (patch_text or "").lstrip("\ufeff")
-        if "*** Begin Patch" not in text or "*** End Patch" not in text:
-            return False, "Patch must include '*** Begin Patch' and '*** End Patch'.", []
-
-        lines = text.splitlines()
-        try:
-            start = lines.index("*** Begin Patch") + 1
-            end = lines.index("*** End Patch")
-        except ValueError:
-            return False, "Patch markers not found or malformed.", []
-
-        content = lines[start:end]
-        ops: List[Tuple[str, str, List[str]]] = []
-        current: Optional[Dict[str, Any]] = None
-
-        def flush():
-            nonlocal current
-            if current is not None:
-                ops.append((
-                    str(current.get("action") or ""),
-                    str(current.get("file_path") or ""),
-                    list(current.get("lines") or []),
-                ))
-                current = None
-
-        for line in content:
-            if line.startswith("*** ") and " File:" in line:
-                flush()
-                # Format: *** Update File: /path/to/file
-                parts = line.split(" File:", 1)
-                action_part = parts[0].replace("***", "").strip()
-                action = action_part.split()[0]
-                file_path = AgentToolExecutor._normalize_patch_path(
-                    parts[1].lstrip(":").strip())
-                current = {"action": action,
-                           "file_path": file_path, "lines": []}
-                continue
-
-            if current is None:
-                # Ignore stray lines between headers.
-                continue
-
-            current["lines"].append(line)
-
-        flush()
-
-        # Basic validation
-        for action, file_path, _ in ops:
-            if action not in ("Add", "Update", "Delete"):
-                return False, f"Unsupported patch action: {action}", []
-            if not file_path:
-                return False, "Patch contains an empty file path.", []
-
-        if not ops:
-            return False, "Patch contains no file operations.", []
-
-        return True, "ok", ops
-
-    @staticmethod
-    def _apply_v4a_update(abs_path: str, block_lines: List[str]) -> Tuple[bool, str]:
-        if not os.path.isfile(abs_path):
-            return False, f"File does not exist for update: {abs_path}"
-
-        file_lines, endswith_newline, bom, encoding = AgentToolExecutor._read_text_file_lines(
-            abs_path)
-
-        # Build edit blocks.
-        context: List[str] = []
-        edits = []  # list of (pre, old, new, post)
-        in_change = False
-        pre: List[str] = []
-        old: List[str] = []
-        new: List[str] = []
-        post: List[str] = []
-
-        def finalize():
-            nonlocal in_change, pre, old, new, post
-            if in_change and (old or new):
-                edits.append((pre[-3:], old, new, post[:3]))
-            in_change = False
-            pre = []
-            old = []
-            new = []
-            post = []
-
-        for line in block_lines:
-            if line.startswith("@@"):
-                continue
-            if line.startswith("-") or line.startswith("+"):
-                if not in_change:
-                    pre = context[:]  # snapshot
-                    in_change = True
-                if post:
-                    # A new change block starts after post-context.
-                    finalize()
-                    pre = context[:]
-                    in_change = True
-                if line.startswith("-"):
-                    old.append(line[1:])
-                else:
-                    new.append(line[1:])
-                continue
-
-            # Plain context line
-            if in_change and (old or new):
-                post.append(line)
-            context.append(line)
-
-        finalize()
-
-        if not edits:
-            return False, "No edits found in Update block (need '-'/'+' lines)."
-
-        # Apply edits sequentially.
-        for pre3, old_lines, new_lines, post3 in edits:
-            target = pre3 + old_lines + post3
-            hits = AgentToolExecutor._find_subsequence(
-                file_lines, target) if target else []
-            if len(hits) == 1:
-                i = hits[0] + len(pre3)
-                file_lines[i:i + len(old_lines)] = new_lines
-                continue
-
-            # Fallback: match old_lines only.
-            hits_old = AgentToolExecutor._find_subsequence(
-                file_lines, old_lines)
-            if len(hits_old) == 1:
-                i = hits_old[0]
-                file_lines[i:i + len(old_lines)] = new_lines
-                continue
-
-            if not hits and not hits_old:
-                snippet = "\\n".join(old_lines[:10])
-                return False, f"Failed to apply edit: old content not found. Snippet:\n{snippet}"
-            return False, "Failed to apply edit: patch context is ambiguous (multiple matches)."
-
-        AgentToolExecutor._write_text_file_lines(
-            abs_path, file_lines, endswith_newline, bom, encoding)
-        return True, "Patch applied."
 
     @staticmethod
     def _resolve_repo_path(repo_dir: str, file_path: str) -> Tuple[bool, str]:
@@ -716,43 +539,45 @@ class AgentToolExecutor(QObject):
         if not patch_text.strip():
             return AgentToolResult(tool_name, False, "Patch is empty.")
 
-        ok, msg, ops = self._parse_v4a_patch(patch_text)
-        if not ok:
-            return AgentToolResult(tool_name, False, msg)
-
-        applied = 0
-        for action, path, block in ops:
+        def _open_file(path: str) -> str:
             file_path = self._normalize_patch_path(path)
-            ok2, abs_path = self._resolve_repo_path(repo_dir, file_path)
-            if not ok2:
-                return AgentToolResult(tool_name, False, abs_path)
+            ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+            if not ok:
+                raise DiffError(abs_path)
+            _, encoding = AgentToolExecutor._detect_bom(abs_path)
+            with open(abs_path, 'r', encoding=encoding) as f:
+                return f.read()
 
-            if action == "Add":
-                if os.path.exists(abs_path):
-                    return AgentToolResult(tool_name, False, f"File already exists: {abs_path}")
-                parent = os.path.dirname(abs_path)
-                os.makedirs(parent, exist_ok=True)
-                # For Add, treat '+' lines as file content.
-                content_lines = [ln[1:] for ln in block if ln.startswith("+")]
-                with open(abs_path, 'w', encoding='utf-8', newline='\n') as f:
-                    f.write("\n".join(content_lines) +
-                            ("\n" if content_lines else ""))
-                applied += 1
-                continue
+        def _write_file(path: str, content: str):
+            file_path = self._normalize_patch_path(path)
+            ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+            if not ok:
+                raise DiffError(abs_path)
+            parent = os.path.dirname(abs_path)
+            os.makedirs(parent, exist_ok=True)
+            bom, encoding = AgentToolExecutor._detect_bom(abs_path)
+            if bom:
+                encoded = content.encode(encoding.replace('-sig', ''))
+                with open(abs_path, 'wb') as f:
+                    f.write(bom)
+                    f.write(encoded)
+            else:
+                with open(abs_path, 'wt', encoding='utf-8') as f:
+                    f.write(content)
 
-            if action == "Delete":
-                if not os.path.exists(abs_path):
-                    return AgentToolResult(tool_name, False, f"File does not exist for delete: {abs_path}")
-                if os.path.isdir(abs_path):
-                    return AgentToolResult(tool_name, False, f"Refusing to delete a directory: {abs_path}")
-                os.remove(abs_path)
-                applied += 1
-                continue
+        def _remove_file(path: str):
+            file_path = self._normalize_patch_path(path)
+            ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+            if not ok:
+                raise DiffError(abs_path)
+            if os.path.isfile(abs_path):
+                os.unlink(abs_path)
 
-            # Update
-            ok3, msg3 = self._apply_v4a_update(abs_path, block)
-            if not ok3:
-                return AgentToolResult(tool_name, False, msg3)
-            applied += 1
-
-        return AgentToolResult(tool_name, True, f"Applied {applied} patch operation(s).")
+        try:
+            message = process_patch(
+                patch_text, _open_file, _write_file, _remove_file)
+            return AgentToolResult(tool_name, True, message)
+        except DiffError as e:
+            return AgentToolResult(tool_name, False, str(e))
+        except Exception as e:
+            return AgentToolResult(tool_name, False, f"Failed to apply patch: {e}")
