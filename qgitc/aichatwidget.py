@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
 import typing
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -40,6 +41,8 @@ from qgitc.models.prompts import (
     AGENT_SYS_PROMPT,
     CODE_REVIEW_PROMPT,
     CODE_REVIEW_SYS_PROMPT,
+    RESOLVE_PROMPT,
+    RESOLVE_SYS_PROMPT,
 )
 from qgitc.preferences import Preferences
 from qgitc.submoduleexecutor import SubmoduleExecutor
@@ -115,7 +118,11 @@ class AiChatWidget(QWidget):
         # Code review diff collection (staged/local changes)
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
         self._codeReviewDiffs: List[str] = []
-        self._codeReviewScene: str = None
+        self._extraContext: str = None
+
+        # Sync helper flows can optionally auto-run a tightly-scoped set of
+        # WRITE tools without user confirmation.
+        self._allowWriteTools: bool = False
 
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
@@ -136,10 +143,10 @@ class AiChatWidget(QWidget):
             return True
         if event.type() == CodeReviewSceneEvent.Type:
             if event.scene_line:
-                if not self._codeReviewScene:
-                    self._codeReviewScene = event.scene_line
+                if not self._extraContext:
+                    self._extraContext = event.scene_line
                 else:
-                    self._codeReviewScene += "\n" + event.scene_line
+                    self._extraContext += "\n" + event.scene_line
             return True
         return super().event(event)
 
@@ -281,7 +288,7 @@ class AiChatWidget(QWidget):
             self._codeReviewExecutor.cancel()
             self._codeReviewExecutor = None
             self._codeReviewDiffs.clear()
-            self._codeReviewScene = None
+        self._extraContext = None
 
     def sizeHint(self):
         if self._embedded:
@@ -412,7 +419,7 @@ class AiChatWidget(QWidget):
         titleSeed = (params.sys_prompt + "\n" +
                      prompt) if params.sys_prompt else prompt
 
-        codeReviewContext: Optional[str] = None
+        extraContext = self._extraContext
 
         if chatMode == AiChatMode.Agent:
             params.tools = AgentToolRegistry.openai_tools()
@@ -430,9 +437,9 @@ class AiChatWidget(QWidget):
             params.tool_choice = "auto"
             params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
 
-            scene = (self._codeReviewScene or "").strip(
+            scene = (self._extraContext or "").strip(
             ) or "(no scene metadata)"
-            codeReviewContext = "CODE REVIEW SCENE (metadata)\n" + scene
+            extraContext = "CODE REVIEW SCENE (metadata)\n" + scene
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
                 language=ApplicationBase.instance().uiLanguage())
@@ -443,12 +450,12 @@ class AiChatWidget(QWidget):
             contextText = provider.buildContextText(
                 selectedIds) if provider is not None else ""
 
-            if chatMode == AiChatMode.CodeReview and codeReviewContext:
+            if extraContext:
                 merged = (contextText or "").strip()
                 if merged:
-                    merged += "\n\n" + codeReviewContext
+                    merged += "\n\n" + extraContext
                 else:
-                    merged = codeReviewContext
+                    merged = extraContext
                 contextText = merged
 
             if contextText:
@@ -531,7 +538,13 @@ class AiChatWidget(QWidget):
                 tool = AgentToolRegistry.tool_by_name(
                     toolName) if toolName else None
 
-                if toolName and tool and tool.tool_type == ToolType.READ_ONLY:
+                # Auto-run only READ_ONLY tools by default. For certain sync helper
+                # flows we optionally auto-run *WRITE* tools, but never DANGEROUS.
+                if toolName and tool and (
+                    tool.tool_type == ToolType.READ_ONLY or (
+                        self._allowWriteTools and tool.tool_type == ToolType.WRITE
+                    )
+                ):
                     if autoGroupId is None:
                         autoGroupId = self._nextAutoGroupId
                         self._nextAutoGroupId += 1
@@ -935,7 +948,7 @@ class AiChatWidget(QWidget):
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
             self._createNewConversation()
-        self._codeReviewScene = scene
+        self._extraContext = scene
         self._doRequest(diff, AiChatMode.CodeReview)
 
     def _makeFileList(self, files: List[str]) -> str:
@@ -957,7 +970,7 @@ class AiChatWidget(QWidget):
         """Start a code review for staged/local changes across submodules."""
         self._ensureCodeReviewExecutor()
         self._codeReviewDiffs.clear()
-        self._codeReviewScene = "type: staged changes (index)\n"
+        self._extraContext = "type: staged changes (index)\n"
         self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
 
     def _ensureCodeReviewExecutor(self):
@@ -1171,7 +1184,7 @@ class AiChatWidget(QWidget):
             if role == AiRole.Assistant and isinstance(toolCalls, list) and toolCalls:
                 toolCallResult, hasMoreMessages = self._collectToolCallResult(
                     i + 1, messages)
-                
+
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
                         continue
@@ -1293,7 +1306,7 @@ class AiChatWidget(QWidget):
         self._autoToolGroups.clear()
         self._nextAutoGroupId = 1
         self._codeReviewDiffs.clear()
-        self._codeReviewScene = None
+        self._extraContext = None
         self.messages.clear()
 
     def _setEmbeddedRecentListVisible(self, visible: bool):
@@ -1345,3 +1358,101 @@ class AiChatWidget(QWidget):
     @property
     def contextPanel(self) -> AiChatContextPanel:
         return self._contextPanel
+
+    def resolveConflictSync(self, repoDir: str, sha1: str, path: str, conflictText: str) -> Tuple[bool, Optional[str]]:
+        """Resolve a conflicted file given an excerpt of the working tree file.
+
+        Returns (ok, reason). On success, ok=True and reason=None.
+        """
+        self._waitForInitialization()
+        model = self.currentChatModel()
+        if not model:
+            return False, "no_model"
+
+        context = (
+            f"sha1: {sha1}\n"
+            f"conflicted_file: {path}"
+        )
+        self._extraContext = context
+
+        prompt = RESOLVE_PROMPT.format(
+            conflict=conflictText,
+        )
+
+        self._allowWriteTools = True
+
+        loop = QEventLoop()
+        done: Dict[str, object] = {"ok": False, "reason": None}
+
+        timer = QTimer()
+        timer.setSingleShot(True)
+        timer.start(5 * 60 * 1000)
+
+        oldHistoryCount = len(model.history)
+
+        def _lastAssistantTextSince(startIndex: int) -> str:
+            # Find the latest assistant message text after startIndex.
+            history = model.history[startIndex:]
+            for h in reversed(history):
+                if h.role == AiRole.Assistant:
+                    if h.message:
+                        return h.message
+            return ""
+
+        def _finalizeIfIdle():
+            # Timeout?
+            if timer.remainingTime() <= 0:
+                done["ok"] = False
+                done["reason"] = "Assistant response timed out"
+                model.requestInterruption()
+                loop.quit()
+                return
+
+            # If the assistant explicitly reported failure, honor it.
+            response = _lastAssistantTextSince(oldHistoryCount)
+            if "QGITC_RESOLVE_FAILED:" in response:
+                parts = response.split("QGITC_RESOLVE_FAILED:", 1)
+                reason = parts[1].strip() if len(parts) > 1 else ""
+                done["ok"] = False
+                done["reason"] = reason or "Assistant reported failure"
+                loop.quit()
+                return
+
+            if "QGITC_RESOLVE_OK" not in response:
+                return
+
+            # Verify the working tree file is conflict-marker-free.
+            try:
+                absPath = os.path.join(repoDir, path)
+                with open(absPath, "r", encoding="utf-8", errors="replace") as f:
+                    merged = f.read()
+            except Exception as e:
+                done["ok"] = False
+                done["reason"] = f"read_back_failed: {e}"
+                loop.quit()
+                return
+
+            if "<<<<<<<" in merged or "=======" in merged or ">>>>>>>" in merged:
+                done["ok"] = False
+                done["reason"] = "conflict_markers_remain"
+                loop.quit()
+                return
+
+            done["ok"] = True
+            done["reason"] = None
+            loop.quit()
+
+        timer.timeout.connect(_finalizeIfIdle)
+
+        # Re-check completion whenever the model finishes a generation step or
+        # a tool finishes (tools may trigger another continue-only generation).
+        model.finished.connect(_finalizeIfIdle)
+
+        self._doRequest(prompt, AiChatMode.Agent, RESOLVE_SYS_PROMPT)
+        loop.exec()
+
+        timer.stop()
+        model.finished.disconnect(_finalizeIfIdle)
+        self._allowWriteTools = False
+
+        return bool(done.get("ok", False)), done.get("reason")

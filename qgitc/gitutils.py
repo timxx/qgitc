@@ -369,11 +369,11 @@ class Git():
         process = GitProcess(cwd, args)
 
     @staticmethod
-    def conflictFiles():
+    def conflictFiles(repoDir=None):
         args = ["diff", "--name-only",
                 "--diff-filter=U",
                 "--no-color"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return None
         return data.rstrip(b'\n').decode("utf-8").split('\n')
@@ -425,17 +425,17 @@ class Git():
         return name
 
     @staticmethod
-    def resolveBy(ours, path):
+    def resolveBy(ours, path, repoDir=None):
         args = ["checkout",
                 "--ours" if ours else "--theirs",
                 path]
-        process = Git.run(args)
+        process = Git.run(args, repoDir=repoDir)
         process.communicate()
         if process.returncode != 0:
             return False
 
         args = ["add", path]
-        process = Git.run(args)
+        process = Git.run(args, repoDir=repoDir)
         process.communicate()
         return True if process.returncode == 0 else False
 
@@ -1081,3 +1081,23 @@ class Git():
             shallowFile = os.path.join(
                 repoDir or Git.REPO_DIR, ".git", "shallow")
             return os.path.exists(shallowFile)
+
+    @staticmethod
+    def getConflictFileBlobIds(filePath, repoDir=None):
+        args = ["ls-files", "-u", "--", filePath]
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if not data:
+            return None
+
+        lines = data.decode("utf-8").split('\n')
+        blobIds = {}
+        for line in lines:
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) >= 3:
+                stage = int(parts[2])
+                blobId = parts[1]
+                blobIds[stage] = blobId
+
+        return blobIds

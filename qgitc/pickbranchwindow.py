@@ -18,6 +18,9 @@ from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, dataDirPath, fullRepoDir
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
+from qgitc.pickbranchwindowaichatcontextprovider import (
+    PickBranchWindowAiChatContextProvider,
+)
 from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_pickbranchwindow import Ui_PickBranchWindow
@@ -128,6 +131,8 @@ class PickBranchWindow(StateWindow):
         self.ui.btnCherryPick.clicked.connect(self._onCherryPickClicked)
         self.ui.cbRecordOrigin.toggled.connect(
             lambda checked: ApplicationBase.instance().settings().setRecordOrigin(checked))
+
+        self.ui.cbAutoResolveAi.toggled.connect(self._onAutoResolveAiToggled)
 
         # LogView signals
         self.ui.logView.currentIndexChanged.connect(self._onCommitSelected)
@@ -521,6 +526,12 @@ class PickBranchWindow(StateWindow):
         progress.setWindowModality(Qt.NonModal)
 
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
+        chatWidget = None
+        if self.ui.cbAutoResolveAi.isChecked():
+            self._onAutoResolveAiToggled(True)
+            chatWidget = self._aiChat.chatWidget()
+            chatWidget.onNewChatRequested()
+
         sourceBranchDir = Git.branchDir(sourceBranch)
         app = ApplicationBase.instance()
         for step, (commit, index) in enumerate(markedCommits):
@@ -533,7 +544,14 @@ class PickBranchWindow(StateWindow):
 
             fullTargetRepoDir = fullRepoDir(commit.repoDir, targetRepoDir)
             fullSourceDir = fullRepoDir(commit.repoDir, sourceBranchDir)
-            if not self.ui.logView.doCherryPick(fullTargetRepoDir, commit.sha1, fullSourceDir, self.ui.logView, recordOrigin):
+            if not self.ui.logView.doCherryPick(
+                fullTargetRepoDir,
+                commit.sha1,
+                fullSourceDir,
+                self.ui.logView,
+                recordOrigin,
+                chatWidget=chatWidget,
+            ):
                 break
 
         progress.setValue(len(markedCommits))
@@ -549,20 +567,18 @@ class PickBranchWindow(StateWindow):
 
         self._aiChat = AiChatDockWidget(self)
 
-        # TODO: Setup context provider for pick branch window if needed
-        # aiChatContextProvider = PickBranchWindowAiChatContextProvider(
-        #     self, parent=self)
-        # self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
+        aiChatContextProvider = PickBranchWindowAiChatContextProvider(
+            self, parent=self)
+        self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
 
         # Add dock widget to pick branch window
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
 
-    def _onChatClicked(self):
-        """Toggle the AI chat dock visibility"""
-        # Setup the chat dock if not already done
+    def _onAutoResolveAiToggled(self, checked: bool):
+        # Ensure the AI chat is available when auto-resolve is enabled.
         if self._aiChat is None:
             self._setupAiChatDock()
 
-        self._aiChat.setVisible(not self._aiChat.isVisible())
-        if self._aiChat.isVisible():
+        self._aiChat.setVisible(bool(checked))
+        if checked:
             self._aiChat.chatWidget().contextPanel.setFocus()
