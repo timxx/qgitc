@@ -4,6 +4,7 @@ import json
 import os
 import re
 import tempfile
+from datetime import datetime, timezone
 from typing import List
 
 from PySide6.QtCore import (
@@ -18,6 +19,7 @@ from PySide6.QtCore import (
     QRect,
     QRectF,
     QSize,
+    QStandardPaths,
     Qt,
     Signal,
 )
@@ -564,6 +566,12 @@ class LogGraph(QWidget):
         if self._graphImage:
             painter = QPainter(self)
             painter.drawImage(0, 0, self._graphImage)
+
+
+class ResolveResult:
+    SUCCESS = 0
+    NEEDS_USER = 1
+    FAILED = 2
 
 
 class LogView(QAbstractScrollArea, CommitSource):
@@ -3090,7 +3098,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         if needReload:
             self.reloadLogs()
 
-    def doCherryPick(self, repoDir: str, sha1: str, sourceRepoDir: str, sourceView: 'LogView', recordOrigin=True) -> bool:
+    def doCherryPick(
+        self,
+        repoDir: str,
+        sha1: str,
+        sourceRepoDir: str,
+        sourceView: 'LogView',
+        recordOrigin=True,
+        chatWidget=None,
+    ) -> bool:
         """Perform cherry-pick of a single commit"""
         if sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
             return self._applyLocalChanges(repoDir, sha1, sourceRepoDir, sourceView)
@@ -3103,7 +3119,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 return True
             # Check if it's a conflict
             if error and ("conflict" in error.lower() or Git.isCherryPicking(repoDir)):
-                if self._resolveCherryPickConflict(repoDir, sha1, error, sourceView):
+                if self._resolveCherryPickConflict(repoDir, sha1, error, sourceView, chatWidget=chatWidget):
                     return True
             elif not sourceView and error and f"fatal: bad object {sha1}" in error:
                 if self._pickFromAnotherRepo(repoDir, sourceRepoDir, sha1):
@@ -3131,8 +3147,21 @@ class LogView(QAbstractScrollArea, CommitSource):
                 break
         sourceView.viewport().update()
 
-    def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView') -> bool:
+    def _resolveCherryPickConflict(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView', chatWidget=None) -> bool:
         """Resolve cherry-pick conflict"""
+
+        # AI-first: attempt to resolve without showing the mergetool prompt.
+        if chatWidget is not None:
+            status, error2 = self._runAiResolveTool(
+                repoDir, sha1, error, sourceView, chatWidget)
+            if status == ResolveResult.SUCCESS:
+                return True
+            if status == ResolveResult.FAILED:
+                return False
+
+            if error2:
+                error = error2
+
         process, ok = self._runMergeTool(
             repoDir, sha1, error, sourceView, True)
         if not ok:
@@ -3143,19 +3172,14 @@ class LogView(QAbstractScrollArea, CommitSource):
         if process:
             ret = process.exitCode()
             if ret == 0:
-                # Continue cherry-pick
-                ret, error = Git.cherryPickContinue(repoDir)
-                if ret == 0:
-                    LogView._markPickStatus(
-                        sourceView, sha1, MarkType.PICKED)
-                    return True
-                # After resolved, it can be empty commit
-                if self._handleEmptyCherryPick(repoDir, sha1, error, sourceView):
+                ok, continueErr = self._continueCherryPickPickOrEmpty(
+                    repoDir, sha1, sourceView)
+                if ok:
                     return True
                 QMessageBox.critical(
                     self, self.tr("Cherry-pick Failed"),
                     self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
-                        sha1[:7], error if error else self.tr("Unknown error")))
+                        sha1[:7], continueErr if continueErr else self.tr("Unknown error")))
             else:
                 error = process.readAllStandardError().data().decode("utf-8").rstrip()
                 QMessageBox.critical(self, self.tr("Merge Tool Failed"), self.tr(
@@ -3168,6 +3192,211 @@ class LogView(QAbstractScrollArea, CommitSource):
         LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
 
         return False
+
+    def _continueCherryPickPickOrEmpty(self, repoDir: str, sha1: str, sourceView: 'LogView') -> tuple[bool, str | None]:
+        """Try `cherry-pick --continue` and handle the empty-commit case.
+
+        Returns (ok, errorMessage).
+        """
+        ret, error = Git.cherryPickContinue(repoDir)
+        if ret == 0:
+            LogView._markPickStatus(sourceView, sha1, MarkType.PICKED)
+            return True, None
+        if self._handleEmptyCherryPick(repoDir, sha1, error, sourceView):
+            return True, None
+        return False, error
+
+    def _runAiResolveTool(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView', chatWidget):
+        if not self._attemptAiAutoResolveCherryPick(repoDir, sha1, error, chatWidget):
+            return ResolveResult.NEEDS_USER, None
+
+        ok, continueErr = self._continueCherryPickPickOrEmpty(
+            repoDir, sha1, sourceView)
+        if ok:
+            return ResolveResult.SUCCESS, None
+        # If continue failed but conflicts still exist, caller can decide next steps.
+        remaining = Git.conflictFiles(repoDir)
+        if remaining:
+            return ResolveResult.NEEDS_USER, continueErr
+
+        QMessageBox.critical(
+            self, self.tr("Cherry-pick Failed"),
+            self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
+                sha1[:7], continueErr if continueErr else self.tr("Unknown error")))
+        Git.cherryPickAbort(repoDir)
+        LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
+        return ResolveResult.FAILED, continueErr
+
+    def _attemptAiAutoResolveCherryPick(self, repoDir: str, sha1: str, error: str, chatWidget) -> bool:
+        """Try to auto-resolve cherry-pick conflicts using an LLM.
+
+        Returns True only when there are no remaining conflicted files.
+        """
+        conflictFiles = Git.conflictFiles(repoDir)
+        if not conflictFiles:
+            return True
+
+        perFile = []
+        for path in conflictFiles:
+            fileResult = {"path": path, "resolved": False,
+                          "strategy": None, "reason": None}
+
+            stageIds = Git.getConflictFileBlobIds(path, repoDir)
+            baseId = stageIds.get(1)
+            oursId = stageIds.get(2)
+            theirsId = stageIds.get(3)
+            if not oursId or not theirsId:
+                fileResult["reason"] = "missing_index_stage"
+                perFile.append(fileResult)
+                continue
+
+            # Quick non-AI resolutions using blob ids (no file content reads).
+            if oursId == theirsId:
+                if Git.resolveBy(ours=True, path=path, repoDir=repoDir):
+                    fileResult["strategy"] = "trivial_same"
+                    fileResult["resolved"] = True
+                else:
+                    fileResult["reason"] = "checkout_ours_failed"
+                perFile.append(fileResult)
+                continue
+
+            if baseId == oursId:
+                if Git.resolveBy(ours=False, path=path, repoDir=repoDir):
+                    fileResult["strategy"] = "trivial_take_theirs"
+                    fileResult["resolved"] = True
+                else:
+                    fileResult["reason"] = "checkout_theirs_failed"
+                perFile.append(fileResult)
+                continue
+
+            if baseId == theirsId:
+                if Git.resolveBy(ours=True, path=path, repoDir=repoDir):
+                    fileResult["strategy"] = "trivial_take_ours"
+                    fileResult["resolved"] = True
+                else:
+                    fileResult["reason"] = "checkout_ours_failed"
+                perFile.append(fileResult)
+                continue
+
+            conflictText = LogView._buildConflictExcerpt(repoDir, path)
+            if not conflictText:
+                fileResult["reason"] = "no_conflict_excerpt"
+                perFile.append(fileResult)
+                continue
+
+            ok, reason = chatWidget.resolveConflictSync(
+                repoDir, sha1, path, conflictText)
+
+            fileResult["strategy"] = "llm_conflict_excerpt"
+
+            if not ok:
+                fileResult["reason"] = (
+                    reason or fileResult["reason"] or "resolve_failed")
+                perFile.append(fileResult)
+                continue
+
+            addErr = Git.addFiles(repoDir, [path])
+            if addErr:
+                fileResult["reason"] = f"git_add_failed: {addErr}"
+                perFile.append(fileResult)
+                continue
+
+            fileResult["resolved"] = True
+            perFile.append(fileResult)
+
+        remaining = Git.conflictFiles(repoDir) or []
+        self._appendAiCherryPickLog({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "repoDir": repoDir,
+            "commit": sha1,
+            "error": (error or "").strip(),
+            "conflictFiles": conflictFiles,
+            "perFile": perFile,
+            "remainingConflicts": remaining,
+            "aiAttempted": True,
+        })
+
+        return len(remaining) == 0
+
+    @staticmethod
+    def _buildConflictExcerpt(repoDir: str, path: str, contextLines: int = 3) -> str:
+        """Return a compact excerpt of the conflicted working tree file.
+
+        This uses the current file contents (with conflict markers) so the assistant can
+        construct apply_patch edits that match existing lines reliably.
+        """
+        absPath = os.path.join(repoDir, path)
+        try:
+            with open(absPath, "rb") as f:
+                data = f.read()
+            text, _ = decodeFileData(data)
+            lines = text.splitlines(keepends=True)
+        except Exception:
+            return ""
+
+        starts = [i for i, line in enumerate(
+            lines) if line.startswith("<<<<<<<")]
+        if not starts:
+            return ""
+
+        ranges: list[tuple[int, int]] = []
+        n = len(lines)
+        for start in starts:
+            end = None
+            for j in range(start + 1, n):
+                if lines[j].startswith(">>>>>>>"):
+                    end = j
+                    break
+            if end is None:
+                continue
+            a = max(0, start - contextLines)
+            b = min(n, end + 1 + contextLines)
+            ranges.append((a, b))
+
+        if not ranges:
+            return ""
+
+        ranges.sort()
+        merged: list[list[int]] = []
+        for a, b in ranges:
+            if not merged:
+                merged.append([a, b])
+                continue
+            prev = merged[-1]
+            if a <= prev[1]:
+                prev[1] = max(prev[1], b)
+            else:
+                merged.append([a, b])
+
+        parts: list[str] = []
+        total = 0
+        for idx, (a, b) in enumerate(merged, start=1):
+            chunk = "".join(lines[a:b])
+            # Only the fenced block contents are verbatim file text.
+            piece = (
+                f"Conflict region {idx} (approx lines {a + 1}-{b}):\n"
+                "```text\n"
+                f"{chunk}"
+                "```\n"
+            )
+
+            parts.append(piece)
+            total += len(piece)
+
+        return "\n".join(parts).strip("\n")
+
+    def _appendAiCherryPickLog(self, record: dict):
+        try:
+            docDir = QStandardPaths.writableLocation(
+                QStandardPaths.DocumentsLocation)
+            if not docDir:
+                return
+            path = os.path.join(docDir, "qgitc_ai_cherry_pick_conflicts.jsonl")
+            with open(path, "a", encoding="utf-8", newline="\n") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        except Exception:
+            # Logging should never block the user.
+            return
 
     def _handleEmptyCherryPick(self, repoDir: str, sha1: str, error: str, sourceView: 'LogView') -> bool:
         if error and "git commit --allow-empty" in error:

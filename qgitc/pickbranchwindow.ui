@@ -152,6 +152,19 @@
            </property>
           </widget>
          </item>
+        <item>
+         <widget class="QCheckBox" name="cbAutoResolveAi">
+          <property name="toolTip">
+           <string>Attempt to auto-resolve cherry-pick conflicts using the assistant and record the resolution details.</string>
+          </property>
+          <property name="text">
+             <string>Auto-resolve</string>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
          <item>
           <widget class="QPushButton" name="btnCherryPick">
            <property name="enabled">
@@ -370,6 +383,7 @@
   <tabstop>btnShowLogWindow</tabstop>
   <tabstop>cbTargetBranch</tabstop>
   <tabstop>cbRecordOrigin</tabstop>
+    <tabstop>cbAutoResolveAi</tabstop>
   <tabstop>btnCherryPick</tabstop>
   <tabstop>btnSelectAll</tabstop>
   <tabstop>btnSelectNone</tabstop>
