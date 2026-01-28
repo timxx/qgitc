@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>721</width>
-    <height>461</height>
+    <height>464</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>4</number>
+      <number>6</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="title">
@@ -1288,6 +1288,13 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
             </property>
             <property name="text">
              <string>Don't pick &amp;reverted commits</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cbFilterMerge">
+            <property name="text">
+             <string>Don't pick merge commits</string>
             </property>
            </widget>
           </item>

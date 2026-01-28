@@ -358,10 +358,11 @@ class PickBranchWindow(StateWindow):
         app = ApplicationBase.instance()
         settings = app.settings()
         filterReverted = settings.filterRevertedCommits()
+        filterMerge = settings.filterMergeCommits()
         filterPatterns = settings.filterCommitPatterns()
         useRegex = settings.filterUseRegex()
 
-        if not filterReverted and not filterPatterns:
+        if not filterReverted and not filterMerge and not filterPatterns:
             # No filters enabled, show message
             self._updateStatus(
                 self.tr("No filters configured. Please configure filters in Settings > Cherry-Pick"))
@@ -369,6 +370,7 @@ class PickBranchWindow(StateWindow):
 
         app.trackFeatureUsage("cherry_pick_filter_commits", {
             "filter_reverted": filterReverted,
+            "filter_merge": filterMerge,
             "filter_patterns": bool(filterPatterns),
             "use_regex": useRegex,
             "by_default": settings.applyFilterByDefault(),
@@ -409,6 +411,11 @@ class PickBranchWindow(StateWindow):
             # TODO: check if it is reverted later
             if filterReverted:
                 if "This reverts commit " in commit.comments:
+                    shouldFilter = True
+
+            # Check if commit is a merge commit
+            if not shouldFilter and filterMerge:
+                if len(commit.parents) > 1:
                     shouldFilter = True
 
             # Check if commit matches any pattern

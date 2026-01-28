@@ -606,6 +606,9 @@ class Preferences(QDialog):
         self.ui.cbFilterRevertedCommits.setChecked(
             self.settings.filterRevertedCommits())
 
+        self.ui.cbFilterMerge.setChecked(
+            self.settings.filterMergeCommits())
+
         # Load patterns into list
         patterns = self.settings.filterCommitPatterns()
         self.ui.listFilterPatterns.clear()
@@ -631,6 +634,9 @@ class Preferences(QDialog):
         # Filter settings
         self.settings.setFilterRevertedCommits(
             self.ui.cbFilterRevertedCommits.isChecked())
+
+        self.settings.setFilterMergeCommits(
+            self.ui.cbFilterMerge.isChecked())
 
         # Save patterns from list
         patterns = []

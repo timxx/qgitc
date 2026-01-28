@@ -732,6 +732,18 @@ class Settings(QSettings):
         self.setValue("filterReverted", filter)
         self.endGroup()
 
+    def filterMergeCommits(self):
+        """Whether to filter out merge commits when cherry-picking"""
+        self.beginGroup("cherryPick")
+        value = self.value("filterMerge", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setFilterMergeCommits(self, filter: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("filterMerge", filter)
+        self.endGroup()
+
     def filterCommitPatterns(self):
         """Get the list of patterns to filter commits"""
         self.beginGroup("cherryPick")
@@ -771,7 +783,7 @@ class Settings(QSettings):
     def applyFilterByDefault(self):
         """Whether to apply cherry-pick filter automatically when loading commits"""
         self.beginGroup("cherryPick")
-        value = self.value("applyFilterByDefault", False, type=bool)
+        value = self.value("applyFilterByDefault", True, type=bool)
         self.endGroup()
         return value
 
