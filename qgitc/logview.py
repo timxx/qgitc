@@ -3193,7 +3193,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         return False
 
-    def _continueCherryPickPickOrEmpty(self, repoDir: str, sha1: str, sourceView: 'LogView') -> tuple[bool, str | None]:
+    def _continueCherryPickPickOrEmpty(self, repoDir: str, sha1: str, sourceView: 'LogView'):
         """Try `cherry-pick --continue` and handle the empty-commit case.
 
         Returns (ok, errorMessage).
