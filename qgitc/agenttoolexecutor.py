@@ -32,6 +32,7 @@ from qgitc.agenttools import (
     RunCommandParams,
 )
 from qgitc.basemodel import ValidationError
+from qgitc.common import decodeFileData
 from qgitc.gitutils import Git
 from qgitc.tools.applypatch import DiffError, process_patch
 
@@ -480,15 +481,18 @@ class AgentToolExecutor(QObject):
             return AgentToolResult(tool_name, False, f"File does not exist: {abs_path}")
 
         try:
-            encoding = AgentToolExecutor._detect_bom(abs_path)[1]
-            with open(abs_path, 'r', encoding=encoding) as f:
-                lines = f.readlines()
+            with open(abs_path, 'rb') as f:
+                data = f.read()
+
+            prefer_encoding = AgentToolExecutor._detect_bom(abs_path)[1]
+            text, _ = decodeFileData(data, prefer_encoding)
+            lines = text.splitlines(keepends=True)
 
             start_line = validated.start_line - 1 if validated.start_line else 0
             end_line = validated.end_line if validated.end_line else len(lines)
 
             selected_lines = lines[start_line:end_line]
-            output = ''.join(selected_lines).strip('\n')
+            output = ''.join(selected_lines)
 
             return AgentToolResult(tool_name, True, output)
 
@@ -539,31 +543,94 @@ class AgentToolExecutor(QObject):
         if not patch_text.strip():
             return AgentToolResult(tool_name, False, "Patch is empty.")
 
+        # Track per-file encoding/BOM so we can write patched content back without
+        # changing encoding. Newlines are preserved by the patch engine.
+        # Values are (bom_bytes_or_None, encoding_name).
+        file_format: Dict[str, Tuple[Optional[bytes], str]] = {}
+
+        def _probe_file_format(abs_path: str) -> Tuple[Optional[bytes], str, str]:
+            """Return (bom, encoding, text) for an existing file."""
+            with open(abs_path, 'rb') as fb:
+                raw = fb.read()
+
+            bom, bom_encoding = AgentToolExecutor._detect_bom(abs_path)
+            if bom:
+                # Decode while stripping BOM bytes; we'll re-add BOM on write.
+                raw_wo_bom = raw[len(bom):]
+                enc_for_decode = bom_encoding
+                # utf-8 BOM is typically handled via utf-8-sig; since we stripped the BOM,
+                # decode with plain utf-8.
+                if enc_for_decode == 'utf-8-sig':
+                    enc_for_decode = 'utf-8'
+                try:
+                    text = raw_wo_bom.decode(enc_for_decode)
+                    encoding = enc_for_decode
+                except Exception:
+                    # Fall back to our heuristic decoding for robustness.
+                    text, encoding = decodeFileData(raw_wo_bom, enc_for_decode)
+                    encoding = encoding or enc_for_decode
+            else:
+                # Heuristic decode for files without BOM.
+                text, encoding = decodeFileData(raw, 'utf-8')
+                encoding = encoding or 'utf-8'
+
+            return bom, encoding, text
+
         def _open_file(path: str) -> str:
             file_path = self._normalize_patch_path(path)
             ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
             if not ok:
                 raise DiffError(abs_path)
-            _, encoding = AgentToolExecutor._detect_bom(abs_path)
-            with open(abs_path, 'r', encoding=encoding) as f:
-                return f.read()
 
-        def _write_file(path: str, content: str):
+            if not os.path.isfile(abs_path):
+                raise DiffError(f"File does not exist: {file_path}")
+
+            bom, encoding, text = _probe_file_format(abs_path)
+            # Cache format by the repo-relative patch path.
+            file_format[file_path] = (bom, encoding)
+            return text
+
+        def _write_file(path: str, content: str, source_path: Optional[str] = None):
             file_path = self._normalize_patch_path(path)
             ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
             if not ok:
                 raise DiffError(abs_path)
             parent = os.path.dirname(abs_path)
             os.makedirs(parent, exist_ok=True)
-            bom, encoding = AgentToolExecutor._detect_bom(abs_path)
-            if bom:
-                encoded = content.encode(encoding.replace('-sig', ''))
-                with open(abs_path, 'wb') as f:
+
+            # Determine target format.
+            fmt = file_format.get(file_path)
+            if fmt is None and source_path:
+                src = self._normalize_patch_path(source_path)
+                fmt = file_format.get(src)
+
+            if fmt is None and os.path.isfile(abs_path):
+                # Patch may write without ever having opened the file.
+                bom, encoding, _ = _probe_file_format(abs_path)
+                fmt = (bom, encoding)
+
+            if fmt is None:
+                # New file: default to UTF-8.
+                fmt = (None, 'utf-8')
+
+            bom, encoding = fmt
+
+            enc_for_bytes = encoding
+            if bom and enc_for_bytes == 'utf-8-sig':
+                enc_for_bytes = 'utf-8'
+
+            try:
+                payload = content.encode(enc_for_bytes)
+            except UnicodeEncodeError as e:
+                raise DiffError(f"Failed to encode {file_path} as {enc_for_bytes}: {e}")
+
+            with open(abs_path, 'wb') as f:
+                if bom:
                     f.write(bom)
-                    f.write(encoded)
-            else:
-                with open(abs_path, 'wt', encoding='utf-8') as f:
-                    f.write(content)
+                f.write(payload)
+
+            # Update cache to reflect what we just wrote.
+            file_format[file_path] = (bom, encoding)
 
         def _remove_file(path: str):
             file_path = self._normalize_patch_path(path)

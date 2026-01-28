@@ -9,6 +9,25 @@ from tests.base import TestBase
 
 
 class TestApplyPatchTool(TestBase):
+    def _assert_only_crlf_bytes(self, data: bytes):
+        # Ensure every LF byte is preceded by CR.
+        for i, b in enumerate(data):
+            if b == 0x0A:  # '\n'
+                self.assertGreater(i, 0, msg="LF at start of file")
+                self.assertEqual(data[i - 1], 0x0D,
+                                 msg="Found lone LF (not CRLF)")
+
+    def _assert_only_crlf_utf16le(self, data: bytes):
+        # Ensure every UTF-16LE LF sequence (0A 00) is preceded by CR (0D 00).
+        for i in range(0, len(data) - 1):
+            if data[i] == 0x0A and data[i + 1] == 0x00:
+                self.assertGreaterEqual(
+                    i, 2, msg="UTF-16LE LF at start of file")
+                self.assertEqual(data[i - 2], 0x0D,
+                                 msg="Found lone UTF-16LE LF (not CRLF)")
+                self.assertEqual(
+                    data[i - 1], 0x00, msg="Found malformed UTF-16LE CR before LF")
+
     def test_apply_patch_updates_file(self):
         path = os.path.join(Git.REPO_DIR, "apply_patch_test.txt")
         with open(path, "w", encoding="utf-8", newline="\n") as f:
@@ -43,6 +62,141 @@ class TestApplyPatchTool(TestBase):
             content = f.read()
         self.assertIn("new_line\n", content)
         self.assertNotIn("old_line\n", content)
+
+    def test_apply_patch_preserves_crlf_newlines(self):
+        path = os.path.join(Git.REPO_DIR, "apply_patch_crlf.txt")
+        with open(path, "wb") as f:
+            f.write(b"line1\r\nline2\r\nold_line\r\nline4\r\n")
+
+        patch_path = path.replace("\\", "/")
+        patch = (
+            "*** Begin Patch\n"
+            f"*** Update File: {patch_path}\n"
+            " line1\n"
+            " line2\n"
+            "-old_line\n"
+            "+new_line\n"
+            " line4\n"
+            "*** End Patch\n"
+        )
+
+        executor = AgentToolExecutor()
+        result = executor._handle_apply_patch(
+            "apply_patch",
+            {
+                "input": patch,
+                "explanation": "Replace old_line with new_line (preserve CRLF)",
+            },
+        )
+
+        self.assertTrue(result.ok, msg=result.output)
+        with open(path, "rb") as f:
+            data = f.read()
+        self._assert_only_crlf_bytes(data)
+        self.assertIn(b"new_line\r\n", data)
+        self.assertNotIn(b"old_line\r\n", data)
+
+    def test_apply_patch_preserves_utf16le_bom_and_crlf(self):
+        path = os.path.join(Git.REPO_DIR, "apply_patch_utf16le.txt")
+        # Write UTF-16LE with BOM and CRLF.
+        text = "line1\r\nline2\r\nold_line\r\nline4\r\n"
+        with open(path, "wb") as f:
+            f.write(b"\xff\xfe")
+            f.write(text.encode("utf-16-le"))
+
+        patch_path = path.replace("\\", "/")
+        patch = (
+            "*** Begin Patch\n"
+            f"*** Update File: {patch_path}\n"
+            " line1\n"
+            " line2\n"
+            "-old_line\n"
+            "+new_line\n"
+            " line4\n"
+            "*** End Patch\n"
+        )
+
+        executor = AgentToolExecutor()
+        result = executor._handle_apply_patch(
+            "apply_patch",
+            {
+                "input": patch,
+                "explanation": "Replace old_line with new_line (preserve UTF-16LE BOM/CRLF)",
+            },
+        )
+
+        self.assertTrue(result.ok, msg=result.output)
+        with open(path, "rb") as f:
+            data = f.read()
+
+        self.assertTrue(data.startswith(b"\xff\xfe"),
+                        msg="Missing UTF-16LE BOM")
+        self._assert_only_crlf_utf16le(data[2:])
+        # Verify content in bytes (UTF-16LE)
+        self.assertIn("new_line\r\n".encode("utf-16-le"), data)
+        self.assertNotIn("old_line\r\n".encode("utf-16-le"), data)
+
+    def test_apply_patch_preserves_mixed_newlines_locally(self):
+        # The file intentionally mixes LF and CRLF. The patch should preserve
+        # newline style based on nearby original lines, not normalize the whole file.
+        path = os.path.join(Git.REPO_DIR, "apply_patch_mixed_newlines.txt")
+        original = (
+            b"lf1\n"
+            b"lf2\n"
+            b"crlf1\r\n"
+            b"old_line\r\n"
+            b"crlf3\r\n"
+            b"lf_tail\n"
+        )
+        with open(path, "wb") as f:
+            f.write(original)
+
+        patch_path = path.replace("\\", "/")
+        patch = (
+            "*** Begin Patch\n"
+            f"*** Update File: {patch_path}\n"
+            " lf1\n"
+            " lf2\n"
+            "+inserted_line\n"
+            " crlf1\n"
+            "-old_line\n"
+            "+new_line\n"
+            " crlf3\n"
+            " lf_tail\n"
+            "*** End Patch\n"
+        )
+
+        executor = AgentToolExecutor()
+        result = executor._handle_apply_patch(
+            "apply_patch",
+            {
+                "input": patch,
+                "explanation": "Insert after LF and replace within CRLF block",
+            },
+        )
+
+        self.assertTrue(result.ok, msg=result.output)
+        with open(path, "rb") as f:
+            data = f.read()
+
+        # Inserted line should be LF (because it follows an LF line).
+        pos = data.index(b"inserted_line")
+        end = pos + len(b"inserted_line")
+        self.assertEqual(data[end:end + 1], b"\n",
+                         msg="inserted_line should end with LF")
+        self.assertNotEqual(data[end - 1:end + 1], b"\r\n",
+                            msg="inserted_line should not be CRLF")
+
+        # Replaced line should be CRLF (because it replaced a CRLF line).
+        pos = data.index(b"new_line")
+        end = pos + len(b"new_line")
+        self.assertEqual(data[end:end + 2], b"\r\n",
+                         msg="new_line should end with CRLF")
+
+        # Neighbor lines should remain as originally encoded.
+        self.assertIn(b"crlf1\r\n", data)
+        self.assertIn(b"crlf3\r\n", data)
+        self.assertIn(b"lf_tail\n", data)
 
     def test_apply_patch_rejects_outside_repo(self):
         outside = os.path.abspath(os.path.join(

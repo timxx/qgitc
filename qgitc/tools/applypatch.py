@@ -411,6 +411,25 @@ def _get_updated_file(text: str, action: PatchAction, path: str) -> str:
     dest_lines: List[str] = []
     orig_index = 0
 
+    def _has_cr(line: str) -> bool:
+        # For CRLF files, splitting on '\n' keeps '\r' at the end of each line.
+        return line.endswith("\r")
+
+    def _choose_cr(insert_at: int, del_count: int) -> bool:
+        # Prefer CRLF for inserted lines when the nearby original lines use CRLF.
+        if del_count > 0 and insert_at < len(orig_lines):
+            end = min(insert_at + del_count, len(orig_lines))
+            window = orig_lines[insert_at:end]
+            if window:
+                cr_votes = sum(1 for l in window if _has_cr(l))
+                return cr_votes * 2 >= len(window)
+
+        if insert_at > 0:
+            return _has_cr(orig_lines[insert_at - 1])
+        if insert_at < len(orig_lines):
+            return _has_cr(orig_lines[insert_at])
+        return False
+
     for chunk in action.chunks:
         if chunk.orig_index > len(orig_lines):
             raise DiffError(
@@ -424,7 +443,15 @@ def _get_updated_file(text: str, action: PatchAction, path: str) -> str:
         dest_lines.extend(orig_lines[orig_index: chunk.orig_index])
         orig_index = chunk.orig_index
 
-        dest_lines.extend(chunk.ins_lines)
+        want_cr = _choose_cr(chunk.orig_index, len(chunk.del_lines))
+        if want_cr:
+            dest_lines.extend([
+                (s if s.endswith("\r") else (s + "\r")) for s in chunk.ins_lines
+            ])
+        else:
+            dest_lines.extend([
+                (s[:-1] if s.endswith("\r") else s) for s in chunk.ins_lines
+            ])
         orig_index += len(chunk.del_lines)
 
     dest_lines.extend(orig_lines[orig_index:])
@@ -503,7 +530,7 @@ def load_files(paths: List[str], open_fn: Callable[[str], str]) -> Dict[str, str
 
 def apply_commit(
     commit: Commit,
-    write_fn: Callable[[str, str], None],
+    write_fn: Callable[[str, str, Optional[str]], None],
     remove_fn: Callable[[str], None],
 ) -> None:
     for path, change in commit.changes.items():
@@ -512,12 +539,12 @@ def apply_commit(
         elif change.type is ActionType.ADD:
             if change.new_content is None:
                 raise DiffError(f"ADD change for {path} has no content")
-            write_fn(path, change.new_content)
+            write_fn(path, change.new_content, None)
         elif change.type is ActionType.UPDATE:
             if change.new_content is None:
                 raise DiffError(f"UPDATE change for {path} has no new content")
             target = change.move_path or path
-            write_fn(target, change.new_content)
+            write_fn(target, change.new_content, path)
             if change.move_path:
                 remove_fn(path)
 
@@ -525,7 +552,7 @@ def apply_commit(
 def process_patch(
     text: str,
     open_fn: Callable[[str], str],
-    write_fn: Callable[[str, str], None],
+    write_fn: Callable[[str, str, Optional[str]], None],
     remove_fn: Callable[[str], None],
 ) -> str:
     if not text.startswith("*** Begin Patch"):
@@ -546,7 +573,7 @@ def open_file(path: str) -> str:
         return fh.read()
 
 
-def write_file(path: str, content: str) -> None:
+def write_file(path: str, content: str, source_path: Optional[str] = None) -> None:
     target = pathlib.Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("wt", encoding="utf-8") as fh:
