@@ -71,11 +71,15 @@ class PickBranchWindow(StateWindow):
         self._setupSpinner(self.ui.spinnerCommits)
         self._setupSignals()
 
+        self._aiChat: AiChatDockWidget = None
+
+        # Default Auto-Resolve AI based on preferences.
+        settings = ApplicationBase.instance().settings()
+        self.ui.cbAutoResolveAi.setChecked(
+            settings.autoResolveConflictsWithAssistant())
+
         # Setup DiffView with vertical orientation (file list on bottom)
         self.ui.diffView.setFileListOrientation(Qt.Vertical)
-
-        # Initialize AI Chat dock widget (not setup by default)
-        self._aiChat: AiChatDockWidget = None
 
     def _setupUi(self):
         """Setup UI components"""
@@ -581,9 +585,15 @@ class PickBranchWindow(StateWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
 
     def _onAutoResolveAiToggled(self, checked: bool):
+        settings = ApplicationBase.instance().settings()
+        settings.setAutoResolveConflictsWithAssistant(checked)
+
         # Ensure the AI chat is available when auto-resolve is enabled.
-        if self._aiChat is None:
+        if checked and self._aiChat is None:
             self._setupAiChatDock()
+
+        if self._aiChat is None:
+            return
 
         self._aiChat.setVisible(bool(checked))
         if checked:

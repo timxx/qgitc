@@ -602,6 +602,9 @@ class Preferences(QDialog):
         self.ui.cbRecordOrigin.setChecked(
             self.settings.recordOrigin())
 
+        self.ui.cbAutoResolve.setChecked(
+            self.settings.autoResolveConflictsWithAssistant())
+
         # Filter settings
         self.ui.cbFilterRevertedCommits.setChecked(
             self.settings.filterRevertedCommits())
@@ -630,6 +633,9 @@ class Preferences(QDialog):
         # General settings
         self.settings.setRecordOrigin(
             self.ui.cbRecordOrigin.isChecked())
+
+        self.settings.setAutoResolveConflictsWithAssistant(
+            self.ui.cbAutoResolve.isChecked())
 
         # Filter settings
         self.settings.setFilterRevertedCommits(

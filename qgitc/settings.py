@@ -715,6 +715,18 @@ class Settings(QSettings):
         self.endGroup()
         return value
 
+    def autoResolveConflictsWithAssistant(self):
+        """Whether to auto-resolve cherry-pick conflicts with the assistant by default"""
+        self.beginGroup("cherryPick")
+        value = self.value("autoResolve", False, type=bool)
+        self.endGroup()
+        return value
+
+    def setAutoResolveConflictsWithAssistant(self, enabled: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("autoResolve", enabled)
+        self.endGroup()
+
     def setRecordOrigin(self, record: bool):
         self.beginGroup("cherryPick")
         self.setValue("recordOrigin", record)
