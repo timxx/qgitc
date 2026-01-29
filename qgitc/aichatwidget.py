@@ -438,10 +438,6 @@ class AiChatWidget(QWidget):
             params.tools = AgentToolRegistry.openai_tools()
             params.tool_choice = "auto"
             params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
-
-            scene = (self._extraContext or "").strip(
-            ) or "(no scene metadata)"
-            extraContext = "CODE REVIEW SCENE (metadata)\n" + scene
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt,
                 language=ApplicationBase.instance().uiLanguage())
@@ -461,7 +457,7 @@ class AiChatWidget(QWidget):
                 contextText = merged
 
             if contextText:
-                params.prompt = f"<context>\n{contextText}\n</context>\n\n" + \
+                params.prompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + \
                     params.prompt
 
         if params.sys_prompt:

@@ -47,7 +47,7 @@ Output
 """
 
 
-CODE_REVIEW_PROMPT = """Please provide a code review, respond in {language}:
+CODE_REVIEW_PROMPT = """Please provide a code review for the following unified diff patch. Respond in {language}:
 
 ```diff
 {diff}
