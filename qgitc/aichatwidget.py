@@ -254,6 +254,8 @@ class AiChatWidget(QWidget):
         defaultModelKey = ApplicationBase.instance().settings().defaultLlmModel()
         currentModelIndex = -1
 
+        self._contextPanel.cbBots.blockSignals(True)
+
         for i, model in enumerate(aiModels):
             self._contextPanel.cbBots.addItem(model.name, model)
             model.responseAvailable.connect(self._onMessageReady)
@@ -268,6 +270,7 @@ class AiChatWidget(QWidget):
         if currentModelIndex != -1:
             self._contextPanel.cbBots.setCurrentIndex(currentModelIndex)
 
+        self._contextPanel.cbBots.blockSignals(False)
         self._onModelChanged(self._contextPanel.cbBots.currentIndex())
 
     def queryClose(self):

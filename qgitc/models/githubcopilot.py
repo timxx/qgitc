@@ -115,6 +115,7 @@ class GithubCopilot(AiModelBase):
 
     _models = None
     _capabilities = {}
+    _defaultModel = None
 
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model, parent)
@@ -302,6 +303,7 @@ class GithubCopilot(AiModelBase):
             return
 
         if GithubCopilot._models is not None:
+            self._ensureDefaultModel()
             return
 
         if not self._token:
@@ -321,15 +323,27 @@ class GithubCopilot(AiModelBase):
         fetcher: ModelsFetcher = self.sender()
         GithubCopilot._models = fetcher.models
         GithubCopilot._capabilities = fetcher.capabilities
+        GithubCopilot._defaultModel = fetcher.defaultModel
 
-        if not self.modelId:
-            modelKey = AiModelFactory.modelKey(self)
-            settings = ApplicationBase.instance().settings()
-            self.modelId = settings.defaultLlmModelId(
-                modelKey) or fetcher.defaultModel or "gpt-4.1"
+        self._ensureDefaultModel()
 
         self._modelFetcher = None
         self.modelsReady.emit()
+
+    def _ensureDefaultModel(self):
+        if self.modelId:
+            return
+
+        modelKey = AiModelFactory.modelKey(self)
+        settings = ApplicationBase.instance().settings()
+        self.modelId = settings.defaultLlmModelId(modelKey)
+
+        if GithubCopilot._models is not None:
+            for id, _ in GithubCopilot._models:
+                if id == self.modelId:
+                    return
+
+        self.modelId = GithubCopilot._defaultModel or "gpt-4.1"
 
     def models(self):
         if GithubCopilot._models is None:
