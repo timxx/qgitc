@@ -490,8 +490,7 @@ def patch_to_commit(patch: Patch, orig: Dict[str, str]) -> Commit:
 # --------------------------------------------------------------------------- #
 #  User-facing helpers
 # --------------------------------------------------------------------------- #
-def text_to_patch(text: str, orig: Dict[str, str]) -> Tuple[Patch, int]:
-    lines = text.splitlines()  # preserves blank lines, no strip()
+def text_to_patch(lines: List[str], orig: Dict[str, str]) -> Tuple[Patch, int]:
     if (
         len(lines) < 2
         or not Parser._norm(lines[0]).startswith("*** Begin Patch")
@@ -504,8 +503,7 @@ def text_to_patch(text: str, orig: Dict[str, str]) -> Tuple[Patch, int]:
     return parser.patch, parser.fuzz
 
 
-def identify_files_needed(text: str) -> List[str]:
-    lines = text.splitlines()
+def identify_files_needed(lines: List[str]) -> List[str]:
     return [
         line[len("*** Update File: "):]
         for line in lines
@@ -514,15 +512,6 @@ def identify_files_needed(text: str) -> List[str]:
         line[len("*** Delete File: "):]
         for line in lines
         if line.startswith("*** Delete File: ")
-    ]
-
-
-def identify_files_added(text: str) -> List[str]:
-    lines = text.splitlines()
-    return [
-        line[len("*** Add File: "):]
-        for line in lines
-        if line.startswith("*** Add File: ")
     ]
 
 
@@ -562,9 +551,10 @@ def process_patch(
 ) -> str:
     if not text.startswith("*** Begin Patch"):
         raise DiffError("Patch text must start with *** Begin Patch")
-    paths = identify_files_needed(text)
+    text_lines = text.splitlines()
+    paths = identify_files_needed(text_lines)
     orig = load_files(paths, open_fn)
-    patch, _fuzz = text_to_patch(text, orig)
+    patch, _fuzz = text_to_patch(text_lines, orig)
     commit = patch_to_commit(patch, orig)
     apply_commit(commit, write_fn, remove_fn)
     return "Done!"
