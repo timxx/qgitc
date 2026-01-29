@@ -3060,6 +3060,15 @@ class LogView(QAbstractScrollArea, CommitSource):
         app = ApplicationBase.instance()
         recordOrigin = app.settings().recordOrigin()
 
+        chatWidget = None
+        if app.settings().autoResolveConflictsWithAssistant():
+            from qgitc.mainwindow import MainWindow
+            logWindow: MainWindow = self.logWindow()
+            aiChatDock = logWindow.chatDockWidget() if logWindow else None
+            if aiChatDock is not None:
+                chatWidget = aiChatDock.chatWidget()
+                aiChatDock.setVisible(True)
+
         progress = self._createProgressDialog(
             self.tr("Cherry-picking commits..."), len(commits))
         # avoid block the messagebox
@@ -3075,7 +3084,14 @@ class LogView(QAbstractScrollArea, CommitSource):
             subRepoDir = commit.get("repoDir", None)
             fullTargetRepoDir = fullRepoDir(subRepoDir, self._branchDir)
             fullSourceRepoDir = fullRepoDir(subRepoDir, sourceRepoDir)
-            if self.doCherryPick(fullTargetRepoDir, sha1, fullSourceRepoDir, sourceView, recordOrigin):
+            if self.doCherryPick(
+                fullTargetRepoDir,
+                sha1,
+                fullSourceRepoDir,
+                sourceView,
+                recordOrigin=recordOrigin,
+                chatWidget=chatWidget,
+            ):
                 needReload = True
             else:
                 # Stop processing remaining commits
@@ -3087,7 +3103,14 @@ class LogView(QAbstractScrollArea, CommitSource):
                 subRepoDir = subCommit.get("repoDir", None)
                 fullTargetRepoDir = fullRepoDir(subRepoDir, self._branchDir)
                 fullSourceRepoDir = fullRepoDir(subRepoDir, sourceRepoDir)
-                if self.doCherryPick(fullTargetRepoDir, sha1, fullSourceRepoDir, sourceView):
+                if self.doCherryPick(
+                    fullTargetRepoDir,
+                    sha1,
+                    fullSourceRepoDir,
+                    sourceView,
+                    recordOrigin=recordOrigin,
+                    chatWidget=chatWidget,
+                ):
                     needReload = True
                 else:
                     # Stop processing remaining commits

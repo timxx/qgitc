@@ -936,3 +936,7 @@ class MainWindow(StateWindow):
         app = ApplicationBase.instance()
         app.postEvent(app, ShowPickBranchEvent(sourceBranch, targetBranch))
         app.trackFeatureUsage("menu.pick_branch")
+
+    def chatDockWidget(self) -> AiChatDockWidget:
+        """Get the AI chat dock widget"""
+        return self._aiChat
