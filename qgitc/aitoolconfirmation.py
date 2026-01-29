@@ -68,7 +68,6 @@ class ToolConfirmationInterface(QPyTextObject):
         self.cardCornerRadius = 6
         self.innerSpacing = 4
         self.statusHeight = 20
-        self.minCardWidth = 170
 
         # Extra vertical spacing before action buttons (pending state)
         self.pendingButtonsTopSpacing = 6
@@ -79,6 +78,47 @@ class ToolConfirmationInterface(QPyTextObject):
         self.buttonSpacing = 8
         self.buttonStartMargin = 0
 
+        # Minimum card width: fit at least a single button (vertical layout)
+        self.minCardWidth = (
+            self.cardPadding * 2
+            + self.buttonStartMargin
+            + self.buttonWidth
+        )
+
+    def _effectiveCardWidth(self):
+        """Compute card width based on viewport and min width."""
+        viewportWidth = self.viewportWidth()
+        # Keep a little space so card doesn't flush to the viewport edge.
+        available = max(0, viewportWidth - (self.cardPadding * 2))
+        return max(self.minCardWidth, available)
+
+    def _useVerticalButtons(self, cardRect: QRectF) -> bool:
+        """Return True when buttons should be stacked vertically."""
+        padding = self.cardPadding
+        available = cardRect.width() - padding * 2 - self.buttonStartMargin
+        neededHorizontal = (self.buttonWidth * 2) + self.buttonSpacing
+        return available < neededHorizontal
+
+    def _buttonBlockHeight(self, cardRect: QRectF) -> int:
+        """Height needed for the buttons block in pending state."""
+        if self._useVerticalButtons(cardRect):
+            return (self.buttonHeight * 2) + self.buttonSpacing
+        return self.buttonHeight
+
+    def _wrappedTextHeight(self, fm: QFontMetrics, text: str, width: int) -> int:
+        """Compute word-wrapped text height for a given width."""
+        if not text:
+            return 0
+        # Use a very large height to let Qt compute wrapping.
+        bounding = fm.boundingRect(
+            0, 0, max(1, width), 10_000, Qt.TextWrapAnywhere, text)
+        return bounding.height()
+
+    def _statusTextForData(self, data: ToolConfirmationData) -> str:
+        if data.status == ConfirmationStatus.APPROVED:
+            return self.tr("✓ Approved, executing...")
+        return self.tr("✗ Rejected")
+
     def viewportWidth(self):
         """Get the width of the viewport for layout purposes"""
         edit = self.parent()
@@ -88,15 +128,9 @@ class ToolConfirmationInterface(QPyTextObject):
 
     def intrinsicSize(self, doc: QTextDocument, posInDocument, format: QTextFormat):
         """Return the size of the confirmation card"""
-        width = max(self.minCardWidth, self.viewportWidth() - self.cardPadding)
+        width = self._effectiveCardWidth()
         data: ToolConfirmationData = format.property(QTextFormat.UserProperty)
 
-        # Compute height dynamically since params can vary widely.
-        # Layout (inside padded rect):
-        #   description (optional, wrapped)
-        #   params (optional, wrapped)
-        #   status (only when NOT pending)
-        #   buttons (only when pending)
         height = 0
         padding = self.cardPadding
 
@@ -108,17 +142,21 @@ class ToolConfirmationInterface(QPyTextObject):
             fm = edit.fontMetrics()
         else:
             fm = QFontMetrics(QApplication.font())
-        lineHeight = fm.height()
 
         if data.tool_desc:
-            height += lineHeight
+            descText = data.tool_desc.splitlines()[0]
+            textWidth = max(1, int(width - (padding * 2)))
+            height += self._wrappedTextHeight(fm, descText, textWidth)
             height += self.innerSpacing
 
         if data.status == ConfirmationStatus.PENDING:
             height += self.pendingButtonsTopSpacing
-            height += self.buttonHeight
+            height += self._buttonBlockHeight(QRectF(0, 0, width, 1))
         else:
-            height += self.statusHeight
+            textWidth = max(1, int(width - (padding * 2)))
+            statusText = self._statusTextForData(data)
+            height += max(self.statusHeight,
+                          self._wrappedTextHeight(fm, statusText, textWidth))
 
         return QSizeF(width, height)
 
@@ -162,15 +200,16 @@ class ToolConfirmationInterface(QPyTextObject):
         fm = painter.fontMetrics()
         textWidth = max(1, int(innerRect.width()))
 
-        # Draw description (single line, elided)
+        # Draw description (multi-line, word-wrapped)
         font.setBold(False)
         painter.setFont(font)
         if data.tool_desc:
-            descLine = fm.elidedText(data.tool_desc.replace(
-                "\n", " "), Qt.ElideRight, textWidth)
+            descText = data.tool_desc.splitlines()[0]
+            descHeight = self._wrappedTextHeight(fm, descText, textWidth)
             descRect = QRectF(innerRect.left(), y,
-                              innerRect.width(), fm.height())
-            painter.drawText(descRect, Qt.AlignLeft | Qt.AlignTop, descLine)
+                              innerRect.width(), descHeight)
+            painter.drawText(descRect, Qt.AlignLeft |
+                             Qt.AlignTop | Qt.TextWrapAnywhere, descText)
             y = descRect.bottom() + self.innerSpacing
 
         if data.status == ConfirmationStatus.PENDING:
@@ -179,15 +218,17 @@ class ToolConfirmationInterface(QPyTextObject):
             schema: ColorSchema = ApplicationBase.instance().colorSchema()
             if data.status == ConfirmationStatus.APPROVED:
                 painter.setPen(schema.ApproveText)
-                statusText = self.tr("✓ Approved, executing...")
+                statusText = self._statusTextForData(data)
             else:
                 painter.setPen(schema.RejectText)
-                statusText = self.tr("✗ Rejected")
+                statusText = self._statusTextForData(data)
 
+            statusHeight = max(self.statusHeight, self._wrappedTextHeight(
+                fm, statusText, textWidth))
             statusRect = QRectF(innerRect.left(), y,
-                                innerRect.width(), self.statusHeight)
+                                innerRect.width(), statusHeight)
             painter.drawText(statusRect, Qt.AlignLeft |
-                             Qt.AlignTop, statusText)
+                             Qt.AlignTop | Qt.TextWrapAnywhere, statusText)
 
         painter.restore()
 
@@ -222,8 +263,19 @@ class ToolConfirmationInterface(QPyTextObject):
     def getButtonRects(self, rect: QRectF):
         """Calculate button rectangles for hit testing"""
         padding = self.cardPadding
-        buttonY = rect.bottom() - padding - self.buttonHeight
         startX = rect.left() + padding + self.buttonStartMargin
+
+        # Stack buttons vertically if the available width cannot fit both.
+        if self._useVerticalButtons(rect):
+            rejectY = rect.bottom() - padding - self.buttonHeight
+            approveY = rejectY - self.buttonSpacing - self.buttonHeight
+            approveRect = QRectF(
+                startX, approveY, self.buttonWidth, self.buttonHeight)
+            rejectRect = QRectF(
+                startX, rejectY, self.buttonWidth, self.buttonHeight)
+            return approveRect, rejectRect
+
+        buttonY = rect.bottom() - padding - self.buttonHeight
 
         approveRect = QRectF(
             startX, buttonY, self.buttonWidth, self.buttonHeight)
