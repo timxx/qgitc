@@ -135,7 +135,7 @@ Success handling
   QGITC_RESOLVE_OK
 """
 
-RESOLVE_PROMPT = """Please resolve this merge/cherry-pick conflict.
+RESOLVE_PROMPT = """Please resolve this {operation} conflict.
 
 Here are one or more verbatim conflict regions from the current WORKING TREE file. The contents inside each fenced code block are exact text from the file and must match when constructing apply_patch edits:
 

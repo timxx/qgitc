@@ -663,6 +663,17 @@ class Git():
         return os.path.exists(cherry_pick_head)
 
     @staticmethod
+    def cherryPickHeadSha1(repoDir=None) -> str:
+        """Return CHERRY_PICK_HEAD sha1 if present, else empty string."""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        try:
+            path = os.path.join(branchDir, ".git", "CHERRY_PICK_HEAD")
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                return f.read().strip()
+        except Exception:
+            return ""
+
+    @staticmethod
     def cherryPickAbort(repoDir=None):
         """Abort an in-progress cherry-pick operation"""
         branchDir = repoDir if repoDir else Git.REPO_DIR

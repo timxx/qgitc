@@ -1358,7 +1358,7 @@ class AiChatWidget(QWidget):
     def contextPanel(self) -> AiChatContextPanel:
         return self._contextPanel
 
-    def resolveConflictSync(self, repoDir: str, sha1: str, path: str, conflictText: str) -> Tuple[bool, Optional[str]]:
+    def resolveConflictSync(self, repoDir: str, sha1: str, path: str, conflictText: str, extraContext: str = None) -> Tuple[bool, Optional[str]]:
         """Resolve a conflicted file given an excerpt of the working tree file.
 
         Returns (ok, reason). On success, ok=True and reason=None.
@@ -1373,12 +1373,19 @@ class AiChatWidget(QWidget):
         self._createNewConversation()
 
         context = (
-            f"sha1: {sha1}\n"
-            f"conflicted_file: {path}"
+            f"repo_dir: {repoDir}\n"
+            f"conflicted_file: {path}\n"
         )
-        self._extraContext = context
+
+        if sha1:
+            context += f"sha1: {sha1}\n"
+
+        self._extraContext = context.rstrip()
+        if extraContext:
+            self._extraContext += f"\n{extraContext.rstrip()}"
 
         prompt = RESOLVE_PROMPT.format(
+            operation="cherry-pick" if sha1 else "merge",
             conflict=conflictText,
         )
 

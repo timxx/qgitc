@@ -203,6 +203,68 @@ def decodeFileData(data, preferEncoding="utf-8"):
     return data.decode(preferEncoding, "replace"), None
 
 
+def buildConflictExcerpt(repoDir: str, path: str, contextLines: int = 3) -> str:
+    """Return a compact excerpt of the conflicted working tree file.
+
+    This uses the current file contents (with conflict markers) so the assistant can
+    construct apply_patch edits that match existing lines reliably.
+    """
+    absPath = os.path.join(repoDir, path)
+    try:
+        with open(absPath, "rb") as f:
+            data = f.read()
+        text, _ = decodeFileData(data)
+        lines = text.splitlines(keepends=True)
+    except Exception:
+        return ""
+
+    starts = [i for i, line in enumerate(lines) if line.startswith("<<<<<<<")]
+    if not starts:
+        return ""
+
+    ranges: list[tuple[int, int]] = []
+    n = len(lines)
+    for start in starts:
+        end = None
+        for j in range(start + 1, n):
+            if lines[j].startswith(">>>>>>>"):
+                end = j
+                break
+        if end is None:
+            continue
+        a = max(0, start - contextLines)
+        b = min(n, end + 1 + contextLines)
+        ranges.append((a, b))
+
+    if not ranges:
+        return ""
+
+    ranges.sort()
+    merged: list[list[int]] = []
+    for a, b in ranges:
+        if not merged:
+            merged.append([a, b])
+            continue
+        prev = merged[-1]
+        if a <= prev[1]:
+            prev[1] = max(prev[1], b)
+        else:
+            merged.append([a, b])
+
+    parts: list[str] = []
+    for idx, (a, b) in enumerate(merged, start=1):
+        chunk = "".join(lines[a:b])
+        piece = (
+            f"Conflict region {idx} (approx lines {a + 1}-{b}):\n"
+            "```text\n"
+            f"{chunk}"
+            "```\n"
+        )
+        parts.append(piece)
+
+    return "\n".join(parts).strip("\n")
+
+
 def appDirPath():
     # qApp.applicationDirPath not works as expected
     path = os.path.realpath(__file__)
@@ -286,7 +348,7 @@ def _isArgNeedValue(arg: str):
         "--min-parents", "--max-parents", "--glob", "--exclude",
         "--format", "--encoding", "--date",
         # --not can be used without value
-         "--not",
+        "--not",
         # "--branches", "--tags", "--remotes"
     ]
     return arg in known_args
@@ -389,6 +451,7 @@ def makeRepoName(repoDir: str):
     if repoDir == ".":
         repoDir = "<main>"
     return repoDir
+
 
 def _findInlineSpan(text: str, currentPos: int, c: str):
     i = currentPos

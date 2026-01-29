@@ -676,6 +676,7 @@ class MainWindow(StateWindow):
         elif mode == MainWindow.MergeMode:
             from qgitc.mergewidget import MergeWidget
             self.mergeWidget = MergeWidget()
+            self.mergeWidget.setChatDockWidget(self._aiChat)
             self.mergeWidget.requestResolve.connect(
                 self.__onRequestResolve)
 

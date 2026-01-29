@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import dataDirPath, logger
+from qgitc.common import buildConflictExcerpt, dataDirPath, logger
 from qgitc.conflictlog import (
     HAVE_EXCEL_API,
     HAVE_XLSX_WRITER,
@@ -78,6 +78,8 @@ class MergeWidget(QWidget):
 
         self.resolveIndex = -1
         self.process = None
+        self._aiResolving = False
+        self._chatDock = None
 
         self._firstShown = True
 
@@ -87,6 +89,14 @@ class MergeWidget(QWidget):
         self.__setupSignals()
 
         self._mergeInfo = None
+
+    def setChatDockWidget(self, chatDockWidget):
+        self._chatDock = chatDockWidget
+
+    def __ensureChatDockVisible(self):
+        if not self._chatDock:
+            return
+        self._chatDock.setVisible(True)
 
     def __setupUi(self):
         self.view = QListView(self)
@@ -116,12 +126,16 @@ class MergeWidget(QWidget):
         self.status = QLabel(self)
         self.status.setToolTip(self.tr("Click to refresh the list"))
         self.cbAutoNext = QCheckBox(self.tr("Continuous resolve"))
+        self.cbAutoResolve = QCheckBox(self.tr("Auto-resolve"))
+        self.cbAutoResolve.setToolTip(
+            self.tr("Use assistant to auto-resolve conflicts if possible"))
         self.btnResolve = QPushButton(self.tr("Resolve"))
 
         hlayout.addWidget(self.status)
         hlayout.addSpacerItem(QSpacerItem(
             20, 20, QSizePolicy.MinimumExpanding))
         hlayout.addWidget(self.cbAutoNext)
+        hlayout.addWidget(self.cbAutoResolve)
         hlayout.addWidget(self.btnResolve)
 
         vlayout.addLayout(hlayout)
@@ -137,6 +151,9 @@ class MergeWidget(QWidget):
         vlayout.addLayout(hlayout)
 
         self.cbAutoNext.setChecked(True)
+        settings = ApplicationBase.instance().settings()
+        self.cbAutoResolve.setChecked(
+            settings.autoResolveConflictsWithAssistant())
         if HAVE_EXCEL_API or HAVE_XLSX_WRITER:
             self.cbAutoLog.setChecked(True)
             self.__onAutoLogChanged(Qt.Checked)
@@ -206,6 +223,14 @@ class MergeWidget(QWidget):
         self.leFilter.textChanged.connect(self.__onFilterChanged)
         self.cbAutoLog.stateChanged.connect(self.__onAutoLogChanged)
         self.btnChooseLog.clicked.connect(self.__onChooseLogFile)
+        self.cbAutoResolve.toggled.connect(self.__onAutoResolveToggled)
+
+    def __onAutoResolveToggled(self, checked: bool):
+        settings = ApplicationBase.instance().settings()
+        settings.setAutoResolveConflictsWithAssistant(checked)
+
+        if checked:
+            self.__ensureChatDockVisible()
 
     def __makeTextIcon(self, text, color):
         img = QPixmap(QSize(32, 32))
@@ -260,7 +285,7 @@ class MergeWidget(QWidget):
         self.resolve(index)
 
     def __onStatusRefresh(self, link):
-        if self.process:
+        if self.isResolving():
             QMessageBox.information(self,
                                     ApplicationBase.instance().applicationName(),
                                     self.tr("You can't refresh before close the merge window."))
@@ -413,31 +438,30 @@ class MergeWidget(QWidget):
             # TODO: might have other prompt need yes no
             logger.warning("unhandled prompt: %s", data)
 
-    def __onResolveFinished(self, exitCode, exitStatus):
-        errorData = None
-        if exitCode == 0:
+    def __finishResolveCommon(self, success: bool, errorText: str = None):
+        if success:
             index = self.proxyModel.index(self.resolveIndex, 0)
             self.__resolvedIndex(index)
         else:
-            errorData = self.process.readAllStandardError()
+            if errorText:
+                QMessageBox.critical(
+                    self, self.window().windowTitle(), errorText)
 
         self.process = None
+        self._aiResolving = False
         curRow = self.resolveIndex
         self.resolveIndex = -1
 
-        self.resolveFinished.emit(RESOLVE_SUCCEEDED if exitCode == 0
+        self.resolveFinished.emit(RESOLVE_SUCCEEDED if success
                                   else RESOLVE_FAILED)
 
         self.leFilter.setEnabled(True)
         if HAVE_EXCEL_API or HAVE_XLSX_WRITER:
             self.cbAutoLog.setEnabled(True)
             self.__onAutoLogChanged(self.cbAutoLog.checkState())
+
         # auto next only when success
-        if exitCode != 0:
-            if errorData:
-                QMessageBox.critical(
-                    self, self.window().windowTitle(),
-                    errorData.data().decode("utf-8"))
+        if not success:
             return
 
         if not self.cbAutoNext.isChecked():
@@ -487,14 +511,88 @@ class MergeWidget(QWidget):
         self.view.setCurrentIndex(index)
         self.resolve(index)
 
+    def __onResolveFinished(self, exitCode, exitStatus):
+        errorText = None
+        if exitCode != 0:
+            errorData = self.process.readAllStandardError() if self.process else None
+            if errorData:
+                errorText = errorData.data().decode("utf-8")
+        self.__finishResolveCommon(exitCode == 0, errorText)
+
     def __onFirstShow(self):
         self.updateList()
+        if self.cbAutoResolve.isChecked():
+            self.__ensureChatDockVisible()
         if self.model.rowCount() == 0:
             QMessageBox.information(
                 self,
                 self.window().windowTitle(),
                 self.tr("No conflict files to resolve!"),
                 QMessageBox.Ok)
+
+    def __resolveWithAssistant(self, file: str):
+        if not self._chatDock:
+            return False
+
+        from qgitc.aichatwidget import AiChatWidget
+        chatWidget: AiChatWidget = self._chatDock.chatWidget()
+        self.__ensureChatDockVisible()
+
+        repoDir = Git.REPO_DIR
+        if not repoDir:
+            self.__finishResolveCommon(
+                False, self.tr("No repository directory"))
+            return True
+
+        # Prevent concurrent actions and keep UI consistent with mergetool.
+        self._aiResolving = True
+
+        sha1 = ""
+        extraContext = None
+        if Git.isCherryPicking(repoDir):
+            sha1 = Git.cherryPickHeadSha1(repoDir)
+        elif self._mergeInfo is not None:
+            extraContext = (
+                f"local_branch: {self._mergeInfo.local}\n"
+                f"remote_branch: {self._mergeInfo.remote}\n"
+            )
+
+        conflictText = buildConflictExcerpt(repoDir, file)
+        if not conflictText:
+            self.__finishResolveCommon(False, self.tr(
+                "Failed to build conflict excerpt"))
+            return True
+
+        # Keep existing side-effects: jump/filter file in the main log view.
+        self.requestResolve.emit(file)
+        if self.logEnabled():
+            self.__ensureLogWriter()
+            self.log.addFile(file)
+
+        ok, reason = chatWidget.resolveConflictSync(
+            repoDir,
+            sha1,
+            file,
+            conflictText,
+            extraContext
+        )
+
+        if not ok:
+            self.__finishResolveCommon(
+                False, reason or self.tr("Auto-resolve failed"))
+            return True
+
+        addErr = Git.addFiles(repoDir, [file])
+        if addErr:
+            self.__finishResolveCommon(False, f"git add failed: {addErr}")
+            return True
+
+        if self.logEnabled():
+            self.__ensureLogWriter()
+            self.log.setResolveMethod(file, self.tr("Assistant"))
+
+        self.__finishResolveCommon(True, None)
+        return True
 
     def contextMenuEvent(self, event):
         index = self.view.currentIndex()
@@ -552,7 +650,7 @@ class MergeWidget(QWidget):
                                     self.tr("This file is already resolved."))
             return
 
-        if self.process:
+        if self.isResolving():
             QMessageBox.information(self, ApplicationBase.instance().applicationName(),
                                     self.tr("Please resolve current conflicts before start a new one."))
             return
@@ -564,6 +662,12 @@ class MergeWidget(QWidget):
             self.__onAutoLogChanged(Qt.Unchecked)
         self.resolveIndex = index.row()
         file = index.data()
+
+        # AI auto-resolve path
+        if self.cbAutoResolve.isChecked():
+            if self.__resolveWithAssistant(file):
+                return
+
         args = ["mergetool", "--no-prompt"]
 
         toolName = None
@@ -628,7 +732,7 @@ class MergeWidget(QWidget):
         return super().eventFilter(obj, event)
 
     def isResolving(self):
-        return self.process is not None
+        return self.process is not None or self._aiResolving
 
     def logEnabled(self):
         return self.cbAutoLog.isChecked()
