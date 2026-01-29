@@ -559,8 +559,8 @@ class AiChatWidget(QWidget):
                 if toolName and tool:
                     hasConfirmations = True
                     toolDesc = tool.description
-                    if toolName == "apply_patch" and isinstance(args, dict):
-                        expl = (args.get("explanation") or "").strip()
+                    if isinstance(args, dict):
+                        expl = args.get("explanation", "").strip()
                         if expl:
                             toolDesc = expl
                     messages.insertToolConfirmation(
@@ -1252,8 +1252,8 @@ class AiChatWidget(QWidget):
                     }
 
                     if addToChatBot:
-                        if toolName == "apply_patch" and isinstance(args, dict):
-                            expl = (args.get("explanation") or "").strip()
+                        if isinstance(args, dict):
+                            expl = args.get("explanation", "").strip()
                             if expl:
                                 toolDesc = expl
                         chatbot.insertToolConfirmation(

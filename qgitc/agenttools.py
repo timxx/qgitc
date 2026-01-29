@@ -157,6 +157,8 @@ class RunCommandParams(BaseModel):
         None, description="Optional working directory. If not specified, uses the repository directory.")
     timeout: int = Field(
         60, ge=1, le=300, description="Maximum execution time in seconds (default 60, max 300).")
+    explanation: Optional[str] = Field(
+        ..., description="A short explanation of why this command is being run.")
 
 
 class ReadFileParams(BaseModel):
