@@ -2,10 +2,9 @@
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QDockWidget, QHBoxLayout, QMenu, QWidget
+from PySide6.QtWidgets import QDockWidget, QHBoxLayout, QMainWindow, QMenu, QWidget
 
 from qgitc.aichatwidget import AiChatWidget
-from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
 from qgitc.elidedlabel import ElidedLabel
@@ -23,6 +22,8 @@ class AiChatDockWidget(QDockWidget):
 
         self._aiChatWidget = AiChatWidget(self, embedded=True)
         self.setWidget(self._aiChatWidget)
+
+        self.dockLocationChanged.connect(self._onDockLocationChanged)
 
         # Create custom title bar with title and combo button
         self._titleBarWidget = QWidget(self)
@@ -98,6 +99,29 @@ class AiChatDockWidget(QDockWidget):
             lambda _isGenerating: self._updateNewConversationButtonState())
 
         self._updateNewConversationButtonState()
+
+    def _onDockLocationChanged(self, area: Qt.DockWidgetArea):
+        # Keep 4px padding on the *outer* edge (window border), but 0px on the
+        # inner seam edge (adjacent to the central widget) to avoid 4+4.
+        mw = self.parentWidget()
+        if isinstance(mw, QMainWindow):
+            cw = mw.centralWidget()
+            layout = cw.layout() if cw else None
+        else:
+            layout = None
+    
+        if area == Qt.RightDockWidgetArea:
+            self._aiChatWidget.setEmbeddedOuterMargins(0, 4, 4, 4)
+            if layout:
+                layout.setContentsMargins(4, 4, 0, 4)
+        elif area == Qt.LeftDockWidgetArea:
+            self._aiChatWidget.setEmbeddedOuterMargins(4, 4, 0, 4)
+            if layout:
+                layout.setContentsMargins(0, 4, 4, 4)
+        else:
+            self._aiChatWidget.setEmbeddedOuterMargins(4, 4, 4, 4)
+            if layout:
+                layout.setContentsMargins(4, 4, 4, 4)
 
     def _updateNewConversationButtonState(self):
         """Enable New Conversation only when history is ready and not generating."""

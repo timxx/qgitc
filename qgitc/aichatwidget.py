@@ -242,6 +242,26 @@ class AiChatWidget(QWidget):
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
 
+    def setEmbeddedOuterMargins(self, left: int, top: int, right: int, bottom: int):
+        """Set the outer layout margins for embedded (dock) mode.
+
+        This is used by dock widgets to avoid double-padding between the dock
+        content and the main window while still keeping a 4px margin against
+        the window border.
+        """
+        if not self._embedded:
+            return
+
+        layout = self.layout()
+        if not layout:
+            return
+
+        l = max(0, int(left))
+        t = max(0, int(top))
+        r = max(0, int(right))
+        b = max(0, int(bottom))
+        layout.setContentsMargins(l, t, r, b)
+
     def setContextProvider(self, provider: AiChatContextProvider):
         self._contextPanel.setContextProvider(provider)
 
