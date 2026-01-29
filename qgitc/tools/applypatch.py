@@ -416,6 +416,34 @@ def _get_updated_file(text: str, action: PatchAction, path: str) -> str:
     dest_lines: List[str] = []
     orig_index = 0
 
+    def _split_leading_ws(line: str) -> Tuple[str, str]:
+        i = 0
+        while i < len(line) and line[i] in ("\t", " "):
+            i += 1
+        return line[:i], line[i:]
+
+    def _indent_style(ws: str) -> str:
+        if not ws:
+            return "none"
+        has_tabs = "\t" in ws
+        has_spaces = " " in ws
+        if has_tabs and not has_spaces:
+            return "tab"
+        if has_spaces and not has_tabs:
+            return "space"
+        return "mixed"
+
+    def _is_indent_only_change(old_ws: str, old_rest: str, new_ws: str, new_rest: str) -> bool:
+        # Treat as indent-only if non-whitespace content matches exactly.
+        if old_rest != new_rest:
+            return False
+        if old_ws == new_ws:
+            return False
+        # Ignore mixed-indentation lines to avoid surprising rewrites.
+        if _indent_style(old_ws) in ("mixed",) or _indent_style(new_ws) in ("mixed",):
+            return False
+        return True
+
     def _has_cr(line: str) -> bool:
         # For CRLF files, splitting on '\n' keeps '\r' at the end of each line.
         return line.endswith("\r")
@@ -448,14 +476,36 @@ def _get_updated_file(text: str, action: PatchAction, path: str) -> str:
         dest_lines.extend(orig_lines[orig_index: chunk.orig_index])
         orig_index = chunk.orig_index
 
+        # Prefer keeping original indentation style:
+        # - If replacement differs only by leading ws (tabs/spaces), keep the original line.
+        # - If replacement changes content but uses a different indent char, reuse the old line's indent.
+        adjusted_ins_lines: List[str] = []
+        old_span = orig_lines[chunk.orig_index: chunk.orig_index +
+                              len(chunk.del_lines)]
+        common = min(len(chunk.del_lines), len(chunk.ins_lines))
+        for i in range(common):
+            old_actual = old_span[i] if i < len(
+                old_span) else chunk.del_lines[i]
+            new_line = chunk.ins_lines[i]
+
+            old_ws, old_rest = _split_leading_ws(old_actual)
+            new_ws, new_rest = _split_leading_ws(new_line)
+            if _is_indent_only_change(old_ws, old_rest, new_ws, new_rest):
+                adjusted_ins_lines.append(old_actual)
+                continue
+            adjusted_ins_lines.append(old_ws + new_rest)
+
+        for j in range(common, len(chunk.ins_lines)):
+            adjusted_ins_lines.append(chunk.ins_lines[j])
+
         want_cr = _choose_cr(chunk.orig_index, len(chunk.del_lines))
         if want_cr:
             dest_lines.extend([
-                (s if s.endswith("\r") else (s + "\r")) for s in chunk.ins_lines
+                (s if s.endswith("\r") else (s + "\r")) for s in adjusted_ins_lines
             ])
         else:
             dest_lines.extend([
-                (s[:-1] if s.endswith("\r") else s) for s in chunk.ins_lines
+                (s[:-1] if s.endswith("\r") else s) for s in adjusted_ins_lines
             ])
         orig_index += len(chunk.del_lines)
 
@@ -577,25 +627,3 @@ def write_file(path: str, content: str, source_path: Optional[str] = None) -> No
 
 def remove_file(path: str) -> None:
     pathlib.Path(path).unlink(missing_ok=True)
-
-
-# --------------------------------------------------------------------------- #
-#  CLI entry-point
-# --------------------------------------------------------------------------- #
-def main() -> None:
-    import sys
-
-    patch_text = sys.stdin.read()
-    if not patch_text:
-        print("Please pass patch text through stdin", file=sys.stderr)
-        return
-    try:
-        result = process_patch(patch_text, open_file, write_file, remove_file)
-    except DiffError as exc:
-        print(exc, file=sys.stderr)
-        return
-    print(result)
-
-
-if __name__ == "__main__":
-    main()

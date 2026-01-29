@@ -198,6 +198,65 @@ class TestApplyPatchTool(TestBase):
         self.assertIn(b"crlf3\r\n", data)
         self.assertIn(b"lf_tail\n", data)
 
+    def test_apply_patch_does_not_touch_indent_only_changes(self):
+        # If the new content differs only by tab/space indentation,
+        # the original line should be preserved exactly.
+        path = os.path.join(Git.REPO_DIR, "apply_patch_indent_only.py")
+        original = "\tvalue = 1\n"
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(original)
+
+        patch = (
+            "*** Begin Patch\n"
+            f"*** Update File: {path}\n"
+            "-\tvalue = 1\n"
+            "+    value = 1\n"
+            "*** End Patch\n"
+        )
+
+        executor = AgentToolExecutor()
+        result = executor._handle_apply_patch(
+            "apply_patch",
+            {
+                "input": patch,
+                "explanation": "Indent-only change should not modify the line",
+            },
+        )
+
+        self.assertTrue(result.ok, msg=result.output)
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertEqual(content, original)
+
+    def test_apply_patch_preserves_old_indent_char_on_replacement(self):
+        # If a replacement line changes content but uses spaces where the original used tabs,
+        # prefer the original indent character.
+        path = os.path.join(Git.REPO_DIR, "apply_patch_indent_style.py")
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            f.write("\tprint('old')\n")
+
+        patch = (
+            "*** Begin Patch\n"
+            f"*** Update File: {path}\n"
+            "-\tprint('old')\n"
+            "+    print('new')\n"
+            "*** End Patch\n"
+        )
+
+        executor = AgentToolExecutor()
+        result = executor._handle_apply_patch(
+            "apply_patch",
+            {
+                "input": patch,
+                "explanation": "Replacement should keep original indent char",
+            },
+        )
+
+        self.assertTrue(result.ok, msg=result.output)
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertEqual(content, "\tprint('new')\n")
+
     def test_apply_patch_rejects_outside_repo(self):
         outside = os.path.abspath(os.path.join(
             Git.REPO_DIR, os.pardir, "outside.txt"))
