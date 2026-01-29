@@ -1418,6 +1418,10 @@ class AiChatWidget(QWidget):
                 loop.quit()
                 return
 
+            # No new messages yet.
+            if len(model.history) == oldHistoryCount:
+                return
+
             # If the assistant explicitly reported failure, honor it.
             response = _lastAssistantTextSince(oldHistoryCount)
             if "QGITC_RESOLVE_FAILED:" in response:
@@ -1452,17 +1456,24 @@ class AiChatWidget(QWidget):
             done["reason"] = None
             loop.quit()
 
+        def _onNetworkError(errorMsg: str):
+            done["ok"] = False
+            done["reason"] = errorMsg
+            loop.quit()
+
         timer.timeout.connect(_finalizeIfIdle)
 
         # Re-check completion whenever the model finishes a generation step or
         # a tool finishes (tools may trigger another continue-only generation).
         model.finished.connect(_finalizeIfIdle)
+        model.networkError.connect(_onNetworkError)
 
         self._doRequest(prompt, AiChatMode.Agent, RESOLVE_SYS_PROMPT)
         loop.exec()
 
         timer.stop()
         model.finished.disconnect(_finalizeIfIdle)
+        model.networkError.disconnect(_onNetworkError)
         self._allowWriteTools = False
 
         return bool(done.get("ok", False)), done.get("reason")
