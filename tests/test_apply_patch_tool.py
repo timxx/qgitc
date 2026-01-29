@@ -360,10 +360,53 @@ class TestApplyPatchTool(TestBase):
 -hello
 *** End Patch""".format(path.replace("\\", "/").upper())
 
-        path = path.replace("\\", "/")
         executor = AgentToolExecutor()
         result = executor._handle_apply_patch("apply_patch", {
             "input": patch,
             "explanation": "Fix bug",
         })
         self.assertTrue(result.ok, msg=result.output)
+
+    def test_anchors(self):
+        path = os.path.join(Git.REPO_DIR, "test.cpp").replace("\\", "/")
+
+        def _create_file():
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write("""// comment
+\tvoid foo()
+{
+#ifndef Q_OS_UNIX
+\tint bar = 1;
+#else
+\tint bar = 2;
+#endif
+}
+
+// another comment
+""")
+
+        # both `@@ void foo()` and `@@void foo()` should be accepted
+        patch = """*** Begin Patch
+*** Update File: {}
+{}
+-#ifndef Q_OS_UNIX
++#ifdef Q_OS_WIN
+*** End Patch"""
+
+        def _test(patch: str):
+            executor = AgentToolExecutor()
+            _create_file()
+            result = executor._handle_apply_patch("apply_patch", {
+                "input": patch,
+                "explanation": "Fix bug",
+            })
+            self.assertTrue(result.ok, msg=result.output)
+
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("#ifdef Q_OS_WIN", content)
+            self.assertNotIn("#ifndef Q_OS_UNIX", content)
+
+        _test(patch.format(path, "@@ void foo()"))
+        _test(patch.format(path, "@@void foo()"))

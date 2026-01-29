@@ -229,6 +229,11 @@ class Parser:
             )
         ):
             def_str = self.read_str("@@ ")
+            if not def_str:
+                # Accept anchors without a space after '@@' (e.g. '@@void foo()').
+                cur = self._norm(self._cur_line())
+                if cur.startswith("@@") and cur != "@@":
+                    def_str = self.read_str("@@")
             section_str = ""
             if not def_str and self._norm(self._cur_line()) == "@@":
                 section_str = self.read_line()
