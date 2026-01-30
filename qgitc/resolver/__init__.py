@@ -11,7 +11,6 @@ from qgitc.resolver.models import (
     ResolveContext,
     ResolveEvent,
     ResolveOutcome,
-    ResolvePolicy,
     ResolvePrompt,
 )
 
@@ -21,7 +20,6 @@ __all__ = [
     "ResolvePromptKind",
     "ResolveMethod",
     "ResolveContext",
-    "ResolvePolicy",
     "ResolveEvent",
     "ResolveOutcome",
     "ResolvePrompt",

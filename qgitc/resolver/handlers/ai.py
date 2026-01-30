@@ -26,9 +26,6 @@ class AiResolveHandler(ResolveHandler):
         self._ctx = ctx
         self._services = services
         self._path = ctx.path
-        if not ctx.policy.aiAutoResolveEnabled:
-            self.finished.emit(False, None)
-            return
         if services.ai is None:
             self.finished.emit(False, None)
             return

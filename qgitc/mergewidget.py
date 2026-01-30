@@ -65,7 +65,6 @@ from qgitc.resolver.models import (
     ResolveContext,
     ResolveEvent,
     ResolveOutcome,
-    ResolvePolicy,
     ResolvePrompt,
 )
 from qgitc.resolver.services import ResolveServices
@@ -656,10 +655,8 @@ class MergeWidget(QWidget):
             self.__ensureLogWriter()
             self.log.addFile(file)
 
-        # Resolve policy
-        policy = ResolvePolicy(
-            aiAutoResolveEnabled=self.cbAutoResolve.isChecked())
-        if policy.aiAutoResolveEnabled:
+        aiAutoResolveEnabled = self.cbAutoResolve.isChecked()
+        if aiAutoResolveEnabled:
             self.__ensureChatDockVisible()
 
         sha1 = ""
@@ -691,19 +688,19 @@ class MergeWidget(QWidget):
 
         # AI needs chat widget.
         chatWidget = None
-        if policy.aiAutoResolveEnabled and self._chatDock is not None:
+        if aiAutoResolveEnabled and self._chatDock is not None:
             chatWidget = self._chatDock.chatWidget()
 
         # Build handler chain.
         handlers = []
         services = ResolveServices(runner=self._resolveRunner, ai=chatWidget)
 
-        if policy.aiAutoResolveEnabled and chatWidget is not None:
+        if aiAutoResolveEnabled and chatWidget is not None:
             handlers.append(AiResolveHandler(self))
 
         if toolName or hasGitDefaultTool:
             handlers.append(GitMergetoolHandler(self))
-        elif not policy.aiAutoResolveEnabled:
+        elif not aiAutoResolveEnabled:
             # If AI isn't enabled, we cannot proceed.
             QMessageBox.warning(
                 self,

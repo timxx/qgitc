@@ -15,11 +15,6 @@ from qgitc.resolver.enums import (
 
 
 @dataclass(slots=True)
-class ResolvePolicy:
-    aiAutoResolveEnabled: bool = False
-
-
-@dataclass(slots=True)
 class ResolveContext:
     repoDir: str
     operation: ResolveOperation
@@ -28,7 +23,6 @@ class ResolveContext:
     extraContext: Optional[str] = None
     initialError: Optional[str] = None
     mergetoolName: Optional[str] = None
-    policy: ResolvePolicy = field(default_factory=ResolvePolicy)
     meta: Dict[str, Any] = field(default_factory=dict)
 
 

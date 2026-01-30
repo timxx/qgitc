@@ -66,12 +66,7 @@ from qgitc.resolver.handlers.finalize import (
 )
 from qgitc.resolver.handlers.mergetool import GitMergetoolHandler
 from qgitc.resolver.manager import ResolveManager
-from qgitc.resolver.models import (
-    ResolveContext,
-    ResolveOutcome,
-    ResolvePolicy,
-    ResolvePrompt,
-)
+from qgitc.resolver.models import ResolveContext, ResolveOutcome, ResolvePrompt
 from qgitc.resolver.services import ResolveServices
 from qgitc.resolver.taskrunner import TaskRunner
 from qgitc.windowtype import WindowType
@@ -3158,7 +3153,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # If the commit doesn't exist in the current repo (external drop), fall back to patch-based pick.
         if not sourceView and error and f"fatal: bad object {sha1}" in error:
-            ok = self._pickFromAnotherRepo(repoDir, sourceRepoDir, sha1)
+            ok = self._pickFromAnotherRepo(
+                repoDir, sourceRepoDir, sha1, chatWidget)
             return True if ok else False
 
         # If git started a cherry-pick sequence (conflict or empty commit), resolve via the resolver pipeline.
@@ -3235,8 +3231,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 sha1=sha1,
                 path=path,
                 initialError=initialError,
-                mergetoolName=toolName,
-                policy=policy,
+                mergetoolName=toolName
             )
 
             loop = QEventLoop()
@@ -3299,7 +3294,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         runner = TaskRunner(self)
         services = ResolveServices(runner=runner, ai=chatWidget)
-        policy = ResolvePolicy(aiAutoResolveEnabled=chatWidget is not None)
+        aiAutoResolveEnabled = chatWidget is not None
 
         # Determine merge tool name (Preferences first; git default tool is supported by git itself).
         toolName = ApplicationBase.instance().settings().mergeToolName()
@@ -3316,7 +3311,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             conflictFiles = Git.conflictFiles(repoDir) or []
 
             # If there are conflict files, we need either AI or a merge tool.
-            if conflictFiles and (not policy.aiAutoResolveEnabled) and (not toolName) and (not hasGitDefaultTool):
+            if conflictFiles and (not aiAutoResolveEnabled) and (not toolName) and (not hasGitDefaultTool):
                 QMessageBox.warning(
                     self,
                     self.tr("Merge Tool Not Configured"),
@@ -3341,7 +3336,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                     continue
 
                 handlers = []
-                if policy.aiAutoResolveEnabled and chatWidget is not None:
+                if aiAutoResolveEnabled and chatWidget is not None:
                     handlers.append(AiResolveHandler(self))
                 if toolName or hasGitDefaultTool:
                     handlers.append(GitMergetoolHandler(self))
@@ -3431,7 +3426,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             if patchFile:
                 os.remove(patchFile)
 
-    def _pickFromAnotherRepo(self, repoDir: str, sourceRepoDir: str, sha1: str) -> bool:
+    def _pickFromAnotherRepo(self, repoDir: str, sourceRepoDir: str, sha1: str, chatWidget=None) -> bool:
         """Pick commits from another repository by generating and applying patch"""
         # Generate patch from source repo
         args = ["format-patch", "-1", "--stdout", sha1]
@@ -3473,7 +3468,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                         operation=ResolveOperation.AM,
                         sha1=sha1,
                         initialError=errorMsg,
-                        chatWidget=None,
+                        chatWidget=chatWidget,
                     )
                     return True if ok else False
 
