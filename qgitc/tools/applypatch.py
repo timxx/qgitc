@@ -57,6 +57,8 @@ An example of a message that you might pass as "input" to this function, in orde
 *** End Patch
 
 Do not use line numbers in this diff format.
+
+You must use the same indentation style as the original code. If the original code uses tabs, you must use tabs. If the original code uses spaces, you must use spaces. Be sure to use a proper UNESCAPED tab character.
 """
 
 

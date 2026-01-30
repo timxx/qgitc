@@ -40,6 +40,7 @@ Repo selection / submodules
 
 After code review
 - After completing your code review, if you found issues that can be fixed, run the `apply_patch` tool with V4A diff format to apply the fixes.
+- When using `apply_patch`, keep the original indentation style: if the original code uses tabs, use tabs; if it uses spaces, use spaces.
 
 Output
 - Respond in the UI language requested by the user.
@@ -117,6 +118,7 @@ WRITE tool you MUST use to apply the resolution:
     - Ends with `*** End Patch`
   - Update the file to the final resolved content (no conflict markers).
   - The file path can be absolute or repo-relative, but must be within the repo.
+  - Keep the original indentation style: if the original code uses tabs, use tabs; if it uses spaces, use spaces.
 
 Hard requirements
 - Do NOT leave conflict markers (<<<<<<<, =======, >>>>>>>) anywhere.
