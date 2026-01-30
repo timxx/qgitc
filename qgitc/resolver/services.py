@@ -21,7 +21,7 @@ class AiConflictResolverProto(Protocol):
         sha1: str,
         path: str,
         conflictText: str,
-        extraContext: str | None = None,
+        extraContext: str = None,
     ) -> ResolveConflictJobProto: ...
 
 

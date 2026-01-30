@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from PySide6.QtCore import QObject
 
@@ -20,12 +20,12 @@ class AiResolveHandler(ResolveHandler):
         super().__init__(parent)
         self._ctx: Optional[ResolveContext] = None
         self._services: ResolveServices = None
-        self._paths: List[str] = []
-        self._i = 0
+        self._path: Optional[str] = None
 
     def start(self, ctx: ResolveContext, services: ResolveServices):
         self._ctx = ctx
         self._services = services
+        self._path = ctx.path
         if not ctx.policy.aiAutoResolveEnabled:
             self.finished.emit(False, None)
             return
@@ -33,46 +33,14 @@ class AiResolveHandler(ResolveHandler):
             self.finished.emit(False, None)
             return
 
-        # Determine which files to resolve.
-        if ctx.paths:
-            self._paths = list(ctx.paths)
-        else:
-            # Could be expensive; run in thread.
-            runner = services.runner
-            task = runner.run(lambda: Git.conflictFiles(ctx.repoDir) or [])
-            task.finished.connect(self._onConflictFiles)
-            return
-
-        self._i = 0
-        self._nextFile()
-
-    def _onConflictFiles(self, ok: bool, result: object, error: object):
-        if not ok:
-            self.finished.emit(False, None)
-            return
-        self._paths = list(result or [])
-        self._i = 0
-        self._nextFile()
+        self._resolveFile(self._path)
 
     def _emit(self, ev: ResolveEvent):
         self._services.manager.emitEvent(ev)
 
-    def _nextFile(self):
+    def _resolveFile(self, path: str):
         ctx = self._ctx
         services = self._services
-        if ctx is None or services is None:
-            self.finished.emit(False, None)
-            return
-
-        if self._i >= len(self._paths):
-            # Check remaining conflicts
-            runner = services.runner
-            task = runner.run(lambda: Git.conflictFiles(ctx.repoDir) or [])
-            task.finished.connect(self._onFinalRemaining)
-            return
-
-        path = self._paths[self._i]
-        self._i += 1
 
         # Fast-path checks via blob ids.
         def _trivial() -> str:
@@ -103,7 +71,7 @@ class AiResolveHandler(ResolveHandler):
             return
 
         if not ok:
-            self._nextFile()
+            self.finished.emit(False, None)
             return
 
         mode = str(result)
@@ -116,20 +84,27 @@ class AiResolveHandler(ResolveHandler):
             return
 
         if mode.startswith("fail_"):
-            self._nextFile()
+            self.finished.emit(False, None)
             return
 
         if mode != "non_trivial":
-            self._nextFile()
+            self.finished.emit(False, None)
             return
 
         conflictText = buildConflictExcerpt(ctx.repoDir, path)
         if not conflictText:
-            self._nextFile()
+            self.finished.emit(False, None)
             return
 
-        self._emit(ResolveEvent(kind=ResolveEventKind.STEP,
-                   message=f"ai_resolving:{path}", path=path, method=ResolveMethod.AI))
+        self._emit(
+            ResolveEvent(
+                kind=ResolveEventKind.STEP,
+                message=self.tr(
+                    "Assistant is resolving {path}").format(path=path),
+                path=path,
+                method=ResolveMethod.AI,
+            )
+        )
 
         job = services.ai.resolveFileAsync(
             ctx.repoDir, ctx.sha1, path, conflictText, ctx.extraContext
@@ -146,7 +121,7 @@ class AiResolveHandler(ResolveHandler):
 
         if not ok:
             # Leave it for next handler.
-            self._nextFile()
+            self.finished.emit(False, None)
             return
 
         addTask = services.runner.run(
@@ -158,20 +133,21 @@ class AiResolveHandler(ResolveHandler):
         if ok and not result:
             m = ResolveMethod.AI if mode == "ai" else (
                 ResolveMethod.OURS if mode == "take_ours" else ResolveMethod.THEIRS)
-            self._emit(ResolveEvent(kind=ResolveEventKind.FILE_RESOLVED,
-                       message="file_resolved", path=path, method=m))
-        self._nextFile()
+            self._emit(
+                ResolveEvent(
+                    kind=ResolveEventKind.FILE_RESOLVED,
+                    message=self.tr("Resolved {path}").format(path=path),
+                    path=path,
+                    method=m,
+                )
+            )
 
-    def _onFinalRemaining(self, ok: bool, result: object, error: object):
-        remaining = list(result or []) if ok else []
-        if remaining:
             out = ResolveOutcome(
-                status=ResolveOutcomeStatus.NEEDS_USER,
-                message="ai_needs_user",
-                remainingConflicts=remaining,
+                status=ResolveOutcomeStatus.RESOLVED,
+                message=self.tr("Resolved by assistant"),
             )
             self.finished.emit(True, out)
             return
-        out = ResolveOutcome(
-            status=ResolveOutcomeStatus.RESOLVED, message="ai_resolved")
-        self.finished.emit(True, out)
+
+        # Staging failed, let next handler attempt.
+        self.finished.emit(False, None)

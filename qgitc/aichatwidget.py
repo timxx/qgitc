@@ -5,7 +5,7 @@ import os
 import typing
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from PySide6.QtCore import QEvent, QEventLoop, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QEventLoop, QObject, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QScrollBar,
@@ -64,6 +64,159 @@ class CodeReviewSceneEvent(QEvent):
     def __init__(self, scene_line: str):
         super().__init__(QEvent.Type(CodeReviewSceneEvent.Type))
         self.scene_line = scene_line
+
+
+class ResolveConflictJob(QObject):
+    finished = Signal(bool, object)  # ok, reason
+
+    def __init__(
+        self,
+        widget: "AiChatWidget",
+        repoDir: str,
+        sha1: str,
+        path: str,
+        conflictText: str,
+        extraContext: str = None,
+        parent: QObject = None,
+    ):
+        super().__init__(parent or widget)
+        self._widget = widget
+        self._repoDir = repoDir
+        self._sha1 = sha1
+        self._path = path
+        self._conflictText = conflictText
+        self._extraContext = extraContext
+
+        self._done = False
+        self._prevAllowWrite = False
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+
+        self._model = None
+        self._oldHistoryCount = 0
+
+    def start(self):
+        w = self._widget
+        w._waitForInitialization()
+
+        model = w.currentChatModel()
+        if not model:
+            self._finish(False, "no_model")
+            return
+
+        # Always start a new conversation for conflict resolution.
+        w._createNewConversation()
+
+        context = (
+            f"repo_dir: {self._repoDir}\n"
+            f"conflicted_file: {self._path}\n"
+        )
+
+        if self._sha1:
+            context += f"sha1: {self._sha1}\n"
+
+        w._extraContext = context.rstrip()
+        if self._extraContext:
+            w._extraContext += f"\n{self._extraContext.rstrip()}"
+
+        prompt = RESOLVE_PROMPT.format(
+            operation="cherry-pick" if self._sha1 else "merge",
+            conflict=self._conflictText,
+        )
+
+        self._prevAllowWrite = w._allowWriteTools
+        w._allowWriteTools = True
+
+        self._model = model
+        self._oldHistoryCount = len(model.history)
+
+        self._timer.timeout.connect(self._onTimeout)
+        self._timer.start(5 * 60 * 1000)
+
+        model.finished.connect(self._checkDone)
+        model.networkError.connect(self._onNetworkError)
+        # Tools can also trigger another continue-only generation.
+        w._agentExecutor.toolFinished.connect(self._checkDone)
+
+        w._doRequest(prompt, AiChatMode.Agent, RESOLVE_SYS_PROMPT)
+
+    def _lastAssistantTextSince(self, startIndex: int) -> str:
+        model = self._model
+        if model is None:
+            return ""
+        for i in range(len(model.history) - 1, startIndex - 1, -1):
+            h = model.history[i]
+            if h.role == AiRole.Assistant and h.message:
+                return h.message
+        return ""
+
+    def _onTimeout(self):
+        model = self._model
+        if model is not None:
+            model.requestInterruption()
+        self._finish(False, "Assistant response timed out")
+
+    def _onNetworkError(self, errorMsg: str):
+        self._finish(False, errorMsg)
+
+    def _checkDone(self, *args):
+        if self._done:
+            return
+
+        model = self._model
+        if model is None:
+            return
+
+        # No new messages yet.
+        if len(model.history) == self._oldHistoryCount:
+            return
+
+        response = self._lastAssistantTextSince(self._oldHistoryCount)
+
+        if "QGITC_RESOLVE_FAILED:" in response:
+            parts = response.split("QGITC_RESOLVE_FAILED:", 1)
+            reason = parts[1].strip() if len(parts) > 1 else ""
+            self._finish(False, reason or "Assistant reported failure")
+            return
+
+        if "QGITC_RESOLVE_OK" not in response:
+            return
+
+        # Verify the working tree file is conflict-marker-free.
+        try:
+            absPath = os.path.join(self._repoDir, self._path)
+            with open(absPath, "rb") as f:
+                merged = f.read()
+        except Exception as e:
+            self._finish(False, f"read_back_failed: {e}")
+            return
+
+        if b"<<<<<<<" in merged or b"=======" in merged or b">>>>>>>" in merged:
+            self._finish(False, "conflict_markers_remain")
+            return
+
+        self._finish(True, None)
+
+    def _disconnect(self):
+        model = self._model
+        if model is not None:
+            model.finished.disconnect(self._checkDone)
+            model.networkError.disconnect(self._onNetworkError)
+        self._widget._agentExecutor.toolFinished.disconnect(self._checkDone)
+        self._timer.timeout.disconnect(self._onTimeout)
+
+    def _finish(self, ok: bool, reason: object):
+        if self._done:
+            return
+        self._done = True
+
+        self._disconnect()
+        self._timer.stop()
+
+        # Restore tool permission.
+        self._widget._allowWriteTools = self._prevAllowWrite
+
+        self.finished.emit(ok, reason)
 
 
 class AiChatWidget(QWidget):
@@ -1372,122 +1525,42 @@ class AiChatWidget(QWidget):
     def contextPanel(self) -> AiChatContextPanel:
         return self._contextPanel
 
+    def resolveFileAsync(
+        self,
+        repoDir: str,
+        sha1: str,
+        path: str,
+        conflictText: str,
+        extraContext: str = None,
+    ) -> ResolveConflictJob:
+        job = ResolveConflictJob(
+            self,
+            repoDir=repoDir,
+            sha1=sha1,
+            path=path,
+            conflictText=conflictText,
+            extraContext=extraContext,
+        )
+        QTimer.singleShot(0, job.start)
+        return job
+
     def resolveConflictSync(self, repoDir: str, sha1: str, path: str, conflictText: str, extraContext: str = None) -> Tuple[bool, Optional[str]]:
         """Resolve a conflicted file given an excerpt of the working tree file.
 
         Returns (ok, reason). On success, ok=True and reason=None.
         """
-        self._waitForInitialization()
-        model = self.currentChatModel()
-        if not model:
-            return False, "no_model"
-
-        # Always start a new conversation for conflict resolution.
-        # To avoid context too long and mixing with previous topics.
-        self._createNewConversation()
-
-        context = (
-            f"repo_dir: {repoDir}\n"
-            f"conflicted_file: {path}\n"
-        )
-
-        if sha1:
-            context += f"sha1: {sha1}\n"
-
-        self._extraContext = context.rstrip()
-        if extraContext:
-            self._extraContext += f"\n{extraContext.rstrip()}"
-
-        prompt = RESOLVE_PROMPT.format(
-            operation="cherry-pick" if sha1 else "merge",
-            conflict=conflictText,
-        )
-
-        self._allowWriteTools = True
-
         loop = QEventLoop()
         done: Dict[str, object] = {"ok": False, "reason": None}
 
-        timer = QTimer()
-        timer.setSingleShot(True)
-        timer.start(5 * 60 * 1000)
+        job = self.resolveFileAsync(
+            repoDir, sha1, path, conflictText, extraContext)
 
-        oldHistoryCount = len(model.history)
-
-        def _lastAssistantTextSince(startIndex: int) -> str:
-            # Find the latest assistant message text after startIndex.
-            for i in range(len(model.history) - 1, startIndex - 1, -1):
-                h = model.history[i]
-                if h.role == AiRole.Assistant:
-                    if h.message:
-                        return h.message
-            return ""
-
-        def _finalizeIfIdle():
-            # Timeout?
-            if timer.remainingTime() <= 0:
-                done["ok"] = False
-                done["reason"] = "Assistant response timed out"
-                model.requestInterruption()
-                loop.quit()
-                return
-
-            # No new messages yet.
-            if len(model.history) == oldHistoryCount:
-                return
-
-            # If the assistant explicitly reported failure, honor it.
-            response = _lastAssistantTextSince(oldHistoryCount)
-            if "QGITC_RESOLVE_FAILED:" in response:
-                parts = response.split("QGITC_RESOLVE_FAILED:", 1)
-                reason = parts[1].strip() if len(parts) > 1 else ""
-                done["ok"] = False
-                done["reason"] = reason or "Assistant reported failure"
-                loop.quit()
-                return
-
-            if "QGITC_RESOLVE_OK" not in response:
-                return
-
-            # Verify the working tree file is conflict-marker-free.
-            try:
-                absPath = os.path.join(repoDir, path)
-                with open(absPath, "rb") as f:
-                    merged = f.read()
-            except Exception as e:
-                done["ok"] = False
-                done["reason"] = f"read_back_failed: {e}"
-                loop.quit()
-                return
-
-            if b"<<<<<<<" in merged or b"=======" in merged or b">>>>>>>" in merged:
-                done["ok"] = False
-                done["reason"] = "conflict_markers_remain"
-                loop.quit()
-                return
-
-            done["ok"] = True
-            done["reason"] = None
+        def _onFinished(ok: bool, reason: object):
+            done["ok"] = ok
+            done["reason"] = reason
             loop.quit()
 
-        def _onNetworkError(errorMsg: str):
-            done["ok"] = False
-            done["reason"] = errorMsg
-            loop.quit()
-
-        timer.timeout.connect(_finalizeIfIdle)
-
-        # Re-check completion whenever the model finishes a generation step or
-        # a tool finishes (tools may trigger another continue-only generation).
-        model.finished.connect(_finalizeIfIdle)
-        model.networkError.connect(_onNetworkError)
-
-        self._doRequest(prompt, AiChatMode.Agent, RESOLVE_SYS_PROMPT)
+        job.finished.connect(_onFinished)
         loop.exec()
-
-        timer.stop()
-        model.finished.disconnect(_finalizeIfIdle)
-        model.networkError.disconnect(_onNetworkError)
-        self._allowWriteTools = False
 
         return bool(done.get("ok", False)), done.get("reason")

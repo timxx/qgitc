@@ -6,7 +6,7 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
 
-from qgitc.resolver.models import ResolveContext, ResolveOutcome
+from qgitc.resolver.models import ResolveContext
 from qgitc.resolver.services import ResolveServices
 
 

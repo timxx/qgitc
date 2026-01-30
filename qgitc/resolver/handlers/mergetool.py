@@ -6,7 +6,7 @@ from typing import Optional
 
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment
 
-from qgitc.gitutils import Git, GitProcess
+from qgitc.gitutils import GitProcess
 from qgitc.resolver.enums import (
     ResolveEventKind,
     ResolveMethod,
@@ -38,10 +38,7 @@ class GitMergetoolHandler(ResolveHandler):
         self._ctx = ctx
         self._services = services
 
-        # If there are no conflicts, nothing to do.
-        runner = services.runner
-        task = runner.run(lambda: Git.conflictFiles(ctx.repoDir) or [])
-        task.finished.connect(self._onConflictList)
+        self._start()
 
     def cancel(self):
         if self._process is not None:
@@ -75,15 +72,9 @@ class GitMergetoolHandler(ResolveHandler):
         self._awaitingPrompt = False
         self._pendingPrompt = None
 
-    def _onConflictList(self, ok: bool, result: object, error: object):
+    def _start(self):
         ctx = self._ctx
-        if ctx is None:
-            self.finished.emit(False, None)
-            return
-
-        conflicts = list(result or []) if ok else []
-        if not conflicts:
-            # Not handled.
+        if ctx is None or self._services is None:
             self.finished.emit(False, None)
             return
 
@@ -92,9 +83,7 @@ class GitMergetoolHandler(ResolveHandler):
         if ctx.mergetoolName:
             args.append(f"--tool={ctx.mergetoolName}")
 
-        # If caller provided a single path, pass it to mergetool.
-        if ctx.paths and len(ctx.paths) == 1:
-            args.append(ctx.paths[0])
+        args.append(ctx.path)
 
         self._process = QProcess(self)
         self._process.readyReadStandardOutput.connect(self._onStdout)
@@ -106,7 +95,7 @@ class GitMergetoolHandler(ResolveHandler):
         self._process.setProcessEnvironment(env)
 
         self._emit(ResolveEvent(kind=ResolveEventKind.STEP,
-                   message="run_mergetool", method=ResolveMethod.MERGETOOL))
+                   message=self.tr("Launching merge tool"), method=ResolveMethod.MERGETOOL))
         self._process.start(GitProcess.GIT_BIN, args)
 
     def _onStdout(self):
@@ -132,7 +121,7 @@ class GitMergetoolHandler(ResolveHandler):
             p = ResolvePrompt(
                 promptId=self._promptId,
                 kind=ResolvePromptKind.DELETED_CONFLICT_CHOICE,
-                title="Deleted merge conflict",
+                title=self.tr("Deleted merge conflict"),
                 text=promptText,
                 options=options,
                 meta={"isCreated": isCreated},
@@ -153,7 +142,7 @@ class GitMergetoolHandler(ResolveHandler):
             p = ResolvePrompt(
                 promptId=self._promptId,
                 kind=ResolvePromptKind.SYMLINK_CONFLICT_CHOICE,
-                title="Symlink conflict",
+                title=self.tr("Symlink conflict"),
                 text=promptText,
                 options=["l", "r", "a"],
             )
@@ -173,34 +162,24 @@ class GitMergetoolHandler(ResolveHandler):
             return
 
     def _onFinished(self, exitCode: int, exitStatus: object):
-        ctx = self._ctx
-        services = self._services
-        if ctx is None or services is None:
-            self.finished.emit(True, ResolveOutcome(
-                status=ResolveOutcomeStatus.FAILED, message="mergetool_failed"))
-            return
-
         if exitCode != 0:
             err = ""
             if self._process is not None:
                 err = self._process.readAllStandardError().data().decode("utf-8", errors="replace")
             out = ResolveOutcome(
-                status=ResolveOutcomeStatus.FAILED, message=err.strip() or "mergetool_failed")
+                status=ResolveOutcomeStatus.FAILED,
+                message=err.strip() or self.tr("Merge tool failed"),
+            )
             self.finished.emit(True, out)
             return
 
-        # Determine remaining conflicts.
-        task = services.runner.run(
-            lambda: Git.conflictFiles(ctx.repoDir) or [])
-        task.finished.connect(self._onRemaining)
 
-    def _onRemaining(self, ok: bool, result: object, error: object):
-        remaining = list(result or []) if ok else []
-        if remaining:
-            out = ResolveOutcome(status=ResolveOutcomeStatus.NEEDS_USER,
-                                 message="mergetool_needs_user", remainingConflicts=remaining)
-            self.finished.emit(True, out)
-            return
+        self._emit(ResolveEvent(
+            kind=ResolveEventKind.FILE_RESOLVED,
+            message=self.tr("Resolved {path}").format(path=self._ctx.path),
+            path=self._ctx.path,
+            method=ResolveMethod.MERGETOOL,
+        ))
         out = ResolveOutcome(
-            status=ResolveOutcomeStatus.RESOLVED, message="mergetool_resolved")
+            status=ResolveOutcomeStatus.RESOLVED, message=self.tr("Resolved with merge tool"))
         self.finished.emit(True, out)

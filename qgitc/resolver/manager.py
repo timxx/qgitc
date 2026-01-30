@@ -35,7 +35,6 @@ class ResolveManager(QObject):
         self._idx = -1
         self._pendingPrompt: Optional[ResolvePrompt] = None
 
-        # No getattr/hasattr contract: services must be correct.
         self._services.manager = self
 
         for h in self._handlers:
@@ -46,7 +45,7 @@ class ResolveManager(QObject):
         self._idx = -1
         self._pendingPrompt = None
         self._emit(ResolveEvent(kind=ResolveEventKind.STARTED,
-                   message="resolve_started"))
+               message=self.tr("Resolve started")))
         self._startNextHandler()
 
     def cancel(self):
@@ -82,7 +81,9 @@ class ResolveManager(QObject):
         if self._idx >= len(self._handlers):
             # Nothing handled.
             out = ResolveOutcome(
-                status=ResolveOutcomeStatus.FAILED, message="no_handler")
+                status=ResolveOutcomeStatus.FAILED,
+                message=self.tr("No resolver handler available"),
+            )
             self.completed.emit(out)
             self._emit(ResolveEvent(kind=ResolveEventKind.COMPLETED,
                        outcome=out, message=out.message or ""))

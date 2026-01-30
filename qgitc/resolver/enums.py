@@ -32,3 +32,9 @@ class ResolveMethod(IntEnum):
     OURS = 3
     THEIRS = 4
     TRIVIAL = 5
+
+
+class ResolveOperation(IntEnum):
+    MERGE = 1
+    CHERRY_PICK = 2
+    AM = 3

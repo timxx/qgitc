@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from qgitc.resolver.enums import (
     ResolveEventKind,
     ResolveMethod,
+    ResolveOperation,
     ResolveOutcomeStatus,
     ResolvePromptKind,
 )
@@ -21,9 +22,9 @@ class ResolvePolicy:
 @dataclass(slots=True)
 class ResolveContext:
     repoDir: str
-    operation: str  # 'merge' | 'cherry-pick' | 'am'
+    operation: ResolveOperation
     sha1: str = ""
-    paths: Optional[List[str]] = None
+    path: Optional[str] = None
     extraContext: Optional[str] = None
     initialError: Optional[str] = None
     mergetoolName: Optional[str] = None
