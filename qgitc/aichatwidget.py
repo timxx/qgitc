@@ -1546,24 +1546,3 @@ class AiChatWidget(QWidget):
         )
         QTimer.singleShot(0, job.start)
         return job
-
-    def resolveConflictSync(self, repoDir: str, sha1: str, path: str, conflictText: str, extraContext: str = None) -> Tuple[bool, Optional[str]]:
-        """Resolve a conflicted file given an excerpt of the working tree file.
-
-        Returns (ok, reason). On success, ok=True and reason=None.
-        """
-        loop = QEventLoop()
-        done: Dict[str, object] = {"ok": False, "reason": None}
-
-        job = self.resolveFileAsync(
-            repoDir, sha1, path, conflictText, extraContext)
-
-        def _onFinished(ok: bool, reason: object):
-            done["ok"] = ok
-            done["reason"] = reason
-            loop.quit()
-
-        job.finished.connect(_onFinished)
-        loop.exec()
-
-        return bool(done.get("ok", False)), done.get("reason")

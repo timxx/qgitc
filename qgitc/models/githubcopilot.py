@@ -9,7 +9,7 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters, AiRole
+from qgitc.llm import AiModelBase, AiModelFactory, AiParameters, AiRole
 from qgitc.settings import Settings
 
 

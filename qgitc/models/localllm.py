@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.llm import AiChatMode, AiModelFactory
+from qgitc.llm import AiModelFactory
 from qgitc.models.chatgpt import ChatGPTModel
 
 
