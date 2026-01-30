@@ -577,25 +577,3 @@ def write_file(path: str, content: str, source_path: Optional[str] = None) -> No
 
 def remove_file(path: str) -> None:
     pathlib.Path(path).unlink(missing_ok=True)
-
-
-# --------------------------------------------------------------------------- #
-#  CLI entry-point
-# --------------------------------------------------------------------------- #
-def main() -> None:
-    import sys
-
-    patch_text = sys.stdin.read()
-    if not patch_text:
-        print("Please pass patch text through stdin", file=sys.stderr)
-        return
-    try:
-        result = process_patch(patch_text, open_file, write_file, remove_file)
-    except DiffError as exc:
-        print(exc, file=sys.stderr)
-        return
-    print(result)
-
-
-if __name__ == "__main__":
-    main()
