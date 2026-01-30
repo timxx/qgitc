@@ -100,11 +100,14 @@ class AiModelBase(QObject):
 
         self._data: bytes = b""
         self._isStreaming = False
-        self._role = AiRole.Assistant
-        self._content = ""
         self._firstDelta = True
-        self._toolCallAcc: Dict[int, Dict[str, Any]] = {}
-        self._toolCalls = []
+
+        # Per-choice accumulators for streaming responses.
+        # OpenAI can legally return multiple choices in one response.
+        self._choiceRoles = {}
+        self._choiceContents = {}
+        # Nested mapping: choiceIndex -> (toolCallIndex -> toolCall dict accumulator)
+        self._choiceToolCallAcc = {}
 
     def clear(self):
         self._history.clear()
@@ -272,11 +275,11 @@ class AiModelBase(QObject):
 
     def _initReply(self, reply: QNetworkReply):
         self._data = b""
-        self._content = ""
-        self._role = AiRole.Assistant
         self._firstDelta = True
-        self._toolCallAcc = {}
-        self._toolCalls = []
+
+        self._choiceRoles = {}
+        self._choiceContents = {}
+        self._choiceToolCallAcc = {}
 
         if not reply:
             return
@@ -326,8 +329,6 @@ class AiModelBase(QObject):
         self._reply = None
         self.finished.emit()
         self._isStreaming = False
-        self._content = ""
-        self._toolCalls = []
 
     def _handleData(self, data: bytes):
         if self._isStreaming:
@@ -348,9 +349,13 @@ class AiModelBase(QObject):
             self.handleNonStreamResponse(data)
 
     def _handleFinished(self):
-        if self._content or self._toolCalls:
-            self.addHistory(self._role, self._content,
-                            toolCalls=self._toolCalls)
+        # Iterate over a snapshot since we'll pop from the dict.
+        for choiceIndex in list(self._choiceRoles.keys()):
+            role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
+            fullContent = self._choiceContents.pop(choiceIndex, None)
+            toolCalls = self._choiceToolCallAcc.pop(choiceIndex, {})
+            if fullContent or toolCalls:
+                self.addHistory(role, fullContent, toolCalls=toolCalls)
 
     def _handleError(self, code: QNetworkReply.NetworkError):
         if code in [QNetworkReply.ConnectionRefusedError, QNetworkReply.HostNotFoundError]:
@@ -385,55 +390,80 @@ class AiModelBase(QObject):
         if not choices:
             return
 
-        choice0 = choices[0]
-        delta = choice0.get("delta")
-        if not delta:
-            return
+        # OpenAI can stream multiple choices concurrently.
+        for choice in choices:
+            choiceIndex = choice.get("index", 0)
+            delta = choice.get("delta", {})
+            finishReason = choice.get("finish_reason")
 
-        if "role" in delta and delta["role"]:
-            self._role = AiRole.fromString(delta["role"])
-        # Tool calls can stream as incremental chunks of function.arguments.
-        if "tool_calls" in delta and delta["tool_calls"]:
-            for tc in delta["tool_calls"]:
-                idx = tc.get("index")
-                if idx is None:
-                    continue
-                acc = self._toolCallAcc.get(idx) or {"type": "function"}
-                if tc.get("id"):
-                    acc["id"] = tc.get("id")
-                if tc.get("type"):
-                    acc["type"] = tc.get("type")
-                func = tc.get("function") or {}
-                if func.get("name"):
-                    acc.setdefault("function", {})["name"] = func.get("name")
-                if func.get("arguments"):
-                    acc.setdefault("function", {})
-                    prev = acc["function"].get("arguments", "")
-                    acc["function"]["arguments"] = prev + func.get("arguments")
-                self._toolCallAcc[idx] = acc
+            if choiceIndex not in self._choiceRoles:
+                self._choiceRoles[choiceIndex] = AiRole.Assistant
+            if choiceIndex not in self._choiceContents:
+                self._choiceContents[choiceIndex] = ""
 
-        # If model signaled tool_calls completion in finish_reason, emit a tool-only response.
-        if choice0.get("finish_reason") == "tool_calls" and self._toolCallAcc:
-            aiResponse = AiResponse()
-            aiResponse.is_delta = False
-            aiResponse.role = AiRole.Assistant
-            aiResponse.message = ""
-            aiResponse.tool_calls = [self._toolCallAcc[i]
-                                     for i in sorted(self._toolCallAcc.keys())]
-            self._toolCalls = aiResponse.tool_calls
-            self.responseAvailable.emit(aiResponse)
-            return
+            roleStr = delta.get("role")
+            if roleStr:
+                self._choiceRoles[choiceIndex] = AiRole.fromString(roleStr)
 
-        content = self._getContent(delta)
-        if content:
-            aiResponse = AiResponse()
-            aiResponse.is_delta = True
-            aiResponse.role = AiRole.Assistant
-            aiResponse.message = content
-            aiResponse.first_delta = self._firstDelta
-            self.responseAvailable.emit(aiResponse)
-            self._content += aiResponse.message
-            self._firstDelta = False
+            # Tool calls can stream as incremental chunks of function.arguments.
+            tools = delta.get("tool_calls")
+            if tools:
+                accMap = self._choiceToolCallAcc.get(choiceIndex, {})
+                for tc in tools:
+                    idx = tc.get("index")
+                    if idx is None:
+                        continue
+                    acc = accMap.get(idx, {"type": "function"})
+                    if tc.get("id"):
+                        acc["id"] = tc.get("id")
+                    if tc.get("type"):
+                        acc["type"] = tc.get("type")
+                    func = tc.get("function", {})
+                    if func.get("name"):
+                        acc.setdefault("function", {})[
+                            "name"] = func.get("name")
+                    if func.get("arguments"):
+                        acc.setdefault("function", {})
+                        prev = acc["function"].get("arguments", "")
+                        acc["function"]["arguments"] = prev + \
+                            func.get("arguments")
+                    accMap[idx] = acc
+                self._choiceToolCallAcc[choiceIndex] = accMap
+
+            content = self._getContent(delta)
+            if content:
+                self._choiceContents[choiceIndex] = self._choiceContents.get(
+                    choiceIndex, "") + content
+
+            # If model signaled completion for this choice, commit immediately.
+            if finishReason in ("stop", "tool_calls"):
+                role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
+                fullContent = self._choiceContents.pop(choiceIndex, None)
+                toolCalls = None
+                if finishReason == "tool_calls":
+                    accMap = self._choiceToolCallAcc.pop(choiceIndex, {})
+                    toolCalls = [accMap[i]
+                                 for i in sorted(accMap.keys())] if accMap else []
+                    if toolCalls:
+                        aiResponse = AiResponse()
+                        aiResponse.is_delta = False
+                        aiResponse.role = role
+                        aiResponse.message = ""  # message is already sent in previous deltas
+                        aiResponse.tool_calls = toolCalls
+                        aiResponse.first_delta = self._firstDelta and choiceIndex == 0
+                        self.responseAvailable.emit(aiResponse)
+
+                if fullContent or toolCalls:
+                    self.addHistory(role, fullContent, toolCalls=toolCalls)
+            elif content:
+                aiResponse = AiResponse()
+                aiResponse.is_delta = True
+                aiResponse.role = self._choiceRoles.get(
+                    choiceIndex, AiRole.Assistant)
+                aiResponse.message = content
+                aiResponse.first_delta = self._firstDelta and choiceIndex == 0
+                self.responseAvailable.emit(aiResponse)
+                self._firstDelta = False
 
     def handleNonStreamResponse(self, response: bytes):
         try:
@@ -442,23 +472,24 @@ class AiModelBase(QObject):
             logger.error("Failed to decode JSON response: %s", e)
             return
         usage: dict = data.get("usage", {})
-        aiResponse = AiResponse()
-        aiResponse.total_tokens = usage.get("total_tokens", 0)
+        totalTokens = usage.get("total_tokens", 0)
 
-        for choice in data["choices"]:
-            message: dict = choice.get("message") or {}
+        for choice in data.get("choices", []):
+            message: dict = choice.get("message", {})
             content = self._getContent(message)
-            role = message.get("role", "assistant")
-            aiResponse.role = AiRole.Assistant
-            aiResponse.message = content or ""
-            if message.get("tool_calls"):
-                aiResponse.tool_calls = message.get("tool_calls")
-                self._toolCalls = aiResponse.tool_calls
-            self.responseAvailable.emit(aiResponse)
-            break
+            role = AiRole.fromString(message.get("role", "assistant"))
+            tool_calls = message.get("tool_calls")
 
-        self._role = AiRole.fromString(role)
-        self._content = content
+            aiResponse = AiResponse()
+            aiResponse.total_tokens = totalTokens
+            aiResponse.role = role
+            aiResponse.message = content
+            if tool_calls:
+                aiResponse.tool_calls = tool_calls
+            self.responseAvailable.emit(aiResponse)
+
+            if content or tool_calls:
+                self.addHistory(role, content, toolCalls=tool_calls)
 
     @staticmethod
     def _getContent(data: dict) -> str:
