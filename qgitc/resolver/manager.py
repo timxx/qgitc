@@ -34,6 +34,8 @@ class ResolveManager(QObject):
         self._ctx: Optional[ResolveContext] = None
         self._idx = -1
         self._pendingPrompt: Optional[ResolvePrompt] = None
+        self._lastResolved: Optional[ResolveOutcome] = None
+        self._done = False
 
         self._services.manager = self
 
@@ -44,8 +46,10 @@ class ResolveManager(QObject):
         self._ctx = ctx
         self._idx = -1
         self._pendingPrompt = None
+        self._lastResolved = None
+        self._done = False
         self._emit(ResolveEvent(kind=ResolveEventKind.STARTED,
-               message=self.tr("Resolve started")))
+                                message=self.tr("Resolve started")))
         self._startNextHandler()
 
     def cancel(self):
@@ -79,11 +83,14 @@ class ResolveManager(QObject):
     def _startNextHandler(self):
         self._idx += 1
         if self._idx >= len(self._handlers):
-            # Nothing handled.
-            out = ResolveOutcome(
-                status=ResolveOutcomeStatus.FAILED,
-                message=self.tr("No resolver handler available"),
-            )
+            # End of pipeline.
+            out = self._lastResolved
+            if out is None:
+                out = ResolveOutcome(
+                    status=ResolveOutcomeStatus.FAILED,
+                    message=self.tr("No resolver handler available"),
+                )
+            self._done = True
             self.completed.emit(out)
             self._emit(ResolveEvent(kind=ResolveEventKind.COMPLETED,
                        outcome=out, message=out.message or ""))
@@ -93,10 +100,20 @@ class ResolveManager(QObject):
         h.start(self._ctx, self._services)
 
     def _onHandlerFinished(self, handled: bool, outcomeObj: object):
+        if self._done:
+            return
+
         if handled:
             outcome: ResolveOutcome = outcomeObj
+            if outcome.status == ResolveOutcomeStatus.RESOLVED:
+                self._lastResolved = outcome
+                self._startNextHandler()
+                return
+
+            self._done = True
             self.completed.emit(outcome)
             self._emit(ResolveEvent(kind=ResolveEventKind.COMPLETED,
                        outcome=outcome, message=outcome.message or ""))
             return
+
         self._startNextHandler()

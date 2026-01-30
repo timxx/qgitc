@@ -24,7 +24,7 @@ class ResolveContext:
     repoDir: str
     operation: ResolveOperation
     sha1: str = ""
-    path: Optional[str] = None
+    path: str = ""
     extraContext: Optional[str] = None
     initialError: Optional[str] = None
     mergetoolName: Optional[str] = None
