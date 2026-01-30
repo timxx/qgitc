@@ -32,8 +32,17 @@ class TaskRunner(QObject):
     def __init__(self, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._pool = QThreadPool.globalInstance()
+        self._pending: set[TaskResult] = set()
 
     def run(self, fn: Callable[[], Any]) -> TaskResult:
         resultObj = TaskResult()
+        # Keep TaskResult alive until its finished signal is delivered.
+        # Otherwise, the object can be garbage-collected and queued signals may be dropped.
+        self._pending.add(resultObj)
+
+        def _release(ok: bool, result: object, error: object, ro: TaskResult = resultObj):
+            self._pending.discard(ro)
+
+        resultObj.finished.connect(_release)
         self._pool.start(_Runnable(resultObj, fn))
         return resultObj
