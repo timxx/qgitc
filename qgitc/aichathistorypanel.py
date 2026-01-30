@@ -1,17 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import json
-from datetime import datetime
 from typing import List
 
-from PySide6.QtCore import (
-    QAbstractListModel,
-    QItemSelectionModel,
-    QModelIndex,
-    QSortFilterProxyModel,
-    Qt,
-    Signal,
-)
+from PySide6.QtCore import QItemSelectionModel, QModelIndex, Qt, Signal
 from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -25,144 +17,20 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.aichathistory import AiChatHistory
-from qgitc.applicationbase import qtVersion
+from qgitc.aichathistorymodel import AiChatHistoryFilterModel, AiChatHistoryModel
+from qgitc.aichathistorystore import AiChatHistoryStore
 from qgitc.colorediconbutton import ColoredIconButton
 from qgitc.common import dataDirPath
-from qgitc.llm import AiModelBase, AiModelFactory
-
-
-class AiChatHistoryModel(QAbstractListModel):
-    """Custom model for chat histories"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._histories: List[AiChatHistory] = []
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._histories)
-
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid() or index.row() >= len(self._histories):
-            return None
-
-        history = self._histories[index.row()]
-
-        if role == Qt.DisplayRole:
-            return history.title or self.tr("New Conversation")
-        elif role == Qt.UserRole:
-            return history
-        elif role == Qt.ToolTipRole:
-            modelStr = self.tr("Model: ")
-            createdStr = self.tr("Created: ")
-            return f"{modelStr}{history.modelId}\n{createdStr}{history.timestamp[:19]}"
-
-        return None
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if index.isValid() and role == Qt.UserRole:
-            self._histories[index.row()] = value
-            self.dataChanged.emit(index, index)
-            return True
-        return False
-
-    def insertHistory(self, row, history: AiChatHistory):
-        self.beginInsertRows(QModelIndex(), row, row)
-        self._histories.insert(row, history)
-        self.endInsertRows()
-
-    def removeHistory(self, row):
-        if 0 <= row < len(self._histories):
-            self.beginRemoveRows(QModelIndex(), row, row)
-            del self._histories[row]
-            self.endRemoveRows()
-
-    def clear(self):
-        self.beginResetModel()
-        self._histories.clear()
-        self.endResetModel()
-
-    def setHistories(self, histories: List[AiChatHistory]):
-        self.beginResetModel()
-        self._histories = histories.copy()
-        self.endResetModel()
-
-    def getHistory(self, row) -> AiChatHistory:
-        if 0 <= row < len(self._histories):
-            return self._histories[row]
-        return None
-
-    def findHistoryRow(self, historyId: str) -> int:
-        for i, history in enumerate(self._histories):
-            if history.historyId == historyId:
-                return i
-        return -1
-
-    def moveToTop(self, row):
-        if row > 0:
-            newRow = 0
-            # Check if we should keep "New Conversation" at top
-            if len(self._histories) > 1:
-                firstHistory = self._histories[0]
-                if not firstHistory.messages and firstHistory.title in ['', self.tr("New Conversation")]:
-                    newRow = 1
-
-            if newRow != row:
-                self.beginMoveRows(QModelIndex(), row, row,
-                                   QModelIndex(), newRow)
-                history = self._histories.pop(row)
-                self._histories.insert(newRow, history)
-                self.endMoveRows()
-                return newRow
-        return row
-
-
-class AiChatHistoryFilterModel(QSortFilterProxyModel):
-    """Filter model for searching chat histories"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._searchText = ""
-        self.setFilterCaseSensitivity(Qt.CaseInsensitive)
-
-    def setSearchText(self, text: str):
-        self._searchText = text.strip().lower()
-        if qtVersion() >= (6, 10, 0):
-            self.beginFilterChange()
-            self.endFilterChange()
-        else:
-            self.invalidateFilter()
-
-    def filterAcceptsRow(self, sourceRow, sourceParent):
-        if not self._searchText:
-            return True
-
-        model = self.sourceModel()
-        index = model.index(sourceRow, 0, sourceParent)
-        history: AiChatHistory = model.data(index, Qt.UserRole)
-        if not history:
-            return False
-
-        # Search in title
-        if self._searchText in history.title.lower():
-            return True
-
-        # Search in messages
-        for message in history.messages:
-            content: str = message.get('content', '')
-            if self._searchText in content.lower():
-                return True
-
-        return False
 
 
 class AiChatHistoryPanel(QWidget):
 
     requestNewChat = Signal()
     historySelectionChanged = Signal(AiChatHistory)
-    historyRemoved = Signal(str)  # historyId
 
-    def __init__(self, parent=None):
+    def __init__(self, store: AiChatHistoryStore, parent=None):
         super().__init__(parent)
+        self._store = store
         self._setupUi()
 
     def _setupUi(self):
@@ -189,7 +57,7 @@ class AiChatHistoryPanel(QWidget):
         mainLayout.addWidget(self._searchEdit)
 
         # History list with model/view
-        self._historyModel = AiChatHistoryModel(self)
+        self._historyModel = self._store.model()
         self._filterModel = AiChatHistoryFilterModel(self)
         self._filterModel.setSourceModel(self._historyModel)
 
@@ -272,20 +140,12 @@ class AiChatHistoryPanel(QWidget):
         self.historySelectionChanged.emit(chatHistory)
 
     def clear(self):
-        self._historyModel.clear()
         self._searchEdit.clear()
 
-    def loadHistories(self, histories: List[AiChatHistory]):
-        self.clear()
-
-        # Sort histories by timestamp (newest first)
-        sorted_histories = sorted(
-            histories,
-            key=lambda h: h.timestamp,
-            reverse=True
-        )
-
-        self._historyModel.setHistories(sorted_histories)
+        # Clear selection without affecting the shared model.
+        selModel = self._historyList.selectionModel()
+        if selModel is not None:
+            selModel.clearSelection()
 
     def currentHistory(self) -> AiChatHistory:
         """Get the currently selected history item"""
@@ -295,18 +155,7 @@ class AiChatHistoryPanel(QWidget):
         return None
 
     def updateTitle(self, historyId: str, newTitle: str):
-        """Update the title of a history item"""
-        row = self._historyModel.findHistoryRow(historyId)
-        if row >= 0:
-            sourceIndex = self._historyModel.index(row, 0)
-            chatHistory: AiChatHistory = self._historyModel.data(
-                sourceIndex, Qt.UserRole)
-            if chatHistory:
-                chatHistory.title = newTitle
-                self._historyModel.setData(
-                    sourceIndex, chatHistory, Qt.UserRole)
-                return chatHistory
-        return None
+        return self._store.updateTitle(historyId, newTitle)
 
     def updateCurrentModelId(self, modelId: str):
         current = self._historyList.currentIndex()
@@ -319,53 +168,10 @@ class AiChatHistoryPanel(QWidget):
 
         chatHistory: AiChatHistory = self._historyModel.data(
             sourceIndex, Qt.UserRole)
-        if chatHistory and chatHistory.modelId != modelId:
-            chatHistory.modelId = modelId
-            self._historyModel.setData(sourceIndex, chatHistory, Qt.UserRole)
-            return chatHistory
-
-        return None
-
-    def updateCurrentHistory(self, model: AiModelBase):
-        """Update the current selected history item"""
-        current = self._historyList.currentIndex()
-        if not current.isValid():
+        if not chatHistory:
             return None
 
-        # Get the source index from the filter model
-        sourceIndex = self._filterModel.mapToSource(current)
-        if not sourceIndex.isValid():
-            return None
-
-        messages = []
-        for message in model.history:
-            data = {
-                'role': message.role.name.lower(),
-                'content': message.message,
-                'description': message.description,
-                'tool_calls': message.toolCalls
-            }
-            messages.append(data)
-
-        chatHistory: AiChatHistory = self._historyModel.data(
-            sourceIndex, Qt.UserRole)
-        if chatHistory:
-            chatHistory.messages = messages
-            chatHistory.modelKey = AiModelFactory.modelKey(model)
-            chatHistory.modelId = model.modelId or model.name
-            chatHistory.timestamp = datetime.now().isoformat()
-            self._historyModel.setData(sourceIndex, chatHistory, Qt.UserRole)
-
-            # Move to top
-            newRow = self._historyModel.moveToTop(sourceIndex.row())
-
-            # Update selection to the new position
-            newSourceIndex = self._historyModel.index(newRow, 0)
-            newFilterIndex = self._filterModel.mapFromSource(newSourceIndex)
-            if newFilterIndex.isValid():
-                self._selectSingleIndex(newFilterIndex)
-
-        return chatHistory
+        return self._store.updateCurrentModelId(chatHistory.historyId, modelId)
 
     def setCurrentHistory(self, historyId: str):
         """Set the current selected history by ID"""
@@ -377,7 +183,7 @@ class AiChatHistoryPanel(QWidget):
                 self._selectSingleIndex(filterIndex)
 
     def insertHistoryAtTop(self, history: AiChatHistory, select: bool = True):
-        self._historyModel.insertHistory(0, history)
+        self._store.insertHistoryAtTop(history)
         if select:
             # Select the newly inserted item
             sourceIndex = self._historyModel.index(0, 0)
@@ -465,13 +271,7 @@ class AiChatHistoryPanel(QWidget):
         )
 
         if reply == QMessageBox.Yes:
-            # Map filter index to source index
-            sourceIndex = self._filterModel.mapToSource(filterIndex)
-            if sourceIndex.isValid():
-                # Remove from model
-                self._historyModel.removeHistory(sourceIndex.row())
-                # Emit signal for external handling (e.g., delete from storage)
-                self.historyRemoved.emit(chatHistory.historyId)
+            self._store.remove(chatHistory.historyId)
 
     def _removeSelectedHistories(self):
         """Remove all selected chat history items"""
@@ -500,24 +300,13 @@ class AiChatHistoryPanel(QWidget):
         )
 
         if reply == QMessageBox.Yes:
-            # Collect histories to remove and their source rows
-            historiesToRemove = []
+            historyIds = []
             for filterIndex in selectedIndexes:
-                sourceIndex = self._filterModel.mapToSource(filterIndex)
-                if sourceIndex.isValid():
-                    chatHistory = self._historyModel.data(
-                        sourceIndex, Qt.UserRole)
-                    if chatHistory:
-                        historiesToRemove.append(
-                            (sourceIndex.row(), chatHistory))
-
-            # Sort by row in descending order to remove from bottom to top
-            historiesToRemove.sort(key=lambda x: x[0], reverse=True)
-
-            # Remove histories
-            for row, chatHistory in historiesToRemove:
-                self._historyModel.removeHistory(row)
-                self.historyRemoved.emit(chatHistory.historyId)
+                chatHistory = self._filterModel.data(filterIndex, Qt.UserRole)
+                if chatHistory:
+                    historyIds.append(chatHistory.historyId)
+            if historyIds:
+                self._store.removeMany(historyIds)
 
     def _removeAllHistories(self):
         """Remove all chat history items"""
@@ -535,17 +324,4 @@ class AiChatHistoryPanel(QWidget):
         )
 
         if reply == QMessageBox.Yes:
-            # Collect all history IDs before clearing
-            historyIds = []
-            for row in range(self._historyModel.rowCount()):
-                index = self._historyModel.index(row, 0)
-                chatHistory = self._historyModel.data(index, Qt.UserRole)
-                if chatHistory:
-                    historyIds.append(chatHistory.historyId)
-
-            # Clear the model
-            self._historyModel.clear()
-
-            # Emit signals for all removed histories
-            for historyId in historyIds:
-                self.historyRemoved.emit(historyId)
+            self._store.clearAll()

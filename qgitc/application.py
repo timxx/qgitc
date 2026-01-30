@@ -23,6 +23,7 @@ from PySide6.QtGui import QDesktopServices, QIcon, QPalette
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QMessageBox
 
+from qgitc.aichathistorystore import AiChatHistoryStore
 from qgitc.aichatwindow import AiChatWindow
 from qgitc.applicationbase import ApplicationBase, qtVersion
 from qgitc.blamewindow import BlameWindow
@@ -119,9 +120,13 @@ class Application(ApplicationBase):
         self._watchDog.start()
 
         self.aboutToQuit.connect(self._onAboutToQuit)
+        self._aiChatHistoryStore = AiChatHistoryStore(self._settings, self)
 
     def settings(self):
         return self._settings
+
+    def aiChatHistoryStore(self):
+        return self._aiChatHistoryStore
 
     def setupTranslator(self):
         if self.testing:

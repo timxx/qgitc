@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
-from typing import Dict, List, cast
+from typing import TYPE_CHECKING, Dict, List, cast
 
 from PySide6.QtCore import QThread, Signal, qVersion
 from PySide6.QtNetwork import QNetworkAccessManager
@@ -11,6 +11,9 @@ from qgitc.colorschema import ColorSchema
 from qgitc.settings import Settings
 from qgitc.telemetry import TelemetryBase
 from qgitc.windowtype import WindowType
+
+if TYPE_CHECKING:
+    from qgitc.aichathistorystore import AiChatHistoryStore
 
 
 def qtVersion():
@@ -35,6 +38,9 @@ class ApplicationBase(QApplication):
 
     @abc.abstractmethod
     def settings(self) -> Settings: ...
+
+    @abc.abstractmethod
+    def aiChatHistoryStore(self) -> 'AiChatHistoryStore': ...
 
     @abc.abstractmethod
     def terminateThread(self, thread: QThread, waitTime=3000): ...

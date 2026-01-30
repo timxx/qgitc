@@ -173,11 +173,12 @@ class AiChatWidget(QWidget):
         return False
 
     def _setupHistoryPanel(self):
-        self._historyPanel = AiChatHistoryPanel(self)
+        store = ApplicationBase.instance().aiChatHistoryStore()
+        self._historyPanel = AiChatHistoryPanel(store, self)
         self._historyPanel.requestNewChat.connect(self.onNewChatRequested)
         self._historyPanel.historySelectionChanged.connect(
             self._onHistorySelectionChanged)
-        self._historyPanel.historyRemoved.connect(self._onHistoryRemoved)
+        store.historyRemoved.connect(self._onHistoryRemoved)
 
         if not self._embedded:
             self.splitter.addWidget(self._historyPanel)
@@ -643,12 +644,15 @@ class AiChatWidget(QWidget):
         self._updateStatus()
 
     def _saveChatHistory(self, model: AiModelBase):
-        chatHistory = self._historyPanel.updateCurrentHistory(model)
-        if chatHistory:
-            # Save to settings
-            settings = ApplicationBase.instance().settings()
-            settings.saveChatHistory(
-                chatHistory.historyId, chatHistory.toDict())
+        chatHistory = self._historyPanel.currentHistory()
+        if not chatHistory:
+            return
+
+        store = ApplicationBase.instance().aiChatHistoryStore()
+        updated = store.updateFromModel(chatHistory.historyId, model)
+        if updated:
+            # Keep selection stable after potential row moves.
+            self._historyPanel.setCurrentHistory(updated.historyId)
 
     def _updateStatus(self):
         self._contextPanel.btnSend.setVisible(True)
@@ -1049,30 +1053,23 @@ class AiChatWidget(QWidget):
         self._historyPanel.updateCurrentModelId(model.modelId)
 
     def _onDelayInit(self):
-        # Load chat histories from settings
-        settings = ApplicationBase.instance().settings()
-        histories = settings.chatHistories()
-        chatHistories: List[AiChatHistory] = []
-
-        for historyData in histories:
-            if isinstance(historyData, dict):
-                history = AiChatHistory.fromDict(historyData)
-                chatHistories.append(history)
-
+        # Load chat histories once via the shared store.
+        store = ApplicationBase.instance().aiChatHistoryStore()
         curHistory = self._historyPanel.currentHistory()
+        store.ensureLoaded()
 
-        self._historyPanel.loadHistories(chatHistories)
+        # Preserve any unsaved in-memory conversation created before load.
+        if curHistory and not store.get(curHistory.historyId):
+            self._historyPanel.blockSignals(True)
+            self._historyPanel.insertHistoryAtTop(curHistory)
+            self._historyPanel.blockSignals(False)
 
         self._setupModels()
         self._isInitialized = True
         self.initialized.emit()
 
-        # if there is a new conversation from code review, keep it
-        if curHistory and not curHistory.messages:
-            self._historyPanel.blockSignals(True)
-            self._historyPanel.insertHistoryAtTop(curHistory)
-            self._historyPanel.blockSignals(False)
-        else:
+        # If there is no active empty conversation, create one.
+        if not (curHistory and not curHistory.messages):
             self._createNewConversation()
 
         self._historyPanel.setEnabled(True)
@@ -1126,14 +1123,12 @@ class AiChatWidget(QWidget):
 
     def _onHistoryRemoved(self, historyId: str):
         """Handle history removal"""
-        # Remove from persistent storage
-        settings = ApplicationBase.instance().settings()
-        settings.removeChatHistory(historyId)
-
         # If the removed history was currently selected, create a new conversation
         currentHistory = self._historyPanel.currentHistory()
         if not currentHistory or currentHistory.historyId == historyId:
             self._createNewConversation()
+
+        currentHistory = self._historyPanel.currentHistory()
 
         self._setEmbeddedRecentListVisible(
             currentHistory and not currentHistory.messages)
