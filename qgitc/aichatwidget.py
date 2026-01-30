@@ -1368,6 +1368,9 @@ class AiChatWidget(QWidget):
                     toolType = tool.tool_type if tool else ToolType.WRITE
 
                     if addToChatBot:
+                        if content:
+                            chatbot.appendResponse(AiResponse(role, content))
+
                         uiResponse = self._makeUiToolCallResponse(
                             toolName, func.get("arguments"))
                         collapsed = bool(

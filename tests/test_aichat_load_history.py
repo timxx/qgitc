@@ -311,6 +311,80 @@ class TestAiChatLoadHistory(TestBase):
         ]
         self.assertGreaterEqual(len(tool_output_calls), 1)
 
+    def test_restore_tool_call_with_assistant_content(self):
+        """Restoring history should show the assistant message even if it also contains tool_calls.
+
+        Regression test: when restoring an assistant message that had both `content`
+        and `tool_calls`, the assistant message itself must still be appended to the UI
+        (in addition to the tool call entry).
+        """
+        calls = []
+
+        def _appendResponse(resp, collapsed=False):
+            calls.append({
+                "type": "append",
+                "role": resp.role.name.lower(),
+                "content": resp.message,
+                "description": resp.description or "",
+                "collapsed": bool(collapsed),
+            })
+
+        self.chatWidget.messages.appendResponse = MagicMock(
+            side_effect=_appendResponse)
+        # Avoid depending on exact tool confirmation internals for this test.
+        self.chatWidget.messages.insertToolConfirmation = MagicMock()
+
+        messages = [
+            {"role": "user", "content": "please commit"},
+            {
+                "role": "assistant",
+                "content": "I'll commit your changes now.",
+                "tool_calls": [
+                    {
+                        "id": "tc_content_1",
+                        "type": "function",
+                        "function": {
+                            "name": "git_commit",
+                            "arguments": '{"message": "test"}',
+                        },
+                    }
+                ],
+            },
+            # Tool result exists in history.
+            {
+                "role": "tool",
+                "content": "done",
+                "description": "✓ `git_commit`",
+                "tool_calls": {"tool_call_id": "tc_content_1"},
+            },
+        ]
+
+        self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=True)
+
+        # Expect: user message, assistant content message, tool-call UI entry, tool message.
+        append_calls = [c for c in calls if c["type"] == "append"]
+        self.assertGreaterEqual(len(append_calls), 4)
+
+        self.assertEqual(append_calls[0]["role"], "user")
+        self.assertEqual(append_calls[0]["content"], "please commit")
+
+        # The assistant message content should be shown before the tool-call UI entry.
+        self.assertEqual(append_calls[1]["role"], "assistant")
+        self.assertEqual(append_calls[1]["content"],
+                         "I'll commit your changes now.")
+
+        # Ensure the tool result appears somewhere after.
+        tool_roles = [c["role"] for c in append_calls]
+        self.assertIn("tool", tool_roles)
+
+        # Ensure the model history still contains the assistant content message.
+        assistant_history = [
+            h for h in self._mockChatModel.history if h.role == AiRole.Assistant
+        ]
+        self.assertEqual(len(assistant_history), 1)
+        self.assertEqual(
+            assistant_history[0].message, "I'll commit your changes now.")
+
     def test_write_tool_cancelled_if_conversation_continued(self):
         """WRITE tools without results should be cancelled if conversation continued after."""
         calls = []
