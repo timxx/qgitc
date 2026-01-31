@@ -9,7 +9,15 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, Qt, QTimer, Signal
 
 
 class TaskResult(QObject):
+    _deliver = Signal(bool, object, object)
     finished = Signal(bool, object, object)  # ok, result, error
+
+    def __init__(self, parent: Optional[QObject] = None):
+        super().__init__(parent)
+        # Ensure results are delivered on this object's thread.
+        # Emitting `finished` directly from a worker thread can be flaky on some
+        # PySide6/Python combos; routing through a queued connection is reliable.
+        self._deliver.connect(self.finished)
 
 
 class _Runnable(QRunnable):
@@ -28,8 +36,7 @@ class _Runnable(QRunnable):
             self._emit(False, None, err)
 
     def _emit(self, ok, out, err):
-        QTimer.singleShot(0, self._resultObj,
-                          lambda: self._resultObj.finished.emit(ok, out, err))
+        self._resultObj._deliver.emit(ok, out, err)
 
 
 class TaskRunner(QObject):
@@ -46,10 +53,8 @@ class TaskRunner(QObject):
         self._pending.add(resultObj)
 
         def _release(ok: bool, result: object, error: object, ro: TaskResult = resultObj):
-            # Defer cleanup to the next turn of the event loop so any other queued
-            # receivers (e.g. QSignalSpy) see the signal before we drop our last refs.
-            QTimer.singleShot(0, ro, lambda: self._pending.discard(ro))
+            self._pending.discard(ro)
 
-        resultObj.finished.connect(_release)
+        resultObj.finished.connect(_release, Qt.QueuedConnection)
         self._pool.start(_Runnable(resultObj, fn))
         return resultObj
