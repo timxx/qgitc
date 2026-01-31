@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Optional
 
 from PySide6.QtCore import QObject
@@ -88,6 +89,20 @@ class AiResolveHandler(ResolveHandler):
             self.finished.emit(False, None)
             return
 
+        if self._isLikelyBinaryPath(path) or self._isLikelyBinaryWorktreeFile(ctx.repoDir, path):
+            self._emit(
+                ResolveEvent(
+                    kind=ResolveEventKind.STEP,
+                    message=self.tr(
+                        "Unhandled (binary file): {path}").format(path=path),
+                    path=path,
+                    method=ResolveMethod.AI,
+                )
+            )
+            # Leave it for next handler.
+            self.finished.emit(False, None)
+            return
+
         conflictText = buildConflictExcerpt(ctx.repoDir, path)
         if not conflictText:
             self.finished.emit(False, None)
@@ -108,6 +123,68 @@ class AiResolveHandler(ResolveHandler):
         )
         job.finished.connect(
             lambda ok3, reason: self._afterAi(path, ok3, reason))
+
+    def _isLikelyBinaryPath(self, path: str) -> bool:
+        # Fast extension check to avoid reading huge files / blobs.
+        _, ext = os.path.splitext(path.lower())
+        if not ext:
+            return False
+        return ext in {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".bmp",
+            ".tif",
+            ".tiff",
+            ".ico",
+            ".webp",
+            ".svgz",
+            ".pdf",
+            ".zip",
+            ".7z",
+            ".rar",
+            ".gz",
+            ".bz2",
+            ".xz",
+            ".tar",
+            ".exe",
+            ".dll",
+            ".pdb",
+            ".so",
+            ".dylib",
+            ".bin",
+            ".class",
+            ".jar",
+            ".pyc",
+            ".mp3",
+            ".wav",
+            ".flac",
+            ".mp4",
+            ".mkv",
+            ".avi",
+            ".mov",
+        }
+
+    def _isLikelyBinaryWorktreeFile(self, repoDir: str, path: str) -> bool:
+        absPath = os.path.join(repoDir, path)
+        try:
+            with open(absPath, "rb") as f:
+                sample = f.read(4096)
+        except Exception:
+            return False
+
+        if not sample:
+            return False
+        if b"\x00" in sample:
+            return True
+
+        # Heuristic: if a significant portion of bytes are control chars, treat as binary.
+        control = 0
+        for b in sample:
+            if b < 9 or (13 < b < 32):
+                control += 1
+        return (control / max(1, len(sample))) > 0.30
 
     def _afterAi(self, path: str, ok: bool, reason: object):
         ctx = self._ctx

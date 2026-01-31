@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtTest import QSignalSpy
@@ -110,3 +110,22 @@ class TestAiResolveHandler(TestBase):
         handled, outcome = spy.at(0)
         self.assertTrue(handled)
         self.assertEqual(ResolveOutcomeStatus.RESOLVED, outcome.status)
+
+    @patch("qgitc.resolver.handlers.ai.buildConflictExcerpt", autospec=True)
+    @patch("qgitc.resolver.handlers.ai.Git.getConflictFileBlobIds", autospec=True)
+    def test_non_trivial_binary_is_unhandled(self, mock_blobids, mock_excerpt):
+        mock_blobids.return_value = {1: "base", 2: "ours", 3: "theirs"}
+
+        ai = Mock()
+        h = AiResolveHandler(self.app)
+        spy = QSignalSpy(h.finished)
+        ctx = ResolveContext(
+            repoDir=".", operation=ResolveOperation.MERGE, sha1="abc", path="image.png")
+        h.start(ctx, self._services(ai=ai))
+
+        self.wait(2000, lambda: spy.count() == 0)
+        handled, outcome = spy.at(0)
+        self.assertFalse(handled)
+        self.assertIsNone(outcome)
+        ai.resolveFileAsync.assert_not_called()
+        mock_excerpt.assert_not_called()
