@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from PySide6.QtCore import QObject, Signal
@@ -81,3 +83,23 @@ class TestMergeWidgetResolverFlow(TestBase):
             w.resolve(idx)
             self.assertTrue(mock_warn.called)
             self.assertIsNone(w._resolveManager)
+
+    def test_ensure_log_writer_creates_parent_directory(self):
+        w = MergeWidget()
+
+        with TemporaryDirectory() as tmp:
+            log_file = os.path.join(tmp, "nested", "dir", "conflicts.xlsx")
+            parent_dir = os.path.dirname(log_file)
+            self.assertFalse(os.path.exists(parent_dir))
+
+            w.cbAutoLog.setChecked(True)
+            w.leLogFile.setText(log_file)
+
+            # Private method (name-mangled): should create folder then copy template.
+            w._MergeWidget__ensureLogWriter()
+
+            self.assertTrue(os.path.isdir(parent_dir))
+            self.assertTrue(os.path.isfile(log_file))
+
+            # Ensure we release resources and flush the workbook.
+            self.assertTrue(w.queryClose())

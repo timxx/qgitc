@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 import shutil
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -199,6 +200,7 @@ class MergeWidget(QWidget):
             return
 
         logFile = self.leLogFile.text()
+        os.makedirs(os.path.dirname(logFile), exist_ok=True)
         shutil.copy(dataDirPath() + "/templates/builtin.xlsx", logFile)
 
         if HAVE_EXCEL_API:
