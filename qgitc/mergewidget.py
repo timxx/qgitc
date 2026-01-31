@@ -59,8 +59,10 @@ from qgitc.resolver.enums import (
     ResolveOutcomeStatus,
     ResolvePromptKind,
 )
-from qgitc.resolver.handlers.ai import AiResolveHandler
-from qgitc.resolver.handlers.mergetool import GitMergetoolHandler
+from qgitc.resolver.helpers import (
+    build_resolve_handlers,
+    select_mergetool_name_for_path,
+)
 from qgitc.resolver.manager import ResolveManager
 from qgitc.resolver.models import (
     ResolveContext,
@@ -673,19 +675,7 @@ class MergeWidget(QWidget):
                 f"remote_branch: {self._mergeInfo.remote}\n"
             )
 
-        # Determine merge tool name (suffix-specific first)
-        toolName = None
-        tools = ApplicationBase.instance().settings().mergeToolList()
-        lowercase_file = file.lower()
-        for tool in tools:
-            if tool.canMerge() and tool.isValid():
-                if lowercase_file.endswith(tool.suffix.lower()):
-                    toolName = tool.command
-                    break
-
-        if not toolName:
-            toolName = ApplicationBase.instance().settings().mergeToolName()
-
+        toolName = select_mergetool_name_for_path(file)
         hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
 
         # AI needs chat widget.
@@ -694,15 +684,19 @@ class MergeWidget(QWidget):
             chatWidget = self._chatDock.chatWidget()
 
         # Build handler chain.
-        handlers = []
         services = ResolveServices(runner=self._resolveRunner, ai=chatWidget)
 
-        if aiAutoResolveEnabled and chatWidget is not None:
-            handlers.append(AiResolveHandler(self))
+        handlers, toolNameFromHelper, hasGitDefaultToolFromHelper = build_resolve_handlers(
+            parent=self,
+            path=file,
+            aiEnabled=aiAutoResolveEnabled,
+            chatWidget=chatWidget,
+        )
+        if toolNameFromHelper is not None:
+            toolName = toolNameFromHelper
+        hasGitDefaultTool = hasGitDefaultTool or hasGitDefaultToolFromHelper
 
-        if toolName or hasGitDefaultTool:
-            handlers.append(GitMergetoolHandler(self))
-        elif not aiAutoResolveEnabled:
+        if not handlers and not aiAutoResolveEnabled:
             # If AI isn't enabled, we cannot proceed.
             QMessageBox.warning(
                 self,
