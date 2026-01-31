@@ -59,10 +59,7 @@ from qgitc.resolver.enums import (
     ResolveOutcomeStatus,
     ResolvePromptKind,
 )
-from qgitc.resolver.helpers import (
-    build_resolve_handlers,
-    select_mergetool_name_for_path,
-)
+from qgitc.resolver.helpers import buildResolveHandlers, selectMergetoolNameForPath
 from qgitc.resolver.manager import ResolveManager
 from qgitc.resolver.models import (
     ResolveContext,
@@ -675,7 +672,7 @@ class MergeWidget(QWidget):
                 f"remote_branch: {self._mergeInfo.remote}\n"
             )
 
-        toolName = select_mergetool_name_for_path(file)
+        toolName = selectMergetoolNameForPath(file)
         hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
 
         # AI needs chat widget.
@@ -686,7 +683,7 @@ class MergeWidget(QWidget):
         # Build handler chain.
         services = ResolveServices(runner=self._resolveRunner, ai=chatWidget)
 
-        handlers, toolNameFromHelper, hasGitDefaultToolFromHelper = build_resolve_handlers(
+        handlers, toolNameFromHelper, hasGitDefaultToolFromHelper = buildResolveHandlers(
             parent=self,
             path=file,
             aiEnabled=aiAutoResolveEnabled,

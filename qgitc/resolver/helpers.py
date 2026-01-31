@@ -11,7 +11,7 @@ from qgitc.resolver.handlers.base import ResolveHandler
 from qgitc.resolver.handlers.mergetool import GitMergetoolHandler
 
 
-def select_mergetool_name_for_path(path: str) -> Optional[str]:
+def selectMergetoolNameForPath(path: str) -> Optional[str]:
     """Select merge tool command name for a given file path.
 
     Preference order:
@@ -36,7 +36,7 @@ def select_mergetool_name_for_path(path: str) -> Optional[str]:
     return settings.mergeToolName() or None
 
 
-def build_resolve_handlers(
+def buildResolveHandlers(
     *,
     parent,
     path: str,
@@ -48,7 +48,7 @@ def build_resolve_handlers(
     Returns (handlers, mergetoolName, hasGitDefaultTool).
     """
 
-    mergeToolName = select_mergetool_name_for_path(path)
+    mergeToolName = selectMergetoolNameForPath(path)
     hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
 
     handlers: List[ResolveHandler] = []
