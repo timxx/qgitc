@@ -16,7 +16,7 @@ from tests.base import TestBase
 
 
 class _ImmediateHandler(ResolveHandler):
-    def __init__(self, handled: bool, outcome: ResolveOutcome | None, parent=None):
+    def __init__(self, handled: bool, outcome: ResolveOutcome, parent=None):
         super().__init__(parent)
         self._handled = handled
         self._outcome = outcome
@@ -28,7 +28,7 @@ class _ImmediateHandler(ResolveHandler):
 class _PromptingHandler(ResolveHandler):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._services: ResolveServices | None = None
+        self._services: ResolveServices = None
         self._promptId = 42
 
     def start(self, ctx: ResolveContext, services: ResolveServices):
