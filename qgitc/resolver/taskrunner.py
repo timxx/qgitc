@@ -5,7 +5,7 @@ from __future__ import annotations
 import traceback
 from typing import Any, Callable, Optional
 
-from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Qt, QTimer, Signal
 
 
 class TaskResult(QObject):
@@ -22,9 +22,14 @@ class _Runnable(QRunnable):
     def run(self):
         try:
             out = self._fn()
-            self._resultObj.finished.emit(True, out, None)
+            self._emit(True, out, None)
         except Exception:
-            self._resultObj.finished.emit(False, None, traceback.format_exc())
+            err = traceback.format_exc()
+            self._emit(False, None, err)
+
+    def _emit(self, ok, out, err):
+        QTimer.singleShot(0, self._resultObj,
+                          lambda: self._resultObj.finished.emit(ok, out, err))
 
 
 class TaskRunner(QObject):
@@ -41,7 +46,9 @@ class TaskRunner(QObject):
         self._pending.add(resultObj)
 
         def _release(ok: bool, result: object, error: object, ro: TaskResult = resultObj):
-            self._pending.discard(ro)
+            # Defer cleanup to the next turn of the event loop so any other queued
+            # receivers (e.g. QSignalSpy) see the signal before we drop our last refs.
+            QTimer.singleShot(0, ro, lambda: self._pending.discard(ro))
 
         resultObj.finished.connect(_release)
         self._pool.start(_Runnable(resultObj, fn))
