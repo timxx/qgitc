@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
+from typing import TYPE_CHECKING, Optional, Protocol
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Protocol
+import sys
 
 if TYPE_CHECKING:
     from qgitc.resolver.manager import ResolveManager
@@ -25,7 +26,10 @@ class AiConflictResolverProto(Protocol):
     ) -> ResolveConflictJobProto: ...
 
 
-@dataclass(slots=True)
+_DATACLASS_KWARGS = {"slots": True} if sys.version_info >= (3, 10) else {}
+
+
+@dataclass(**_DATACLASS_KWARGS)
 class ResolveServices:
     runner: "TaskRunner"
     ai: Optional[AiConflictResolverProto] = None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import sys
 from typing import Any, Dict, List, Optional
 
 from qgitc.resolver.enums import (
@@ -12,9 +13,10 @@ from qgitc.resolver.enums import (
     ResolveOutcomeStatus,
     ResolvePromptKind,
 )
+_DATACLASS_KWARGS = {"slots": True} if sys.version_info >= (3, 10) else {}
 
 
-@dataclass(slots=True)
+@dataclass(**_DATACLASS_KWARGS)
 class ResolveContext:
     repoDir: str
     operation: ResolveOperation
@@ -26,7 +28,7 @@ class ResolveContext:
     meta: Dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass(**_DATACLASS_KWARGS)
 class ResolvePrompt:
     promptId: int
     kind: ResolvePromptKind
@@ -36,7 +38,7 @@ class ResolvePrompt:
     meta: Dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass(**_DATACLASS_KWARGS)
 class ResolveOutcome:
     status: ResolveOutcomeStatus
     message: Optional[str] = None
@@ -44,7 +46,7 @@ class ResolveOutcome:
     details: Dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass(slots=True)
+@dataclass(**_DATACLASS_KWARGS)
 class ResolveEvent:
     kind: ResolveEventKind
     message: str = ""
