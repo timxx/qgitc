@@ -38,6 +38,9 @@ def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
     if msg.startswith("QApplication::regClass: Registering window class"):
         return
 
+    if msg.startswith("QFontDatabase: Cannot find font directory"):
+        return
+
     print(msg)
 
 
