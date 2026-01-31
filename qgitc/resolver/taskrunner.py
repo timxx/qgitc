@@ -5,7 +5,7 @@ from __future__ import annotations
 import traceback
 from typing import Any, Callable, Optional
 
-from PySide6.QtCore import QObject, QRunnable, QThreadPool, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 
 
 class TaskResult(QObject):
