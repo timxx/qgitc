@@ -725,7 +725,6 @@ class MergeWidget(QWidget):
             path=file,
             extraContext=extraContext,
             mergetoolName=toolName,
-            policy=policy,
         )
 
         self._resolveManager = ResolveManager(handlers, services, parent=self)

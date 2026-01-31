@@ -12,6 +12,8 @@ from PySide6.QtWidgets import QMessageBox
 from qgitc.common import Commit
 from qgitc.gitutils import Git
 from qgitc.logview import LogView, MarkType
+from qgitc.resolver.enums import ResolvePromptKind
+from qgitc.resolver.models import ResolvePrompt
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
 
@@ -114,7 +116,8 @@ class TestLogViewDragDrop(TestBase):
 
         # Simulate mouse press
         pos = self.logview.itemRect(0).center()
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
 
         self.logview.mousePressEvent(event)
 
@@ -125,7 +128,8 @@ class TestLogViewDragDrop(TestBase):
         """Test that non-left button press resets drag state"""
         # First set a drag start position
         pos = self.logview.itemRect(0).center()
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
         self.logview.mousePressEvent(event)
         self.assertIsNotNone(self.logview._dragStartPos)
 
@@ -146,7 +150,8 @@ class TestLogViewDragDrop(TestBase):
 
         center = self.logview.itemRect(0).center()
         # Store initial position
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (center.x(), center.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (center.x(), center.y()))
         self.logview.mousePressEvent(event)
 
         # Mock _startDrag to verify it's called
@@ -197,7 +202,8 @@ class TestLogViewDragDrop(TestBase):
 
         center = self.logview.itemRect(0).center()
 
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (center.x(), center.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (center.x(), center.y()))
         self.logview.mousePressEvent(event)
 
         with patch.object(self.logview, '_startDrag') as mock_start_drag:
@@ -522,30 +528,32 @@ class TestLogViewDragDrop(TestBase):
         """Test cherry-pick with conflict"""
         mock_cherry_pick.return_value = (1, "conflict detected", "")
 
-        with patch.object(self.logview, '_resolveCherryPickConflict') as mock_resolve:
-            mock_resolve.return_value = False
+        with patch('qgitc.gitutils.Git.isCherryPicking', return_value=True):
+            with patch.object(self.logview, '_resolveInProgressOperation') as mock_resolve:
+                mock_resolve.return_value = False
 
-            result = self.logview.doCherryPick(
-                self.gitDir.name, "abc123", self.gitDir.name, None
-            )
+                result = self.logview.doCherryPick(
+                    self.gitDir.name, "abc123", self.gitDir.name, None
+                )
 
-            self.assertFalse(result)
-            mock_resolve.assert_called_once()
+                self.assertFalse(result)
+                mock_resolve.assert_called_once()
 
     @patch('qgitc.gitutils.Git.cherryPick')
     def test_doCherryPick_handles_empty_commit(self, mock_cherry_pick):
         """Test cherry-pick resulting in empty commit"""
         mock_cherry_pick.return_value = (1, "git commit --allow-empty", "")
 
-        with patch.object(self.logview, '_handleEmptyCherryPick') as mock_handle:
-            mock_handle.return_value = True
+        with patch('qgitc.gitutils.Git.isCherryPicking', return_value=True):
+            with patch.object(self.logview, '_resolveInProgressOperation') as mock_resolve:
+                mock_resolve.return_value = True
 
-            result = self.logview.doCherryPick(
-                self.gitDir.name, "abc123", self.gitDir.name, None
-            )
+                result = self.logview.doCherryPick(
+                    self.gitDir.name, "abc123", self.gitDir.name, None
+                )
 
-            self.assertTrue(result)
-            mock_handle.assert_called_once()
+                self.assertTrue(result)
+                mock_resolve.assert_called_once()
 
     @patch('qgitc.gitutils.Git.cherryPick')
     def test_doCherryPick_handles_general_error(self, mock_cherry_pick):
@@ -623,40 +631,112 @@ class TestLogViewDragDrop(TestBase):
     # Test Conflict Resolution
     # ============================================================================
 
-    def test_handleEmptyCherryPick_skip(self):
-        """Test handling empty cherry-pick with skip option"""
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
-            with patch('qgitc.gitutils.Git.cherryPickSkip') as mock_skip:
-                result = self.logview._handleEmptyCherryPick(
-                    self.gitDir.name, "abc123",
-                    "git commit --allow-empty", None
-                )
-
-                self.assertTrue(result)
-                mock_skip.assert_called_once()
-
-    def test_handleEmptyCherryPick_allow_empty(self):
-        """Test handling empty cherry-pick with allow-empty option"""
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.No):
-            with patch('qgitc.gitutils.Git.cherryPickAllowEmpty') as mock_allow:
-                mock_allow.return_value = (0, "")
-
-                result = self.logview._handleEmptyCherryPick(
-                    self.gitDir.name, "abc123",
-                    "git commit --allow-empty", None
-                )
-
-                self.assertTrue(result)
-                mock_allow.assert_called_once()
-
-    def test_handleEmptyCherryPick_returns_false_for_non_empty_error(self):
-        """Test that _handleEmptyCherryPick returns False for non-empty errors"""
-        result = self.logview._handleEmptyCherryPick(
-            self.gitDir.name, "abc123",
-            "some other error", None
+    def test_onResolvePrompt_empty_commit_skip(self):
+        """Test empty-commit prompt chooses skip."""
+        manager = Mock()
+        prompt = ResolvePrompt(
+            promptId=1,
+            kind=ResolvePromptKind.EMPTY_COMMIT_CHOICE,
+            title="Empty commit",
+            text="",
+            options=["skip", "allow-empty", "abort"],
+            meta={"sha1": "abc123"},
         )
 
-        self.assertFalse(result)
+        class _FakeBox:
+            AcceptRole = 0
+            ActionRole = 1
+            Abort = 2
+
+            def __init__(self, *_args, **_kwargs):
+                self._buttons = []
+                self._clicked = None
+
+            def setWindowTitle(self, *_args, **_kwargs):
+                pass
+
+            def setText(self, *_args, **_kwargs):
+                pass
+
+            def setIcon(self, *_args, **_kwargs):
+                pass
+
+            def addButton(self, *_args, **_kwargs):
+                b = object()
+                self._buttons.append(b)
+                # First addButton is skip
+                if len(self._buttons) == 1:
+                    self._clicked = b
+                return b
+
+            def setDefaultButton(self, *_args, **_kwargs):
+                pass
+
+            def exec(self):
+                return 0
+
+            def clickedButton(self):
+                return self._clicked
+
+        with patch('qgitc.logview.QMessageBox', _FakeBox):
+            self.logview._onResolvePrompt(manager, prompt, "abc123")
+
+        manager.replyPrompt.assert_called_once_with(1, "skip")
+
+    def test_onResolvePrompt_empty_commit_allow_empty(self):
+        """Test empty-commit prompt chooses allow-empty."""
+        from qgitc.resolver.enums import ResolvePromptKind
+        from qgitc.resolver.models import ResolvePrompt
+
+        manager = Mock()
+        prompt = ResolvePrompt(
+            promptId=2,
+            kind=ResolvePromptKind.EMPTY_COMMIT_CHOICE,
+            title="Empty commit",
+            text="",
+            options=["skip", "allow-empty", "abort"],
+            meta={"sha1": "abc123"},
+        )
+
+        class _FakeBox:
+            AcceptRole = 0
+            ActionRole = 1
+            Abort = 2
+
+            def __init__(self, *_args, **_kwargs):
+                self._buttons = []
+                self._clicked = None
+
+            def setWindowTitle(self, *_args, **_kwargs):
+                pass
+
+            def setText(self, *_args, **_kwargs):
+                pass
+
+            def setIcon(self, *_args, **_kwargs):
+                pass
+
+            def addButton(self, *_args, **_kwargs):
+                b = object()
+                self._buttons.append(b)
+                # Second addButton is allow-empty
+                if len(self._buttons) == 2:
+                    self._clicked = b
+                return b
+
+            def setDefaultButton(self, *_args, **_kwargs):
+                pass
+
+            def exec(self):
+                return 0
+
+            def clickedButton(self):
+                return self._clicked
+
+        with patch('qgitc.logview.QMessageBox', _FakeBox):
+            self.logview._onResolvePrompt(manager, prompt, "abc123")
+
+        manager.replyPrompt.assert_called_once_with(2, "allow-empty")
 
     # ============================================================================
     # Test Local Changes Application
@@ -787,15 +867,15 @@ class TestLogViewDragDrop(TestBase):
 
         mock_run.side_effect = [mock_format_patch, mock_am]
 
-        # Should attempt to resolve conflict
-        with patch.object(self.logview, '_runMergeTool') as mock_merge:
-            mock_merge.return_value = (None, False)
+        with patch('qgitc.gitutils.Git.isApplying', return_value=True):
+            with patch.object(self.logview, '_resolveInProgressOperation') as mock_resolve:
+                mock_resolve.return_value = False
 
-            result = self.logview._pickFromAnotherRepo(
-                self.gitDir.name, self.gitDir.name, "abc123"
-            )
+                result = self.logview._pickFromAnotherRepo(
+                    self.gitDir.name, self.gitDir.name, "abc123"
+                )
 
-            self.assertFalse(result)
+                self.assertFalse(result)
 
     # ============================================================================
     # Test Edge Cases
