@@ -16,6 +16,7 @@ from PySide6.QtCore import (
     QRectF,
     QSize,
     Qt,
+    QTimer,
     Signal,
 )
 from PySide6.QtGui import (
@@ -3033,11 +3034,20 @@ class LogView(QAbstractScrollArea, CommitSource):
             "same_repo": isSameRepo
         })
 
-        # Execute cherry-pick
-        self._executeCherryPick(
-            commits, sourceView, sourceRepoDir, dropBeforeSha1)
-
+        # IMPORTANT: don't show a modal dialog while we're still inside the
+        # DnD handler, otherwise Qt keeps the drag pixmap visible until the
+        # dialog closes. Accept the drop first, then run on the next tick.
+        commitsForPick = list(commits)
         event.acceptProposedAction()
+        QTimer.singleShot(
+            0,
+            lambda: self._executeCherryPick(
+                commitsForPick,
+                sourceView,
+                sourceRepoDir,
+                dropBeforeSha1,
+            )
+        )
 
     def _executeCherryPick(self, commits: List[dict], sourceView: 'LogView', sourceRepoDir: str, dropBeforeSha1: str = None):
         """Execute cherry-pick operation"""
