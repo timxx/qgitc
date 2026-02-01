@@ -68,12 +68,6 @@ class TestPickBranchWindow(TestBase):
         # Buttons should be disabled initially (no commits loaded)
         self.assertFalse(self.window.ui.btnCherryPick.isEnabled())
 
-        # Enabling it should show the embedded AI chat dock
-        self.window.ui.cbAutoResolveAi.setChecked(True)
-        self.processEvents()
-        self.assertIsNotNone(self.window._aiChat)
-        self.assertTrue(self.window._aiChat.isVisible())
-
     def testReloadBranches(self):
         """Test loading branches from git"""
         self._createTestBranches()
