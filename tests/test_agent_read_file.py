@@ -19,7 +19,7 @@ class TestAgentReadFile(TestBase):
         result = executor._handle_read_file(
             "read_file",
             {
-                "file_path": "gbk_sample.txt",
+                "filePath": "gbk_sample.txt",
             },
         )
 
@@ -36,9 +36,9 @@ class TestAgentReadFile(TestBase):
         result = executor._handle_read_file(
             "read_file",
             {
-                "file_path": "gbk_sample2.txt",
-                "start_line": 2,
-                "end_line": 2,
+                "filePath": "gbk_sample2.txt",
+                "startLine": 2,
+                "endLine": 2,
             },
         )
 
@@ -57,9 +57,9 @@ class TestAgentReadFile(TestBase):
         result = executor._handle_read_file(
             "read_file",
             {
-                "file_path": "crlf_sample.txt",
-                "start_line": 1,
-                "end_line": 2,
+                "filePath": "crlf_sample.txt",
+                "startLine": 1,
+                "endLine": 2,
             },
         )
 
@@ -78,9 +78,9 @@ class TestAgentReadFile(TestBase):
         result = executor._handle_read_file(
             "read_file",
             {
-                "file_path": "last_line_sample.txt",
-                "start_line": 3,
-                "end_line": 3,
+                "filePath": "last_line_sample.txt",
+                "startLine": 3,
+                "endLine": 3,
             },
         )
 
