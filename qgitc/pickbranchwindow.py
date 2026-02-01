@@ -5,22 +5,15 @@ from typing import List, Tuple
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (
-    QComboBox,
-    QCompleter,
-    QDialog,
-    QMessageBox,
-    QProgressDialog,
-)
+from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
 
-from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, dataDirPath, fullRepoDir
+from qgitc.cherrypickprogressdialog import CherryPickProgressDialog
+from qgitc.cherrypicksession import CherryPickItem
+from qgitc.common import Commit, dataDirPath
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
-from qgitc.pickbranchwindowaichatcontextprovider import (
-    PickBranchWindowAiChatContextProvider,
-)
+from qgitc.logview import LogView, MarkType
 from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_pickbranchwindow import Ui_PickBranchWindow
@@ -70,8 +63,6 @@ class PickBranchWindow(StateWindow):
 
         self._setupSpinner(self.ui.spinnerCommits)
         self._setupSignals()
-
-        self._aiChat: AiChatDockWidget = None
 
         # Default Auto-Resolve AI based on preferences.
         settings = ApplicationBase.instance().settings()
@@ -529,72 +520,41 @@ class PickBranchWindow(StateWindow):
                         "Please checkout the branch first.").format(targetBranch))
             return
 
-        progress = QProgressDialog(
-            self.tr("Cherry-picking commits..."),
-            self.tr("Cancel"),
-            0, len(markedCommits), self)
-        progress.setWindowTitle(self.window().windowTitle())
-        progress.setWindowModality(Qt.NonModal)
-
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
-        chatWidget = None
-        if self.ui.cbAutoResolveAi.isChecked():
-            self._onAutoResolveAiToggled(True)
-            chatWidget = self._aiChat.chatWidget()
+        aiEnabled = self.ui.cbAutoResolveAi.isChecked()
 
         sourceBranchDir = Git.branchDir(sourceBranch)
-        app = ApplicationBase.instance()
-        for step, (commit, index) in enumerate(markedCommits):
-            progress.setValue(step)
-            app.processEvents()
-            if progress.wasCanceled():
-                break
 
-            self.ui.logView.ensureVisible(index)
+        items: List[CherryPickItem] = []
+        for commit, index in markedCommits:
+            items.append(CherryPickItem(
+                sha1=commit.sha1,
+                repoDir=commit.repoDir,
+                sourceIndex=index,
+            ))
 
-            fullTargetRepoDir = fullRepoDir(commit.repoDir, targetRepoDir)
-            fullSourceDir = fullRepoDir(commit.repoDir, sourceBranchDir)
-            if not self.ui.logView.doCherryPick(
-                fullTargetRepoDir,
-                commit.sha1,
-                fullSourceDir,
-                self.ui.logView,
-                recordOrigin,
-                chatWidget=chatWidget,
-            ):
-                break
+        dlg = CherryPickProgressDialog(self)
 
-        progress.setValue(len(markedCommits))
+        dlg.setEnsureVisibleCallback(self.ui.logView.ensureVisible)
+        dlg.setMarkCallback(lambda sha1, ok: LogView._markPickStatus(
+            self.ui.logView,
+            sha1,
+            MarkType.PICKED if ok else MarkType.FAILED,
+        ))
+
+        dlg.startSession(
+            items=items,
+            targetBaseRepoDir=targetRepoDir,
+            sourceBaseRepoDir=sourceBranchDir,
+            recordOrigin=recordOrigin,
+            allowPatchPick=False,
+            aiEnabled=aiEnabled,
+        )
 
     def _updateStatus(self, message: str):
         """Update status label"""
         self.ui.labelStatus.setText(message)
 
-    def _setupAiChatDock(self):
-        """Setup AI Chat dock widget with embedded mode"""
-        if self._aiChat is not None:
-            return
-
-        self._aiChat = AiChatDockWidget(self)
-
-        aiChatContextProvider = PickBranchWindowAiChatContextProvider(
-            self, parent=self)
-        self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
-
-        # Add dock widget to pick branch window
-        self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
-
     def _onAutoResolveAiToggled(self, checked: bool):
         settings = ApplicationBase.instance().settings()
         settings.setAutoResolveConflictsWithAssistant(checked)
-
-        # Ensure the AI chat is available when auto-resolve is enabled.
-        if checked and self._aiChat is None:
-            self._setupAiChatDock()
-
-        if self._aiChat is None:
-            return
-
-        self._aiChat.setVisible(bool(checked))
-        if checked:
-            self._aiChat.chatWidget().contextPanel.setFocus()

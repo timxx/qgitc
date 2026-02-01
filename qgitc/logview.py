@@ -9,7 +9,6 @@ from typing import List
 from PySide6.QtCore import (
     Property,
     QEasingCurve,
-    QEventLoop,
     QMimeData,
     QPointF,
     QPropertyAnimation,
@@ -48,27 +47,14 @@ from PySide6.QtWidgets import (
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.changeauthordialog import ChangeAuthorDialog
+from qgitc.cherrypickprogressdialog import CherryPickProgressDialog
+from qgitc.cherrypicksession import CherryPickItem
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffinder import DiffFinder
 from qgitc.events import CodeReviewEvent, CopyConflictCommit, DockCodeReviewEvent
 from qgitc.gitutils import *
 from qgitc.logsfetcher import LogsFetcher
-from qgitc.resolver.enums import (
-    ResolveOperation,
-    ResolveOutcomeStatus,
-    ResolvePromptKind,
-)
-from qgitc.resolver.handlers.ai import AiResolveHandler
-from qgitc.resolver.handlers.finalize import (
-    AmFinalizeHandler,
-    CherryPickFinalizeHandler,
-)
-from qgitc.resolver.handlers.mergetool import GitMergetoolHandler
-from qgitc.resolver.manager import ResolveManager
-from qgitc.resolver.models import ResolveContext, ResolveOutcome, ResolvePrompt
-from qgitc.resolver.services import ResolveServices
-from qgitc.resolver.taskrunner import TaskRunner
 from qgitc.windowtype import WindowType
 
 HALF_LINE_PERCENT = 0.76
@@ -3065,120 +3051,50 @@ class LogView(QAbstractScrollArea, CommitSource):
         # TODO: If dropBeforeSha1 is specified, we need to rebase
         # For now, just cherry-pick to HEAD
 
-        # Cherry-pick commits one by one
-        needReload = False
-
         app = ApplicationBase.instance()
         recordOrigin = app.settings().recordOrigin()
 
-        chatWidget = None
-        if app.settings().autoResolveConflictsWithAssistant():
-            from qgitc.mainwindow import MainWindow
-            logWindow: MainWindow = self.logWindow()
-            aiChatDock = logWindow.chatDockWidget() if logWindow else None
-            if aiChatDock is not None:
-                chatWidget = aiChatDock.chatWidget()
-                aiChatDock.setVisible(True)
+        aiEnabled = app.settings().autoResolveConflictsWithAssistant()
 
-        progress = self._createProgressDialog(
-            self.tr("Cherry-picking commits..."), len(commits))
-        # avoid block the messagebox
-        progress.setWindowModality(Qt.NonModal)
+        items: List[CherryPickItem] = []
+        for commit in commits:
+            items.append(CherryPickItem(
+                sha1=commit.get("sha1", ""),
+                repoDir=commit.get("repoDir", None),
+            ))
 
-        for i, commit in enumerate(commits):
-            progress.setValue(i)
-            app.processEvents()
-            if progress.wasCanceled():
-                break
+            for subCommit in commit.get("subCommits", []):
+                items.append(CherryPickItem(
+                    sha1=subCommit.get("sha1", ""),
+                    repoDir=subCommit.get("repoDir", None),
+                ))
 
-            sha1 = commit.get("sha1", "")
-            subRepoDir = commit.get("repoDir", None)
-            fullTargetRepoDir = fullRepoDir(subRepoDir, self._branchDir)
-            fullSourceRepoDir = fullRepoDir(subRepoDir, sourceRepoDir)
-            if self.doCherryPick(
-                fullTargetRepoDir,
-                sha1,
-                fullSourceRepoDir,
+        dlg = CherryPickProgressDialog(self)
+        dlg.setReloadCallback(self.reloadLogs)
+
+        if sourceView is not None:
+            dlg.setMarkCallback(lambda sha1, ok: LogView._markPickStatus(
                 sourceView,
-                recordOrigin=recordOrigin,
-                chatWidget=chatWidget,
-            ):
-                needReload = True
-            else:
-                # Stop processing remaining commits
-                break
-
-            subCommits = commit.get("subCommits", [])
-            for subCommit in subCommits:
-                sha1 = subCommit.get("sha1", "")
-                subRepoDir = subCommit.get("repoDir", None)
-                fullTargetRepoDir = fullRepoDir(subRepoDir, self._branchDir)
-                fullSourceRepoDir = fullRepoDir(subRepoDir, sourceRepoDir)
-                if self.doCherryPick(
-                    fullTargetRepoDir,
+                sha1,
+                MarkType.PICKED if ok else MarkType.FAILED,
+            ))
+            dlg.setApplyLocalChangesCallback(
+                lambda targetRepoDir, sha1, sourceRepoDir: self._applyLocalChanges(
+                    targetRepoDir,
                     sha1,
-                    fullSourceRepoDir,
+                    sourceRepoDir,
                     sourceView,
-                    recordOrigin=recordOrigin,
-                    chatWidget=chatWidget,
-                ):
-                    needReload = True
-                else:
-                    # Stop processing remaining commits
-                    break
-
-        progress.setValue(len(commits))
-        # Reload logs to show new commits
-        if needReload:
-            self.reloadLogs()
-
-    def doCherryPick(
-        self,
-        repoDir: str,
-        sha1: str,
-        sourceRepoDir: str,
-        sourceView: 'LogView',
-        recordOrigin=True,
-        chatWidget=None,
-    ) -> bool:
-        """Perform cherry-pick of a single commit"""
-        if sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]:
-            return self._applyLocalChanges(repoDir, sha1, sourceRepoDir, sourceView)
-
-        ret, error, _ = Git.cherryPick(
-            [sha1], recordOrigin=recordOrigin, repoDir=repoDir)
-        if ret == 0:
-            LogView._markPickStatus(sourceView, sha1, MarkType.PICKED)
-            return True
-
-        # If the commit doesn't exist in the current repo (external drop), fall back to patch-based pick.
-        if not sourceView and error and f"fatal: bad object {sha1}" in error:
-            ok = self._pickFromAnotherRepo(
-                repoDir, sourceRepoDir, sha1, chatWidget)
-            return True if ok else False
-
-        # If git started a cherry-pick sequence (conflict or empty commit), resolve via the resolver pipeline.
-        if Git.isCherryPicking(repoDir):
-            ok = self._resolveInProgressOperation(
-                repoDir=repoDir,
-                operation=ResolveOperation.CHERRY_PICK,
-                sha1=sha1,
-                initialError=error or "",
-                chatWidget=chatWidget,
+                )
             )
-            LogView._markPickStatus(
-                sourceView, sha1, MarkType.PICKED if ok else MarkType.FAILED)
-            return ok
 
-        QMessageBox.critical(
-            self,
-            self.tr("Cherry-pick Failed"),
-            self.tr("Cherry-pick of commit {0} failed:\n\n{1}").format(
-                sha1[:7], error if error else self.tr("Unknown error")
-            ),
+        dlg.startSession(
+            items=items,
+            targetBaseRepoDir=self._branchDir,
+            sourceBaseRepoDir=sourceRepoDir,
+            recordOrigin=recordOrigin,
+            allowPatchPick=(sourceView is None),
+            aiEnabled=aiEnabled,
         )
-        LogView._markPickStatus(sourceView, sha1, MarkType.FAILED)
-        return False
 
     @staticmethod
     def _markPickStatus(sourceView: 'LogView', sha1: str, state: MarkType):
@@ -3191,196 +3107,6 @@ class LogView(QAbstractScrollArea, CommitSource):
                 sourceView.marker.mark(idx, idx, state)
                 break
         sourceView.viewport().update()
-
-    def _resolveInProgressOperation(
-        self,
-        *,
-        repoDir: str,
-        operation: ResolveOperation,
-        sha1: str,
-        initialError: str,
-        chatWidget=None,
-    ) -> bool:
-        """Resolve an in-progress git operation (cherry-pick or am) using the resolver pipeline.
-
-        The pipeline runs per-file (AI -> mergetool) and then finalizes (continue/skip/abort).
-        """
-
-        def isInProgress() -> bool:
-            if operation == ResolveOperation.CHERRY_PICK:
-                return Git.isCherryPicking(repoDir)
-            if operation == ResolveOperation.AM:
-                return Git.isApplying(repoDir)
-            return False
-
-        def abortOperation():
-            if operation == ResolveOperation.CHERRY_PICK:
-                Git.cherryPickAbort(repoDir)
-            elif operation == ResolveOperation.AM:
-                Git.amAbort(repoDir)
-
-        def finalizeHandler():
-            if operation == ResolveOperation.CHERRY_PICK:
-                return CherryPickFinalizeHandler(self)
-            return AmFinalizeHandler(self)
-
-        def _runPipeline(*, path: str, handlers: list) -> ResolveOutcome:
-            ctx = ResolveContext(
-                repoDir=repoDir,
-                operation=operation,
-                sha1=sha1,
-                path=path,
-                initialError=initialError,
-                mergetoolName=toolName
-            )
-
-            loop = QEventLoop()
-            done = {"outcome": None}
-            manager = ResolveManager(handlers, services, parent=self)
-            manager.promptRequested.connect(
-                lambda p, m=manager: self._onResolvePrompt(m, p, sha1))
-
-            def _onCompleted(outcome: ResolveOutcome):
-                done["outcome"] = outcome
-                loop.quit()
-
-            manager.completed.connect(_onCompleted)
-            manager.start(ctx)
-            loop.exec()
-            return done.get("outcome")
-
-        def _askAbortOrContinue(*, title: str, text: str) -> bool:
-            """Return True to abort, False to continue."""
-            box = QMessageBox(self)
-            box.setWindowTitle(title)
-            box.setText(text)
-            box.setIcon(QMessageBox.Question)
-            contBtn = box.addButton(
-                self.tr("&Continue"), QMessageBox.AcceptRole)
-            abortBtn = box.addButton(QMessageBox.Abort)
-            box.setDefaultButton(contBtn)
-            box.exec()
-            return box.clickedButton() == abortBtn
-
-        if operation == ResolveOperation.CHERRY_PICK:
-            title = self.tr("Cherry-pick Conflict")
-            opText = self.tr(
-                "Cherry-pick of commit {0} needs your attention:\n\n{1}\n\n"
-                "Do you want to resolve it now?"
-            ).format(sha1[:7], initialError)
-        else:
-            title = self.tr("Apply Patch Conflict")
-            opText = self.tr(
-                "Applying a patch for commit {0} needs your attention:\n\n{1}\n\n"
-                "Do you want to resolve it now?"
-            ).format(sha1[:7], initialError)
-
-        msgBox = QMessageBox(self)
-        msgBox.setWindowTitle(title)
-        msgBox.setText(opText)
-        msgBox.setIcon(QMessageBox.Question)
-
-        yesBtn = msgBox.addButton(QMessageBox.Yes)
-        msgBox.addButton(QMessageBox.Abort)
-        resolvedBtn = msgBox.addButton(
-            self.tr("Already Resolved"), QMessageBox.ActionRole)
-        msgBox.setDefaultButton(yesBtn)
-        msgBox.exec()
-        clickedBtn = msgBox.clickedButton()
-
-        if clickedBtn != yesBtn and clickedBtn != resolvedBtn:
-            abortOperation()
-            return False
-
-        runner = TaskRunner(self)
-        services = ResolveServices(runner=runner, ai=chatWidget)
-        aiAutoResolveEnabled = chatWidget is not None
-
-        # Determine merge tool name (Preferences first; git default tool is supported by git itself).
-        toolName = ApplicationBase.instance().settings().mergeToolName()
-        hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
-
-        opFailedTitle = self.tr(
-            "Cherry-pick Failed") if operation == ResolveOperation.CHERRY_PICK else self.tr("Apply Patch Failed")
-
-        # Outer loop: resolve a snapshot of conflict files, then try to finalize.
-        while True:
-            if not isInProgress():
-                return True
-
-            conflictFiles = Git.conflictFiles(repoDir) or []
-
-            # If there are conflict files, we need either AI or a merge tool.
-            if conflictFiles and (not aiAutoResolveEnabled) and (not toolName) and (not hasGitDefaultTool):
-                QMessageBox.warning(
-                    self,
-                    self.tr("Merge Tool Not Configured"),
-                    self.tr(
-                        "No merge tool is configured.\n\n"
-                        "Please configure a merge tool in:\n"
-                        "- Git global config: git config --global merge.tool <tool-name>\n"
-                        "- Or in Preferences > Tools tab"
-                    ),
-                )
-                abortOperation()
-                return False
-
-            # 1) Resolve each conflicted file once.
-            for path in conflictFiles:
-                if not isInProgress():
-                    return True
-
-                # Skip if no longer conflicted.
-                current = Git.conflictFiles(repoDir) or []
-                if path not in current:
-                    continue
-
-                handlers = []
-                if aiAutoResolveEnabled and chatWidget is not None:
-                    handlers.append(AiResolveHandler(self))
-                if toolName or hasGitDefaultTool:
-                    handlers.append(GitMergetoolHandler(self))
-
-                outcome: ResolveOutcome = _runPipeline(
-                    path=path, handlers=handlers)
-                if outcome is None:
-                    abortOperation()
-                    return False
-
-                if outcome.status == ResolveOutcomeStatus.RESOLVED:
-                    continue
-
-                if outcome.status == ResolveOutcomeStatus.ABORTED:
-                    abortOperation()
-                    return False
-
-                # FAILED / NEEDS_USER: ask whether to abort or continue with other files.
-                abortNow = _askAbortOrContinue(
-                    title=opFailedTitle,
-                    text=self.tr(
-                        "Failed to resolve {0}.\n\n{1}\n\n"
-                        "Do you want to abort the operation?"
-                    ).format(path, outcome.message or self.tr("Unknown error")),
-                )
-                if abortNow:
-                    abortOperation()
-                    return False
-
-            # 2) Try to continue/finalize (handles empty-commit prompt, etc).
-            outcome = _runPipeline(path="", handlers=[finalizeHandler()])
-            if outcome is None:
-                abortOperation()
-                return False
-
-            if outcome.status == ResolveOutcomeStatus.RESOLVED:
-                if not isInProgress():
-                    return True
-
-            if outcome.status == ResolveOutcomeStatus.ABORTED:
-                abortOperation()
-                return False
-
-            continue
 
     def _applyLocalChanges(self, targetRepoDir: str, sha1: str, sourceRepoDir: str, sourceView: 'LogView') -> bool:
         """Apply local uncommitted or cached changes using git diff and apply"""
@@ -3425,152 +3151,3 @@ class LogView(QAbstractScrollArea, CommitSource):
         finally:
             if patchFile:
                 os.remove(patchFile)
-
-    def _pickFromAnotherRepo(self, repoDir: str, sourceRepoDir: str, sha1: str, chatWidget=None) -> bool:
-        """Pick commits from another repository by generating and applying patch"""
-        # Generate patch from source repo
-        args = ["format-patch", "-1", "--stdout", sha1]
-        process = Git.run(args, repoDir=sourceRepoDir, text=True)
-        patchContent, error = process.communicate()
-
-        if process.returncode != 0:
-            errorMsg = error if error else self.tr("Unknown error")
-            QMessageBox.critical(
-                self, self.tr("Cherry-pick Failed"),
-                self.tr("Failed to generate patch from source repository:\n\n{0}").format(errorMsg))
-            return False
-
-        if not patchContent:
-            QMessageBox.warning(
-                self, self.tr("Cherry-pick Failed"),
-                self.tr("No patch content generated for commit {0}.").format(sha1[:7]))
-            return False
-
-        # Create a temporary patch file
-        patchFile = None
-        try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.patch', delete=False, encoding='utf-8') as f:
-                patchFile = f.name
-                f.write(patchContent)
-
-            # Apply patch to target repo
-            args = ["am", "--3way", "--ignore-space-change", patchFile]
-            process = Git.run(args, repoDir=repoDir, text=True)
-            _, error = process.communicate()
-
-            if process.returncode != 0:
-                errorMsg = error if error else self.tr("Unknown error")
-
-                # If git started an am sequence, resolve via the same resolver pipeline.
-                if Git.isApplying(repoDir):
-                    ok = self._resolveInProgressOperation(
-                        repoDir=repoDir,
-                        operation=ResolveOperation.AM,
-                        sha1=sha1,
-                        initialError=errorMsg,
-                        chatWidget=chatWidget,
-                    )
-                    return True if ok else False
-
-                QMessageBox.critical(
-                    self,
-                    self.tr("Cherry-pick Failed"),
-                    self.tr("Failed to apply patch to target repository:\n\n{0}").format(
-                        errorMsg),
-                )
-                return False
-
-            return True
-
-        except Exception as e:
-            QMessageBox.critical(
-                self, self.tr("Cherry-pick Failed"),
-                self.tr("Failed to apply patch from another repository:\n\n{0}").format(str(e)))
-            return False
-        finally:
-            if patchFile and os.path.exists(patchFile):
-                os.remove(patchFile)
-
-    def _onResolvePrompt(self, manager: ResolveManager, prompt: ResolvePrompt, sha1: str):
-        # Deleted merge conflict prompt - must be user-driven.
-        if prompt.kind == ResolvePromptKind.DELETED_CONFLICT_CHOICE:
-            text = prompt.text
-            isCreated = bool((prompt.meta or {}).get("isCreated"))
-            box = QMessageBox(
-                QMessageBox.Question,
-                ApplicationBase.instance().applicationName(),
-                text,
-                QMessageBox.NoButton,
-                self,
-            )
-            primary = prompt.options[0] if prompt.options else "m"
-            deleteOpt = prompt.options[1] if len(
-                prompt.options) > 1 else "d"
-            abortOpt = prompt.options[2] if len(
-                prompt.options) > 2 else "a"
-
-            primaryText = self.tr(
-                "Use &created") if isCreated else self.tr("Use &modified")
-            box.addButton(primaryText, QMessageBox.AcceptRole)
-            box.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
-            box.addButton(QMessageBox.Abort)
-            r = box.exec()
-            if r == QMessageBox.AcceptRole:
-                manager.replyPrompt(prompt.promptId, primary)
-            elif r == QMessageBox.RejectRole:
-                manager.replyPrompt(prompt.promptId, deleteOpt)
-            else:
-                manager.replyPrompt(prompt.promptId, abortOpt)
-            return
-
-        if prompt.kind == ResolvePromptKind.SYMLINK_CONFLICT_CHOICE:
-            text = prompt.text
-            box = QMessageBox(
-                QMessageBox.Question,
-                ApplicationBase.instance().applicationName(),
-                text,
-                QMessageBox.NoButton,
-                self,
-            )
-            localOpt = prompt.options[0] if prompt.options else "l"
-            remoteOpt = prompt.options[1] if len(
-                prompt.options) > 1 else "r"
-            abortOpt = prompt.options[2] if len(
-                prompt.options) > 2 else "a"
-            box.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
-            box.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
-            box.addButton(QMessageBox.Abort)
-            r = box.exec()
-            if r == QMessageBox.AcceptRole:
-                manager.replyPrompt(prompt.promptId, localOpt)
-            elif r == QMessageBox.RejectRole:
-                manager.replyPrompt(prompt.promptId, remoteOpt)
-            else:
-                manager.replyPrompt(prompt.promptId, abortOpt)
-            return
-
-        if prompt.kind == ResolvePromptKind.EMPTY_COMMIT_CHOICE:
-            sha1Meta = (prompt.meta or {}).get("sha1") or sha1
-            box = QMessageBox(self)
-            box.setWindowTitle(prompt.title)
-            box.setText(
-                self.tr(
-                    "Commit {0} results in an empty commit (possibly already applied).\n\n"
-                    "What do you want to do?"
-                ).format(str(sha1Meta)[:7])
-            )
-            skipBtn = box.addButton(
-                self.tr("&Skip"), QMessageBox.AcceptRole)
-            allowBtn = box.addButton(
-                self.tr("&Create empty commit"), QMessageBox.ActionRole)
-            abortBtn = box.addButton(QMessageBox.Abort)
-            box.setDefaultButton(skipBtn)
-            box.exec()
-            clicked = box.clickedButton()
-            if clicked == skipBtn:
-                manager.replyPrompt(prompt.promptId, "skip")
-            elif clicked == allowBtn:
-                manager.replyPrompt(prompt.promptId, "allow-empty")
-            else:
-                manager.replyPrompt(prompt.promptId, "abort")
-            return

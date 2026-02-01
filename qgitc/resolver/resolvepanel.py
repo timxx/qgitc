@@ -7,10 +7,12 @@ from typing import Dict, List, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
+    QPushButton,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -92,6 +94,8 @@ class ResolvePanel(QWidget):
     def _setupUi(self):
         layout = QVBoxLayout(self)
         self.setLayout(layout)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
 
         self._label = QLabel(self.tr("No conflicts"), self)
         self._label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -101,7 +105,21 @@ class ResolvePanel(QWidget):
         self._list.setSelectionMode(QListWidget.SingleSelection)
         layout.addWidget(self._list)
 
+        actions = QHBoxLayout()
+        self._resolveSelectedBtn = QPushButton(self.tr("Resolve selected"), self)
+        self._resolveAllBtn = QPushButton(self.tr("Resolve all"), self)
+        actions.addWidget(self._resolveSelectedBtn)
+        actions.addWidget(self._resolveAllBtn)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+
         self.setVisible(False)
+
+        self._resolveSelectedBtn.clicked.connect(self._onResolveSelected)
+        self._resolveAllBtn.clicked.connect(self.startResolveAll)
+        self._list.itemDoubleClicked.connect(self._onItemDoubleClicked)
+
+        self._updateActionState()
 
     def setContext(
         self,
@@ -123,6 +141,13 @@ class ResolvePanel(QWidget):
         )
         self._services = ResolveServices(runner=self._runner, ai=chatWidget)
 
+    def setAiChatWidget(self, chatWidget: Optional[object]):
+        """Enable/disable AI resolving for the current resolve context."""
+        if self._ctx is not None:
+            self._ctx.chatWidget = chatWidget
+        if self._services is not None:
+            self._services.ai = chatWidget
+
     def isBusy(self) -> bool:
         return self._manager is not None
 
@@ -141,6 +166,7 @@ class ResolvePanel(QWidget):
         self._list.clear()
         self.setVisible(False)
         self._setStatus(self.tr("No conflicts"))
+        self._updateActionState()
 
     def setConflictFiles(self, files: List[str]):
         files = [f for f in (files or []) if f]
@@ -158,6 +184,7 @@ class ResolvePanel(QWidget):
         self._label.setText(self.tr("Conflicts ({0})").format(len(files)))
         self.setVisible(bool(files))
         self.conflictFilesChanged.emit(files)
+        self._updateActionState()
 
     def startResolveAll(self):
         if self._abortRequested:
@@ -170,6 +197,7 @@ class ResolvePanel(QWidget):
                    _FileState.PENDING]
         self._queue = list(pending)
         self._startNextFile()
+        self._updateActionState()
 
     def startResolveFile(self, path: str):
         if self._abortRequested:
@@ -182,6 +210,43 @@ class ResolvePanel(QWidget):
 
         self._queue = [path]
         self._startNextFile()
+        self._updateActionState()
+
+    def _onItemDoubleClicked(self, item: QListWidgetItem):
+        if item is None:
+            return
+        self._retryResolveForPath(item.text())
+
+    def _onResolveSelected(self):
+        path = self._selectedPath()
+        if not path:
+            return
+        self._retryResolveForPath(path)
+
+    def _selectedPath(self) -> str:
+        item = self._list.currentItem()
+        return "" if item is None else str(item.text() or "")
+
+    def _retryResolveForPath(self, path: str):
+        if self.isBusy():
+            return
+        if not path:
+            return
+        st = self._fileStates.get(path)
+        if st == _FileState.RESOLVED:
+            return
+
+        # Allow re-running after failure by putting the file back into pending.
+        self._fileStates[path] = _FileState.PENDING
+        self._renderFileList()
+        self.startResolveFile(path)
+
+    def _updateActionState(self):
+        hasFiles = bool(self._fileStates)
+        busy = self.isBusy()
+        selected = bool(self._selectedPath())
+        self._resolveSelectedBtn.setEnabled(hasFiles and selected and not busy)
+        self._resolveAllBtn.setEnabled(hasFiles and not busy)
 
     def startFinalize(self):
         if self._abortRequested:
@@ -328,6 +393,7 @@ class ResolvePanel(QWidget):
 
         self._renderFileList()
         self.fileOutcome.emit(path, outcome)
+        self._updateActionState()
 
         if self._abortRequested:
             self.abortSafePointReached.emit()
@@ -339,6 +405,7 @@ class ResolvePanel(QWidget):
     def _onFinalizeCompleted(self, outcome: ResolveOutcome):
         self._manager = None
         self.finalizeOutcome.emit(outcome)
+        self._updateActionState()
         if self._abortRequested:
             self.abortSafePointReached.emit()
 
