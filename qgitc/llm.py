@@ -436,7 +436,7 @@ class AiModelBase(QObject):
                     choiceIndex, "") + content
 
             # If model signaled completion for this choice, commit immediately.
-            if finishReason in ("stop", "tool_calls"):
+            if finishReason in ("stop", "tool_calls", "content_filter"):
                 role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
                 fullContent = self._choiceContents.pop(choiceIndex, None)
                 toolCalls = None
