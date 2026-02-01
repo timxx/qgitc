@@ -687,7 +687,7 @@ class AiChatWidget(QWidget):
                 args = parseToolArguments(func.get("arguments"))
                 tool = AgentToolRegistry.tool_by_name(
                     toolName) if toolName else None
-                toolType = tool.tool_type if tool else ToolType.WRITE
+                toolType = tool.toolType if tool else ToolType.WRITE
                 toolDesc = tool.description if tool else self.tr(
                     "Unknown tool requested by model")
                 if tcid:
@@ -713,8 +713,8 @@ class AiChatWidget(QWidget):
                 # Auto-run only READ_ONLY tools by default. For certain sync helper
                 # flows we optionally auto-run *WRITE* tools, but never DANGEROUS.
                 if toolName and tool and (
-                    tool.tool_type == ToolType.READ_ONLY or (
-                        self._allowWriteTools and tool.tool_type == ToolType.WRITE
+                    tool.toolType == ToolType.READ_ONLY or (
+                        self._allowWriteTools and tool.toolType == ToolType.WRITE
                     )
                 ):
                     if autoGroupId is None:
@@ -740,7 +740,7 @@ class AiChatWidget(QWidget):
                         toolName=toolName,
                         params=args,
                         toolDesc=toolDesc,
-                        toolType=tool.tool_type,
+                        toolType=tool.toolType,
                         toolCallId=toolCallId,
                     )
                 elif toolName:
@@ -782,7 +782,7 @@ class AiChatWidget(QWidget):
         else:
             tool = args[0]
 
-        icon = self._getToolIcon(tool.tool_type)
+        icon = self._getToolIcon(tool.toolType)
         title = self.tr("{} run `{}`").format(icon, tool.name)
 
         if isinstance(args[1], str):
@@ -921,7 +921,7 @@ class AiChatWidget(QWidget):
 
     def _onAgentToolFinished(self, result: AgentToolResult):
         model = self.currentChatModel()
-        tool_name = result.tool_name
+        tool_name = result.toolName
         ok = result.ok
         output = result.output or ""
 
@@ -1365,7 +1365,7 @@ class AiChatWidget(QWidget):
                     responseMsg: Dict[str, Any] = toolCallResult.get(tcid)
                     tool = AgentToolRegistry.tool_by_name(
                         toolName) if toolName else None
-                    toolType = tool.tool_type if tool else ToolType.WRITE
+                    toolType = tool.toolType if tool else ToolType.WRITE
 
                     if addToChatBot:
                         if content:

@@ -38,8 +38,8 @@ from qgitc.tools.applypatch import DiffError, process_patch
 
 
 class AgentToolResult:
-    def __init__(self, tool_name: str, ok: bool, output: str):
-        self.tool_name = tool_name
+    def __init__(self, toolName: str, ok: bool, output: str):
+        self.toolName = toolName
         self.ok = ok
         self.output = output
 
@@ -186,7 +186,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["status", "--porcelain=v1", "-b"]
         if not validated.untracked:
             args.append("--untracked-files=no")
@@ -208,7 +208,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
 
         if validated.nth is not None:
             # Fetch exactly one commit, skipping the first (nth-1) commits.
@@ -229,7 +229,7 @@ class AgentToolExecutor(QObject):
                 return AgentToolResult(tool_name, False, f"No commit found at nth={validated.nth} (1-based from HEAD).")
             return AgentToolResult(tool_name, False, output)
 
-        args = ["log", "--oneline", "-n", str(validated.max_count)]
+        args = ["log", "--oneline", "-n", str(validated.maxCount)]
         if validated.since:
             args += ["--since", str(validated.since)]
         if validated.until:
@@ -243,7 +243,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["diff-tree", "-r", "--root", validated.rev,
                 "-p", "--textconv", "--submodule",
                 "-C", "--no-commit-id", "-U3"]
@@ -258,8 +258,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
-        if validated.name_only:
+        repo_dir = validated.repoDir or Git.REPO_DIR
+        if validated.nameOnly:
             args = ["diff", "--name-only"]
         else:
             args = ["diff-files", "-p", "--textconv",
@@ -275,8 +275,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
-        if validated.name_only:
+        repo_dir = validated.repoDir or Git.REPO_DIR
+        if validated.nameOnly:
             args = ["diff", "--name-only", "--cached"]
         else:
             args = ["diff-index", "--cached",
@@ -293,7 +293,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["show", str(validated.rev)]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
@@ -304,15 +304,15 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         spec = f"{validated.rev}:{validated.path}"
         ok, output = self._run_git(repo_dir, ["show", spec])
         if not ok:
             return AgentToolResult(tool_name, ok, output)
 
         lines = output.splitlines()
-        start_line = validated.start_line - 1 if validated.start_line else 0
-        end_line = validated.end_line if validated.end_line else len(lines)
+        start_line = validated.startLine - 1 if validated.startLine else 0
+        end_line = validated.endLine if validated.endLine else len(lines)
         output = "\n".join(lines[start_line:end_line])
 
         return AgentToolResult(tool_name, ok, output)
@@ -323,15 +323,15 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         spec = f":{validated.path}"
         ok, output = self._run_git(repo_dir, ["show", spec])
         if not ok:
             return AgentToolResult(tool_name, ok, output)
 
         lines = output.splitlines()
-        start_line = validated.start_line - 1 if validated.start_line else 0
-        end_line = validated.end_line if validated.end_line else len(lines)
+        start_line = validated.startLine - 1 if validated.startLine else 0
+        end_line = validated.endLine if validated.endLine else len(lines)
         output = "\n".join(lines[start_line:end_line])
 
         return AgentToolResult(tool_name, ok, output)
@@ -342,7 +342,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         # Prefer a cheap command that returns only the current branch name.
         ok, output = self._run_git(
             repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
@@ -365,7 +365,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["branch"] + (["-a"] if validated.all else [])
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
@@ -376,7 +376,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["checkout", str(validated.branch)]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
@@ -387,7 +387,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["cherry-pick"] + [str(c) for c in validated.commits]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
@@ -398,7 +398,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["commit", "-m", str(validated.message), "--no-edit"]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
@@ -409,7 +409,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repo_dir or Git.REPO_DIR
+        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["add"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
@@ -420,7 +420,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        working_dir = validated.working_dir or Git.REPO_DIR
+        working_dir = validated.workingDir or Git.REPO_DIR
 
         if not working_dir or not os.path.isdir(working_dir):
             return AgentToolResult(tool_name, False, f"Invalid working directory: {working_dir}")
@@ -469,7 +469,7 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        file_path = validated.file_path
+        file_path = validated.filePath
         if not os.path.isabs(file_path):
             file_path = os.path.join(Git.REPO_DIR, file_path)
 
@@ -488,8 +488,8 @@ class AgentToolExecutor(QObject):
             text, _ = decodeFileData(data, prefer_encoding)
             lines = text.splitlines(keepends=True)
 
-            start_line = validated.start_line - 1 if validated.start_line else 0
-            end_line = validated.end_line if validated.end_line else len(lines)
+            start_line = validated.startLine - 1 if validated.startLine else 0
+            end_line = validated.endLine if validated.endLine else len(lines)
 
             selected_lines = lines[start_line:end_line]
             output = ''.join(selected_lines)
@@ -622,7 +622,8 @@ class AgentToolExecutor(QObject):
             try:
                 payload = content.encode(enc_for_bytes)
             except UnicodeEncodeError as e:
-                raise DiffError(f"Failed to encode {file_path} as {enc_for_bytes}: {e}")
+                raise DiffError(
+                    f"Failed to encode {file_path} as {enc_for_bytes}: {e}")
 
             with open(abs_path, 'wb') as f:
                 if bom:
