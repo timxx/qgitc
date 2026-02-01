@@ -19,6 +19,7 @@ from qgitc.resolver.resolvepanel import ResolvePanel
 class CherryPickItemStatus:
     PENDING = "pending"
     PICKED = "picked"
+    NEEDS_RESOLUTION = "needsResolution"
     FAILED = "failed"
     ABORTED = "aborted"
 
@@ -256,7 +257,7 @@ class CherryPickSession(QObject):
         if Git.isCherryPicking(step.targetRepoDir):
             self._mark(step.item.sha1, False)
             self.itemStatusChanged.emit(
-                step.itemIndex, CherryPickItemStatus.FAILED, self.tr("Conflicts detected"))
+                step.itemIndex, CherryPickItemStatus.NEEDS_RESOLUTION, "")
             self._startConflictResolution(
                 repoDir=step.targetRepoDir,
                 operation=ResolveOperation.CHERRY_PICK,
@@ -331,6 +332,9 @@ class CherryPickSession(QObject):
 
         errText = (err or "").strip()
         if Git.isApplying(step.targetRepoDir):
+            self._mark(step.item.sha1, False)
+            self.itemStatusChanged.emit(
+                step.itemIndex, CherryPickItemStatus.NEEDS_RESOLUTION, "")
             self._startConflictResolution(
                 repoDir=step.targetRepoDir,
                 operation=ResolveOperation.AM,
@@ -379,6 +383,9 @@ class CherryPickSession(QObject):
             return
 
         if pathObj is not None:
+            # A (re-)resolve attempt is starting. Clear any previous failure latch so
+            # a successful retry can proceed to finalize.
+            self._failedConflictMessage = None
             return
 
         # Queue finished.
@@ -388,8 +395,15 @@ class CherryPickSession(QObject):
 
         if self._failedConflictMessage:
             self._setStatus(self.tr("Resolve needs user action"))
-            self._finish(ok=False, aborted=False,
-                         message=self._failedConflictMessage)
+            if 0 <= self._stepIndex < len(self._steps):
+                step = self._steps[self._stepIndex]
+                if step.item.sha1 == self._activeSha1:
+                    self.itemStatusChanged.emit(
+                        step.itemIndex,
+                        CherryPickItemStatus.NEEDS_RESOLUTION,
+                        self._failedConflictMessage or self.tr("Resolve needs user action"),
+                    )
+            # Do not finish the session; allow the user to retry resolving.
             return
 
         # All files resolved, try to finalize.
@@ -423,6 +437,15 @@ class CherryPickSession(QObject):
             # Done resolving this commit.
             self._inConflictResolution = False
             self._needReload = True
+
+            # Once resolved + finalized, the item should be marked as picked.
+            if 0 <= self._stepIndex < len(self._steps):
+                step = self._steps[self._stepIndex]
+                if step.item.sha1 == self._activeSha1:
+                    self._mark(step.item.sha1, True)
+                    self.itemStatusChanged.emit(
+                        step.itemIndex, CherryPickItemStatus.PICKED, "")
+
             self._stepIndex += 1
             self._runNextStep()
             return

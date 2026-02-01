@@ -261,6 +261,10 @@ class CherryPickProgressDialog(QDialog):
             text = f"{baseText}  {self.tr('Picked')}"
             item.setForeground(
                 ApplicationBase.instance().colorSchema().ResolvedFg)
+        elif status == CherryPickItemStatus.NEEDS_RESOLUTION:
+            text = f"{baseText}  {self.tr('Needs resolution')}"
+            item.setForeground(
+                ApplicationBase.instance().colorSchema().ConflictFg)
         elif status == CherryPickItemStatus.FAILED:
             text = f"{baseText}  {self.tr('Failed')}"
             item.setForeground(
