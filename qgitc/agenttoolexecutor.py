@@ -47,12 +47,15 @@ class AgentToolResult:
 class AgentToolExecutor(QObject):
     """Executes agent tools in a background thread (non-blocking UI)."""
 
+    _deliverFinished = Signal(object)  # AgentToolResult
     toolFinished = Signal(object)  # AgentToolResult
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._inflight: Optional[Future] = None
+        # Ensure emission happens on this QObject's thread (typically the UI thread).
+        self._deliverFinished.connect(self.toolFinished)
         self._tool_handlers: Dict[str, Callable[[str, Dict], AgentToolResult]] = {
             "git_status": self._handle_git_status,
             "git_log": self._handle_git_log,
@@ -149,7 +152,9 @@ class AgentToolExecutor(QObject):
         except Exception as e:
             result = AgentToolResult(
                 "unknown", False, f"Tool execution failed: {e}")
-        self.toolFinished.emit(result)
+        # The Future callback runs on a Python worker thread; queue delivery to the
+        # Qt thread that owns this object.
+        self._deliverFinished.emit(result)
 
     @staticmethod
     def _run_git(repo_dir: str, args: list) -> Tuple[bool, str]:

@@ -10,7 +10,7 @@ from concurrent.futures import (
 )
 from typing import Callable, List, Union
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, Qt, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
@@ -24,6 +24,8 @@ def _actionWrapper(action: Callable, submodule: str, userData: any, gitDir: str)
 
 
 class SubmoduleThread(QThread):
+
+    resultAvailable = Signal(object)  # payload is a tuple of args
 
     def __init__(self, submodules: Union[list, dict], useMultiThreading=True, parent=None):
         super().__init__(parent)
@@ -60,9 +62,9 @@ class SubmoduleThread(QThread):
         return None
 
     def onResultAvailable(self, *args):
-        """ Override this method to handle the result of the action """
-        if self._resultHandler:
-            self._resultHandler(*args)
+        # Emit from the worker thread; receiver side can choose queued delivery.
+        # Payload is already the expanded args tuple.
+        self.resultAvailable.emit(args)
 
     def run(self):
         if self.isInterruptionRequested():
@@ -138,6 +140,7 @@ class SubmoduleExecutor(QObject):
         super().__init__(parent)
         self._thread: SubmoduleThread = None
         self._threads: List[QThread] = []
+        self._resultHandler: Callable[[any], any] = None
 
     def submit(self, submodules: Union[list, dict], actionHandler: Callable,
                resultHandler: Callable = None, useMultiThreading=True):
@@ -148,9 +151,13 @@ class SubmoduleExecutor(QObject):
 
         self.cancel()
 
+        self._resultHandler = resultHandler
+
         self._thread = SubmoduleThread(submodules, useMultiThreading, self)
         self._thread.setActionHandler(actionHandler)
         self._thread.setResultHandler(resultHandler)
+        # Deliver results on this QObject's thread (typically the UI thread).
+        self._thread.resultAvailable.connect(self._onResultAvailable, Qt.QueuedConnection)
         self._thread.finished.connect(self.onFinished)
         self._thread.finished.connect(self._onThreadFinished)
         self._thread.started.connect(self.started)
@@ -184,6 +191,15 @@ class SubmoduleExecutor(QObject):
     def onFinished(self):
         self._thread = None
         self.finished.emit()
+
+    def _onResultAvailable(self, payload):
+        handler = self._resultHandler
+        if not handler:
+            return
+        if isinstance(payload, tuple):
+            handler(*payload)
+        else:
+            handler(payload)
 
     def _onThreadFinished(self):
         thread = self.sender()

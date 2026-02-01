@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import gc
+import weakref
 
 from PySide6.QtTest import QSignalSpy
 
@@ -32,3 +33,28 @@ class TestTaskRunner(TestBase):
         self.assertEqual(123, res)
         self.assertIsNone(err)
         self.assertEqual(1, spy.count())
+
+    def test_task_result_not_released_before_slots_run(self):
+        runner = TaskRunner(self.app)
+        observed = []
+
+        t = runner.run(lambda: 123)
+        wr = weakref.ref(t)
+
+        def _on_finished(ok, res, err):
+            obj = wr()
+            self.assertIsNotNone(obj)
+            self.assertIn(obj, runner._pending)
+            observed.append((ok, res, err))
+
+        t.finished.connect(_on_finished)
+
+        del t
+        gc.collect()
+
+        self.wait(500, lambda: len(observed) == 0)
+        self.assertEqual(1, len(observed))
+
+        # Cleanup is deferred, so it should be gone shortly after.
+        self.wait(500, lambda: len(runner._pending) != 0)
+        self.assertEqual(0, len(runner._pending))
