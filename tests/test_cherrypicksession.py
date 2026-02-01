@@ -40,7 +40,7 @@ class _FakeRunner(QObject):
             except Exception as e:
                 return False, None, str(e)
 
-        return _FakeTask(_call)
+        return _FakeTask(_call, parent=self)
 
 
 class _FakeResolvePanel(QObject):
@@ -85,6 +85,8 @@ class TestCherryPickSession(TestBase):
         pass
 
     def _waitForSpy(self, spy: QSignalSpy, count: int = 1, timeout: int = 2000):
+        # Process events first to allow signals to be emitted
+        self.processEvents()
         self.wait(timeout, lambda: spy.count() < count)
         self.assertGreaterEqual(spy.count(), count)
 
