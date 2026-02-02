@@ -14,6 +14,7 @@ from PySide6.QtGui import (
     QTextCursor,
     QTextDocument,
     QTextFormat,
+    QTextOption,
 )
 from PySide6.QtWidgets import QPlainTextEdit
 
@@ -108,6 +109,8 @@ class AiChatbot(QPlainTextEdit):
 
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
+
+        self.setWordWrapMode(QTextOption.WrapAnywhere)
 
     def appendResponse(self, response: AiResponse, collapsed=False):
         cursor = self.textCursor()
