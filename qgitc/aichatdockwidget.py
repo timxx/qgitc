@@ -36,7 +36,6 @@ class AiChatDockWidget(QDockWidget):
         self._titleBarLayout.addWidget(titleLabel)
 
         self._chatTitleLabel = ElidedLabel(self._titleBarWidget)
-        self._chatTitleLabel.setTextColor(Qt.gray)
         self._titleBarLayout.addWidget(self._chatTitleLabel)
 
         self._titleBarLayout.addStretch()
