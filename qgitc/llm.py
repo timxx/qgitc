@@ -450,6 +450,22 @@ class AiModelBase(QObject):
                 self._choiceReasonings[choiceIndex] = self._choiceReasonings.get(
                     choiceIndex) + reasoning
 
+            if content or reasoning:
+                aiResponse = AiResponse()
+                aiResponse.is_delta = True
+                aiResponse.role = self._choiceRoles.get(
+                    choiceIndex, AiRole.Assistant)
+                aiResponse.message = content
+                aiResponse.reasoning = reasoning
+                if not self._firstDelta and content:
+                    if self._choiceReasonings.get(choiceIndex) and \
+                            self._choiceContents.get(choiceIndex) == content:
+                        # To prevent mixing reasoning and content in a single UI message
+                        self._firstDelta = True
+                aiResponse.first_delta = self._firstDelta and choiceIndex == 0
+                self.responseAvailable.emit(aiResponse)
+                self._firstDelta = False
+
             # If model signaled completion for this choice, commit immediately.
             if finishReason in ("stop", "tool_calls", "content_filter"):
                 role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
@@ -472,21 +488,6 @@ class AiModelBase(QObject):
                 if fullContent or fullReasoning or toolCalls:
                     self.addHistory(
                         role, fullContent, reasoning=fullReasoning, toolCalls=toolCalls)
-            elif content or reasoning:
-                aiResponse = AiResponse()
-                aiResponse.is_delta = True
-                aiResponse.role = self._choiceRoles.get(
-                    choiceIndex, AiRole.Assistant)
-                aiResponse.message = content
-                aiResponse.reasoning = reasoning
-                if not self._firstDelta and content:
-                    if self._choiceReasonings.get(choiceIndex) and \
-                            self._choiceContents.get(choiceIndex) == content:
-                        # To prevent mixing reasoning and content in a single UI message
-                        self._firstDelta = True
-                aiResponse.first_delta = self._firstDelta and choiceIndex == 0
-                self.responseAvailable.emit(aiResponse)
-                self._firstDelta = False
 
     def handleNonStreamResponse(self, response: bytes):
         try:
