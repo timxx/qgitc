@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
+    QFrame,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -64,7 +65,6 @@ class CherryPickProgressDialog(QDialog):
 
     def _setupUi(self):
         layout = QVBoxLayout(self)
-        self.setLayout(layout)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
@@ -74,25 +74,35 @@ class CherryPickProgressDialog(QDialog):
         self._mainSplitter.setChildrenCollapsible(False)
         layout.addWidget(self._mainSplitter)
 
+        topFrame = QFrame(self)
+        topFrame.setFrameShape(QFrame.Shape.StyledPanel)
+        topFrame.setFrameShadow(QFrame.Shadow.Raised)
+
         leftPane = QWidget(self._mainSplitter)
         leftLayout = QVBoxLayout(leftPane)
         leftLayout.setContentsMargins(0, 0, 0, 0)
         leftLayout.setSpacing(4)
 
+        topLayout = QVBoxLayout(topFrame)
+        topLayout.setContentsMargins(4, 4, 4, 4)
+        topLayout.setSpacing(4)
+
         self._status = QLabel(self.tr("Ready"), leftPane)
         self._status.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        leftLayout.addWidget(self._status)
+        topLayout.addWidget(self._status)
 
         self._progress = QProgressBar(leftPane)
         self._progress.setRange(0, 1)
         self._progress.setValue(0)
-        leftLayout.addWidget(self._progress)
+        topLayout.addWidget(self._progress)
 
         self._leftSplitter = QSplitter(Qt.Vertical, leftPane)
         self._leftSplitter.setChildrenCollapsible(False)
 
         self._list = QListWidget(self._leftSplitter)
-        self._leftSplitter.addWidget(self._list)
+        topLayout.addWidget(self._list)
+
+        self._leftSplitter.addWidget(topFrame)
         self._leftSplitter.addWidget(self._resolvePanel)
         self._leftSplitter.setStretchFactor(0, 4)
         self._leftSplitter.setStretchFactor(1, 2)

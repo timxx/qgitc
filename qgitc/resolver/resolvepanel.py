@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -94,9 +95,17 @@ class ResolvePanel(QWidget):
         self._setupUi()
 
     def _setupUi(self):
-        layout = QVBoxLayout(self)
+        frame = QFrame(self)
+        frame.setFrameShape(QFrame.Shape.StyledPanel)
+        frame.setFrameShadow(QFrame.Shadow.Raised)
+
+        mainLayout = QVBoxLayout(self)
+        mainLayout.setContentsMargins(0, 0, 0, 0)
+        mainLayout.addWidget(frame)
+
+        layout = QVBoxLayout(frame)
         self.setLayout(layout)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
         self._label = QLabel(self.tr("No conflicts"), self)
@@ -114,13 +123,10 @@ class ResolvePanel(QWidget):
         actions.addWidget(self._resolveSelectedBtn)
         actions.addWidget(self._resolveAllBtn)
 
-        self._aiAutoResolveCheck = QCheckBox(
-            self.tr("Auto-resolve with AI"), self)
+        self._aiAutoResolveCheck = QCheckBox(self.tr("Auto-resolve"), self)
         self._aiAutoResolveCheck.setChecked(False)
         self._aiAutoResolveCheck.setToolTip(
-            self.tr(
-                "When enabled, conflicts are auto-resolved using the assistant. Disable to use merge tool only.")
-        )
+            self.tr("Use assistant to auto-resolve conflicts if possible"))
 
         actions.addWidget(self._aiAutoResolveCheck)
         actions.addStretch(1)
