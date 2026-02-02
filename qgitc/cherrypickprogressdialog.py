@@ -49,7 +49,7 @@ class CherryPickProgressDialog(QDialog):
             resolvePanel=self._resolvePanel, parent=self)
 
         self._aiChatWidget: Optional[AiChatWidget] = None
-        self._aiContextProvider: Optional[CherryPickProgressAiChatContextProvider] = None
+        self._aiContextProvider = CherryPickProgressAiChatContextProvider(self)
 
         self._aiContainer: Optional[QWidget] = None
         self._aiContainerLayout: Optional[QVBoxLayout] = None
@@ -136,8 +136,10 @@ class CherryPickProgressDialog(QDialog):
         self._session.conflictsDetected.connect(self._onConflictsDetected)
         self._session.finished.connect(self._onFinished)
 
-        self._resolvePanel.currentFileChanged.connect(self._onResolveCurrentFileChanged)
-        self._resolvePanel.aiAutoResolveToggled.connect(self._onAiAutoResolveToggled)
+        self._resolvePanel.currentFileChanged.connect(
+            self._onResolveCurrentFileChanged)
+        self._resolvePanel.aiAutoResolveToggled.connect(
+            self._onAiAutoResolveToggled)
 
     def setMarkCallback(self, callback: Optional[Callable[[str, bool], None]]):
         self._session.setMarkCallback(callback)
@@ -168,7 +170,6 @@ class CherryPickProgressDialog(QDialog):
 
             self._aiChatWidget = AiChatWidget(
                 self._aiContainer, embedded=True, hideHistoryPanel=True)
-            self._aiContextProvider = CherryPickProgressAiChatContextProvider(self)
             self._aiChatWidget.setContextProvider(self._aiContextProvider)
 
             self._aiContainerLayout.addWidget(self._aiChatWidget)
@@ -196,11 +197,10 @@ class CherryPickProgressDialog(QDialog):
     ):
         self._resolvePanel.setAiAutoResolveEnabled(aiEnabled)
 
-        if self._aiContextProvider is not None:
-            self._aiContextProvider.setBaseDirs(
-                targetBaseRepoDir=targetBaseRepoDir,
-                sourceBaseRepoDir=sourceBaseRepoDir,
-            )
+        self._aiContextProvider.setBaseDirs(
+            targetBaseRepoDir=targetBaseRepoDir,
+            sourceBaseRepoDir=sourceBaseRepoDir,
+        )
 
         self._items = list(items or [])
         self._list.clear()
@@ -241,7 +241,7 @@ class CherryPickProgressDialog(QDialog):
         if item is not None and item.sourceIndex is not None and self._ensureVisibleCallback:
             self._ensureVisibleCallback(int(item.sourceIndex))
 
-        if self._aiContextProvider is not None and item is not None:
+        if item is not None:
             self._aiContextProvider.setCurrentItem(
                 sha1=item.sha1,
                 repoDir=item.repoDir or "",
@@ -280,13 +280,11 @@ class CherryPickProgressDialog(QDialog):
             self._status.setText(
                 self.tr("Patch conflicts detected; resolving…"))
 
-        if self._aiContextProvider is not None:
-            opText = "cherry-pick" if op == ResolveOperation.CHERRY_PICK else "am"
-            self._aiContextProvider.setConflicts(operation=opText, files=list(filesObj or []))
+        opText = "cherry-pick" if op == ResolveOperation.CHERRY_PICK else "am"
+        self._aiContextProvider.setConflicts(
+            operation=opText, files=list(filesObj or []))
 
     def _onResolveCurrentFileChanged(self, pathObj: object):
-        if self._aiContextProvider is None:
-            return
         path = "" if pathObj is None else str(pathObj)
         self._aiContextProvider.setCurrentFile(path)
 
