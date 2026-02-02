@@ -22,6 +22,9 @@ class _DummyAiChatWidget(QWidget):
     def setContextProvider(self, provider):
         self._provider = provider
 
+    def queryClose(self):
+        pass
+
 
 class TestCherryPickProgressDialog(TestBase):
 
