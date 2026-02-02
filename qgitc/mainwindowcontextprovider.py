@@ -214,10 +214,9 @@ class MainWindowContextProvider(AiChatContextProvider):
                 c = self._activeCommit()
                 if c is not None and c.isValid():
                     blocks.append(
-                        "Active commit:\n"
-                        f"{c.sha1}\n"
+                        f"Active commit: {c.sha1}\n"
                         f"Author: {c.author} {c.authorDate}\n"
-                        f"Message:\n{c.comments}"
+                        f"Message:\n```text\n{c.comments}\n```"
                     )
 
             elif cid == self.CTX_SELECTED_COMMITS:

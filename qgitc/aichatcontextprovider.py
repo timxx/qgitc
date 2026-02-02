@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import platform
 from typing import List, NamedTuple, Optional
 
 from PySide6.QtCore import QObject, Signal
@@ -51,7 +52,8 @@ class AiChatContextProvider(QObject):
     def commonContext(self) -> List[str]:
         blocks = []
         today = datetime.date.today().isoformat()
-        blocks.append(f"The current date is {today}")
+        blocks.append(f"Current date: {today}")
+        blocks.append(f"Current OS: {platform.system()}")
         blocks.append(f"Main repo dir: {Git.REPO_DIR}")
 
         return blocks
