@@ -27,10 +27,10 @@ class TestAiChatLoadHistory(TestBase):
         def _clear():
             self._mockChatModel.history.clear()
 
-        def _addHistory(role, message, description=None, toolCalls=None):
+        def _addHistory(role, message, description=None, toolCalls=None, reasoning=None):
             self._mockChatModel.history.append(
                 AiChatMessage(
-                    role, message, description=description, toolCalls=toolCalls)
+                    role, message, description=description, toolCalls=toolCalls, reasoning=reasoning)
             )
 
         self._mockChatModel.clear.side_effect = _clear

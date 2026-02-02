@@ -657,10 +657,17 @@ class AiChatWidget(QWidget):
 
     def _onMessageReady(self, response: AiResponse):
         # tool-only responses can have empty message.
-        if response.message is None and not response.tool_calls:
+        if not response.message and not response.reasoning and not response.tool_calls:
             return
 
         model: AiModelBase = self.sender()
+        if response.reasoning:
+            reasoningResponse = AiResponse(
+                AiRole.Assistant, response.reasoning, description=self.tr("🧠 Reasoning"))
+            reasoningResponse.is_delta = response.is_delta
+            reasoningResponse.first_delta = response.first_delta
+            self._doMessageReady(model, reasoningResponse)
+
         self._doMessageReady(model, response)
 
     def _doMessageReady(self, model: AiModelBase, response: AiResponse, collapsed=False):
@@ -1334,13 +1341,18 @@ class AiChatWidget(QWidget):
             msg = messages[i]
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
+            reasoning = msg.get('reasoning', None)
             description = msg.get('description', None)
             toolCalls = msg.get('tool_calls', None)
 
-            model.addHistory(
-                role, content, description=description, toolCalls=toolCalls)
+            model.addHistory(role, content, description=description,
+                             toolCalls=toolCalls, reasoning=reasoning)
             # Don't add tool calls to UI (both for assistant and tool roles)
             if addToChatBot and not toolCalls:
+                if reasoning:
+                    reasoningResponse = AiResponse(
+                        AiRole.Assistant, reasoning, description=self.tr("🧠 Reasoning"))
+                    chatbot.appendResponse(reasoningResponse, collapsed=True)
                 response = AiResponse(role, content)
                 collapsed = (role == AiRole.Tool) or (role == AiRole.System) or \
                     (role == AiRole.Assistant and toolCalls)
@@ -1367,6 +1379,10 @@ class AiChatWidget(QWidget):
                     toolType = tool.toolType if tool else ToolType.WRITE
 
                     if addToChatBot:
+                        if reasoning:
+                            reasoningResponse = AiResponse(
+                                AiRole.Assistant, reasoning, description=self.tr("🧠 Reasoning"))
+                            chatbot.appendResponse(reasoningResponse, collapsed=True)
                         if content:
                             chatbot.appendResponse(AiResponse(role, content))
 

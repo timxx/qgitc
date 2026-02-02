@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -31,27 +32,27 @@ class AiRole(Enum):
         return AiRole.Assistant
 
 
+@dataclass
 class AiChatMessage:
-    def __init__(self, role=AiRole.User, message: str = None, description: str = None, toolCalls=None):
-        self.role = role
-        self.message = message
-        self.description = description
-        self.toolCalls = toolCalls
+    role: AiRole = AiRole.User
+    message: str = None
+    reasoning: str = None
+    description: str = None
+    toolCalls: Optional[List[Dict[str, Any]]] = None
 
 
+@dataclass
 class AiResponse:
-
-    def __init__(self, role=AiRole.Assistant, message: str = None, description: str = None):
-        self.role = role
-        self.message = message
-        # Optional description displayed after the role header (UI-only).
-        self.description = description
-        self.total_tokens = None
-        self.is_delta = False
-        self.first_delta = False
-        # OpenAI-compatible tool calls (Chat Completions).
-        # Each item is a dict like: {"id": str, "type": "function", "function": {"name": str, "arguments": str}}
-        self.tool_calls: Optional[List[Dict[str, Any]]] = None
+    role: AiRole = AiRole.Assistant
+    message: str = None
+    description: str = None
+    reasoning: str = None
+    total_tokens: int = None
+    is_delta: bool = False
+    first_delta: bool = False
+    # OpenAI-compatible tool calls (Chat Completions).
+    # Each item is a dict like: {"id": str, "type": "function", "function": {"name": str, "arguments": str}}
+    tool_calls: Optional[List[Dict[str, Any]]] = None
 
 
 class AiParameters:
@@ -106,6 +107,7 @@ class AiModelBase(QObject):
         # OpenAI can legally return multiple choices in one response.
         self._choiceRoles = {}
         self._choiceContents = {}
+        self._choiceReasonings = {}
         # Nested mapping: choiceIndex -> (toolCallIndex -> toolCall dict accumulator)
         self._choiceToolCallAcc = {}
 
@@ -115,10 +117,11 @@ class AiModelBase(QObject):
     def queryAsync(self, params: AiParameters):
         pass
 
-    def addHistory(self, role: AiRole, message: str, description: str = None, toolCalls=None):
+    def addHistory(self, role: AiRole, message: str, description: str = None,
+                   toolCalls=None, reasoning: str = None):
         self._history.append(AiChatMessage(
             role, message, description=description,
-            toolCalls=toolCalls))
+            toolCalls=toolCalls, reasoning=reasoning))
 
     def toOpenAiMessages(self):
         """Convert internal chat history to OpenAI Chat Completions messages.
@@ -279,6 +282,7 @@ class AiModelBase(QObject):
 
         self._choiceRoles = {}
         self._choiceContents = {}
+        self._choiceReasonings = {}
         self._choiceToolCallAcc = {}
 
         if not reply:
@@ -353,9 +357,11 @@ class AiModelBase(QObject):
         for choiceIndex in list(self._choiceRoles.keys()):
             role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
             fullContent = self._choiceContents.pop(choiceIndex, None)
+            fullReasoning = self._choiceReasonings.pop(choiceIndex, None)
             toolCalls = self._choiceToolCallAcc.pop(choiceIndex, {})
-            if fullContent or toolCalls:
-                self.addHistory(role, fullContent, toolCalls=toolCalls)
+            if fullContent or fullReasoning or toolCalls:
+                self.addHistory(role, fullContent,
+                                reasoning=fullReasoning, toolCalls=toolCalls)
 
     def _handleError(self, code: QNetworkReply.NetworkError):
         if code in [QNetworkReply.ConnectionRefusedError, QNetworkReply.HostNotFoundError]:
@@ -400,6 +406,8 @@ class AiModelBase(QObject):
                 self._choiceRoles[choiceIndex] = AiRole.Assistant
             if choiceIndex not in self._choiceContents:
                 self._choiceContents[choiceIndex] = ""
+            if choiceIndex not in self._choiceReasonings:
+                self._choiceReasonings[choiceIndex] = ""
 
             roleStr = delta.get("role")
             if roleStr:
@@ -433,12 +441,20 @@ class AiModelBase(QObject):
             content = self._getContent(delta)
             if content:
                 self._choiceContents[choiceIndex] = self._choiceContents.get(
-                    choiceIndex, "") + content
+                    choiceIndex) + content
+
+            reasoning = self._getReasoning(delta)
+            if reasoning:
+                # content and reasoning are mutually exclusive in a single delta.
+                assert not content
+                self._choiceReasonings[choiceIndex] = self._choiceReasonings.get(
+                    choiceIndex) + reasoning
 
             # If model signaled completion for this choice, commit immediately.
             if finishReason in ("stop", "tool_calls", "content_filter"):
                 role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
                 fullContent = self._choiceContents.pop(choiceIndex, None)
+                fullReasoning = self._choiceReasonings.pop(choiceIndex, None)
                 toolCalls = None
                 if finishReason == "tool_calls":
                     accMap = self._choiceToolCallAcc.pop(choiceIndex, {})
@@ -453,14 +469,21 @@ class AiModelBase(QObject):
                         aiResponse.first_delta = self._firstDelta and choiceIndex == 0
                         self.responseAvailable.emit(aiResponse)
 
-                if fullContent or toolCalls:
-                    self.addHistory(role, fullContent, toolCalls=toolCalls)
-            elif content:
+                if fullContent or fullReasoning or toolCalls:
+                    self.addHistory(
+                        role, fullContent, reasoning=fullReasoning, toolCalls=toolCalls)
+            elif content or reasoning:
                 aiResponse = AiResponse()
                 aiResponse.is_delta = True
                 aiResponse.role = self._choiceRoles.get(
                     choiceIndex, AiRole.Assistant)
                 aiResponse.message = content
+                aiResponse.reasoning = reasoning
+                if not self._firstDelta and content:
+                    if self._choiceReasonings.get(choiceIndex) and \
+                            self._choiceContents.get(choiceIndex) == content:
+                        # To prevent mixing reasoning and content in a single UI message
+                        self._firstDelta = True
                 aiResponse.first_delta = self._firstDelta and choiceIndex == 0
                 self.responseAvailable.emit(aiResponse)
                 self._firstDelta = False
@@ -477,6 +500,7 @@ class AiModelBase(QObject):
         for choice in data.get("choices", []):
             message: dict = choice.get("message", {})
             content = self._getContent(message)
+            reasoning = self._getReasoning(message)
             role = AiRole.fromString(message.get("role", "assistant"))
             tool_calls = message.get("tool_calls")
 
@@ -484,24 +508,30 @@ class AiModelBase(QObject):
             aiResponse.total_tokens = totalTokens
             aiResponse.role = role
             aiResponse.message = content
+            aiResponse.reasoning = reasoning
             if tool_calls:
                 aiResponse.tool_calls = tool_calls
             self.responseAvailable.emit(aiResponse)
 
-            if content or tool_calls:
-                self.addHistory(role, content, toolCalls=tool_calls)
+            if content or reasoning or tool_calls:
+                self.addHistory(
+                    role, content, reasoning=reasoning, toolCalls=tool_calls)
 
     @staticmethod
     def _getContent(data: dict) -> str:
-        content = data.get("content", None)
-        if content:
-            return content
+        return data.get("content", None)
 
+    @staticmethod
+    def _getReasoning(data: dict) -> str:
         content = data.get("reasoning", None)
         if content:
             return content
 
         content = data.get("reasoning_text", None)
+        if content:
+            return content
+
+        content = data.get("reasoning_content", None)
         return content
 
     @property

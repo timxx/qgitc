@@ -161,6 +161,7 @@ class AiChatHistoryStore(QObject):
             messages.append({
                 "role": message.role.name.lower(),
                 "content": message.message,
+                "reasoning": message.reasoning,
                 "description": message.description,
                 "tool_calls": message.toolCalls,
             })
