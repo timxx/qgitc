@@ -88,21 +88,14 @@ class CherryPickProgressDialog(QDialog):
         self._progress.setValue(0)
         leftLayout.addWidget(self._progress)
 
-        self._aiAutoResolveCheck = QCheckBox(self.tr("Auto-resolve with AI"), leftPane)
-        self._aiAutoResolveCheck.setChecked(False)
-        self._aiAutoResolveCheck.setToolTip(
-            self.tr("When enabled, conflicts are auto-resolved using the assistant. Disable to use merge tool only.")
-        )
-        leftLayout.addWidget(self._aiAutoResolveCheck)
-
         self._leftSplitter = QSplitter(Qt.Vertical, leftPane)
         self._leftSplitter.setChildrenCollapsible(False)
 
         self._list = QListWidget(self._leftSplitter)
         self._leftSplitter.addWidget(self._list)
         self._leftSplitter.addWidget(self._resolvePanel)
-        self._leftSplitter.setStretchFactor(0, 2)
-        self._leftSplitter.setStretchFactor(1, 3)
+        self._leftSplitter.setStretchFactor(0, 4)
+        self._leftSplitter.setStretchFactor(1, 2)
         leftLayout.addWidget(self._leftSplitter)
 
         self._buttons = QDialogButtonBox(leftPane)
@@ -126,8 +119,6 @@ class CherryPickProgressDialog(QDialog):
         self._abortBtn.clicked.connect(self._onAbort)
         self._closeBtn.clicked.connect(self.close)
 
-        self._aiAutoResolveCheck.toggled.connect(self._onAiAutoResolveToggled)
-
         self._session.statusTextChanged.connect(self._status.setText)
         self._session.progressChanged.connect(self._onProgress)
         self._session.itemStarted.connect(self._onItemStarted)
@@ -136,6 +127,7 @@ class CherryPickProgressDialog(QDialog):
         self._session.finished.connect(self._onFinished)
 
         self._resolvePanel.currentFileChanged.connect(self._onResolveCurrentFileChanged)
+        self._resolvePanel.aiAutoResolveToggled.connect(self._onAiAutoResolveToggled)
 
     def setMarkCallback(self, callback: Optional[Callable[[str, bool], None]]):
         self._session.setMarkCallback(callback)
@@ -191,12 +183,7 @@ class CherryPickProgressDialog(QDialog):
         allowPatchPick: bool = True,
         aiEnabled: bool = False,
     ):
-        # Initialize checkbox + AI pane from caller-provided default.
-        self._aiAutoResolveCheck.blockSignals(True)
-        self._aiAutoResolveCheck.setChecked(bool(aiEnabled))
-        self._aiAutoResolveCheck.blockSignals(False)
-
-        self._ensureAiChatEnabled(bool(aiEnabled))
+        self._resolvePanel.setAiAutoResolveEnabled(aiEnabled)
 
         if self._aiContextProvider is not None:
             self._aiContextProvider.setBaseDirs(

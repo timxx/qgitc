@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -74,6 +75,7 @@ class ResolvePanel(QWidget):
     finalizeOutcome = Signal(object)  # ResolveOutcome
 
     abortSafePointReached = Signal()
+    aiAutoResolveToggled = Signal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -106,10 +108,21 @@ class ResolvePanel(QWidget):
         layout.addWidget(self._list)
 
         actions = QHBoxLayout()
-        self._resolveSelectedBtn = QPushButton(self.tr("Resolve selected"), self)
+        self._resolveSelectedBtn = QPushButton(
+            self.tr("Resolve selected"), self)
         self._resolveAllBtn = QPushButton(self.tr("Resolve all"), self)
         actions.addWidget(self._resolveSelectedBtn)
         actions.addWidget(self._resolveAllBtn)
+
+        self._aiAutoResolveCheck = QCheckBox(
+            self.tr("Auto-resolve with AI"), self)
+        self._aiAutoResolveCheck.setChecked(False)
+        self._aiAutoResolveCheck.setToolTip(
+            self.tr(
+                "When enabled, conflicts are auto-resolved using the assistant. Disable to use merge tool only.")
+        )
+
+        actions.addWidget(self._aiAutoResolveCheck)
         actions.addStretch(1)
         layout.addLayout(actions)
 
@@ -117,6 +130,7 @@ class ResolvePanel(QWidget):
 
         self._resolveSelectedBtn.clicked.connect(self._onResolveSelected)
         self._resolveAllBtn.clicked.connect(self.startResolveAll)
+        self._aiAutoResolveCheck.toggled.connect(self._onAiAutoResolveToggled)
         self._list.itemDoubleClicked.connect(self._onItemDoubleClicked)
 
         self._updateActionState()
@@ -147,6 +161,9 @@ class ResolvePanel(QWidget):
             self._ctx.chatWidget = chatWidget
         if self._services is not None:
             self._services.ai = chatWidget
+
+    def setAiAutoResolveEnabled(self, enabled: bool):
+        self._aiAutoResolveCheck.setChecked(enabled)
 
     def isBusy(self) -> bool:
         return self._manager is not None
@@ -518,3 +535,6 @@ class ResolvePanel(QWidget):
             else:
                 manager.replyPrompt(prompt.promptId, "abort")
             return
+
+    def _onAiAutoResolveToggled(self, checked: bool):
+        self.aiAutoResolveToggled.emit(checked)
