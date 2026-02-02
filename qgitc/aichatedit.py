@@ -30,8 +30,9 @@ class AiChatEdit(QWidget):
 
         self._lineHeight = self.edit.document().firstBlock().layout().boundingRect().height()
 
-        self.edit.textChanged.connect(self._onTextChanged)
         self.edit.textChanged.connect(self.textChanged)
+        self.edit.document().documentLayout().documentSizeChanged.connect(
+            self._onDocumentSizeChanged)
 
         self._adjustHeight()
         self.edit.installEventFilter(self)
@@ -48,7 +49,7 @@ class AiChatEdit(QWidget):
     def textCursor(self):
         return self.edit.textCursor()
 
-    def _onTextChanged(self):
+    def _onDocumentSizeChanged(self, newSize):
         self._adjustHeight()
 
     def _adjustHeight(self):
