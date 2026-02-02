@@ -193,6 +193,11 @@ class ResolvePanel(QWidget):
         if self.isBusy():
             return
 
+        # "Resolve all" should retry files that previously failed.
+        for p, st in list(self._fileStates.items()):
+            if st == _FileState.FAILED:
+                self._fileStates[p] = _FileState.PENDING
+
         pending = [p for p, st in self._fileStates.items() if st ==
                    _FileState.PENDING]
         self._queue = list(pending)
