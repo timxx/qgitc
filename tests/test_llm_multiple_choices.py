@@ -127,3 +127,39 @@ class TestLlmMultipleChoices(TestBase):
         # Calling _handleFinished again shouldn't duplicate because caches were popped.
         model._handleFinished()
         self.assertEqual(len(model.history), 1)
+
+    def testStreamResponse_StopChunkWithContent_StillEmitsDeltaAndAddsHistory(self):
+        """Regression for da063ca (Gemini 3 Flash).
+
+        Some providers may send the final chunk with finish_reason="stop" AND include content.
+        We must still emit that content via responseAvailable and commit it to history.
+        """
+
+        model = _DummyModel(url="http://example.invalid")
+
+        received = []
+
+        def _on_response(resp):
+            received.append(resp)
+
+        model.responseAvailable.connect(_on_response)
+
+        payload_stop_with_content = {
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"role": "assistant", "content": "Hello"},
+                    "finish_reason": "stop",
+                }
+            ]
+        }
+
+        model.handleStreamResponse(
+            b"data: " + json.dumps(payload_stop_with_content).encode("utf-8")
+        )
+        self.processEvents()
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0].message, "Hello")
+
+        self.assertEqual(len(model.history), 1)
+        self.assertEqual(model.history[0].message, "Hello")
