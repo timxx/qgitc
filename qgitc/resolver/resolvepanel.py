@@ -424,6 +424,14 @@ class ResolvePanel(QWidget):
 
         self._renderFileList()
         self.fileOutcome.emit(path, outcome)
+
+        if outcome.status != ResolveOutcomeStatus.RESOLVED:
+            msg = (outcome.message or "").strip()
+            if msg:
+                self._setStatus(
+                    self.tr("Failed to resolve {0}: {1}").format(path, msg))
+            else:
+                self._setStatus(self.tr("Failed to resolve {0}").format(path))
         self._updateActionState()
 
         if self._abortRequested:

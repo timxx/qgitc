@@ -97,7 +97,7 @@ class TestCherryPickProgressDialog(TestBase):
 
         self.dialog._onItemStatusChanged(0, CherryPickItemStatus.FAILED, "x")
         self.assertIn("Failed", self.dialog._list.item(0).text())
-        self.assertIn("x", self.dialog._list.item(0).text())
+        self.assertNotIn("x", self.dialog._list.item(0).text())
 
         self.dialog._onItemStatusChanged(0, CherryPickItemStatus.PICKED, "")
         self.assertIn("Picked", self.dialog._list.item(0).text())

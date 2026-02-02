@@ -268,8 +268,6 @@ class CherryPickProgressDialog(QDialog):
                 ApplicationBase.instance().colorSchema().ConflictFg)
         elif status == CherryPickItemStatus.ABORTED:
             text = f"{baseText}  {self.tr('Aborted')}"
-        if message:
-            text = f"{text}  -  {message}"
         item.setText(text)
 
     def _onConflictsDetected(self, operationObj: object, filesObj: object):
