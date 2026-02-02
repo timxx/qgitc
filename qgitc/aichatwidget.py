@@ -668,7 +668,7 @@ class AiChatWidget(QWidget):
 
         assert (index != -1)
         messages: AiChatbot = self._chatBot
-        if response.message:
+        if response.message or response.role == AiRole.Tool:
             messages.appendResponse(response, collapsed)
 
         # If the assistant produced tool calls, auto-run READ_ONLY tools and

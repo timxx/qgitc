@@ -267,6 +267,8 @@ class AgentToolExecutor(QObject):
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
+        if not output:
+            output = "No changed files found"
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff_staged(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -285,6 +287,8 @@ class AgentToolExecutor(QObject):
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
         ok, output = self._run_git(repo_dir, args)
+        if not output:
+            output = "No changed files found"
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_show(self, tool_name: str, params: Dict) -> AgentToolResult:
