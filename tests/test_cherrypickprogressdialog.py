@@ -14,7 +14,7 @@ from tests.base import TestBase
 
 
 class _DummyAiChatWidget(QWidget):
-    def __init__(self, parent=None, embedded=False):
+    def __init__(self, parent=None, embedded=False, hideHistoryPanel=False):
         super().__init__(parent)
         self.embedded = embedded
         self._provider = None

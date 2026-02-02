@@ -218,10 +218,12 @@ class AiChatWidget(QWidget):
     chatTitleReady = Signal()
     modelStateChanged = Signal(bool)
 
-    def __init__(self, parent=None, embedded=False):
+    def __init__(self, parent=None, embedded=False, hideHistoryPanel=False):
         super().__init__(parent)
 
         self._embedded = embedded
+        self._hideHistoryPanel = hideHistoryPanel
+
         if not embedded:
             mainLayout = QHBoxLayout(self)
             mainLayout.setContentsMargins(4, 4, 4, 4)
@@ -335,6 +337,8 @@ class AiChatWidget(QWidget):
 
         # wait until history loaded
         self._historyPanel.setEnabled(False)
+        if self._hideHistoryPanel:
+            self._historyPanel.setVisible(False)
 
     def _setupChatPanel(self):
         if not self._embedded:
@@ -1472,7 +1476,7 @@ class AiChatWidget(QWidget):
         self.messages.clear()
 
     def _setEmbeddedRecentListVisible(self, visible: bool):
-        if not self._embedded:
+        if not self._embedded or self._hideHistoryPanel:
             return
 
         if visible:

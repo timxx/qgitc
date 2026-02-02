@@ -166,7 +166,8 @@ class CherryPickProgressDialog(QDialog):
             if self._aiContainer is None or self._aiContainerLayout is None:
                 return
 
-            self._aiChatWidget = AiChatWidget(self._aiContainer, embedded=True)
+            self._aiChatWidget = AiChatWidget(
+                self._aiContainer, embedded=True, hideHistoryPanel=True)
             self._aiContextProvider = CherryPickProgressAiChatContextProvider(self)
             self._aiChatWidget.setContextProvider(self._aiContextProvider)
 
