@@ -76,7 +76,7 @@ class ResolveConflictJob(QObject):
         sha1: str,
         path: str,
         conflictText: str,
-        extraContext: str = None,
+        context: str = None,
         parent: QObject = None,
     ):
         super().__init__(parent or widget)
@@ -85,7 +85,7 @@ class ResolveConflictJob(QObject):
         self._sha1 = sha1
         self._path = path
         self._conflictText = conflictText
-        self._extraContext = extraContext
+        self._context = context
 
         self._done = False
         self._prevAllowWrite = False
@@ -107,17 +107,10 @@ class ResolveConflictJob(QObject):
         # Always start a new conversation for conflict resolution.
         w._createNewConversation()
 
-        context = (
-            f"repo_dir: {self._repoDir}\n"
-            f"conflicted_file: {self._path}\n"
-        )
-
-        if self._sha1:
-            context += f"sha1: {self._sha1}\n"
-
-        w._extraContext = context.rstrip()
-        if self._extraContext:
-            w._extraContext += f"\n{self._extraContext.rstrip()}"
+        # Context should be supplied by the caller (e.g. embedded context provider
+        # or ResolveContext.context). Avoid synthesizing duplicate repo/file
+        # lines here.
+        w._injectedContext = (self._context or "").strip() or None
 
         prompt = RESOLVE_PROMPT.format(
             operation="cherry-pick" if self._sha1 else "merge",
@@ -271,7 +264,7 @@ class AiChatWidget(QWidget):
         # Code review diff collection (staged/local changes)
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
         self._codeReviewDiffs: List[str] = []
-        self._extraContext: str = None
+        self._injectedContext: str = None
 
         # allow auto-run WRITE tools without user confirmation.
         self._allowWriteTools: bool = False
@@ -295,10 +288,10 @@ class AiChatWidget(QWidget):
             return True
         if event.type() == CodeReviewSceneEvent.Type:
             if event.scene_line:
-                if not self._extraContext:
-                    self._extraContext = event.scene_line
+                if not self._injectedContext:
+                    self._injectedContext = event.scene_line
                 else:
-                    self._extraContext += "\n" + event.scene_line
+                    self._injectedContext += "\n" + event.scene_line
             return True
         return super().event(event)
 
@@ -464,7 +457,7 @@ class AiChatWidget(QWidget):
             self._codeReviewExecutor.cancel()
             self._codeReviewExecutor = None
             self._codeReviewDiffs.clear()
-        self._extraContext = None
+        self._injectedContext = None
 
     def sizeHint(self):
         if self._embedded:
@@ -595,7 +588,7 @@ class AiChatWidget(QWidget):
         titleSeed = (params.sys_prompt + "\n" +
                      prompt) if params.sys_prompt else prompt
 
-        extraContext = self._extraContext
+        injectedContext = self._injectedContext
 
         if chatMode == AiChatMode.Agent:
             params.tools = AgentToolRegistry.openai_tools()
@@ -622,12 +615,12 @@ class AiChatWidget(QWidget):
             contextText = provider.buildContextText(
                 selectedIds) if provider is not None else ""
 
-            if extraContext:
+            if injectedContext:
                 merged = (contextText or "").strip()
                 if merged:
-                    merged += "\n\n" + extraContext
+                    merged += "\n\n" + injectedContext
                 else:
-                    merged = extraContext
+                    merged = injectedContext
                 contextText = merged
 
             if contextText:
@@ -1123,7 +1116,7 @@ class AiChatWidget(QWidget):
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
             self._createNewConversation()
-        self._extraContext = scene
+        self._injectedContext = scene
         self._doRequest(diff, AiChatMode.CodeReview)
 
     def _makeFileList(self, files: List[str]) -> str:
@@ -1145,7 +1138,7 @@ class AiChatWidget(QWidget):
         """Start a code review for staged/local changes across submodules."""
         self._ensureCodeReviewExecutor()
         self._codeReviewDiffs.clear()
-        self._extraContext = "type: staged changes (index)\n"
+        self._injectedContext = "type: staged changes (index)\n"
         self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
 
     def _ensureCodeReviewExecutor(self):
@@ -1475,7 +1468,7 @@ class AiChatWidget(QWidget):
         self._autoToolGroups.clear()
         self._nextAutoGroupId = 1
         self._codeReviewDiffs.clear()
-        self._extraContext = None
+        self._injectedContext = None
         self.messages.clear()
 
     def _setEmbeddedRecentListVisible(self, visible: bool):
@@ -1534,7 +1527,7 @@ class AiChatWidget(QWidget):
         sha1: str,
         path: str,
         conflictText: str,
-        extraContext: str = None,
+        context: str = None,
     ) -> ResolveConflictJob:
         job = ResolveConflictJob(
             self,
@@ -1542,7 +1535,7 @@ class AiChatWidget(QWidget):
             sha1=sha1,
             path=path,
             conflictText=conflictText,
-            extraContext=extraContext,
+            context=context,
         )
         QTimer.singleShot(0, job.start)
         return job

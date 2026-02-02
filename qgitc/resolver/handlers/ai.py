@@ -119,7 +119,7 @@ class AiResolveHandler(ResolveHandler):
         )
 
         job = services.ai.resolveFileAsync(
-            ctx.repoDir, ctx.sha1, path, conflictText, ctx.extraContext
+            ctx.repoDir, ctx.sha1, path, conflictText, ctx.context
         )
         job.finished.connect(
             lambda ok3, reason: self._afterAi(path, ok3, reason))

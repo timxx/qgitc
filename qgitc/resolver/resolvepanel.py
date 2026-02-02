@@ -53,7 +53,7 @@ class ResolvePanelContext:
     operation: ResolveOperation
     sha1: str
     initialError: str = ""
-    extraContext: Optional[str] = None
+    context: Optional[str] = None
     chatWidget: Optional[object] = None
 
 
@@ -128,7 +128,7 @@ class ResolvePanel(QWidget):
         operation: ResolveOperation,
         sha1: str,
         initialError: str = "",
-        extraContext: Optional[str] = None,
+        context: Optional[str] = None,
         chatWidget: Optional[object] = None,
     ):
         self._ctx = ResolvePanelContext(
@@ -136,7 +136,7 @@ class ResolvePanel(QWidget):
             operation=operation,
             sha1=sha1,
             initialError=initialError or "",
-            extraContext=extraContext,
+            context=context,
             chatWidget=chatWidget,
         )
         self._services = ResolveServices(runner=self._runner, ai=chatWidget)
@@ -274,7 +274,7 @@ class ResolvePanel(QWidget):
             sha1=ctx.sha1,
             path="",
             initialError=ctx.initialError,
-            extraContext=ctx.extraContext,
+            context=ctx.context,
             mergetoolName=None,
         )
 
@@ -346,7 +346,7 @@ class ResolvePanel(QWidget):
             sha1=ctx.sha1,
             path=path,
             initialError=ctx.initialError,
-            extraContext=ctx.extraContext,
+            context=ctx.context,
             mergetoolName=mergeToolName,
         )
 

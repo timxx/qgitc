@@ -661,16 +661,24 @@ class MergeWidget(QWidget):
             self.__ensureChatDockVisible()
 
         sha1 = ""
-        extraContext = None
+        contextParts = [
+            f"Repo dir: {repoDir}",
+            f"Conflicted file: {file}",
+        ]
         operation = ResolveOperation.MERGE
         if Git.isCherryPicking(repoDir):
             sha1 = Git.cherryPickHeadSha1(repoDir)
             operation = ResolveOperation.CHERRY_PICK
         elif self._mergeInfo is not None:
-            extraContext = (
-                f"local_branch: {self._mergeInfo.local}\n"
-                f"remote_branch: {self._mergeInfo.remote}\n"
-            )
+            contextParts.extend([
+                f"Local branch: {self._mergeInfo.local}",
+                f"Remote branch: {self._mergeInfo.remote}",
+            ])
+
+        if sha1:
+            contextParts.append(f"Sha1: {sha1}")
+
+        context = "\n".join(p for p in contextParts if p).strip() or None
 
         toolName = selectMergetoolNameForPath(file)
         hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
@@ -716,7 +724,7 @@ class MergeWidget(QWidget):
             operation=operation,
             sha1=sha1,
             path=file,
-            extraContext=extraContext,
+            context=context,
             mergetoolName=toolName,
         )
 

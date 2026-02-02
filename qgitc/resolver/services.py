@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Protocol
 
-from dataclasses import dataclass
 import sys
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional, Protocol
 
 if TYPE_CHECKING:
     from qgitc.resolver.manager import ResolveManager
@@ -22,7 +22,7 @@ class AiConflictResolverProto(Protocol):
         sha1: str,
         path: str,
         conflictText: str,
-        extraContext: str = None,
+        context: str = None,
     ) -> ResolveConflictJobProto: ...
 
 

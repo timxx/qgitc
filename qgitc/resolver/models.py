@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import sys
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from qgitc.resolver.enums import (
@@ -13,6 +13,7 @@ from qgitc.resolver.enums import (
     ResolveOutcomeStatus,
     ResolvePromptKind,
 )
+
 _DATACLASS_KWARGS = {"slots": True} if sys.version_info >= (3, 10) else {}
 
 
@@ -22,7 +23,7 @@ class ResolveContext:
     operation: ResolveOperation
     sha1: str = ""
     path: str = ""
-    extraContext: Optional[str] = None
+    context: Optional[str] = None
     initialError: Optional[str] = None
     mergetoolName: Optional[str] = None
     meta: Dict[str, Any] = field(default_factory=dict)

@@ -53,7 +53,7 @@ class CherryPickProgressAiChatContextProvider(AiChatContextProvider):
             blocks.append(f"Target repo dir: {self._targetBaseRepoDir}")
 
         if self._currentSha1:
-            blocks.append(f"Current commit: {self._currentSha1[:7]}")
+            blocks.append(f"Current commit sha1: {self._currentSha1}")
         if self._currentRepoDir:
             blocks.append(f"Current sub-repo dir: {self._currentRepoDir}")
 
