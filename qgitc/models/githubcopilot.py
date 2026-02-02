@@ -2,6 +2,7 @@
 
 import json
 import time
+from dataclasses import dataclass
 
 from PySide6.QtCore import QEventLoop, QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
@@ -25,13 +26,12 @@ def _makeHeaders(token: str, intent: bytes = b"conversation-other"):
     }
 
 
-# TODO: upgrade to Python 3.7 to support @dataclass
+@dataclass
 class AiModelCapabilities:
 
-    def __init__(self, streaming: bool = True, tool_calls: bool = False):
-        self.streaming = streaming
-        self.tool_calls = tool_calls
-        self.max_output_tokens = 4096
+    streaming: bool = True
+    tool_calls: bool = False
+    max_output_tokens: int = 4096
 
 
 class ModelsFetcher(QObject):
@@ -42,6 +42,7 @@ class ModelsFetcher(QObject):
         super().__init__(parent)
         self.models = []
         self.capabilities = {}
+        self.endPoints = {}
         self.defaultModel = None
         self._token = token
         self._reply: QNetworkReply = None
@@ -100,6 +101,9 @@ class ModelsFetcher(QObject):
             if model.get("is_chat_default", False):
                 self.defaultModel = id
 
+            endpoints = model.get("supported_endpoints", [])
+            self.endPoints[id] = endpoints
+
         self.finished.emit()
 
     def requestInterruption(self):
@@ -116,6 +120,7 @@ class GithubCopilot(AiModelBase):
     _models = None
     _capabilities = {}
     _defaultModel = None
+    _endPoints = {}
 
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model, parent)
@@ -324,6 +329,7 @@ class GithubCopilot(AiModelBase):
         GithubCopilot._models = fetcher.models
         GithubCopilot._capabilities = fetcher.capabilities
         GithubCopilot._defaultModel = fetcher.defaultModel
+        GithubCopilot._endPoints = fetcher.endPoints
 
         self._ensureDefaultModel()
 
