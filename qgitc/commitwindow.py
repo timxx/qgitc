@@ -1438,6 +1438,7 @@ class CommitWindow(StateWindow):
         logger.debug("Before cancel")
         self.cancel(True)
         logger.debug("After cancel")
+        self._aiChat.queryClose()
         return super().closeEvent(event)
 
     def _onFilesContextMenuRequested(self, pos):

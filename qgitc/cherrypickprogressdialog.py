@@ -301,3 +301,9 @@ class CherryPickProgressDialog(QDialog):
 
         self._abortBtn.setEnabled(False)
         self._closeBtn.setEnabled(True)
+
+    def closeEvent(self, e):
+        if self._aiChatWidget:
+            self._aiChatWidget.queryClose()
+
+        return super().closeEvent(e)

@@ -128,6 +128,8 @@ class ResolveConflictJob(QObject):
 
         model.finished.connect(self._checkDone)
         model.networkError.connect(self._onNetworkError)
+        model.serviceUnavailable.connect(
+            lambda: self._finish(False, "service_unavailable"))
         # Tools can also trigger another continue-only generation.
         w._agentExecutor.toolFinished.connect(self._checkDone)
 
