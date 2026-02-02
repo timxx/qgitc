@@ -28,7 +28,7 @@ class AiChatEdit(QWidget):
         self.edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.edit.document().setDocumentMargin(4)
 
-        self._lineHeight = self.fontMetrics().height()
+        self._lineHeight = self.edit.document().firstBlock().layout().boundingRect().height()
 
         self.edit.textChanged.connect(self._onTextChanged)
         self.edit.textChanged.connect(self.textChanged)
@@ -55,15 +55,15 @@ class AiChatEdit(QWidget):
         lineCount = self.edit.document().lineCount()
         margin = self.edit.document().documentMargin()
         # see `QLineEdit::sizeHint()`
-        verticalMarin = 2 * 1
+        verticalMargin = 2 * 1
         if lineCount < AiChatEdit.MaxLines:
             height = lineCount * self._lineHeight
             self.edit.setMinimumHeight(height)
-            self.setFixedHeight(height + margin * 2 + verticalMarin)
+            self.setFixedHeight(height + margin * 2 + verticalMargin)
         else:
             maxHeight = AiChatEdit.MaxLines * self._lineHeight
             self.edit.setMinimumHeight(maxHeight + margin * 2)
-            self.setFixedHeight(maxHeight + margin * 2 + verticalMarin)
+            self.setFixedHeight(maxHeight + margin * 2 + verticalMargin)
 
     def eventFilter(self, watched, event: QEvent):
         if watched == self.edit and event.type() == QEvent.KeyPress:
