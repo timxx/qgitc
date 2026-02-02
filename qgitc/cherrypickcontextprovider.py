@@ -9,7 +9,7 @@ from PySide6.QtCore import QObject
 from qgitc.aichatcontextprovider import AiChatContextProvider
 
 
-class CherryPickProgressAiChatContextProvider(AiChatContextProvider):
+class CherryPickContextProvider(AiChatContextProvider):
     """Context provider for the embedded AI chat in CherryPickProgressDialog."""
 
     def __init__(self, parent: Optional[QObject] = None):
@@ -66,6 +66,7 @@ class CherryPickProgressAiChatContextProvider(AiChatContextProvider):
         if self._conflictFiles:
             preview = "\n".join(f"- {p}" for p in self._conflictFiles[:50])
             suffix = "\n…" if len(self._conflictFiles) > 50 else ""
-            blocks.append(f"Conflict files ({len(self._conflictFiles)}):\n{preview}{suffix}")
+            blocks.append(
+                f"Conflict files ({len(self._conflictFiles)}):\n{preview}{suffix}")
 
         return "\n".join(b for b in blocks if b).strip()

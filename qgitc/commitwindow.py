@@ -48,7 +48,7 @@ from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
-from qgitc.commitwindowaichatcontextprovider import CommitWindowAiChatContextProvider
+from qgitc.commitcontextprovider import CommitContextProvider
 from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView
@@ -384,7 +384,7 @@ class CommitWindow(StateWindow):
         self._aiChat = AiChatDockWidget(self)
 
         # Setup context provider for commit window
-        aiChatContextProvider = CommitWindowAiChatContextProvider(
+        aiChatContextProvider = CommitContextProvider(
             self, parent=self)
         self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
 

@@ -22,8 +22,8 @@ from PySide6.QtWidgets import (
 
 from qgitc.aichatwidget import AiChatWidget
 from qgitc.applicationbase import ApplicationBase
-from qgitc.cherrypickprogressaichatcontextprovider import (
-    CherryPickProgressAiChatContextProvider,
+from qgitc.cherrypickcontextprovider import (
+    CherryPickContextProvider,
 )
 from qgitc.cherrypicksession import (
     CherryPickItem,
@@ -49,7 +49,7 @@ class CherryPickProgressDialog(QDialog):
             resolvePanel=self._resolvePanel, parent=self)
 
         self._aiChatWidget: Optional[AiChatWidget] = None
-        self._aiContextProvider = CherryPickProgressAiChatContextProvider(self)
+        self._aiContextProvider = CherryPickContextProvider(self)
 
         self._aiContainer: Optional[QWidget] = None
         self._aiContainerLayout: Optional[QVBoxLayout] = None

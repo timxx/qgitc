@@ -11,7 +11,7 @@ from qgitc.drawutils import makeColoredIconPixmap
 from qgitc.filestatus import StatusFileListModel
 
 
-class CommitWindowAiChatContextProvider(AiChatContextProvider):
+class CommitContextProvider(AiChatContextProvider):
     """Context provider for the embedded AI chat inside CommitWindow."""
 
     CTX_STAGED_FILES = "commit.staged"
@@ -150,7 +150,7 @@ class CommitWindowAiChatContextProvider(AiChatContextProvider):
 
         commitMessage = self._getCommitMessage()
         if commitMessage:
-            label = self.tr("Commit message") 
+            label = self.tr("Commit message")
 
             preview = commitMessage.splitlines()[0] if commitMessage else ""
             if len(preview) > 60:

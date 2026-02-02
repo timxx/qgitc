@@ -12,7 +12,7 @@ from qgitc.diffview import FileListModel
 from qgitc.drawutils import makeColoredIconPixmap
 
 
-class MainWindowAiChatContextProvider(AiChatContextProvider):
+class MainWindowContextProvider(AiChatContextProvider):
     """Context provider for the embedded AI chat inside MainWindow."""
 
     CTX_ACTIVE_COMMIT = "commit.active"
