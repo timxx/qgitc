@@ -158,6 +158,9 @@ class ResolvePanel(QWidget):
         if not self.isBusy():
             self.abortSafePointReached.emit()
 
+        self._resolveAllBtn.setDisabled(True)
+        self._resolveSelectedBtn.setDisabled(True)
+
     def clear(self):
         self._abortRequested = False
         self._queue.clear()
@@ -218,7 +221,7 @@ class ResolvePanel(QWidget):
         self._updateActionState()
 
     def _onItemDoubleClicked(self, item: QListWidgetItem):
-        if item is None:
+        if item is None or self._abortRequested:
             return
         self._retryResolveForPath(item.text())
 
@@ -248,7 +251,7 @@ class ResolvePanel(QWidget):
 
     def _updateActionState(self):
         hasFiles = bool(self._fileStates)
-        busy = self.isBusy()
+        busy = self.isBusy() or self._abortRequested
         selected = bool(self._selectedPath())
         self._resolveSelectedBtn.setEnabled(hasFiles and selected and not busy)
         self._resolveAllBtn.setEnabled(hasFiles and not busy)
