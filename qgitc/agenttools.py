@@ -172,14 +172,47 @@ class ReadFileParams(BaseModel):
 
 class CreateFileParams(BaseModel):
     """Parameters for create_file tool."""
-    filePath: str = Field(..., description="The absolute path to the file to create.")
+    filePath: str = Field(...,
+                          description="The absolute path to the file to create.")
     content: str = Field(..., description="The content to write to the file.")
+
+
+class GrepSearchParams(BaseModel):
+    """Parameters for grep_search tool."""
+    repoDir: Optional[str] = Field(
+        None, description="Optional repo directory. Defaults to current repo.")
+    query: str = Field(
+        ..., description="The pattern or text to search for. Search is case-insensitive.")
+    isRegexp: bool = Field(
+        ..., description="Whether query should be treated as a regular expression.")
+    includeIgnoredFiles: bool = Field(
+        False,
+        description=(
+            "If true, also search files ignored by .gitignore and other Git ignore rules. "
+            "Warning: using this may cause the search to be slower. Only set it when you want to search in ignored folders like node_modules or build outputs."
+        ),
+    )
+    includePattern: Optional[str] = Field(
+        None,
+        description=(
+            "Optional glob pattern to filter files to search (e.g. 'qgitc/**/*.py')."
+        ),
+    )
+    maxResults: Optional[int] = Field(
+        30, ge=1,
+        description=(
+            "Maximum number of matches to return (default 30)."
+            "By default, only some matches are returned. If you use this and don't see what you're looking for, you can try again with a more specific query or a larger maxResults."
+        ),
+    )
 
 
 class ApplyPatchParams(BaseModel):
     """Parameters for apply_patch tool (V4A diff format)."""
-    input: str = Field(..., description="The edit patch to apply (V4A format).")
-    explanation: str = Field(..., description="A short description of what the patch is aiming to achieve.")
+    input: str = Field(...,
+                       description="The edit patch to apply (V4A format).")
+    explanation: str = Field(
+        ..., description="A short description of what the patch is aiming to achieve.")
 
 
 # ==================== Helper Function ====================
@@ -341,6 +374,18 @@ class AgentToolRegistry:
                 ),
                 toolType=ToolType.READ_ONLY,
                 modeClass=ReadFileParams,
+            ),
+
+            createToolFromModel(
+                name="grep_search",
+                description=(
+                    "Search for text across files in the current repository.\n"
+                    "Use this tool when you want to search with an exact string or regex. "
+                    "If you are not sure what words will appear in the workspace, prefer using regex patterns with alternation (|) or character classes to search for multiple potential words at once instead of making separate searches. "
+                    "For example, use 'function|method|procedure' to look for all of those words at once."
+                ),
+                toolType=ToolType.READ_ONLY,
+                modeClass=GrepSearchParams,
             ),
 
             createToolFromModel(

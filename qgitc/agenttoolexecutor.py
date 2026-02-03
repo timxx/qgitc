@@ -28,6 +28,7 @@ from qgitc.agenttools import (
     GitShowIndexFileParams,
     GitShowParams,
     GitStatusParams,
+    GrepSearchParams,
     ReadFileParams,
     RunCommandParams,
 )
@@ -35,6 +36,8 @@ from qgitc.basemodel import ValidationError
 from qgitc.common import decodeFileData
 from qgitc.gitutils import Git
 from qgitc.tools.applypatch import DiffError, process_patch
+from qgitc.tools.grepsearch import grepSearch
+from qgitc.tools.utils import detectBom
 
 
 class AgentToolResult:
@@ -70,6 +73,7 @@ class AgentToolExecutor(QObject):
             "git_add": self._handle_git_add,
             "run_command": self._handle_run_command,
             "read_file": self._handle_read_file,
+            "grep_search": self._handle_grep_search,
             "create_file": self._handle_create_file,
             "apply_patch": self._handle_apply_patch,
         }
@@ -105,28 +109,6 @@ class AgentToolExecutor(QObject):
             return False, f"Refusing to access paths outside the repository: {file_path}"
 
         return True, abs_path
-
-    @staticmethod
-    def _detect_bom(path: str) -> Tuple[Optional[bytes], str]:
-        """Return (bom_bytes, encoding_name_for_text) for common Unicode BOMs."""
-        try:
-            with open(path, 'rb') as fb:
-                head = fb.read(4)
-        except Exception:
-            return None, 'utf-8'
-
-        if head.startswith(b'\xff\xfe\x00\x00'):
-            return b'\xff\xfe\x00\x00', 'utf-32-le'
-        if head.startswith(b'\x00\x00\xfe\xff'):
-            return b'\x00\x00\xfe\xff', 'utf-32-be'
-        if head.startswith(b'\xff\xfe'):
-            return b'\xff\xfe', 'utf-16-le'
-        if head.startswith(b'\xfe\xff'):
-            return b'\xfe\xff', 'utf-16-be'
-        if head.startswith(b'\xef\xbb\xbf'):
-            return b'\xef\xbb\xbf', 'utf-8-sig'
-
-        return None, 'utf-8'
 
     def executeAsync(self, tool_name: str, params: Dict) -> bool:
         if self._inflight and not self._inflight.done():
@@ -488,7 +470,7 @@ class AgentToolExecutor(QObject):
             with open(abs_path, 'rb') as f:
                 data = f.read()
 
-            prefer_encoding = AgentToolExecutor._detect_bom(abs_path)[1]
+            prefer_encoding = detectBom(abs_path)[1]
             text, _ = decodeFileData(data, prefer_encoding)
             lines = text.splitlines(keepends=True)
 
@@ -502,6 +484,27 @@ class AgentToolExecutor(QObject):
 
         except Exception as e:
             return AgentToolResult(tool_name, False, f"Failed to read file: {e}")
+
+    def _handle_grep_search(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = GrepSearchParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repoDir = validated.repoDir or Git.REPO_DIR
+        try:
+            output = grepSearch(
+                repoDir=repoDir,
+                query=validated.query,
+                isRegexp=validated.isRegexp,
+                includeIgnoredFiles=validated.includeIgnoredFiles,
+                includePattern=validated.includePattern,
+                maxResults=(validated.maxResults or 10),
+            )
+        except Exception as e:
+            return AgentToolResult(tool_name, False, str(e))
+
+        return AgentToolResult(tool_name, True, output)
 
     def _handle_create_file(self, tool_name: str, params: Dict) -> AgentToolResult:
         try:
@@ -557,7 +560,7 @@ class AgentToolExecutor(QObject):
             with open(abs_path, 'rb') as fb:
                 raw = fb.read()
 
-            bom, bom_encoding = AgentToolExecutor._detect_bom(abs_path)
+            bom, bom_encoding = detectBom(abs_path)
             if bom:
                 # Decode while stripping BOM bytes; we'll re-add BOM on write.
                 raw_wo_bom = raw[len(bom):]
