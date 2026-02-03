@@ -1365,10 +1365,11 @@ class AiChatWidget(QWidget):
                 toolCallResult, hasMoreMessages = self._collectToolCallResult(
                     i + 1, messages)
 
-                # Tool call cannot have `content`, but may have reasoning.
-                assert not content
                 if addToChatBot:
                     _addReasoning(reasoning)
+                if content:
+                    response = AiResponse(role, content)
+                    chatbot.appendResponse(response, collapsed=False)
 
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
