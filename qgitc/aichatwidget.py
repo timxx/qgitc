@@ -1336,6 +1336,12 @@ class AiChatWidget(QWidget):
         self._autoToolGroups.clear()
         self._nextAutoGroupId = 1
 
+        def _addReasoning(reasoning: str):
+            if reasoning:
+                reasoningResponse = AiResponse(
+                    AiRole.Assistant, reasoning, description=self.tr("🧠 Reasoning"))
+                chatbot.appendResponse(reasoningResponse, collapsed=True)
+
         i = 0
         while i < len(messages):
             msg = messages[i]
@@ -1349,10 +1355,7 @@ class AiChatWidget(QWidget):
                              toolCalls=toolCalls, reasoning=reasoning)
             # Don't add tool calls to UI (both for assistant and tool roles)
             if addToChatBot and not toolCalls:
-                if reasoning:
-                    reasoningResponse = AiResponse(
-                        AiRole.Assistant, reasoning, description=self.tr("🧠 Reasoning"))
-                    chatbot.appendResponse(reasoningResponse, collapsed=True)
+                _addReasoning(reasoning)
                 response = AiResponse(role, content)
                 collapsed = (role == AiRole.Tool) or (role == AiRole.System) or \
                     (role == AiRole.Assistant and toolCalls)
@@ -1361,6 +1364,11 @@ class AiChatWidget(QWidget):
             if role == AiRole.Assistant and isinstance(toolCalls, list) and toolCalls:
                 toolCallResult, hasMoreMessages = self._collectToolCallResult(
                     i + 1, messages)
+
+                # Tool call cannot have `content`, but may have reasoning.
+                assert not content
+                if addToChatBot:
+                    _addReasoning(reasoning)
 
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
@@ -1379,13 +1387,6 @@ class AiChatWidget(QWidget):
                     toolType = tool.toolType if tool else ToolType.WRITE
 
                     if addToChatBot:
-                        if reasoning:
-                            reasoningResponse = AiResponse(
-                                AiRole.Assistant, reasoning, description=self.tr("🧠 Reasoning"))
-                            chatbot.appendResponse(reasoningResponse, collapsed=True)
-                        if content:
-                            chatbot.appendResponse(AiResponse(role, content))
-
                         uiResponse = self._makeUiToolCallResponse(
                             toolName, func.get("arguments"))
                         collapsed = bool(

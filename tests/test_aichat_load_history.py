@@ -241,10 +241,68 @@ class TestAiChatLoadHistory(TestBase):
         confirm_calls = [c for c in calls if c["type"] == "confirm"]
         self.assertEqual(1, len(confirm_calls))
         self.assertEqual("git_commit", confirm_calls[0]["tool"])
+        self.assertEqual("w1", confirm_calls[0]["id"])
 
         # Verify only the WRITE tool is awaiting confirmation
         self.assertEqual(1, len(self.chatWidget._awaitingToolResults))
         self.assertIn("w1", self.chatWidget._awaitingToolResults)
+
+    def test_tool_calls_reasoning_not_duplicated_per_tool(self):
+        """Regression: reasoning should render once for a tool_call batch.
+
+        When restoring history, an assistant message can contain a single
+        `tool_calls` list with multiple tools. If the message also carries
+        `reasoning`, it   must be appended once (not once per tool call).
+        """
+        calls = []
+
+        def _appendResponse(resp, collapsed=False):
+            calls.append({
+                "type": "append",
+                "role": resp.role.name.lower(),
+                "message": resp.message or "",
+                "description": resp.description or "",
+            })
+
+        def _insertToolConfirmation(**kwargs):
+            calls.append({
+                "type": "confirm",
+                "tool": kwargs.get("toolName"),
+                "id": kwargs.get("toolCallId"),
+                "toolDesc": kwargs.get("toolDesc"),
+            })
+
+        self.chatWidget.messages.appendResponse = MagicMock(
+            side_effect=_appendResponse)
+        self.chatWidget.messages.insertToolConfirmation = MagicMock(
+            side_effect=_insertToolConfirmation)
+
+        # One assistant message with 2 tool calls and a single reasoning payload.
+        messages = [
+            {
+                "role": "assistant",
+                "content": "",
+                "reasoning": "some reasoning text",
+                "tool_calls": [
+                    {"id": "c1", "type": "function", "function": {
+                        "name": "git_checkout", "arguments": "{}"}},
+                    {"id": "c2", "type": "function", "function": {
+                        "name": "git_commit", "arguments": "{}"}},
+                ],
+            },
+        ]
+
+        self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=True)
+
+        reasoning_msgs = [
+            c for c in calls
+            if c["type"] == "append" and c["role"] == "assistant" and "Reasoning" in (c["description"] or "")
+        ]
+        self.assertEqual(1, len(reasoning_msgs))
+
+        # Sanity: confirmation UI restored for both WRITE tools.
+        confirm_calls = [c for c in calls if c["type"] == "confirm"]
+        self.assertEqual(2, len(confirm_calls))
 
     def test_tool_with_existing_result_not_cancelled(self):
         """Tools that already have results should not be cancelled or re-confirmed."""
@@ -312,11 +370,11 @@ class TestAiChatLoadHistory(TestBase):
         self.assertGreaterEqual(len(tool_output_calls), 1)
 
     def test_restore_tool_call_with_assistant_content(self):
-        """Restoring history should show the assistant message even if it also contains tool_calls.
+        """Restoring history shows assistant text + tool calls in correct shape.
 
-        Regression test: when restoring an assistant message that had both `content`
-        and `tool_calls`, the assistant message itself must still be appended to the UI
-        (in addition to the tool call entry).
+        Assistant tool-calls messages should not carry regular `content`.
+        Instead, the assistant explanation should be represented as a separate
+        assistant message immediately before the tool_calls message.
         """
         calls = []
 
@@ -339,6 +397,10 @@ class TestAiChatLoadHistory(TestBase):
             {
                 "role": "assistant",
                 "content": "I'll commit your changes now.",
+            },
+            {
+                "role": "assistant",
+                "content": "",
                 "tool_calls": [
                     {
                         "id": "tc_content_1",
@@ -381,9 +443,9 @@ class TestAiChatLoadHistory(TestBase):
         assistant_history = [
             h for h in self._mockChatModel.history if h.role == AiRole.Assistant
         ]
-        self.assertEqual(len(assistant_history), 1)
-        self.assertEqual(
-            assistant_history[0].message, "I'll commit your changes now.")
+        self.assertTrue(
+            any(h.message == "I'll commit your changes now." for h in assistant_history)
+        )
 
     def test_write_tool_cancelled_if_conversation_continued(self):
         """WRITE tools without results should be cancelled if conversation continued after."""
