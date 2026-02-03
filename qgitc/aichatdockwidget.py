@@ -47,14 +47,14 @@ class AiChatDockWidget(QDockWidget):
         self._btnNewConversation.setToolTip(self.tr("New Conversation"))
         self._btnNewConversation.clicked.connect(
             self._aiChatWidget.onNewChatRequested)
-        self._btnNewConversation.setShortcut("Ctrl+N")
 
         newMenu = QMenu(self._btnNewConversation)
-        acNewConversation = newMenu.addAction(self.tr("New Conversation"))
+        acNewConversation = newMenu.addAction(self.tr("&New Conversation"))
+        acNewConversation.setShortcut("Ctrl+N")
         acNewConversation.triggered.connect(
             self._aiChatWidget.onNewChatRequested)
 
-        acNewChatWindow = newMenu.addAction(self.tr("New Chat Window"))
+        acNewChatWindow = newMenu.addAction(self.tr("New Chat &Window"))
         acNewChatWindow.triggered.connect(self._onNewChatWindow)
 
         self._btnNewConversation.setMenu(newMenu)
