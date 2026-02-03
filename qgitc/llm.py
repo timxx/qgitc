@@ -47,7 +47,6 @@ class AiResponse:
     message: str = None
     description: str = None
     reasoning: str = None
-    total_tokens: int = None
     is_delta: bool = False
     first_delta: bool = False
     # OpenAI-compatible tool calls (Chat Completions).
@@ -554,8 +553,6 @@ class AiModelBase(QObject):
         except json.JSONDecodeError as e:
             logger.error("Failed to decode JSON response: %s", e)
             return
-        usage: dict = data.get("usage", {})
-        totalTokens = usage.get("total_tokens", 0)
 
         for choice in data.get("choices", []):
             message: dict = choice.get("message", {})
