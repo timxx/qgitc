@@ -129,7 +129,14 @@ class GithubCopilot(AiModelBase):
 
         self._eventLoop = None
         self._modelFetcher: ModelsFetcher = None
+
+        self._ensureDefaultModel()
         self._updateModels()
+
+    def _defaultModelId(self):
+        modelKey = AiModelFactory.modelKey(self)
+        settings = ApplicationBase.instance().settings()
+        return settings.defaultLlmModelId(modelKey)
 
     def _updateUrlPrefix(self):
         isIndividual = GithubCopilot.isIndividualToken(self._token)
@@ -354,7 +361,6 @@ class GithubCopilot(AiModelBase):
             return
 
         if GithubCopilot._models is not None:
-            self._ensureDefaultModel()
             return
 
         if not self._token:
@@ -382,20 +388,34 @@ class GithubCopilot(AiModelBase):
         self._modelFetcher = None
         self.modelsReady.emit()
 
+    def _hasModelId(self, modelId: str) -> bool:
+        if GithubCopilot._models is None:
+            return False
+
+        for id, _ in GithubCopilot._models:
+            if id == modelId:
+                return True
+
+        return False
+
     def _ensureDefaultModel(self):
+        # If caller already selected a model, keep it unless we know it's invalid.
         if self.modelId:
+            if GithubCopilot._models is None or self._hasModelId(self.modelId):
+                return
+
+        modelsLoaded = GithubCopilot._models is not None
+
+        preferred = self._defaultModelId()
+        if preferred and (not modelsLoaded or self._hasModelId(preferred)):
+            self.modelId = preferred
             return
 
-        modelKey = AiModelFactory.modelKey(self)
-        settings = ApplicationBase.instance().settings()
-        self.modelId = settings.defaultLlmModelId(modelKey)
+        if GithubCopilot._defaultModel and (not modelsLoaded or self._hasModelId(GithubCopilot._defaultModel)):
+            self.modelId = GithubCopilot._defaultModel
+            return
 
-        if GithubCopilot._models is not None:
-            for id, _ in GithubCopilot._models:
-                if id == self.modelId:
-                    return
-
-        self.modelId = GithubCopilot._defaultModel or "gpt-4.1"
+        self.modelId = "gpt-4.1"
 
     def models(self):
         if GithubCopilot._models is None:
