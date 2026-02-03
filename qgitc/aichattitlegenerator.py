@@ -29,6 +29,7 @@ class AiChatTitleGenerator(QObject):
         params.max_tokens = 1024
         params.sys_prompt = GEN_TITLE_SYS_PROMPT
         params.stream = False
+        params.reasoning = False
 
         self._model.responseAvailable.connect(self._onResponse)
         self._model.finished.connect(self._onFinished)

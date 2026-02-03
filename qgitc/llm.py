@@ -75,6 +75,7 @@ class AiParameters:
         self.tools: Optional[List[Dict[str, Any]]] = None
         # OpenAI tool choice (e.g. "auto"); leave None to omit.
         self.tool_choice: Optional[str] = None
+        self.reasoning: bool = True
 
 
 class AiChatMode(Enum):

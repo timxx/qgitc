@@ -176,12 +176,14 @@ class GithubCopilot(AiModelBase):
                 "store": False,
                 "input": self.toResponsesInput(),
                 "truncation": "disabled",
-                "reasoning": {
+            }
+
+            if params.reasoning:
+                payload["reasoning"] = {
                     "effort": "medium",
                     "summary": "detailed"
-                },
-                "include": ["reasoning.encrypted_content"]
-            }
+                }
+                payload["include"] = ["reasoning.encrypted_content"]
 
             # FIXME: `Unsupported parameter: 'temperature' is not supported with this model.`
             # Such as gpt-5.2, currently disable temperature for Responses API.

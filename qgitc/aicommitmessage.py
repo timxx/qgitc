@@ -133,6 +133,7 @@ class AiCommitMessage(QObject):
         params.temperature = 0.1
         params.max_tokens = 4096
         params.prompt = REFINE_MESSAGE_PROMPT.format(message=message)
+        params.reasoning = False
 
         self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)
@@ -212,6 +213,7 @@ class AiCommitMessage(QObject):
         params.sys_prompt = SYSTEM_PROMPT
         params.temperature = 0.1
         params.max_tokens = 4096
+        params.reasoning = False
 
         params.prompt = COMMIT_PROMPT.format(
             user_commits=AiCommitMessage._makeLogs(self._userLogs),

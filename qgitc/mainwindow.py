@@ -780,6 +780,7 @@ class MainWindow(StateWindow):
         params.temperature = 0.1
         params.max_tokens = 512
         params.stream = False
+        params.reasoning = False
 
         self._aiModel.queryAsync(params)
 
