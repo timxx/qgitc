@@ -492,20 +492,13 @@ class AiModelBase(QObject):
                     choiceIndex) + reasoning
 
             if content or reasoning:
-                aiResponse = AiResponse()
-                aiResponse.is_delta = True
-                aiResponse.role = self._choiceRoles.get(
-                    choiceIndex, AiRole.Assistant)
-                aiResponse.message = content
-                aiResponse.reasoning = reasoning
                 if not self._firstDelta and content:
                     if self._choiceReasonings.get(choiceIndex) and \
                             self._choiceContents.get(choiceIndex) == content:
                         # To prevent mixing reasoning and content in a single UI message
                         self._firstDelta = True
-                aiResponse.first_delta = self._firstDelta and choiceIndex == 0
-                self.responseAvailable.emit(aiResponse)
-                self._firstDelta = False
+                role = self._choiceRoles.get(choiceIndex, AiRole.Assistant)
+                self._emitResponse(content, reasoning, role=role)
 
             # If model signaled completion for this choice, commit immediately.
             if finishReason in ("stop", "tool_calls", "content_filter"):
@@ -518,13 +511,8 @@ class AiModelBase(QObject):
                     toolCalls = [accMap[i]
                                  for i in sorted(accMap.keys())] if accMap else []
                     if toolCalls:
-                        aiResponse = AiResponse()
-                        aiResponse.is_delta = False
-                        aiResponse.role = role
-                        aiResponse.message = ""  # message is already sent in previous deltas
-                        aiResponse.tool_calls = toolCalls
-                        aiResponse.first_delta = self._firstDelta and choiceIndex == 0
-                        self.responseAvailable.emit(aiResponse)
+                        self._emitResponse(
+                            isDelta=False, role=role, toolCalls=toolCalls)
 
                 if fullContent or fullReasoning or toolCalls:
                     self.addHistory(
@@ -550,7 +538,8 @@ class AiModelBase(QObject):
             try:
                 evt = json.loads(payload.decode("utf-8"))
             except Exception as e:
-                logger.warning("Failed to decode Responses stream event: %s", e)
+                logger.warning(
+                    "Failed to decode Responses stream event: %s", e)
                 continue
             self._handleResponsesStreamEvent(evt)
 
@@ -574,15 +563,8 @@ class AiModelBase(QObject):
             reasoning = self._getReasoning(message)
             role = AiRole.fromString(message.get("role", "assistant"))
             tool_calls = message.get("tool_calls")
-
-            aiResponse = AiResponse()
-            aiResponse.total_tokens = totalTokens
-            aiResponse.role = role
-            aiResponse.message = content
-            aiResponse.reasoning = reasoning
-            if tool_calls:
-                aiResponse.tool_calls = tool_calls
-            self.responseAvailable.emit(aiResponse)
+            self._emitResponse(isDelta=False, role=role, text=content,
+                               reasoning=reasoning, toolCalls=tool_calls)
 
             if content or reasoning or tool_calls:
                 self.addHistory(
@@ -602,13 +584,15 @@ class AiModelBase(QObject):
             try:
                 data = json.loads(line.decode("utf-8"))
             except Exception as e:
-                logger.warning("Failed to decode Responses non-stream line: %s", e)
+                logger.warning(
+                    "Failed to decode Responses non-stream line: %s", e)
                 continue
             self._processResponsesResponseObject(data)
 
     def _emitResponse(self, text: str = None, reasoning: str = None,
-                      isDelta=True, role=AiRole.Assistant):
-        if not text and not reasoning:
+                      isDelta=True, role=AiRole.Assistant,
+                      toolCalls: Optional[List[Dict[str, Any]]] = None):
+        if not text and not reasoning and not toolCalls:
             return
 
         aiResponse = AiResponse()
@@ -616,6 +600,7 @@ class AiModelBase(QObject):
         aiResponse.role = role
         aiResponse.message = text
         aiResponse.reasoning = reasoning
+        aiResponse.tool_calls = toolCalls
         aiResponse.first_delta = self._firstDelta
         self.responseAvailable.emit(aiResponse)
         self._firstDelta = False
@@ -727,13 +712,6 @@ class AiModelBase(QObject):
             itemType = item.get("type")
             if itemType == "function_call":
                 toolCalls = [self._parseResponsesFunctionCall(item)]
-                aiResponse = AiResponse()
-                aiResponse.is_delta = False
-                aiResponse.role = AiRole.Assistant
-                aiResponse.message = ""
-                aiResponse.tool_calls = toolCalls
-                aiResponse.first_delta = self._firstDelta
-                self.responseAvailable.emit(aiResponse)
                 self._responsesToolCalls.extend(toolCalls)
 
         # A response is complete
@@ -742,6 +720,11 @@ class AiModelBase(QObject):
                 self.addHistory(AiRole.Assistant, self._responsesText,
                                 reasoning=self._responsesReasoning,
                                 toolCalls=self._responsesToolCalls)
+
+                if self._responsesToolCalls:
+                    self._emitResponse(
+                        isDelta=False, toolCalls=self._responsesToolCalls)
+
                 self._responsesText = ""
                 self._responsesReasoning = ""
                 self._responsesToolCalls = []
@@ -769,14 +752,9 @@ class AiModelBase(QObject):
             self.addHistory(role, message, reasoning=reasoning,
                             toolCalls=toolCalls)
 
-            aiResponse = AiResponse()
-            aiResponse.is_delta = False
-            aiResponse.role = role
-            aiResponse.message = message
-            aiResponse.reasoning = reasoning
-            aiResponse.tool_calls = toolCalls
-            aiResponse.first_delta = True
-            self.responseAvailable.emit(aiResponse)
+            self._emitResponse(isDelta=False, role=role,
+                               text=message, reasoning=reasoning,
+                               toolCalls=toolCalls)
 
     def _parseResponsesMessage(self, item: dict):
         content: List[Dict[str, any]] = item.get("content", [])
