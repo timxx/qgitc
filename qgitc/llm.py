@@ -99,6 +99,9 @@ class AiModelBase(QObject):
         self.modelId: str = model
         self._reply: QNetworkReply = None
 
+        # True = Responses API; False = Chat Completions API
+        self._isResponsesApiEnabled = False
+
         self._data: bytes = b""
         self._isStreaming = False
         self._firstDelta = True
@@ -110,6 +113,11 @@ class AiModelBase(QObject):
         self._choiceReasonings = {}
         # Nested mapping: choiceIndex -> (toolCallIndex -> toolCall dict accumulator)
         self._choiceToolCallAcc = {}
+
+        # Responses API per-request state.
+        self._responsesText: str = ""
+        self._responsesReasoning: str = ""
+        self._responsesToolCalls = []
 
     def clear(self):
         self._history.clear()
@@ -285,6 +293,10 @@ class AiModelBase(QObject):
         self._choiceReasonings = {}
         self._choiceToolCallAcc = {}
 
+        self._responsesText = ""
+        self._responsesReasoning = ""
+        self._responsesToolCalls = []
+
         if not reply:
             return
 
@@ -353,6 +365,12 @@ class AiModelBase(QObject):
             self.handleNonStreamResponse(data)
 
     def _handleFinished(self):
+        if self._isResponsesApiEnabled:
+            self._handleFinishedResponses()
+        else:
+            self._handleFinishedChat()
+
+    def _handleFinishedChat(self):
         # Iterate over a snapshot since we'll pop from the dict.
         for choiceIndex in list(self._choiceRoles.keys()):
             role = self._choiceRoles.pop(choiceIndex, AiRole.Assistant)
@@ -363,12 +381,29 @@ class AiModelBase(QObject):
                 self.addHistory(role, fullContent,
                                 reasoning=fullReasoning, toolCalls=toolCalls)
 
+    def _handleFinishedResponses(self):
+        if self._responsesText or self._responsesReasoning or self._responsesToolCalls:
+            self.addHistory(AiRole.Assistant, self._responsesText,
+                            reasoning=self._responsesReasoning, toolCalls=self._responsesToolCalls)
+
     def _handleError(self, code: QNetworkReply.NetworkError):
         if code in [QNetworkReply.ConnectionRefusedError, QNetworkReply.HostNotFoundError]:
             self.serviceUnavailable.emit()
         elif isinstance(self.sender(), QNetworkReply):
             reply: QNetworkReply = self.sender()
-            self.networkError.emit(reply.errorString())
+            errorString = reply.errorString()
+
+            if self._data and self._data.startswith(b"{"):
+                try:
+                    msg = json.loads(self._data.decode("utf-8"))
+                    error = msg.get("error", {})
+                    message = error.get("message")
+                    if message:
+                        errorString += f"\n\n{message}"
+                except:
+                    pass
+
+            self.networkError.emit(errorString)
 
     def isRunning(self):
         return self._reply is not None and self._reply.isRunning()
@@ -380,6 +415,12 @@ class AiModelBase(QObject):
         self._reply.abort()
 
     def handleStreamResponse(self, line: bytes):
+        if self._isResponsesApiEnabled:
+            self._handleStreamResponseResponses(line)
+        else:
+            self._handleStreamResponseChat(line)
+
+    def _handleStreamResponseChat(self, line: bytes):
         if not line:
             return
 
@@ -489,7 +530,36 @@ class AiModelBase(QObject):
                     self.addHistory(
                         role, fullContent, reasoning=fullReasoning, toolCalls=toolCalls)
 
+    def _handleStreamResponseResponses(self, line: bytes):
+        if not line:
+            return
+
+        # Responses streaming can include `event:` lines alongside `data:`.
+        for raw in line.splitlines():
+            raw = raw.strip()
+            if not raw.startswith(b"data:"):
+                if not raw.startswith(b"event:"):
+                    logger.warning(b"Unexpected chunk: %s" % raw)
+                continue
+            payload = raw[5:].strip()
+            if not payload:
+                continue
+            if payload == b"[DONE]":
+                return
+
+            try:
+                evt = json.loads(payload.decode("utf-8"))
+            except Exception as e:
+                logger.warning("Failed to decode Responses stream event: %s", e)
+                continue
+            self._handleResponsesStreamEvent(evt)
+
     def handleNonStreamResponse(self, response: bytes):
+        if self._isResponsesApiEnabled:
+            return self._handleNonStreamResponseResponses(response)
+        return self._handleNonStreamResponseChat(response)
+
+    def _handleNonStreamResponseChat(self, response: bytes):
         try:
             data: dict = json.loads(response)
         except json.JSONDecodeError as e:
@@ -517,6 +587,233 @@ class AiModelBase(QObject):
             if content or reasoning or tool_calls:
                 self.addHistory(
                     role, content, reasoning=reasoning, toolCalls=tool_calls)
+
+    def _handleNonStreamResponseResponses(self, response: bytes):
+        self._data += response
+        while self._data:
+            pos = self._data.find(b"\n")
+            if pos == -1:
+                break
+
+            line = self._data[:pos].strip()
+            self._data = self._data[pos+1:]
+            if not line:
+                continue
+            try:
+                data = json.loads(line.decode("utf-8"))
+            except Exception as e:
+                logger.warning("Failed to decode Responses non-stream line: %s", e)
+                continue
+            self._processResponsesResponseObject(data)
+
+    def _emitResponse(self, text: str = None, reasoning: str = None,
+                      isDelta=True, role=AiRole.Assistant):
+        if not text and not reasoning:
+            return
+
+        aiResponse = AiResponse()
+        aiResponse.is_delta = isDelta
+        aiResponse.role = role
+        aiResponse.message = text
+        aiResponse.reasoning = reasoning
+        aiResponse.first_delta = self._firstDelta
+        self.responseAvailable.emit(aiResponse)
+        self._firstDelta = False
+
+    @staticmethod
+    def historyToResponsesInput(history: List[AiChatMessage]):
+        """Convert internal chat history to Responses API `input` array."""
+        if not history:
+            return []
+
+        converted: List[Dict[str, Any]] = []
+        for h in history:
+            # Tool calls
+            if h.role == AiRole.Assistant and isinstance(h.toolCalls, list) and h.toolCalls:
+                for tc in h.toolCalls:
+                    function = tc.get("function", {})
+                    item = {
+                        "type": "function_call",
+                        "name": function.get("name", ""),
+                        "arguments": function.get("arguments", "{}"),
+                        "call_id": tc.get("id", ""),
+                    }
+                    converted.append(item)
+                continue
+
+            # Tool results
+            if h.role == AiRole.Tool and h.toolCalls:
+                toolCalls = h.toolCalls
+                item = {
+                    "type": "function_call_output",
+                    "call_id": toolCalls.get("tool_call_id", ""),
+                    "output": h.message or "",
+                }
+                converted.append(item)
+                continue
+
+            assert h.role != AiRole.Tool
+
+            # Regular messages
+            item = {
+                "role": h.role.name.lower(),
+                "content": h.message or "",
+            }
+            converted.append(item)
+
+        return converted
+
+    @staticmethod
+    def chatToolsToResponsesTools(tools: List[Dict[str, Any]]):
+        """Convert Chat Completions tool definitions to Responses API format.
+
+        Chat Completions uses: {"type":"function","function":{...}}
+        Responses API uses:   {"type":"function", ...function_fields_at_root }
+        """
+
+        if not tools:
+            return []
+
+        converted: List[Dict[str, Any]] = []
+        for t in tools:
+            if not isinstance(t, dict):
+                continue
+
+            # If already in Responses shape (no nested function), keep as-is.
+            if isinstance(t.get("name"), str) and "function" not in t:
+                converted.append(t)
+                continue
+
+            ttype = t.get("type", "function")
+            fn = t.get("function")
+            if not isinstance(fn, dict):
+                # Unknown shape; forward as-is rather than dropping it.
+                converted.append(t)
+                continue
+
+            out: Dict[str, Any] = {"type": ttype}
+            # Keep only fields known to be accepted by Responses tools.
+            for k in ("name", "description", "parameters", "strict"):
+                v = fn.get(k)
+                if v is not None:
+                    out[k] = v
+            # Keep compatibility with Chat Completions strict mode.
+            out["strict"] = False
+            converted.append(out)
+
+        return converted
+
+    def toResponsesInput(self):
+        return AiModelBase.historyToResponsesInput(self._history)
+
+    def _handleResponsesStreamEvent(self, evt: dict):
+        evtType: str = evt.get("type") or evt.get("event")
+        if not evtType:
+            return
+
+        if evtType == "response.output_text.delta":
+            delta = evt.get("delta", "")
+            self._firstDelta = not self._responsesText
+            self._responsesText += delta
+            self._emitResponse(text=delta)
+        elif evtType == "response.reasoning_summary_text.delta":
+            delta = evt.get("delta", "")
+            self._responsesReasoning += delta
+            self._emitResponse(reasoning=delta)
+
+        # Parse function call in done event (we don't need deltas for tool calls).
+        elif evtType == "response.output_item.done":
+            item = evt.get("item", {})
+            itemType = item.get("type")
+            if itemType == "function_call":
+                toolCalls = [self._parseResponsesFunctionCall(item)]
+                aiResponse = AiResponse()
+                aiResponse.is_delta = False
+                aiResponse.role = AiRole.Assistant
+                aiResponse.message = ""
+                aiResponse.tool_calls = toolCalls
+                aiResponse.first_delta = self._firstDelta
+                self.responseAvailable.emit(aiResponse)
+                self._responsesToolCalls.extend(toolCalls)
+
+        # A response is complete
+        elif evtType == "response.completed":
+            if self._responsesText or self._responsesReasoning or self._responsesToolCalls:
+                self.addHistory(AiRole.Assistant, self._responsesText,
+                                reasoning=self._responsesReasoning,
+                                toolCalls=self._responsesToolCalls)
+                self._responsesText = ""
+                self._responsesReasoning = ""
+                self._responsesToolCalls = []
+
+    def _processResponsesResponseObject(self, data: dict):
+        output: List[Dict[str, Any]] = data.get("output", [])
+        message = ""
+        reasoning = ""
+        toolCalls = []
+        role = AiRole.Assistant
+
+        for item in output:
+            itemType = item.get("type")
+            if not itemType:
+                continue
+            if itemType == "message":
+                message += self._parseResponsesMessage(item)
+                role = AiRole.fromString(item.get("role", "assistant"))
+            elif itemType == "function_call":
+                toolCalls.append(self._parseResponsesFunctionCall(item))
+            elif itemType == "reasoning":
+                reasoning += self._parseResponsesReasoning(item)
+
+        if message or reasoning or toolCalls:
+            self.addHistory(role, message, reasoning=reasoning,
+                            toolCalls=toolCalls)
+
+            aiResponse = AiResponse()
+            aiResponse.is_delta = False
+            aiResponse.role = role
+            aiResponse.message = message
+            aiResponse.reasoning = reasoning
+            aiResponse.tool_calls = toolCalls
+            aiResponse.first_delta = True
+            self.responseAvailable.emit(aiResponse)
+
+    def _parseResponsesMessage(self, item: dict):
+        content: List[Dict[str, any]] = item.get("content", [])
+        message = ""
+        for chunk in content:
+            text = chunk.get("text", "")
+            chunkType = chunk.get("type")
+            if chunkType == "output_text":
+                message += text
+            else:
+                logger.warning(
+                    "Unknown Responses message chunk type: %s", chunkType)
+        return message
+
+    def _parseResponsesFunctionCall(self, item: dict):
+        return {
+            "function": {
+                "name": item.get("name"),
+                "arguments": item.get("arguments"),
+            },
+            "id": item.get("call_id"),
+            "type": "function",
+        }
+
+    def _parseResponsesReasoning(self, item: dict):
+        summary: List[Dict[str, any]] = item.get("summary", [])
+        reasoning = ""
+        for chunk in summary:
+            chunkType = chunk.get("type")
+            if chunkType == "summary_text":
+                text = chunk.get("text", "")
+                reasoning += text
+            else:
+                logger.warning(
+                    "Unknown Responses reasoning chunk type: %s", chunkType)
+
+        return reasoning
 
     @staticmethod
     def _getContent(data: dict) -> str:

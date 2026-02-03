@@ -161,6 +161,45 @@ class GithubCopilot(AiModelBase):
             # claude-3.7-sonnet-thought seems cannot be 4096
             params.max_tokens = caps.max_output_tokens
 
+        # Decide which endpoint to use for this model.
+        self._isResponsesApiEnabled = self._shouldUseResponsesApi(id)
+        if self._isResponsesApiEnabled:
+            if not params.continue_only:
+                prompt = params.prompt
+                if params.sys_prompt:
+                    self.addHistory(AiRole.System, params.sys_prompt)
+                self.addHistory(AiRole.User, prompt)
+
+            payload = {
+                "model": id,
+                "stream": stream,
+                "store": False,
+                "input": self.toResponsesInput(),
+                "truncation": "disabled",
+                "reasoning": {
+                    "effort": "medium",
+                    "summary": "detailed"
+                },
+                "include": ["reasoning.encrypted_content"]
+            }
+
+            # FIXME: `Unsupported parameter: 'temperature' is not supported with this model.`
+            # Such as gpt-5.2, currently disable temperature for Responses API.
+
+            if params.max_tokens is not None:
+                payload["max_output_tokens"] = params.max_tokens
+
+            if params.top_p is not None:
+                payload["top_p"] = params.top_p
+
+            if params.tools and caps.tool_calls:
+                payload["tools"] = AiModelBase.chatToolsToResponsesTools(
+                    params.tools)
+                payload["tool_choice"] = params.tool_choice or "auto"
+
+            self._doQuery(payload, stream)
+            return
+
         payload = {
             "model": id,
             "temperature": params.temperature,
@@ -197,13 +236,18 @@ class GithubCopilot(AiModelBase):
             modelId, AiModelCapabilities())
         return bool(caps.tool_calls)
 
+    def _shouldUseResponsesApi(self, modelId: str) -> bool:
+        """Return True when the model supports the Responses API."""
+        endpoints = GithubCopilot._endPoints.get(modelId)
+        if not endpoints:
+            return False
+
+        return "/responses" in endpoints
+
     def _doQuery(self, payload, stream=True):
         headers = _makeHeaders(self._token)
-        self.post(
-            f"{self._url_prefix}/chat/completions",
-            headers=headers,
-            data=payload,
-            stream=stream)
+        url = f"{self._url_prefix}/responses" if self._isResponsesApiEnabled else f"{self._url_prefix}/chat/completions"
+        self.post(url, headers=headers, data=payload, stream=stream)
 
     def updateToken(self, retry=False):
         settings = Settings(testing=ApplicationBase.instance().testing)
