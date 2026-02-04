@@ -270,16 +270,42 @@ class AiChatbot(QPlainTextEdit):
                 self._findPanel.updateStatus(0, 0)
             return
 
-        # Try to keep current match index based on current selection.
         cur = self.textCursor()
         selStart, selEnd = cur.selectionStart(), cur.selectionEnd()
         idx = -1
-        for i, (s, e) in enumerate(self._findMatches):
-            if s == selStart and e == selEnd:
-                idx = i
-                break
-        if idx == -1:
-            pos = cur.selectionEnd()
+
+        if cur.hasSelection():
+            # 1) Exact match (keeps index stable when toggling flags)
+            for i, (s, e) in enumerate(self._findMatches):
+                if s == selStart and e == selEnd:
+                    idx = i
+                    break
+
+            # 2) Same start (keeps incremental typing anchored)
+            if idx == -1:
+                for i, (s, _) in enumerate(self._findMatches):
+                    if s == selStart:
+                        idx = i
+                        break
+
+            # 3) Contains selection start (handles cases where selection was shorter/longer)
+            if idx == -1:
+                for i, (s, e) in enumerate(self._findMatches):
+                    if s <= selStart < e:
+                        idx = i
+                        break
+
+            # 4) Fallback: next match after the current selection end
+            if idx == -1:
+                pos = selEnd
+                idx = 0
+                for i, (s, _) in enumerate(self._findMatches):
+                    if s >= pos:
+                        idx = i
+                        break
+        else:
+            # No selection: pick the next match at/after the caret.
+            pos = cur.position()
             idx = 0
             for i, (s, _) in enumerate(self._findMatches):
                 if s >= pos:

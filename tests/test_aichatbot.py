@@ -114,6 +114,32 @@ class TestAiChatbot(TestBase):
         self.assertEqual(cursorPos, actualCursor.position())
         self.assertFalse(actualCursor.hasSelection())
 
+    def testFindPanel_IncrementalTypingKeepsAnchor(self):
+        response = AiResponse(role=AiRole.Assistant, message="hello hello")
+        response.is_delta = False
+        self.chatbot.appendResponse(response)
+
+        self.chatbot.executeFind()
+        panel = self.chatbot._findPanel
+        self.assertIsNotNone(panel)
+
+        QTest.keyClicks(panel._leFind, "he")
+        self.wait(260)
+
+        c1 = self.chatbot.textCursor()
+        self.assertTrue(c1.hasSelection())
+        start1 = c1.selectionStart()
+        self.assertEqual(c1.selectedText(), "he")
+
+        # Add one more character: selection should extend at the same start.
+        QTest.keyClick(panel._leFind, "l")
+        self.wait(260)
+
+        c2 = self.chatbot.textCursor()
+        self.assertTrue(c2.hasSelection())
+        self.assertEqual(c2.selectionStart(), start1)
+        self.assertEqual(c2.selectedText(), "hel")
+
     def testGetConfirmDataAtPosition_WithScrolling(self):
         """Test that _getConfirmDataAtPosition works correctly when document is scrolled"""
         # Add a lot of initial content to enable scrolling
