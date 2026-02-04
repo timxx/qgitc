@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -455,31 +456,69 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        file_path = validated.filePath
-        if not os.path.isabs(file_path):
-            file_path = os.path.join(Git.REPO_DIR, file_path)
+        # Allow absolute file paths outside the repository if the file exists.
+        # Relative paths are still resolved relative to the opened repository.
+        filePath = (validated.filePath or "").strip()
+        if not filePath:
+            return AgentToolResult(tool_name, False, "filePath is required.")
 
-        ok, abs_path = self._resolve_repo_path(Git.REPO_DIR, file_path)
-        if not ok:
-            return AgentToolResult(tool_name, False, abs_path)
-
-        if not os.path.isfile(abs_path):
-            return AgentToolResult(tool_name, False, f"File does not exist: {abs_path}")
+        absPath: Optional[str] = None
+        if os.path.isabs(filePath):
+            candidateAbsPath = os.path.abspath(filePath)
+            if os.path.isfile(candidateAbsPath):
+                absPath = candidateAbsPath
+            else:
+                return AgentToolResult(tool_name, False, f"File does not exist: {candidateAbsPath}")
+        else:
+            if not Git.REPO_DIR:
+                return AgentToolResult(tool_name, False, "No repository is currently opened.")
+            candidatePath = os.path.join(Git.REPO_DIR, filePath)
+            ok, resolved = self._resolve_repo_path(Git.REPO_DIR, candidatePath)
+            if not ok:
+                return AgentToolResult(tool_name, False, resolved)
+            if not os.path.isfile(resolved):
+                return AgentToolResult(tool_name, False, f"File does not exist: {resolved}")
+            absPath = resolved
 
         try:
-            with open(abs_path, 'rb') as f:
+            with open(absPath, 'rb') as f:
                 data = f.read()
 
-            prefer_encoding = detectBom(abs_path)[1]
-            text, _ = decodeFileData(data, prefer_encoding)
+            preferEncoding = detectBom(absPath)[1]
+            text, _ = decodeFileData(data, preferEncoding)
             lines = text.splitlines(keepends=True)
 
-            start_line = validated.startLine - 1 if validated.startLine else 0
-            end_line = validated.endLine if validated.endLine else len(lines)
+            totalLines = len(lines)
+            requestedStartLine = validated.startLine
+            requestedEndLine = validated.endLine
 
-            selected_lines = lines[start_line:end_line]
-            output = ''.join(selected_lines)
+            # Tool convention: startLine/endLine are 1-based and endLine is inclusive.
+            effectiveStartLine = requestedStartLine if requestedStartLine is not None else 1
+            if effectiveStartLine < 1:
+                effectiveStartLine = 1
 
+            effectiveEndLine = requestedEndLine if requestedEndLine is not None else totalLines
+            if effectiveEndLine < 0:
+                effectiveEndLine = 0
+            if effectiveEndLine > totalLines:
+                effectiveEndLine = totalLines
+
+            startIndex = max(effectiveStartLine - 1, 0)
+            endIndex = max(effectiveEndLine, 0)
+            selectedLines = lines[startIndex:endIndex]
+            content = ''.join(selectedLines)
+
+            meta = {
+                "path": absPath,
+                "totalLines": totalLines,
+                "startLine": effectiveStartLine if totalLines > 0 and effectiveEndLine > 0 else 0,
+                "endLine": effectiveEndLine if totalLines > 0 else 0,
+            }
+
+            # Keep metadata clearly separated from content to avoid confusing the LLM.
+            output = "<<<METADATA>>>\n" + \
+                json.dumps(meta, ensure_ascii=False) + \
+                "\n<<<CONTENT>>>\n" + content
             return AgentToolResult(tool_name, True, output)
 
         except Exception as e:
