@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from qgitc.gitutils import GitProcess
 
@@ -42,7 +42,7 @@ def runGit(
     *,
     stdin: Optional[Union[bytes, str]] = None,
     text: bool = False,
-    env: Optional[dict[str, str]] = None,
+    env: Optional[Dict[str, str]] = None,
 ) -> Tuple[bool, Union[bytes, str], Union[bytes, str]]:
     """Run git in repoDir.
 
@@ -60,16 +60,17 @@ def runGit(
         msg = f"Invalid repoDir: {repoDir}"
         return False, emptyStr, _makeError(msg, text)
 
-    env: dict[str, str] = os.environ.copy()
-    if "LANGUAGE" not in env:
-        env["LANGUAGE"] = "en_US"
+    mergedEnv: Dict[str, str] = os.environ.copy()
+    if "LANGUAGE" not in mergedEnv:
+        mergedEnv["LANGUAGE"] = "en_US"
+
     if env:
-        env.update({str(k): str(v) for k, v in env.items()})
+        mergedEnv.update({str(k): str(v) for k, v in env.items()})
 
     try:
         gitArgs = [str(a) for a in args]
         process = GitProcess(repoDir, gitArgs, text=text,
-                             env=env, stdinPipe=bool(stdin))
+                             env=mergedEnv, stdinPipe=bool(stdin))
         out, err = process.communicate(input=stdin)
         ok = process.returncode == 0
         return ok, out or emptyStr, err or emptyStr

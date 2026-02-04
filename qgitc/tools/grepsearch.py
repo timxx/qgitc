@@ -33,16 +33,16 @@ def _splitZ(data: bytes) -> List[str]:
 
 def _gitListNonIgnoredFiles(repoDir: str) -> Tuple[bool, str, List[str]]:
     """List tracked + untracked (not ignored) files. Returns repo-relative paths."""
-    ok, out, err = runGit(repoDir, ["ls-files", "-z"], text=False)
+    ok, outTracked, err = runGit(repoDir, ["ls-files", "-z"], text=False)
     if not ok:
         return False, (err.decode("utf-8", errors="replace") or "git ls-files failed"), []
 
-    ok, out, err = runGit(
+    ok, outOthers, err = runGit(
         repoDir, ["ls-files", "-z", "--others", "--exclude-standard"], text=False)
     if not ok:
         return False, (err.decode("utf-8", errors="replace") or "git ls-files --others failed"), []
 
-    files = _splitZ(out) + _splitZ(out)
+    files = _splitZ(outTracked) + _splitZ(outOthers)
     files = [f for f in files if f and not f.startswith(
         ".git/") and f != ".git"]
     files.sort()
