@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from qgitc.common import decodeFileData
 from qgitc.tools.utils import detectBom, runGit
@@ -19,11 +19,11 @@ def _isGitRepo(repoDir: str) -> bool:
     return os.path.isdir(gitMarkerPath) or os.path.isfile(gitMarkerPath)
 
 
-def _splitZ(data: bytes) -> list[str]:
+def _splitZ(data: bytes) -> List[str]:
     if not data:
         return []
     parts = data.split(b"\x00")
-    out: list[str] = []
+    out: List[str] = []
     for p in parts:
         if not p:
             continue
@@ -31,7 +31,7 @@ def _splitZ(data: bytes) -> list[str]:
     return out
 
 
-def _gitListNonIgnoredFiles(repoDir: str) -> Tuple[bool, str, list[str]]:
+def _gitListNonIgnoredFiles(repoDir: str) -> Tuple[bool, str, List[str]]:
     """List tracked + untracked (not ignored) files. Returns repo-relative paths."""
     ok, out, err = runGit(repoDir, ["ls-files", "-z"], text=False)
     if not ok:
@@ -49,7 +49,7 @@ def _gitListNonIgnoredFiles(repoDir: str) -> Tuple[bool, str, list[str]]:
     return True, "", files
 
 
-def _gitFilterIgnored(repoDir: str, relPaths: list[str]) -> Tuple[bool, str, Set[str]]:
+def _gitFilterIgnored(repoDir: str, relPaths: List[str]) -> Tuple[bool, str, Set[str]]:
     """Return a set of ignored paths (subset of relPaths)."""
     if not relPaths:
         return True, "", set()
@@ -69,7 +69,7 @@ def _gitFilterIgnored(repoDir: str, relPaths: list[str]) -> Tuple[bool, str, Set
     return True, "", ignored
 
 
-def _iterRepoFiles(repoDir: str, includePattern: Optional[str], includeIgnoredFiles: bool) -> Tuple[bool, str, list[str]]:
+def _iterRepoFiles(repoDir: str, includePattern: Optional[str], includeIgnoredFiles: bool) -> Tuple[bool, str, List[str]]:
     """Return (ok, message, files) where files is a list of absolute file paths."""
     if not repoDir:
         return False, "No repository is currently opened.", []
@@ -91,7 +91,7 @@ def _iterRepoFiles(repoDir: str, includePattern: Optional[str], includeIgnoredFi
             ".eggs",
         }
 
-    files: list[str] = []
+    files: List[str] = []
 
     if pattern:
         pat = pattern.lstrip("/\\")
@@ -117,7 +117,7 @@ def _iterRepoFiles(repoDir: str, includePattern: Optional[str], includeIgnoredFi
 
         # Respect .gitignore by default when in a git repo.
         if not includeIgnoredFiles and _isGitRepo(repoDir):
-            rels: list[str] = []
+            rels: List[str] = []
             for absPath in files:
                 try:
                     rels.append(os.path.relpath(
@@ -199,7 +199,7 @@ def grepSearch(
     else:
         needle = query.casefold()
 
-    results: list[str] = []
+    results: List[str] = []
     matched_files: Set[str] = set()
     scannedFiles = 0
     skippedFiles = 0

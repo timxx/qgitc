@@ -69,7 +69,7 @@ class ResolvePanel(QWidget):
     statusTextChanged = Signal(str)
     currentFileChanged = Signal(object)  # str|None
 
-    conflictFilesChanged = Signal(object)  # list[str]
+    conflictFilesChanged = Signal(object)  # List[str]
     eventEmitted = Signal(object)  # ResolveEvent
 
     fileOutcome = Signal(str, object)  # path, ResolveOutcome

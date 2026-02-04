@@ -6,7 +6,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 
@@ -46,7 +46,7 @@ from qgitc.tools.readfile import (
 from qgitc.tools.utils import detectBom, runGit
 
 
-def _runGit(repo_dir: str, args: list[str]) -> Tuple[bool, str]:
+def _runGit(repo_dir: str, args: List[str]) -> Tuple[bool, str]:
     if not repo_dir:
         return False, "No repository is currently opened."
     if not os.path.isdir(repo_dir):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import QLayout, QLayoutItem, QSizePolicy, QWidget
@@ -16,7 +16,7 @@ class FlowLayout(QLayout):
 
     def __init__(self, parent: QWidget = None, margin: int = 0, spacing: int = 4):
         super().__init__(parent)
-        self._items: list[QLayoutItem] = []
+        self._items: List[QLayoutItem] = []
         self.setContentsMargins(margin, margin, margin, margin)
         self.setSpacing(spacing)
 

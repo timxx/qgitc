@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import List
 
 from qgitc.gitutils import Git, GitProcess
 from qgitc.tools.grepsearch import grepSearch
@@ -15,7 +16,7 @@ class TestGrepSearchTool(unittest.TestCase):
         super().setUp()
         GitProcess.GIT_BIN = "git"
 
-    def _git(self, repoDir: str, args: list[str]) -> None:
+    def _git(self, repoDir: str, args: List[str]) -> None:
         process = Git.run(args, repoDir=repoDir, text=True)
         out, err = process.communicate()
         if process.returncode != 0:

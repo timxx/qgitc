@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from qgitc.gitutils import GitProcess
 
@@ -38,7 +38,7 @@ def _makeError(msg: str, text: bool) -> Union[bytes, str]:
 
 def runGit(
     repoDir: str,
-    args: list[str],
+    args: List[str],
     *,
     stdin: Optional[Union[bytes, str]] = None,
     text: bool = False,

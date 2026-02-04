@@ -222,7 +222,7 @@ def buildConflictExcerpt(repoDir: str, path: str, contextLines: int = 3) -> str:
     if not starts:
         return ""
 
-    ranges: list[tuple[int, int]] = []
+    ranges: List[tuple[int, int]] = []
     n = len(lines)
     for start in starts:
         end = None
@@ -240,7 +240,7 @@ def buildConflictExcerpt(repoDir: str, path: str, contextLines: int = 3) -> str:
         return ""
 
     ranges.sort()
-    merged: list[list[int]] = []
+    merged: List[List[int]] = []
     for a, b in ranges:
         if not merged:
             merged.append([a, b])
@@ -251,7 +251,7 @@ def buildConflictExcerpt(repoDir: str, path: str, contextLines: int = 3) -> str:
         else:
             merged.append([a, b])
 
-    parts: list[str] = []
+    parts: List[str] = []
     for idx, (a, b) in enumerate(merged, start=1):
         chunk = "".join(lines[a:b])
         piece = (

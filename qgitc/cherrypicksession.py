@@ -53,7 +53,7 @@ class CherryPickSession(QObject):
     itemStarted = Signal(int, object)  # itemIndex, CherryPickItem
     itemStatusChanged = Signal(int, str, str)  # itemIndex, status, message
 
-    conflictsDetected = Signal(object, object)  # ResolveOperation, list[str]
+    conflictsDetected = Signal(object, object)  # ResolveOperation, List[str]
 
     # ok, aborted, needReload, message
     finished = Signal(bool, bool, bool, str)
