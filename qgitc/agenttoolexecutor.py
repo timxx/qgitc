@@ -456,8 +456,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        # Allow absolute file paths outside the repository if the file exists.
-        # Relative paths are still resolved relative to the opened repository.
+        # Read only within the opened repository.
+        # Absolute paths are allowed only if they resolve inside the repository.
         filePath = (validated.filePath or "").strip()
         if not filePath:
             return AgentToolResult(tool_name, False, "filePath is required.")
@@ -466,23 +466,16 @@ class AgentToolExecutor(QObject):
         if os.name == 'nt' and filePath.startswith('/') and filePath.find(':') != 1:
             filePath = filePath.lstrip('/')
 
-        absPath: Optional[str] = None
-        if os.path.isabs(filePath):
-            candidateAbsPath = os.path.abspath(filePath)
-            if os.path.isfile(candidateAbsPath):
-                absPath = candidateAbsPath
-            else:
-                return AgentToolResult(tool_name, False, f"File does not exist: {candidateAbsPath}")
-        else:
-            if not Git.REPO_DIR:
-                return AgentToolResult(tool_name, False, "No repository is currently opened.")
-            candidatePath = os.path.join(Git.REPO_DIR, filePath)
-            ok, resolved = self._resolve_repo_path(Git.REPO_DIR, candidatePath)
-            if not ok:
-                return AgentToolResult(tool_name, False, resolved)
-            if not os.path.isfile(resolved):
-                return AgentToolResult(tool_name, False, f"File does not exist: {resolved}")
-            absPath = resolved
+        if not Git.REPO_DIR:
+            return AgentToolResult(tool_name, False, "No repository is currently opened.")
+
+        candidatePath = filePath if os.path.isabs(
+            filePath) else os.path.join(Git.REPO_DIR, filePath)
+        ok, absPath = self._resolve_repo_path(Git.REPO_DIR, candidatePath)
+        if not ok:
+            return AgentToolResult(tool_name, False, absPath)
+        if not os.path.isfile(absPath):
+            return AgentToolResult(tool_name, False, f"File does not exist: {absPath}")
 
         try:
             with open(absPath, 'rb') as f:
