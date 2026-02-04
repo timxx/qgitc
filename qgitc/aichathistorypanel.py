@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import json
-from typing import List
 
-from PySide6.QtCore import QItemSelectionModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import QEvent, QItemSelectionModel, QModelIndex, Qt, Signal
 from PySide6.QtGui import QIcon, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -27,6 +26,7 @@ class AiChatHistoryPanel(QWidget):
 
     requestNewChat = Signal()
     historySelectionChanged = Signal(AiChatHistory)
+    historyActivated = Signal(AiChatHistory)
 
     def __init__(self, store: AiChatHistoryStore, parent=None):
         super().__init__(parent)
@@ -54,6 +54,7 @@ class AiChatHistoryPanel(QWidget):
         self._searchEdit.setPlaceholderText(self.tr("Search conversations..."))
         self._searchEdit.setClearButtonEnabled(True)
         self._searchEdit.textChanged.connect(self._onSearchTextChanged)
+        self._searchEdit.installEventFilter(self)
         mainLayout.addWidget(self._searchEdit)
 
         # History list with model/view
@@ -69,9 +70,68 @@ class AiChatHistoryPanel(QWidget):
             self._showContextMenu)
         self._historyList.selectionModel().currentChanged.connect(
             self._onHistorySelectionChanged)
+        self._historyList.clicked.connect(self._onHistoryActivated)
+        self._historyList.activated.connect(self._onHistoryActivated)
         mainLayout.addWidget(self._historyList)
 
         self._compactMode = False
+
+    def clearFilter(self, preserveSelection: bool = True):
+        """Clear the search filter; optionally keep the currently selected history."""
+        keepId = None
+        if preserveSelection:
+            cur = self.currentHistory()
+            keepId = cur.historyId if cur else None
+
+        # Avoid triggering the default selection auto-behavior from textChanged.
+        self._searchEdit.blockSignals(True)
+        self._searchEdit.setText("")
+        self._searchEdit.blockSignals(False)
+
+        self._filterModel.setSearchText("")
+
+        if keepId:
+            self.setCurrentHistory(keepId)
+        elif (
+            self._historyModel.rowCount() > 0
+            and not self._historyList.currentIndex().isValid()
+        ):
+            self._selectSingleIndex(self._filterModel.index(0, 0))
+
+    def _moveSelection(self, deltaRows: int):
+        if self._filterModel.rowCount() <= 0:
+            return
+
+        cur = self._historyList.currentIndex()
+        row = cur.row() if cur.isValid() else 0
+        newRow = max(
+            0, min(self._filterModel.rowCount() - 1, row + int(deltaRows)))
+        self._selectSingleIndex(self._filterModel.index(newRow, 0))
+
+    def eventFilter(self, obj, event):
+        if obj == self._searchEdit and event.type() == QEvent.KeyPress:
+            key = event.key()
+            if key in (Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown):
+                if key == Qt.Key_Up:
+                    self._moveSelection(-1)
+                elif key == Qt.Key_Down:
+                    self._moveSelection(1)
+                else:
+                    # Approximate page size based on visible rows.
+                    rowHeight = self._historyList.sizeHintForRow(0)
+                    if rowHeight <= 0:
+                        rowHeight = 30
+                    page = max(
+                        1, int(self._historyList.viewport().height() / rowHeight))
+                    self._moveSelection(-page if key ==
+                                        Qt.Key_PageUp else page)
+                return True
+
+            if key in (Qt.Key_Return, Qt.Key_Enter):
+                self._onHistoryActivated(self._historyList.currentIndex())
+                return True
+
+        return super().eventFilter(obj, event)
 
     def setCompactMode(self, compact: bool):
         """Compact mode for embedded UI: hides controls and reduces vertical chrome."""
@@ -100,6 +160,10 @@ class AiChatHistoryPanel(QWidget):
             QAbstractItemView.ScrollPerPixel)
         height = maxRows * rowHeight + (maxRows - 1) + 4
         self._historyList.setFixedHeight(height)
+
+    def setSelectionMode(self, mode: QAbstractItemView.SelectionMode):
+        """Set the selection mode for the history list view."""
+        self._historyList.setSelectionMode(mode)
 
     def _onSearchTextChanged(self, text: str):
         """Handle search text change"""
@@ -138,6 +202,14 @@ class AiChatHistoryPanel(QWidget):
             chatHistory = self._filterModel.data(current, Qt.UserRole)
 
         self.historySelectionChanged.emit(chatHistory)
+
+    def _onHistoryActivated(self, index: QModelIndex):
+        """Emit explicit activation (click/enter) without relying on selection changes."""
+        if not index or not index.isValid():
+            return
+        chatHistory = self._filterModel.data(index, Qt.UserRole)
+        if chatHistory:
+            self.historyActivated.emit(chatHistory)
 
     def clear(self):
         self._searchEdit.clear()

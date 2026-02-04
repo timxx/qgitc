@@ -35,9 +35,6 @@ class AiChatDockWidget(QDockWidget):
         titleLabel = ElidedLabel(self.tr("Chat"), self._titleBarWidget)
         self._titleBarLayout.addWidget(titleLabel)
 
-        self._chatTitleLabel = ElidedLabel(self._titleBarWidget)
-        self._titleBarLayout.addWidget(self._chatTitleLabel)
-
         self._titleBarLayout.addStretch()
 
         icon = QIcon(dataDirPath() + "/icons/add.svg")
@@ -87,11 +84,6 @@ class AiChatDockWidget(QDockWidget):
 
         self._chatWindows = []
 
-        self._aiChatWidget._historyPanel.historySelectionChanged.connect(
-            self._onHistorySelectionChanged)
-        self._aiChatWidget.chatTitleReady.connect(
-            self._onChatTitleReady)
-
         self._aiChatWidget.initialized.connect(
             self._updateNewConversationButtonState)
         self._aiChatWidget.modelStateChanged.connect(
@@ -108,7 +100,7 @@ class AiChatDockWidget(QDockWidget):
             layout = cw.layout() if cw else None
         else:
             layout = None
-    
+
         if area == Qt.RightDockWidgetArea:
             self._aiChatWidget.setEmbeddedOuterMargins(0, 4, 4, 4)
             if layout:
@@ -147,26 +139,3 @@ class AiChatDockWidget(QDockWidget):
     def queryClose(self):
         """Clean up when closing"""
         self._aiChatWidget.queryClose()
-
-    def _onHistorySelectionChanged(self, chatHistory):
-        """Update title when chat history changes"""
-        if chatHistory and chatHistory.title:
-            self._updateChatTitle(chatHistory.title)
-        else:
-            self._updateChatTitle("")
-
-    def _onChatTitleReady(self):
-        """Update title when history data changes (e.g., title generated)"""
-        currentHistory = self._aiChatWidget._historyPanel.currentHistory()
-        if currentHistory and currentHistory.title:
-            self._updateChatTitle(currentHistory.title)
-        else:
-            self._updateChatTitle("")
-
-    def _updateChatTitle(self, title: str):
-        """Update the chat title label with elided text"""
-        if not title:
-            self._chatTitleLabel.setText("")
-        else:
-            self._chatTitleLabel.setText(f"- {title}")
-            self._chatTitleLabel.setToolTip(title)

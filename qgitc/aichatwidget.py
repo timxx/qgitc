@@ -5,14 +5,27 @@ import os
 import typing
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from PySide6.QtCore import QEvent, QEventLoop, QObject, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import (
+    QEvent,
+    QEventLoop,
+    QObject,
+    QPoint,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
+)
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QHBoxLayout,
+    QMenu,
     QScrollBar,
     QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
+    QWidgetAction,
 )
 
 from qgitc.agenttoolexecutor import AgentToolExecutor, AgentToolResult
@@ -26,7 +39,16 @@ from qgitc.aichattitlegenerator import AiChatTitleGenerator
 from qgitc.aitoolconfirmation import ConfirmationStatus
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
-from qgitc.common import Commit, commitRepoDir, fullRepoDir, logger, toSubmodulePath
+from qgitc.coloredicontoolbutton import ColoredIconToolButton
+from qgitc.common import (
+    Commit,
+    commitRepoDir,
+    dataDirPath,
+    fullRepoDir,
+    logger,
+    toSubmodulePath,
+)
+from qgitc.elidedlabel import ElidedLabel
 from qgitc.gitutils import Git
 from qgitc.llm import (
     AiChatMode,
@@ -226,6 +248,12 @@ class AiChatWidget(QWidget):
         self._embedded = embedded
         self._hideHistoryPanel = hideHistoryPanel
 
+        self._conversationHeader = None
+        self._btnBackToNewConversation = None
+        self._conversationTitleLabel = None
+        self._historyPopupMenu = None
+        self._historyPopupPanel = None
+
         if not embedded:
             mainLayout = QHBoxLayout(self)
             mainLayout.setContentsMargins(4, 4, 4, 4)
@@ -359,6 +387,37 @@ class AiChatWidget(QWidget):
             self._historyPanel.setSizePolicy(
                 QSizePolicy.Preferred, QSizePolicy.Fixed)
 
+            # Embedded mode: conversation header (back + title) shown when a
+            # non-empty conversation is active.
+            self._conversationHeader = QWidget(self)
+            headerLayout = QHBoxLayout(self._conversationHeader)
+            headerLayout.setContentsMargins(0, 0, 0, 0)
+            headerLayout.setSpacing(0)
+
+            backIcon = QIcon(dataDirPath() + "/icons/arrow-back.svg")
+            self._btnBackToNewConversation = ColoredIconToolButton(
+                backIcon, QSize(16, 16), self._conversationHeader)
+            self._btnBackToNewConversation.setFixedSize(QSize(20, 20))
+            self._btnBackToNewConversation.setToolTip(
+                self.tr("Go Back"))
+            self._btnBackToNewConversation.clicked.connect(
+                self.onNewChatRequested)
+            headerLayout.addWidget(self._btnBackToNewConversation)
+
+            self._conversationTitleLabel = ElidedLabel(
+                self._conversationHeader)
+            self._conversationTitleLabel.setClickable(True)
+            self._conversationTitleLabel.setToolTip(
+                self.tr("Pick Conversation"))
+            self._conversationTitleLabel.clicked.connect(
+                self._showHistoryPopup)
+            headerLayout.addWidget(self._conversationTitleLabel, 1)
+
+            headerLayout.addStretch(0)
+            layout.addWidget(self._conversationHeader)
+            layout.addSpacing(4)
+            self._conversationHeader.setVisible(False)
+
         self._chatBot = AiChatbot(self)
         self._chatBot.verticalScrollBar().valueChanged.connect(
             self._onTextBrowserScrollbarChanged)
@@ -394,6 +453,83 @@ class AiChatWidget(QWidget):
 
         self._disableAutoScroll = False
         self._adjustingSccrollbar = False
+
+    def _ensureHistoryPopup(self):
+        if self._historyPopupMenu is not None:
+            return
+
+        store = ApplicationBase.instance().aiChatHistoryStore()
+
+        self._historyPopupMenu = QMenu(self)
+        self._historyPopupMenu.setObjectName("AiChatHistoryPopupMenu")
+        self._historyPopupMenu.aboutToHide.connect(self._onHistoryPopupClosed)
+
+        action = QWidgetAction(self._historyPopupMenu)
+        panel = AiChatHistoryPanel(store, self._historyPopupMenu)
+        panel.setCompactMode(False)
+        panel.setMaxVisibleRows(8)
+        panel.setSelectionMode(QAbstractItemView.SingleSelection)
+        panel.requestNewChat.connect(self._onPopupNewChatRequested)
+        panel.historyActivated.connect(self._onPopupHistorySelected)
+        panel.setMinimumWidth(360)
+
+        action.setDefaultWidget(panel)
+        self._historyPopupMenu.addAction(action)
+        self._historyPopupPanel = panel
+
+    def _onHistoryPopupClosed(self):
+        # Reset filter for next open, but keep whichever history is selected.
+        if self._historyPopupPanel is not None:
+            self._historyPopupPanel.clearFilter(preserveSelection=True)
+
+    def _showHistoryPopup(self):
+        if not self._embedded or self._hideHistoryPanel:
+            return
+
+        # Only show when a conversation title header is visible.
+        if not self._conversationHeader or not self._conversationHeader.isVisible():
+            return
+
+        self._ensureHistoryPopup()
+
+        cur = self._historyPanel.currentHistory()
+        if cur is not None:
+            self._historyPopupPanel.setCurrentHistory(cur.historyId)
+
+        anchor = self._conversationTitleLabel
+        pos = anchor.mapToGlobal(QPoint(0, anchor.height()))
+        self._historyPopupMenu.popup(pos)
+
+    def _onPopupHistorySelected(self, chatHistory: AiChatHistory):
+        if not chatHistory:
+            return
+
+        # Activate via the main (embedded) panel so existing logic runs.
+        self._historyPanel.setCurrentHistory(chatHistory.historyId)
+        if self._historyPopupMenu is not None:
+            self._historyPopupMenu.hide()
+
+    def _onPopupNewChatRequested(self):
+        self.onNewChatRequested()
+        if self._historyPopupMenu is not None:
+            self._historyPopupMenu.hide()
+
+    def _updateEmbeddedConversationHeader(self):
+        if not self._embedded or self._hideHistoryPanel:
+            return
+        if not self._conversationHeader:
+            return
+
+        cur = self._historyPanel.currentHistory()
+        isNewConversation = (cur is None) or (not cur.messages)
+
+        self._conversationHeader.setVisible(not isNewConversation)
+        if isNewConversation:
+            return
+
+        title = (cur.title or "").strip() if cur else ""
+        display = title if title else self.tr("Conversation")
+        self._conversationTitleLabel.setText(display)
 
     def setEmbeddedOuterMargins(self, left: int, top: int, right: int, bottom: int):
         """Set the outer layout margins for embedded (dock) mode.
@@ -1267,6 +1403,7 @@ class AiChatWidget(QWidget):
         """Create a new chat conversation"""
         self._createNewConversation()
         self._contextPanel.setFocus()
+        self._updateEmbeddedConversationHeader()
 
     def _createNewConversation(self):
         """Create and switch to a new conversation"""
@@ -1308,6 +1445,7 @@ class AiChatWidget(QWidget):
         """Handle history selection change"""
         self._onUsrInputTextChanged()
         self._loadChatHistory(chatHistory)
+        self._updateEmbeddedConversationHeader()
 
     def _onHistoryRemoved(self, historyId: str):
         """Handle history removal"""
@@ -1334,6 +1472,7 @@ class AiChatWidget(QWidget):
         # Clear and load messages
         self._clearCurrentChat()
         if not chatHistory.messages:
+            self._setEmbeddedRecentListVisible(True)
             return
 
         self._loadMessagesFromHistory(chatHistory.messages)
@@ -1531,6 +1670,7 @@ class AiChatWidget(QWidget):
         if visible:
             visible = self._historyPanel.historyModel().rowCount() > 0
         self._historyPanel.setVisible(visible)
+        self._updateEmbeddedConversationHeader()
 
     def _generateChatTitle(self, historyId: str, firstMessage: str):
         """Generate a title for the conversation"""
@@ -1553,6 +1693,11 @@ class AiChatWidget(QWidget):
         settings = ApplicationBase.instance().settings()
         settings.saveChatHistory(historyId, chatHistory.toDict())
         self.chatTitleReady.emit()
+
+        # Refresh embedded header if this is the currently active conversation.
+        cur = self._historyPanel.currentHistory()
+        if cur and cur.historyId == historyId:
+            self._updateEmbeddedConversationHeader()
 
     def onOpenSettings(self):
         settings = ApplicationBase.instance().settings()
