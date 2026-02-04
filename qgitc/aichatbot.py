@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Optional, Tuple
+import re
+from typing import Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
+    QColor,
     QFont,
+    QKeyEvent,
+    QKeySequence,
     QMouseEvent,
     QPainter,
     QPolygonF,
@@ -16,7 +20,7 @@ from PySide6.QtGui import (
     QTextFormat,
     QTextOption,
 )
-from PySide6.QtWidgets import QPlainTextEdit
+from PySide6.QtWidgets import QPlainTextEdit, QTextEdit
 
 from qgitc.agenttools import ToolType
 from qgitc.aitoolconfirmation import (
@@ -27,8 +31,10 @@ from qgitc.aitoolconfirmation import (
     ToolConfirmationInterface,
 )
 from qgitc.applicationbase import ApplicationBase
+from qgitc.findconstants import FindFlags
+from qgitc.findpanel import FindPanel
 from qgitc.llm import AiResponse, AiRole
-from qgitc.markdownhighlighter import HighlighterState, MarkdownHighlighter
+from qgitc.markdownhighlighter import MarkdownHighlighter
 
 
 class AiChatHeaderData(QTextBlockUserData):
@@ -107,10 +113,39 @@ class AiChatbot(QPlainTextEdit):
 
         self._hoveredHeaderPos: Optional[int] = None
 
+        # Find panel state
+        self._findPanel: Optional[FindPanel] = None
+        self._findMatches: List[Tuple[int, int]] = []
+        self._findCurrentIndex: int = -1
+
         # Enable mouse tracking for hover effects
         self.setMouseTracking(True)
 
         self.setWordWrapMode(QTextOption.WrapAnywhere)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        # Ctrl+F (Find)
+        if event.matches(QKeySequence.Find):
+            self.executeFind()
+            event.accept()
+            return
+
+        # When find panel is visible, support Esc + FindNext/Previous.
+        if self._findPanel and self._findPanel.isVisible():
+            if event.key() == Qt.Key_Escape:
+                self._findPanel.hideAnimate()
+                event.accept()
+                return
+            if event.matches(QKeySequence.FindNext):
+                self._findNext()
+                event.accept()
+                return
+            if event.matches(QKeySequence.FindPrevious):
+                self._findPrevious()
+                event.accept()
+                return
+
+        super().keyPressEvent(event)
 
     def appendResponse(self, response: AiResponse, collapsed=False):
         cursor = self.textCursor()
@@ -144,6 +179,10 @@ class AiChatbot(QPlainTextEdit):
             newCursor.setPosition(selectionStart)
             newCursor.setPosition(selectionEnd, QTextCursor.KeepAnchor)
             self.setTextCursor(newCursor)
+
+        # Keep find results updated while panel is open, without moving the viewport.
+        if self._findPanel and self._findPanel.isVisible() and self._findPanel.text:
+            self._refreshFindResults(preserveSelection=True)
 
     def appendServiceUnavailable(self, errorMsg: str = None):
         cursor = self.textCursor()
@@ -187,7 +226,210 @@ class AiChatbot(QPlainTextEdit):
         self._confirmations.clear()
         self._hoveredConfirmation = None
         self._hoveredHeaderPos = None
+
+        self._clearFindState()
         super().clear()
+
+    def executeFind(self):
+        if not self._findPanel:
+            self._findPanel = FindPanel(self.viewport(), self)
+            self._findPanel.findRequested.connect(self._onFindRequested)
+            self._findPanel.nextRequested.connect(self._findNext)
+            self._findPanel.previousRequested.connect(self._findPrevious)
+            self._findPanel.afterHidden.connect(self._onFindHidden)
+
+        # Prime with current selection if any (first line only).
+        text = self.textCursor().selectedText()
+        if text:
+            # QTextCursor.selectedText uses U+2029 for line breaks.
+            text = text.replace("\u2029", "\n").lstrip("\n")
+            idx = text.find("\n")
+            if idx != -1:
+                text = text[:idx]
+            self._findPanel.setText(text)
+
+        self._findPanel.showAnimate()
+
+    def _onFindHidden(self):
+        self._clearFindState()
+        self.viewport().update()
+
+    def _clearFindState(self):
+        self._findMatches = []
+        self._findCurrentIndex = -1
+        # Clear highlights
+        self.setExtraSelections([])
+
+    def _onFindRequested(self, text: str, flags: int):
+        self._findMatches = self._computeFindMatches(text, flags)
+
+        if not self._findMatches:
+            self._findCurrentIndex = -1
+            self._applyFindHighlights([], -1)
+            if self._findPanel:
+                self._findPanel.updateStatus(0, 0)
+            return
+
+        # Try to keep current match index based on current selection.
+        cur = self.textCursor()
+        selStart, selEnd = cur.selectionStart(), cur.selectionEnd()
+        idx = -1
+        for i, (s, e) in enumerate(self._findMatches):
+            if s == selStart and e == selEnd:
+                idx = i
+                break
+        if idx == -1:
+            pos = cur.selectionEnd()
+            idx = 0
+            for i, (s, _) in enumerate(self._findMatches):
+                if s >= pos:
+                    idx = i
+                    break
+        self._findCurrentIndex = idx
+        self._selectFindMatch(self._findCurrentIndex)
+
+    def _refreshFindResults(self, preserveSelection: bool = True):
+        if not self._findPanel or not self._findPanel.isVisible():
+            return
+        if not self._findPanel.text:
+            self._clearFindState()
+            self._findPanel.updateStatus(0, 0)
+            return
+
+        matches = self._computeFindMatches(
+            self._findPanel.text, self._findPanel.flags)
+        self._findMatches = matches
+
+        if not matches:
+            self._findCurrentIndex = -1
+            self._applyFindHighlights([], -1)
+            self._findPanel.updateStatus(0, 0)
+            return
+
+        idx = self._findCurrentIndex
+        if preserveSelection:
+            cur = self.textCursor()
+            selStart, selEnd = cur.selectionStart(), cur.selectionEnd()
+            for i, (s, e) in enumerate(matches):
+                if s == selStart and e == selEnd:
+                    idx = i
+                    break
+
+        if idx < 0:
+            idx = 0
+        if idx >= len(matches):
+            idx = len(matches) - 1
+
+        self._findCurrentIndex = idx
+        self._applyFindHighlights(matches, idx)
+        self._findPanel.updateStatus(idx, len(matches))
+
+    def _findNext(self):
+        if not self._findMatches:
+            return
+        if self._findCurrentIndex < 0:
+            self._findCurrentIndex = 0
+        else:
+            self._findCurrentIndex = (
+                self._findCurrentIndex + 1) % len(self._findMatches)
+        self._selectFindMatch(self._findCurrentIndex)
+
+    def _findPrevious(self):
+        if not self._findMatches:
+            return
+        if self._findCurrentIndex < 0:
+            self._findCurrentIndex = len(self._findMatches) - 1
+        else:
+            self._findCurrentIndex = (
+                self._findCurrentIndex - 1) % len(self._findMatches)
+        self._selectFindMatch(self._findCurrentIndex)
+
+    def _selectFindMatch(self, index: int):
+        if not self._findMatches or index < 0 or index >= len(self._findMatches):
+            return
+
+        start, end = self._findMatches[index]
+        cursor = self.textCursor()
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
+        self.setTextCursor(cursor)
+        self.centerCursor()
+
+        self._applyFindHighlights(self._findMatches, index)
+        if self._findPanel:
+            self._findPanel.updateStatus(index, len(self._findMatches))
+
+    def _applyFindHighlights(self, matches: List[Tuple[int, int]], currentIndex: int):
+        if not matches:
+            self.setExtraSelections([])
+            return
+
+        schema = ApplicationBase.instance().colorSchema()
+        baseBg = QColor(schema.FindResult)
+        baseBg.setAlpha(90)
+        curBg = QColor(schema.FindResult)
+        curBg.setAlpha(170)
+
+        selections: List[QTextEdit.ExtraSelection] = []
+
+        # Safety cap: don't highlight an extreme number of matches.
+        maxHighlights = 2000
+        doc = self.document()
+
+        for i, (s, e) in enumerate(matches[:maxHighlights]):
+            sel = QTextEdit.ExtraSelection()
+            sel.cursor = QTextCursor(doc)
+            sel.cursor.setPosition(s)
+            sel.cursor.setPosition(e, QTextCursor.KeepAnchor)
+            fmt = QTextCharFormat()
+            fmt.setBackground(curBg if i == currentIndex else baseBg)
+            sel.format = fmt
+            selections.append(sel)
+
+        self.setExtraSelections(selections)
+
+    def _computeFindMatches(self, text: str, flags: int) -> List[Tuple[int, int]]:
+        if not text:
+            return []
+
+        plain = self.document().toPlainText()
+
+        if flags & FindFlags.UseRegExp:
+            pattern = text
+            if flags & FindFlags.WholeWords:
+                pattern = rf"\b(?:{pattern})\b"
+
+            reFlags = re.MULTILINE
+            if not (flags & FindFlags.CaseSenitively):
+                reFlags |= re.IGNORECASE
+
+            try:
+                rx = re.compile(pattern, reFlags)
+            except re.error:
+                return []
+
+            matches: List[Tuple[int, int]] = []
+            for m in rx.finditer(plain):
+                if m.start() == m.end():
+                    continue
+                matches.append((m.start(), m.end()))
+            return matches
+
+        qtFlags = QTextDocument.FindFlags()
+        if flags & FindFlags.CaseSenitively:
+            qtFlags |= QTextDocument.FindCaseSensitively
+        if flags & FindFlags.WholeWords:
+            qtFlags |= QTextDocument.FindWholeWords
+
+        matches: List[Tuple[int, int]] = []
+        cursor = QTextCursor(self.document())
+        cursor.movePosition(QTextCursor.Start)
+        while True:
+            cursor = self.document().find(text, cursor, qtFlags)
+            if cursor.isNull():
+                break
+            matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+        return matches
 
     def event(self, event):
         if event.type() == QEvent.PaletteChange:
