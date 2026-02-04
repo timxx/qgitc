@@ -19,8 +19,17 @@ def normalizeToolFilePath(filePath: str) -> str:
     Returns the normalized (not necessarily absolute) path.
     """
     p = (filePath or "").strip()
-    if os.name == 'nt' and p.startswith('/') and p.find(':') != -1:
-        p = p.lstrip('/')
+    # Only normalize the specific Windows pattern "/C:/path" -> "C:/path".
+    # Do NOT strip leading slashes for other absolute paths like "/etc/hosts"
+    # (MSYS/Cygwin style) or UNC-like paths "//server/share".
+    if (
+        os.name == 'nt'
+        and len(p) >= 3
+        and p[0] == '/'
+        and p[1].isalpha()
+        and p[2] == ':'
+    ):
+        p = p[1:]
     return p
 
 
@@ -37,8 +46,11 @@ def resolveRepoPath(repoDir: str, filePath: str) -> Tuple[bool, str]:
     absPath = os.path.abspath(candidate)
 
     try:
-        repoRoot = os.path.abspath(repoDir)
-        common = os.path.commonpath([repoRoot, absPath])
+        # Use realpath() to avoid symlink escape: a path inside the repo could
+        # still point to a target outside the repo via symlinks.
+        repoRoot = os.path.realpath(os.path.abspath(repoDir))
+        realAbsPath = os.path.realpath(absPath)
+        common = os.path.commonpath([repoRoot, realAbsPath])
     except Exception:
         return False, f"Invalid file path: {filePath}"
 

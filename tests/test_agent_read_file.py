@@ -3,9 +3,11 @@
 import json
 import os
 import tempfile
+from unittest.mock import patch
 
 from qgitc.agenttoolexecutor import AgentToolExecutor
 from qgitc.gitutils import Git
+from qgitc.tools import readfile as readfile_tool
 from tests.base import TestBase
 
 
@@ -123,3 +125,42 @@ class TestAgentReadFile(TestBase):
 
             assert not result.ok
             assert "outside the repository" in result.output
+
+    def test_read_file_blocks_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as td:
+            outsidePath = os.path.join(td, "outside.txt")
+            with open(outsidePath, "w", encoding="utf-8") as f:
+                f.write("hello\n")
+
+            linkPath = os.path.join(Git.REPO_DIR, "link_outside.txt")
+            try:
+                os.symlink(outsidePath, linkPath)
+            except (OSError, NotImplementedError) as e:
+                self.skipTest(f"symlink not supported: {e}")
+
+            executor = AgentToolExecutor()
+            result = executor._handle_read_file(
+                "read_file",
+                {
+                    "filePath": "link_outside.txt",
+                },
+            )
+
+            assert not result.ok
+            assert "outside the repository" in result.output
+
+    def test_normalize_tool_file_path_windows_drive_prefix_only(self):
+        # Regression test: only strip the leading slash for the specific "/C:/" pattern.
+        with patch.object(readfile_tool.os, "name", "nt"):
+            self.assertEqual(
+                readfile_tool.normalizeToolFilePath(" /C:/temp/x.txt "),
+                "C:/temp/x.txt",
+            )
+            self.assertEqual(readfile_tool.normalizeToolFilePath(
+                "/etc/hosts"), "/etc/hosts")
+            self.assertEqual(
+                readfile_tool.normalizeToolFilePath("//server/share/file.txt"),
+                "//server/share/file.txt",
+            )
+            self.assertEqual(readfile_tool.normalizeToolFilePath(
+                "/tmp/foo:bar"), "/tmp/foo:bar")
