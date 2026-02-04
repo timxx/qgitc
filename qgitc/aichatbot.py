@@ -682,6 +682,10 @@ class AiChatbot(QPlainTextEdit):
         # Fix vertical scrollbar range not updating correctly
         # The above calls don't seem to help (even with delay)
         # setDocument internal will relayoutDocument/adjustScrollbars
+        # setDocument still not always work, so do a resize trick
+        size = self.size()
+        self.resize(size.width() + 1, size.height())
+        self.resize(size)
         self.setDocument(doc)
 
         if selectionStart != selectionEnd and selectionEnd == docLength:
