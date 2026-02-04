@@ -629,13 +629,15 @@ class AiChatWidget(QWidget):
                     merged = injectedContext
                 contextText = merged
 
-            if contextText:
+            if contextText and not self._historyHasSameContext(model.history, contextText):
                 params.prompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + \
                     params.prompt
 
-        if params.sys_prompt:
+        if params.sys_prompt and not self._historyHasSameSystemPrompt(model.history, params.sys_prompt):
             self._doMessageReady(model, AiResponse(
                 AiRole.System, params.sys_prompt), True)
+        else:
+            params.sys_prompt = None
 
         self._doMessageReady(model, AiResponse(
             AiRole.User, params.prompt), collapsed)
@@ -654,6 +656,33 @@ class AiChatWidget(QWidget):
                 self._historyPanel.currentHistory().historyId, titleSeed)
 
         self._updateChatHistoryModel(model)
+
+    @staticmethod
+    def _historyHasSameSystemPrompt(history, sp: str) -> bool:
+        if not sp:
+            return False
+
+        for h in history:
+            if h.role != AiRole.System:
+                continue
+            if h.message == sp:
+                return True
+
+        return False
+
+    @staticmethod
+    def _historyHasSameContext(history, contextText: str) -> bool:
+        if not contextText:
+            return False
+
+        target = f"<context>\n{contextText.rstrip()}\n</context>"
+        for h in history:
+            if h.role != AiRole.User:
+                continue
+            if h.message and h.message.startswith(target):
+                return True
+
+        return False
 
     def _onMessageReady(self, response: AiResponse):
         # tool-only responses can have empty message.
