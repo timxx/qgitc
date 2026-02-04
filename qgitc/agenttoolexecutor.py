@@ -31,6 +31,7 @@ from qgitc.agenttools import (
     GitStatusParams,
     GrepSearchParams,
     ReadFileParams,
+    ReadNonRepoFileParams,
     RunCommandParams,
 )
 from qgitc.basemodel import ValidationError
@@ -38,6 +39,7 @@ from qgitc.common import decodeFileData
 from qgitc.gitutils import Git
 from qgitc.tools.applypatch import DiffError, process_patch
 from qgitc.tools.grepsearch import grepSearch
+from qgitc.tools.readfile import buildReadFileOutput, normalizeToolFilePath, resolveRepoPath
 from qgitc.tools.utils import detectBom
 
 
@@ -74,6 +76,7 @@ class AgentToolExecutor(QObject):
             "git_add": self._handle_git_add,
             "run_command": self._handle_run_command,
             "read_file": self._handle_read_file,
+            "read_nonrepo_file": self._handle_read_nonrepo_file,
             "grep_search": self._handle_grep_search,
             "create_file": self._handle_create_file,
             "apply_patch": self._handle_apply_patch,
@@ -456,78 +459,41 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        # Read only within the opened repository.
-        # Absolute paths are allowed only if they resolve inside the repository.
-        filePath = (validated.filePath or "").strip()
+        filePath = normalizeToolFilePath(validated.filePath)
         if not filePath:
             return AgentToolResult(tool_name, False, "filePath is required.")
-
-        # Normalize Unix-style absolute paths on Windows (e.g. /C:/path/to/file).
-        if os.name == 'nt' and filePath.startswith('/') and filePath.find(':') != 1:
-            filePath = filePath.lstrip('/')
-
         if not Git.REPO_DIR:
             return AgentToolResult(tool_name, False, "No repository is currently opened.")
 
-        candidatePath = filePath if os.path.isabs(
-            filePath) else os.path.join(Git.REPO_DIR, filePath)
-        ok, absPath = self._resolve_repo_path(Git.REPO_DIR, candidatePath)
+        ok, absPathOrErr = resolveRepoPath(Git.REPO_DIR, filePath)
         if not ok:
-            return AgentToolResult(tool_name, False, absPath)
+            return AgentToolResult(tool_name, False, absPathOrErr)
+        if not os.path.isfile(absPathOrErr):
+            return AgentToolResult(tool_name, False, f"File does not exist: {absPathOrErr}")
+
+        ok, outputOrErr = buildReadFileOutput(
+            absPathOrErr, validated.startLine, validated.endLine)
+        return AgentToolResult(tool_name, ok, outputOrErr)
+
+    def _handle_read_nonrepo_file(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = ReadNonRepoFileParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        filePath = normalizeToolFilePath(validated.filePath)
+        if not filePath:
+            return AgentToolResult(tool_name, False, "filePath is required.")
+        if not os.path.isabs(filePath):
+            return AgentToolResult(tool_name, False, "read_nonrepo_file requires an absolute filePath.")
+
+        absPath = os.path.abspath(filePath)
         if not os.path.isfile(absPath):
             return AgentToolResult(tool_name, False, f"File does not exist: {absPath}")
 
-        try:
-            with open(absPath, 'rb') as f:
-                data = f.read()
-
-            preferEncoding = detectBom(absPath)[1]
-            text, _ = decodeFileData(data, preferEncoding)
-            lines = text.splitlines(keepends=True)
-
-            totalLines = len(lines)
-            requestedStartLine = validated.startLine
-            requestedEndLine = validated.endLine
-
-            if requestedStartLine is not None and requestedEndLine is not None and \
-                    requestedEndLine < requestedStartLine:
-                return AgentToolResult(
-                    tool_name,
-                    False,
-                    f"Invalid line range: endLine ({requestedEndLine}) is less than startLine ({requestedStartLine})."
-                )
-
-            # Tool convention: startLine/endLine are 1-based and endLine is inclusive.
-            effectiveStartLine = requestedStartLine if requestedStartLine is not None else 1
-            if effectiveStartLine < 1:
-                effectiveStartLine = 1
-
-            effectiveEndLine = requestedEndLine if requestedEndLine is not None else totalLines
-            if effectiveEndLine < 0:
-                effectiveEndLine = 0
-            if effectiveEndLine > totalLines:
-                effectiveEndLine = totalLines
-
-            startIndex = max(effectiveStartLine - 1, 0)
-            endIndex = max(effectiveEndLine, 0)
-            selectedLines = lines[startIndex:endIndex]
-            content = ''.join(selectedLines)
-
-            meta = {
-                "path": absPath,
-                "totalLines": totalLines,
-                "startLine": effectiveStartLine if totalLines > 0 and effectiveEndLine > 0 else 0,
-                "endLine": effectiveEndLine if totalLines > 0 else 0,
-            }
-
-            # Keep metadata clearly separated from content to avoid confusing the LLM.
-            output = "<<<METADATA>>>\n" + \
-                json.dumps(meta, ensure_ascii=False) + \
-                "\n<<<CONTENT>>>\n" + content
-            return AgentToolResult(tool_name, True, output)
-
-        except Exception as e:
-            return AgentToolResult(tool_name, False, f"Failed to read file: {e}")
+        ok, outputOrErr = buildReadFileOutput(
+            absPath, validated.startLine, validated.endLine)
+        return AgentToolResult(tool_name, ok, outputOrErr)
 
     def _handle_grep_search(self, tool_name: str, params: Dict) -> AgentToolResult:
         try:

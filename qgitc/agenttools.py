@@ -170,6 +170,24 @@ class ReadFileParams(BaseModel):
         None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
 
 
+class ReadNonRepoFileParams(BaseModel):
+    """Parameters for read_nonrepo_file tool."""
+    filePath: str = Field(
+        ...,
+        description="Absolute path to a file to read (outside the repository).")
+    startLine: Optional[int] = Field(
+        None, ge=1, description="Starting line number (1-based). If not provided, starts from the beginning.")
+    endLine: Optional[int] = Field(
+        None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
+    explanation: str = Field(
+        ...,
+        description=(
+            "Why you need to read this file. The user will see this in the approval UI. "
+            "Prefer a clear, minimal explanation."
+        ),
+    )
+
+
 class CreateFileParams(BaseModel):
     """Parameters for create_file tool."""
     filePath: str = Field(...,
@@ -374,6 +392,18 @@ class AgentToolRegistry:
                 ),
                 toolType=ToolType.READ_ONLY,
                 modeClass=ReadFileParams,
+            ),
+
+            createToolFromModel(
+                name="read_nonrepo_file",
+                description=(
+                    "Read a file by absolute path that is NOT inside the current repository.\n"
+                    "Use this only when you explicitly need a file outside the repo (e.g. system config), "
+                    "and only after the user approves the action.\n"
+                    "Do NOT use this tool for files inside the repository; use read_file instead."
+                ),
+                toolType=ToolType.DANGEROUS,
+                modeClass=ReadNonRepoFileParams,
             ),
 
             createToolFromModel(
