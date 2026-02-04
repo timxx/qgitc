@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
 
 import os
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
+from qgitc.gitutils import Git, GitProcess
 from qgitc.tools.grepsearch import grepSearch
 
 
 class TestGrepSearchTool(unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        GitProcess.GIT_BIN = "git"
+
+    def _git(self, repoDir: str, args: list[str]) -> None:
+        process = Git.run(args, repoDir=repoDir, text=True)
+        out, err = process.communicate()
+        if process.returncode != 0:
+            msg = err or ""
+            raise AssertionError(f"git {' '.join(args)} failed: {msg}")
 
     def _write(self, root: str, rel: str, content: bytes):
         path = os.path.join(root, rel)
@@ -80,13 +91,7 @@ class TestGrepSearchTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repoDir = str(Path(tmp))
 
-            subprocess.run(
-                ["git", "init"],
-                cwd=repoDir,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(repoDir, ["init"])
             Path(repoDir, ".gitignore").write_text(
                 "ignored.txt\n", encoding="utf-8")
 
@@ -95,13 +100,7 @@ class TestGrepSearchTool(unittest.TestCase):
             Path(repoDir, "tracked.txt").write_text(
                 "HELLO_TRACKED\n", encoding="utf-8")
 
-            subprocess.run(
-                ["git", "add", "tracked.txt"],
-                cwd=repoDir,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(repoDir, ["add", "tracked.txt"])
 
             result = grepSearch(
                 repoDir=repoDir, query="HELLO_IGNORED", isRegexp=False)
@@ -112,13 +111,7 @@ class TestGrepSearchTool(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repoDir = str(Path(tmp))
 
-            subprocess.run(
-                ["git", "init"],
-                cwd=repoDir,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(repoDir, ["init"])
             Path(repoDir, ".gitignore").write_text(
                 "ignored.txt\n", encoding="utf-8")
 
@@ -126,13 +119,7 @@ class TestGrepSearchTool(unittest.TestCase):
                 "HELLO_IGNORED\n", encoding="utf-8")
             Path(repoDir, "tracked.txt").write_text(
                 "HELLO_TRACKED\n", encoding="utf-8")
-            subprocess.run(
-                ["git", "add", "tracked.txt"],
-                cwd=repoDir,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(repoDir, ["add", "tracked.txt"])
 
             result = grepSearch(
                 repoDir=repoDir,
@@ -149,51 +136,17 @@ class TestGrepSearchTool(unittest.TestCase):
             worktreeRepo = tmpPath / "worktree"
             mainRepo.mkdir(parents=True, exist_ok=True)
 
-            subprocess.run(
-                ["git", "init"],
-                cwd=str(mainRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"],
-                cwd=str(mainRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Test"],
-                cwd=str(mainRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(str(mainRepo), ["init"])
+            self._git(str(mainRepo), [
+                      "config", "user.email", "test@example.com"])
+            self._git(str(mainRepo), ["config", "user.name", "Test"])
 
             (mainRepo / "README.md").write_text("base\n", encoding="utf-8")
-            subprocess.run(
-                ["git", "add", "README.md"],
-                cwd=str(mainRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            subprocess.run(
-                ["git", "commit", "-m", "init"],
-                cwd=str(mainRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(str(mainRepo), ["add", "README.md"])
+            self._git(str(mainRepo), ["commit", "-m", "init"])
 
-            subprocess.run(
-                ["git", "worktree", "add", str(worktreeRepo), "-b", "feature"],
-                cwd=str(mainRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(str(mainRepo), ["worktree", "add", str(
+                worktreeRepo), "-b", "feature"])
 
             self.assertTrue((worktreeRepo / ".git").is_file())
 
@@ -202,13 +155,7 @@ class TestGrepSearchTool(unittest.TestCase):
                                                       encoding="utf-8")
             (worktreeRepo / "tracked.txt").write_text("HELLO_TRACKED\n", encoding="utf-8")
 
-            subprocess.run(
-                ["git", "add", "tracked.txt"],
-                cwd=str(worktreeRepo),
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            self._git(str(worktreeRepo), ["add", "tracked.txt"])
 
             outDefault = grepSearch(
                 repoDir=str(worktreeRepo),

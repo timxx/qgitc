@@ -18,7 +18,7 @@ class GitProcess():
 
     GIT_BIN = None
 
-    def __init__(self, repoDir, args, text=None, env=None):
+    def __init__(self, repoDir, args, text=None, env=None, stdinPipe=False):
         creationflags = 0
         logger.debug(f"run {args} in {repoDir}")
         if os.name == "nt":
@@ -32,6 +32,7 @@ class GitProcess():
         self._process = subprocess.Popen(
             [GitProcess.GIT_BIN] + args,
             cwd=repoDir,
+            stdin=(subprocess.PIPE if stdinPipe else None),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             creationflags=creationflags,
@@ -48,8 +49,8 @@ class GitProcess():
     def returncode(self):
         return self._process.returncode
 
-    def communicate(self):
-        return self._process.communicate()
+    def communicate(self, input=None):
+        return self._process.communicate(input=input)
 
 
 class QGitProcess():

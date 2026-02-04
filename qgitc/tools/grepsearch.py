@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import os
 import re
-import subprocess
 from pathlib import Path
 from typing import Optional, Set, Tuple
 
 from qgitc.common import decodeFileData
-from qgitc.tools.utils import detectBom
+from qgitc.tools.utils import detectBom, runGit
 
 
 def _isGitRepo(repoDir: str) -> bool:
@@ -18,20 +17,6 @@ def _isGitRepo(repoDir: str) -> bool:
     gitMarkerPath = os.path.join(repoDir, ".git")
     # In standard repos, .git is a directory; in git worktrees, .git is a file.
     return os.path.isdir(gitMarkerPath) or os.path.isfile(gitMarkerPath)
-
-
-def _runGit(repoDir: str, args: list[str], stdin: Optional[bytes] = None) -> Tuple[bool, bytes, bytes]:
-    try:
-        p = subprocess.run(
-            ["git", "-C", repoDir] + args,
-            input=stdin,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-        return p.returncode == 0, p.stdout or b"", p.stderr or b""
-    except Exception as e:
-        return False, b"", str(e).encode("utf-8", errors="replace")
 
 
 def _splitZ(data: bytes) -> list[str]:
@@ -48,16 +33,16 @@ def _splitZ(data: bytes) -> list[str]:
 
 def _gitListNonIgnoredFiles(repoDir: str) -> Tuple[bool, str, list[str]]:
     """List tracked + untracked (not ignored) files. Returns repo-relative paths."""
-    ok1, out1, err1 = _runGit(repoDir, ["ls-files", "-z"])
-    if not ok1:
-        return False, (err1.decode("utf-8", errors="replace") or "git ls-files failed"), []
+    ok, out, err = runGit(repoDir, ["ls-files", "-z"], text=False)
+    if not ok:
+        return False, (err.decode("utf-8", errors="replace") or "git ls-files failed"), []
 
-    ok2, out2, err2 = _runGit(
-        repoDir, ["ls-files", "-z", "--others", "--exclude-standard"])
-    if not ok2:
-        return False, (err2.decode("utf-8", errors="replace") or "git ls-files --others failed"), []
+    ok, out, err = runGit(
+        repoDir, ["ls-files", "-z", "--others", "--exclude-standard"], text=False)
+    if not ok:
+        return False, (err.decode("utf-8", errors="replace") or "git ls-files --others failed"), []
 
-    files = _splitZ(out1) + _splitZ(out2)
+    files = _splitZ(out) + _splitZ(out)
     files = [f for f in files if f and not f.startswith(
         ".git/") and f != ".git"]
     files.sort()
@@ -71,8 +56,8 @@ def _gitFilterIgnored(repoDir: str, relPaths: list[str]) -> Tuple[bool, str, Set
 
     payload = ("\x00".join(relPaths) +
                "\x00").encode("utf-8", errors="replace")
-    ok, out, err = _runGit(
-        repoDir, ["check-ignore", "-z", "--stdin"], stdin=payload)
+    ok, out, err = runGit(
+        repoDir, ["check-ignore", "-z", "--stdin"], stdin=payload, text=False)
     if not ok:
         # If git can't evaluate ignore rules (e.g. not a repo), treat as no ignored.
         msg = err.decode("utf-8", errors="replace").strip()

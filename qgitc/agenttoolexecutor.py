@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
 import sys
@@ -30,8 +29,8 @@ from qgitc.agenttools import (
     GitShowParams,
     GitStatusParams,
     GrepSearchParams,
-    ReadFileParams,
     ReadExternalFileParams,
+    ReadFileParams,
     RunCommandParams,
 )
 from qgitc.basemodel import ValidationError
@@ -39,8 +38,32 @@ from qgitc.common import decodeFileData
 from qgitc.gitutils import Git
 from qgitc.tools.applypatch import DiffError, process_patch
 from qgitc.tools.grepsearch import grepSearch
-from qgitc.tools.readfile import buildReadFileOutput, normalizeToolFilePath, resolveRepoPath
-from qgitc.tools.utils import detectBom
+from qgitc.tools.readfile import (
+    buildReadFileOutput,
+    normalizeToolFilePath,
+    resolveRepoPath,
+)
+from qgitc.tools.utils import detectBom, runGit
+
+
+def _runGit(repo_dir: str, args: list[str]) -> Tuple[bool, str]:
+    if not repo_dir:
+        return False, "No repository is currently opened."
+    if not os.path.isdir(repo_dir):
+        return False, f"Invalid repo_dir: {repo_dir}"
+
+    ok, out, err = runGit(repo_dir, [str(a) for a in args], text=True)
+    output = out.strip("\n")
+
+    # Only include stderr when the command fails.
+    if not ok:
+        errText = err.strip("\n")
+        if errText:
+            if output:
+                output += "\n"
+            output += errText
+
+    return ok, output
 
 
 class AgentToolResult:
@@ -137,24 +160,6 @@ class AgentToolExecutor(QObject):
                 "unknown", False, f"Tool execution failed: {e}")
         self.toolFinished.emit(result)
 
-    @staticmethod
-    def _run_git(repo_dir: str, args: list) -> Tuple[bool, str]:
-        if not repo_dir:
-            return False, "No repository is currently opened."
-        if not os.path.isdir(repo_dir):
-            return False, f"Invalid repo_dir: {repo_dir}"
-
-        process = Git.run(args, repoDir=repo_dir, text=True)
-        out, err = process.communicate()
-        ok = process.returncode == 0
-        output = (out or "")
-        if err:
-            if output:
-                output += "\n"
-            output += err
-        output = output.strip("\n")
-        return ok, output
-
     def _execute(self, tool_name: str, params: Dict) -> AgentToolResult:
         tool = AgentToolRegistry.tool_by_name(tool_name)
         if not tool:
@@ -176,12 +181,12 @@ class AgentToolExecutor(QObject):
         args = ["status", "--porcelain=v1", "-b"]
         if not validated.untracked:
             args.append("--untracked-files=no")
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         if ok:
             # Porcelain v1 with -b typically includes a branch line like:
             #   ## main...origin/main [ahead 1]
             # If that's the only line, the working tree is clean.
-            lines = (output or "").splitlines()
+            lines = output.splitlines()
             if not lines:
                 output = "working tree clean (no changes)."
             elif len(lines) == 1 and lines[0].startswith("##"):
@@ -201,10 +206,9 @@ class AgentToolExecutor(QObject):
             # This avoids returning commits 1..(nth-1) to the UI.
             args = ["log", "--oneline", "-n", "1",
                     "--skip", str(validated.nth - 1)]
-            ok, output = self._run_git(repo_dir, args)
+            ok, output = _runGit(repo_dir, args)
             if ok:
-                line = (output or "").splitlines()[
-                    0].strip() if (output or "").strip() else ""
+                line = output.splitlines()[0].strip() if output.strip() else ""
                 if line:
                     # Include explicit metadata so the LLM can trust this is the requested position.
                     return AgentToolResult(
@@ -220,7 +224,7 @@ class AgentToolExecutor(QObject):
             args += ["--since", str(validated.since)]
         if validated.until:
             args += ["--until", str(validated.until)]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -235,7 +239,7 @@ class AgentToolExecutor(QObject):
                 "-C", "--no-commit-id", "-U3"]
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff_unstaged(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -252,7 +256,7 @@ class AgentToolExecutor(QObject):
                     "--submodule", "-C", "-U3"]
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         if not output:
             output = "No changed files found"
         return AgentToolResult(tool_name, ok, output)
@@ -272,7 +276,7 @@ class AgentToolExecutor(QObject):
                     "--submodule", "-C", "-U3"]
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         if not output:
             output = "No changed files found"
         return AgentToolResult(tool_name, ok, output)
@@ -285,7 +289,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["show", str(validated.rev)]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_show_file(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -296,7 +300,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         spec = f"{validated.rev}:{validated.path}"
-        ok, output = self._run_git(repo_dir, ["show", spec])
+        ok, output = _runGit(repo_dir, ["show", spec])
         if not ok:
             return AgentToolResult(tool_name, ok, output)
 
@@ -315,7 +319,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         spec = f":{validated.path}"
-        ok, output = self._run_git(repo_dir, ["show", spec])
+        ok, output = _runGit(repo_dir, ["show", spec])
         if not ok:
             return AgentToolResult(tool_name, ok, output)
 
@@ -334,16 +338,15 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         # Prefer a cheap command that returns only the current branch name.
-        ok, output = self._run_git(
+        ok, output = _runGit(
             repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
         if not ok:
             return AgentToolResult(tool_name, False, output)
-        branch = (output or "").strip()
+        branch = output.strip()
         if not branch:
             return AgentToolResult(tool_name, False, "Failed to determine current branch.")
         if branch == "HEAD":
-            ok2, sha = self._run_git(
-                repo_dir, ["rev-parse", "--short", "HEAD"])
+            ok2, sha = _runGit(repo_dir, ["rev-parse", "--short", "HEAD"])
             sha = (sha or "").strip() if ok2 else ""
             msg = f"detached HEAD" + (f" at {sha}" if sha else "")
             return AgentToolResult(tool_name, True, msg)
@@ -357,7 +360,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["branch"] + (["-a"] if validated.all else [])
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_checkout(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -368,7 +371,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["checkout", str(validated.branch)]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_cherry_pick(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -379,7 +382,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["cherry-pick"] + [str(c) for c in validated.commits]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_commit(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -390,7 +393,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["commit", "-m", str(validated.message), "--no-edit"]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_add(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -401,7 +404,7 @@ class AgentToolExecutor(QObject):
 
         repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["add"] + [str(f) for f in validated.files]
-        ok, output = self._run_git(repo_dir, args)
+        ok, output = _runGit(repo_dir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_run_command(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -416,14 +419,19 @@ class AgentToolExecutor(QObject):
             return AgentToolResult(tool_name, False, f"Invalid working directory: {working_dir}")
 
         try:
-            # Run the command using subprocess
+            # Run the command using subprocess. On Windows, hide the console window.
+            creationflags = 0
+            if os.name == "nt":
+                creationflags = subprocess.CREATE_NO_WINDOW
+
             process = subprocess.Popen(
                 validated.command,
                 shell=True,
                 cwd=working_dir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                creationflags=creationflags
             )
 
             try:
@@ -438,12 +446,15 @@ class AgentToolExecutor(QObject):
                 )
 
             ok = process.returncode == 0
-            output = (stdout or "")
-            if stderr:
-                if output:
-                    output += "\n"
-                output += stderr
-            output = output.strip("\n")
+            output = (stdout or "").strip("\n")
+
+            # Only include stderr when the command fails.
+            if not ok:
+                err_text = (stderr or "").strip("\n")
+                if err_text:
+                    if output:
+                        output += "\n"
+                    output += err_text
 
             if not output:
                 output = f"Command executed {'successfully' if ok else 'with errors'} (no output)."
