@@ -8,6 +8,7 @@ from PySide6.QtCore import (
     QPoint,
     QPropertyAnimation,
     QRect,
+    QSignalBlocker,
     QSize,
     QTimer,
     Signal,
@@ -204,6 +205,8 @@ class FindPanel(QWidget):
     def _onDelayFind(self, text: str):
         if self.flags & FindFlags.UseRegExp:
             if not self._verifyPattern(text):
+                # Prevent a previously-started debounce timer from firing.
+                self._delayTimer.stop()
                 return
         self._delayTimer.start(200)
 
@@ -211,6 +214,8 @@ class FindPanel(QWidget):
         self._flags = flags
         if self._flags & FindFlags.UseRegExp:
             if not self._verifyPattern(self._leFind.text()):
+                # Prevent a previously-started debounce timer from firing.
+                self._delayTimer.stop()
                 return
         self._doFind()
 
@@ -237,6 +242,8 @@ class FindPanel(QWidget):
             animation.start(QAbstractAnimation.DeleteWhenStopped)
 
     def hideAnimate(self):
+        # Cancel any pending debounced find to avoid emitting after hiding.
+        self._delayTimer.stop()
         animation = QPropertyAnimation(self, b"geometry", self)
         animation.setDuration(150)
         pos = self.pos()
@@ -282,10 +289,12 @@ class FindPanel(QWidget):
         self._leFind.selectAll()
 
     def hideEvent(self, event):
-        self.blockSignals(True)
+        # Stop pending search and avoid triggering textChanged while clearing.
+        self._delayTimer.stop()
+        blocker = QSignalBlocker(self._leFind)
         self._leFind.setText("")
+        del blocker
         self.updateStatus(0, 0)
-        self.blockSignals(False)
         self.afterHidden.emit()
 
     def paintEvent(self, event):
