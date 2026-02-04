@@ -4,14 +4,7 @@ from typing import List, Tuple
 
 from PySide6.QtCore import QElapsedTimer, QEvent, QPoint, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPen
-from PySide6.QtWidgets import (
-    QApplication,
-    QFrame,
-    QListWidget,
-    QMenu,
-    QWidget,
-    QWidgetAction,
-)
+from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QVBoxLayout, QWidget
 
 from qgitc.applicationbase import ApplicationBase
 
@@ -265,8 +258,14 @@ class InlineComboBox(QWidget):
         if self._popupVisible or len(self._items) == 0:
             return
 
-        self._popup = QMenu(self)
+        # Create popup widget
+        self._popup = QWidget(None, Qt.Popup | Qt.FramelessWindowHint)
+        self._popup.setWindowModality(Qt.NonModal)
         self._popup.setAttribute(Qt.WA_DeleteOnClose)
+
+        # Popup layout
+        popupLayout = QVBoxLayout(self._popup)
+        popupLayout.setContentsMargins(0, 0, 0, 0)
 
         # List widget
         listWidget = QListWidget(self._popup)
@@ -285,9 +284,7 @@ class InlineComboBox(QWidget):
         # Install event filter to handle Enter key
         listWidget.installEventFilter(self)
 
-        action = QWidgetAction(self._popup)
-        action.setDefaultWidget(listWidget)
-        self._popup.addAction(action)
+        popupLayout.addWidget(listWidget)
 
         # Calculate popup width (longest item, clamped to screen)
         fm = QFontMetrics(self.font())
@@ -311,7 +308,7 @@ class InlineComboBox(QWidget):
 
         frameWidth = listWidget.frameWidth() * 2
         popupHeight = viewportHeight + frameWidth
-        listWidget.setFixedSize(maxWidth, popupHeight)
+        self._popup.setFixedSize(maxWidth, popupHeight)
 
         # Position below widget (or above if not enough space)
         globalPos = self.mapToGlobal(QPoint(0, self.height()))
@@ -322,10 +319,11 @@ class InlineComboBox(QWidget):
                 # Show above
                 globalPos = self.mapToGlobal(QPoint(0, -popupHeight))
 
+        self._popup.move(globalPos)
         self._popupVisible = True
         self._popup.destroyed.connect(self._onPopupClosed)
         self.update()  # Redraw border
-        self._popup.popup(globalPos)
+        self._popup.show()
         listWidget.setFocus()
         self._popupTimer.invalidate()
 
