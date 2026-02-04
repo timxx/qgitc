@@ -1151,7 +1151,7 @@ class AiChatWidget(QWidget):
         """Start a code review for staged/local changes across submodules."""
         self._ensureCodeReviewExecutor()
         self._codeReviewDiffs.clear()
-        self._injectedContext = "type: staged changes (index)\n"
+        self._injectedContext = "type: staged changes (index)"
         self._codeReviewExecutor.submit(submodules, self._fetchStagedDiff)
 
     def _ensureCodeReviewExecutor(self):
