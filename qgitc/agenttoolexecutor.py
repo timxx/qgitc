@@ -31,7 +31,7 @@ from qgitc.agenttools import (
     GitStatusParams,
     GrepSearchParams,
     ReadFileParams,
-    ReadNonRepoFileParams,
+    ReadExternalFileParams,
     RunCommandParams,
 )
 from qgitc.basemodel import ValidationError
@@ -76,7 +76,7 @@ class AgentToolExecutor(QObject):
             "git_add": self._handle_git_add,
             "run_command": self._handle_run_command,
             "read_file": self._handle_read_file,
-            "read_nonrepo_file": self._handle_read_nonrepo_file,
+            "read_external_file": self._handle_read_external_file,
             "grep_search": self._handle_grep_search,
             "create_file": self._handle_create_file,
             "apply_patch": self._handle_apply_patch,
@@ -475,9 +475,9 @@ class AgentToolExecutor(QObject):
             absPathOrErr, validated.startLine, validated.endLine)
         return AgentToolResult(tool_name, ok, outputOrErr)
 
-    def _handle_read_nonrepo_file(self, tool_name: str, params: Dict) -> AgentToolResult:
+    def _handle_read_external_file(self, tool_name: str, params: Dict) -> AgentToolResult:
         try:
-            validated = ReadNonRepoFileParams(**params)
+            validated = ReadExternalFileParams(**params)
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
@@ -485,7 +485,7 @@ class AgentToolExecutor(QObject):
         if not filePath:
             return AgentToolResult(tool_name, False, "filePath is required.")
         if not os.path.isabs(filePath):
-            return AgentToolResult(tool_name, False, "read_nonrepo_file requires an absolute filePath.")
+            return AgentToolResult(tool_name, False, "read_external_file requires an absolute filePath.")
 
         absPath = os.path.abspath(filePath)
         if not os.path.isfile(absPath):

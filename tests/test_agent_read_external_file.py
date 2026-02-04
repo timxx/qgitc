@@ -9,7 +9,7 @@ from qgitc.gitutils import Git
 from tests.base import TestBase
 
 
-class TestAgentReadNonRepoFile(TestBase):
+class TestAgentReadExternalFile(TestBase):
     def _parseOutput(self, output: str):
         assert output.startswith("<<<METADATA>>>\n"), output
         rest = output[len("<<<METADATA>>>\n"):]
@@ -19,8 +19,8 @@ class TestAgentReadNonRepoFile(TestBase):
 
     def test_requires_absolute_path(self):
         executor = AgentToolExecutor()
-        result = executor._handle_read_nonrepo_file(
-            "read_nonrepo_file",
+        result = executor._handle_read_external_file(
+            "read_external_file",
             {
                 "filePath": "relative.txt",
                 "explanation": "Need to inspect an external file",
@@ -32,8 +32,8 @@ class TestAgentReadNonRepoFile(TestBase):
     def test_allows_repo_path_even_if_absolute(self):
         executor = AgentToolExecutor()
         absPath = os.path.join(Git.REPO_DIR, "README.md")
-        result = executor._handle_read_nonrepo_file(
-            "read_nonrepo_file",
+        result = executor._handle_read_external_file(
+            "read_external_file",
             {
                 "filePath": absPath,
                 "explanation": "Read a repo file by absolute path",
@@ -55,8 +55,8 @@ class TestAgentReadNonRepoFile(TestBase):
                     f.write("hello\nworld\n")
 
                 executor = AgentToolExecutor()
-                result = executor._handle_read_nonrepo_file(
-                    "read_nonrepo_file",
+                result = executor._handle_read_external_file(
+                    "read_external_file",
                     {
                         "filePath": absPath,
                         "startLine": 1,
@@ -75,8 +75,8 @@ class TestAgentReadNonRepoFile(TestBase):
                 f.write("hello\nworld\n")
 
             executor = AgentToolExecutor()
-            result = executor._handle_read_nonrepo_file(
-                "read_nonrepo_file",
+            result = executor._handle_read_external_file(
+                "read_external_file",
                 {
                     "filePath": absPath,
                     "startLine": 2,
