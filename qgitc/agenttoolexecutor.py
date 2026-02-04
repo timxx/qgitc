@@ -462,6 +462,10 @@ class AgentToolExecutor(QObject):
         if not filePath:
             return AgentToolResult(tool_name, False, "filePath is required.")
 
+        # Normalize Unix-style absolute paths on Windows (e.g. /C:/path/to/file).
+        if os.name == 'nt' and filePath.startswith('/') and filePath.find(':') != 1:
+            filePath = filePath.lstrip('/')
+
         absPath: Optional[str] = None
         if os.path.isabs(filePath):
             candidateAbsPath = os.path.abspath(filePath)
@@ -491,6 +495,14 @@ class AgentToolExecutor(QObject):
             totalLines = len(lines)
             requestedStartLine = validated.startLine
             requestedEndLine = validated.endLine
+
+            if requestedStartLine is not None and requestedEndLine is not None and \
+                    requestedEndLine < requestedStartLine:
+                return AgentToolResult(
+                    tool_name,
+                    False,
+                    f"Invalid line range: endLine ({requestedEndLine}) is less than startLine ({requestedStartLine})."
+                )
 
             # Tool convention: startLine/endLine are 1-based and endLine is inclusive.
             effectiveStartLine = requestedStartLine if requestedStartLine is not None else 1
