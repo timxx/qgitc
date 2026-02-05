@@ -26,10 +26,11 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
         def _clear():
             self._mockChatModel.history.clear()
 
-        def _addHistory(role, message, description=None, toolCalls=None, reasoning=None):
+        def _addHistory(role, message, description=None, toolCalls=None,
+                        reasoning=None, reasoningData=None):
             self._mockChatModel.history.append(
                 AiChatMessage(
-                    role, message, description=description, toolCalls=toolCalls, reasoning=reasoning)
+                    role, message, description=description, toolCalls=toolCalls, reasoning=reasoning, reasoningData=reasoningData)
             )
 
         self._mockChatModel.clear.side_effect = _clear

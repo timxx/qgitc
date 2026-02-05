@@ -51,8 +51,10 @@ class TestMergeWidgetResolverFlow(TestBase):
                 patch("qgitc.mergewidget.Git.isCherryPicking", return_value=True), \
                 patch("qgitc.mergewidget.Git.cherryPickHeadSha1", return_value="deadbeef"), \
                 patch("qgitc.mergewidget.Git.getConfigValue", return_value="kdiff3"), \
-                patch("qgitc.mergewidget.ApplicationBase.instance") as mock_app:
+                patch("qgitc.mergewidget.ApplicationBase.instance") as mock_app, \
+                patch("qgitc.mergewidget.QMessageBox.information") as mock_msgbox:
 
+            mock_app.return_value.applicationName.return_value = "qgitc"
             mock_app.return_value.settings.return_value.mergeToolList.return_value = []
             mock_app.return_value.settings.return_value.mergeToolName.return_value = "kdiff3"
 
@@ -61,6 +63,7 @@ class TestMergeWidgetResolverFlow(TestBase):
             self.assertEqual(ResolveOperation.CHERRY_PICK, ctx.operation)
             self.assertEqual("deadbeef", ctx.sha1)
             self.assertEqual("a.txt", ctx.path)
+            mock_msgbox.assert_called_once()
 
     def test_resolve_warns_when_no_tool_and_no_ai(self):
         w = MergeWidget()
