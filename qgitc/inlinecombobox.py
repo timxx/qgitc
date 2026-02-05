@@ -7,6 +7,7 @@ from PySide6.QtGui import QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QVBoxLayout, QWidget
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.popupwidget import PopupWidget
 
 
 class InlineComboBox(QWidget):
@@ -259,19 +260,12 @@ class InlineComboBox(QWidget):
             return
 
         # Create popup widget
-        self._popup = QWidget(None, Qt.Popup | Qt.FramelessWindowHint)
+        self._popup = PopupWidget(radius=6, parent=self)
         self._popup.setWindowModality(Qt.NonModal)
         self._popup.setAttribute(Qt.WA_DeleteOnClose)
 
-        # Popup layout
-        popupLayout = QVBoxLayout(self._popup)
-        popupLayout.setContentsMargins(0, 0, 0, 0)
-
         # List widget
         listWidget = QListWidget(self._popup)
-        listWidget.setFrameShape(QFrame.StyledPanel)
-
-        # Add items
         for text, _ in self._items:
             listWidget.addItem(text)
 
@@ -284,7 +278,7 @@ class InlineComboBox(QWidget):
         # Install event filter to handle Enter key
         listWidget.installEventFilter(self)
 
-        popupLayout.addWidget(listWidget)
+        self._popup.setContentWidget(listWidget)
 
         # Calculate popup width (longest item, clamped to screen)
         fm = QFontMetrics(self.font())
@@ -307,7 +301,8 @@ class InlineComboBox(QWidget):
             viewportHeight += listWidget.sizeHintForRow(i)
 
         frameWidth = listWidget.frameWidth() * 2
-        popupHeight = viewportHeight + frameWidth
+        margins = self._popup.layout().contentsMargins()
+        popupHeight = viewportHeight + frameWidth + margins.top() + margins.bottom()
         self._popup.setFixedSize(maxWidth, popupHeight)
 
         # Position below widget (or above if not enough space)

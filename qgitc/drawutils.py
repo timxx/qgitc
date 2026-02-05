@@ -7,6 +7,18 @@ from PySide6.QtWidgets import QWidget
 from qgitc.applicationbase import ApplicationBase
 
 
+def blend(a: QColor, b: QColor, t: float, alpha = 255) -> QColor:
+    t = max(0.0, min(1.0, t))
+    alpha = max(0, min(255, int(alpha)))
+
+    return QColor(
+        round(a.red() * (1.0 - t) + b.red() * t),
+        round(a.green() * (1.0 - t) + b.green() * t),
+        round(a.blue() * (1.0 - t) + b.blue() * t),
+        alpha,
+    )
+
+
 def makeColoredIconPixmap(widget: QWidget, icon: QIcon, iconSize: QSize, brush: QBrush = None):
     pixmap = icon.pixmap(iconSize, widget.devicePixelRatio())
 
@@ -29,13 +41,7 @@ def makeColoredIconPixmap(widget: QWidget, icon: QIcon, iconSize: QSize, brush: 
             # Only adjust when the foreground is a near-black, low-saturation color.
             if fg.isValid() and fg.alpha() > 0 and fg.value() < 80 and fg.saturation() < 50:
                 t = 0.25  # 0 → original fg, 1 → background
-                blended = QColor(
-                    round(fg.red() * (1.0 - t) + bg.red() * t),
-                    round(fg.green() * (1.0 - t) + bg.green() * t),
-                    round(fg.blue() * (1.0 - t) + bg.blue() * t),
-                    fg.alpha(),
-                )
-
+                blended = blend(fg, bg, t, fg.alpha())
                 adjusted = QBrush(brush)
                 adjusted.setColor(blended)
                 brush = adjusted
