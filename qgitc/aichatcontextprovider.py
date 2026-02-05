@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import platform
-from typing import List, NamedTuple, Optional
+from typing import List, NamedTuple, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
@@ -57,3 +57,53 @@ class AiChatContextProvider(QObject):
         blocks.append(f"Main repo dir: {Git.REPO_DIR}")
 
         return blocks
+
+    @staticmethod
+    def formatBullets(lines: List[str]) -> str:
+        lines = [l.strip() for l in lines if l.strip()]
+        if not lines:
+            return ""
+        return "\n".join(f"- {l}" for l in lines)
+
+    @staticmethod
+    def formatCodeBlock(language: str, text: str) -> str:
+        lang = language.strip()
+        body = text.rstrip("\n")
+        return f"```{lang}\n{body}\n```"
+
+    @staticmethod
+    def formatSection(title: str, body: str) -> str:
+        t = title.strip()
+        b = body.strip("\n")
+        if not t or not b:
+            return ""
+        return f"### {t}\n{b}".rstrip()
+
+    @staticmethod
+    def addSection(sections: List[str], title: str, body: str):
+        section = AiChatContextProvider.formatSection(title, body)
+        if section:
+            sections.append(section)
+
+    @staticmethod
+    def formatRepoFileBullets(repoFiles: List[Tuple[str, str]], *, limit: int = 100) -> str:
+        if not repoFiles:
+            return ""
+
+        lines: List[str] = []
+        for repoDir, filePath in (repoFiles or [])[:limit]:
+            repo = AiChatContextProvider.normRepoDir(repoDir)
+            path = filePath.replace("\\", "/")
+            lines.append(f"Repo: {repo} | File: {path}")
+
+        if len(repoFiles) > limit:
+            lines.append(f"… (+{len(repoFiles) - limit} more)")
+
+        return AiChatContextProvider.formatBullets(lines)
+
+    @staticmethod
+    def normRepoDir(repoDir: str) -> str:
+        if not repoDir or repoDir == ".":
+            return "."
+
+        return repoDir.replace("\\", "/")

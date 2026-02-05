@@ -7,9 +7,10 @@ from PySide6.QtGui import QIcon
 
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, dataDirPath
+from qgitc.common import Commit, dataDirPath, fileRealCommit, toSubmodulePath
 from qgitc.diffview import FileListModel
 from qgitc.drawutils import makeColoredIconPixmap
+from qgitc.models.prompts import REPO_DESC
 
 
 class MainWindowContextProvider(AiChatContextProvider):
@@ -117,13 +118,16 @@ class MainWindowContextProvider(AiChatContextProvider):
             return []
         rows = sel.selectedRows() or []
         files = []
+        commit = self._activeCommit()
         for idx in rows:
             # Skip the non-file "Comments" entry (RowRole == 0)
             if idx.data(FileListModel.RowRole) == 0:
                 continue
             p = idx.data()
             if p:
-                files.append(p)
+                subCommit = fileRealCommit(p, commit)
+                filePath = toSubmodulePath(subCommit.repoDir, p)
+                files.append((subCommit, filePath))
         return files
 
     def _diffSelection(self) -> str:
@@ -174,8 +178,7 @@ class MainWindowContextProvider(AiChatContextProvider):
                 id=self.CTX_SELECTED_FILES,
                 label=self.tr("Selected files ({0})").format(len(files)),
                 icon=icoFiles,
-                tooltip="\n".join(files[:12]) +
-                ("\n…" if len(files) > 12 else ""),
+                tooltip=""
             ))
 
         diffSel = self._diffSelection()
@@ -196,61 +199,95 @@ class MainWindowContextProvider(AiChatContextProvider):
         return []
 
     def buildContextText(self, contextIds: List[str]) -> str:
-        blocks: List[str] = self.commonContext()
+        sections: List[str] = []
+
+        # Environment (always present)
+        self.addSection(sections, "Environment",
+                         self.formatBullets(self.commonContext()))
+
+        # UI state (branch/submodule)
+        uiLines: List[str] = []
         branch = self._activeBranch()
         if branch:
-            blocks.append(f"Active branch (UI): {branch}")
+            uiLines.append(f"Active branch (UI): {branch}")
 
         submodules = [s for s in (self._submodules() or []) if s]
         submoduleCount = len([s for s in submodules if s != "."])
         activeSub = self._activeSubmodule()
-        if submoduleCount > 0 or activeSub:
-            blocks.append(f"Submodules: {submoduleCount}")
-            if activeSub:
-                blocks.append(f"Active submodule (UI): {activeSub}")
+        if submoduleCount > 0:
+            uiLines.append(f"Submodules: {submoduleCount}")
+        if activeSub:
+            uiLines.append(f"Active submodule (UI): {activeSub}")
+
+        self.addSection(sections, "UI State", self.formatBullets(uiLines))
 
         for cid in contextIds:
             if cid == self.CTX_ACTIVE_COMMIT:
                 c = self._activeCommit()
                 if c is not None and c.isValid():
-                    blocks.append(
-                        f"Active commit: {c.sha1}\n"
-                        f"Author: {c.author} {c.authorDate}\n"
-                        f"Message:\n```text\n{c.comments}\n```"
-                    )
+                    lines = [
+                        f"SHA1: {c.sha1}",
+                        f"Repo: {self.normRepoDir(c.repoDir)}",
+                        f"Author: {c.author}",
+                        f"Date: {c.authorDate}",
+                    ]
+                    msg = (c.comments or "").rstrip()
+                    body = self.formatBullets(lines)
+                    if msg:
+                        body += "\n\nMessage:\n" + \
+                            self.formatCodeBlock("text", msg)
+                    self.addSection(sections, "Active Commit", body)
 
             elif cid == self.CTX_SELECTED_COMMITS:
                 commits = self._selectedCommits()
                 if commits:
-                    lines = []
+                    lines: List[str] = []
                     for c in commits[:20]:
-                        subj = (c.comments or "").splitlines()[
-                            0] if c.comments else ""
-                        lines.append(f"- {c.sha1} {subj}".rstrip())
-                    extra = "\n…" if len(commits) > 20 else ""
-                    blocks.append(
-                        f"Selected commits ({len(commits)}):\n" +
-                        "\n".join(lines) + extra
+                        subj = (c.comments or "").splitlines()[0].strip() if (
+                            c.comments or "").splitlines() else ""
+                        repo = self.normRepoDir(c.repoDir)
+                        lines.append(
+                            f"Repo: {repo} | SHA1: {c.sha1[:7]} | Subject: {subj}")
+                    if len(commits) > 20:
+                        lines.append(f"… (+{len(commits) - 20} more)")
+
+                    self.addSection(
+                        sections,
+                        f"Selected Commits ({len(commits)})",
+                        self.formatBullets(lines)
                     )
 
             elif cid == self.CTX_SELECTED_FILES:
                 files = self._selectedFiles()
                 if files:
-                    blocks.append(
-                        f"Selected files ({len(files)}):\n" +
-                        "\n".join(f"- {p}" for p in files[:200])
+                    lines: List[str] = []
+                    for commit, filePath in files[:100]:
+                        repo = self.normRepoDir(commit.repoDir)
+                        path = filePath.replace("\\", "/")
+                        lines.append(
+                            f"Repo: {repo} | SHA1: {commit.sha1[:7]} | File: {path}")
+                    if len(files) > 100:
+                        lines.append(f"… (+{len(files) - 100} more)")
+
+                    self.addSection(
+                        sections,
+                        f"Selected Files ({len(files)})",
+                        self.formatBullets(lines)
                     )
 
             elif cid == self.CTX_DIFF_SELECTION:
                 text = self._diffSelection()
                 if text:
-                    blocks.append(
-                        "Selected diff excerpt:\n```diff\n" + text + "\n```")
+                    self.addSection(
+                        sections,
+                        "Diff Selection",
+                        self.formatCodeBlock("diff", text)
+                    )
 
-        return "\n".join(b for b in blocks if b).strip()
+        return "\n\n".join(sections).strip()
 
     def agentSystemPrompt(self) -> Optional[str]:
-        return """You are a Git assistant inside QGitc log view.
+        return f"""You are a Git assistant inside QGitc log view.
 
 In log view user can explore git logs (commit sha1, messages, author, dates etc) and the selected commit's diff (and its file list). User can also switch branches and submodules (if any).
 
@@ -262,6 +299,8 @@ Branch/submodule semantics:
 - Prefer 'Active branch (UI)' from context when asked about the current/active branch.
 - Do NOT call git_current_branch just to answer branch questions if the UI branch is present, unless explicitly requested.
 - The repository's checked-out HEAD branch may differ from the UI-selected branch.
+
+{REPO_DESC}
 
 If you need repo information or to perform git actions, call tools. Never assume.
 """

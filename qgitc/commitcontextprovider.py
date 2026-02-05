@@ -9,6 +9,7 @@ from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescript
 from qgitc.common import dataDirPath, toSubmodulePath
 from qgitc.drawutils import makeColoredIconPixmap
 from qgitc.filestatus import StatusFileListModel
+from qgitc.models.prompts import REPO_DESC
 
 
 class CommitContextProvider(AiChatContextProvider):
@@ -78,7 +79,7 @@ class CommitContextProvider(AiChatContextProvider):
             index = model.index(row, 0)
             repoDir = model.data(index, StatusFileListModel.RepoDirRole)
             file = toSubmodulePath(repoDir, model.data(index))
-            files.append(file.replace("\\", "/"))
+            files.append((repoDir, file))
         return files
 
     def _getUnstagedFiles(self) -> List[str]:
@@ -89,7 +90,7 @@ class CommitContextProvider(AiChatContextProvider):
             index = model.index(row, 0)
             repoDir = model.data(index, StatusFileListModel.RepoDirRole)
             file = toSubmodulePath(repoDir, model.data(index))
-            files.append(file.replace("\\", "/"))
+            files.append((repoDir, file))
         return files
 
     def _getSelectedDiff(self) -> str:
@@ -124,8 +125,7 @@ class CommitContextProvider(AiChatContextProvider):
                 id=self.CTX_STAGED_FILES,
                 label=self.tr("Staged files ({0})").format(len(stagedFiles)),
                 icon=icoStage,
-                tooltip="\n".join(stagedFiles[:12]) +
-                ("\n…" if len(stagedFiles) > 12 else ""),
+                tooltip=""
             ))
 
         unstagedFiles = self._getUnstagedFiles()
@@ -135,8 +135,7 @@ class CommitContextProvider(AiChatContextProvider):
                 label=self.tr("Unstaged files ({0})").format(
                     len(unstagedFiles)),
                 icon=icoFile,
-                tooltip="\n".join(unstagedFiles[:12]) +
-                ("\n…" if len(unstagedFiles) > 12 else ""),
+                tooltip=""
             ))
 
         diffSelection = self._getSelectedDiff()
@@ -180,31 +179,44 @@ class CommitContextProvider(AiChatContextProvider):
         return defaults
 
     def buildContextText(self, contextIds: List[str]) -> str:
-        blocks: List[str] = self.commonContext()
-        blocks.append(f"Current branch: {self._commitWindow.currentBranch()}")
+        sections: List[str] = []
+
+        # Environment (always present)
+        self.addSection(sections, "Environment",
+                         self.formatBullets(self.commonContext()))
+
+        # UI state
+        branch = self._commitWindow.currentBranch().strip()
+        self.addSection(sections, "UI State",
+                         self.formatBullets([f"Active branch (UI): {branch}"]))
 
         for cid in contextIds:
             if cid == self.CTX_STAGED_FILES:
                 files = self._getStagedFiles()
                 if files:
-                    blocks.append(
-                        f"Staged files ({len(files)}):\n" +
-                        "\n".join(f"- {f}" for f in files[:100])
+                    self.addSection(
+                        sections,
+                        f"Staged Files ({len(files)})",
+                        self.formatRepoFileBullets(files, limit=100),
                     )
 
             elif cid == self.CTX_UNSTAGED_FILES:
                 files = self._getUnstagedFiles()
                 if files:
-                    blocks.append(
-                        f"Unstaged files ({len(files)}):\n" +
-                        "\n".join(f"- {f}" for f in files[:100])
+                    self.addSection(
+                        sections,
+                        f"Unstaged Files ({len(files)})",
+                        self.formatRepoFileBullets(files, limit=100),
                     )
 
             elif cid == self.CTX_SELECTED_DIFF:
                 diff = self._getSelectedDiff()
                 if diff:
-                    blocks.append(
-                        "Selected diff excerpt:\n```diff\n" + diff + "\n```")
+                    self.addSection(
+                        sections,
+                        "Diff Selection",
+                        self.formatCodeBlock("diff", diff),
+                    )
 
             elif cid == self.CTX_COMMIT_MESSAGE:
                 message = self._getCommitMessage()
@@ -212,13 +224,16 @@ class CommitContextProvider(AiChatContextProvider):
                     doc = self._commitWindow.ui.teMessage.document()
                     isTemplate = not doc.isUndoAvailable()
                     status = "template" if isTemplate else "draft"
-                    blocks.append(
-                        f"Current commit message ({status}):\n{message}")
+                    self.addSection(
+                        sections,
+                        f"Commit Message ({status})",
+                        self.formatCodeBlock("text", message),
+                    )
 
-        return "\n".join(b for b in blocks if b).strip()
+        return "\n\n".join(sections).strip()
 
     def agentSystemPrompt(self) -> Optional[str]:
-        return """You are a Git assistant inside QGitc commit window.
+        return f"""You are a Git assistant inside QGitc commit window.
 
 In commit window user can:
 - View and manage staged files (files ready to commit)
@@ -243,6 +258,8 @@ IMPORTANT - Commit Message Format:
 - When referring to or generating commit messages, exclude lines that start with '#'
 - These comment lines are typically used for instructions or templates
 - Only include actual commit content (non-comment lines) in your responses
+
+{REPO_DESC}
 
 If you need repo information or to perform git actions, call tools. Never assume.
 """

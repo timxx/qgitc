@@ -55,7 +55,7 @@ class CherryPickContextProvider(AiChatContextProvider):
         if self._currentSha1:
             blocks.append(f"Current commit sha1: {self._currentSha1}")
         if self._currentRepoDir:
-            blocks.append(f"Current sub-repo dir: {self._currentRepoDir}")
+            blocks.append(f"Current repo dir: {self._currentRepoDir}")
 
         if self._operation:
             blocks.append(f"Operation: {self._operation}")

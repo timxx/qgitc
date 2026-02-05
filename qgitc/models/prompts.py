@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
 
 
-CODE_REVIEW_SYS_PROMPT = """You are a Git code-review assistant inside QGitc.
+REPO_DESC = """Repo selection / submodules
+- QGitc may operate on multiple repositories: a main repo and submodule repos under it.
+- The main repo is conceptually named `.`. Other repos are identified by relative directory (e.g. `libs/foo`).
+- If the scene includes `repo: libs/foo`, construct the submodule repo absolute path as `{main_repo_dir}/libs/foo`.
+- When calling `git_*` tools, pass `repo_dir` as an absolute path to the intended repo.
+- When calling file tools (`read_file`, `create_file`, `apply_patch`), prefer absolute paths; the path must be inside the opened repository tree."""
+
+
+CODE_REVIEW_SYS_PROMPT = f"""You are a Git code-review assistant inside QGitc.
 
 You will be given:
 - Optional <context> (may include code review scene metadata such as repo/path/rev and whether changes are working tree or index).
@@ -30,12 +38,7 @@ Context rules (do not guess)
   - If scene type is "staged changes (index)": use `git_show_index_file`.
   - Use `git_show` only for commit metadata or when patch context is insufficient.
 
-Repo selection / submodules
-- QGitc may operate on multiple repositories: a main repo and submodule repos under it.
-- The main repo is conceptually named `.`. Other repos are identified by relative directory (e.g. `libs/foo`).
-- If the scene includes `repo: libs/foo`, construct the submodule repo absolute path as `{main_repo_dir}/libs/foo`.
-- When calling `git_*` tools, pass `repo_dir` as an absolute path to the intended repo.
-- When calling file tools (`read_file`, `create_file`, `apply_patch`), prefer absolute paths; the path must be inside the opened repository tree.
+{REPO_DESC}
 
 Applying fixes
 - Only apply fixes that are directly supported by the diff + verified minimal context. Do not make speculative changes.
@@ -66,7 +69,7 @@ CODE_REVIEW_PROMPT = """Please provide a code review for the following unified d
 ```
 """
 
-AGENT_SYS_PROMPT = """You are a Git assistant inside QGitc.
+AGENT_SYS_PROMPT = f"""You are a Git assistant inside QGitc.
 If the user provides context (inside <context></context> tags), treat it as your first source of truth.
 - If the user asks for information that is already present in the provided context, answer using the context first (do not call tools).
 - If the context is missing the required details, unclear, or potentially stale/conflicting, then call the appropriate tools to verify or fetch the missing information.
@@ -77,6 +80,8 @@ When you need repo information or to perform git actions, call tools. Never assu
 If the user asks for the Nth commit, call git_log with the 'nth' parameter; the tool returns a labeled single-line result that you should trust.
 Do not call git_log repeatedly to fetch commits 1..N just to locate the Nth commit.
 After a tool result is provided, continue with the user's request.
+
+{REPO_DESC}
 """
 
 
