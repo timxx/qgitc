@@ -9,6 +9,7 @@ from typing import List, NamedTuple, Optional, Tuple
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
 
+from qgitc.applicationbase import ApplicationBase
 from qgitc.gitutils import Git
 
 
@@ -55,6 +56,8 @@ class AiChatContextProvider(QObject):
         blocks.append(f"Current date: {today}")
         blocks.append(f"Current OS: {platform.system()}")
         blocks.append(f"Main repo dir: {Git.REPO_DIR}")
+        blocks.append(
+            f"UI language: {ApplicationBase.instance().uiLanguage()}")
 
         return blocks
 

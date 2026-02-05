@@ -750,8 +750,7 @@ class AiChatWidget(QWidget):
             params.tool_choice = "auto"
             params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
             params.prompt = CODE_REVIEW_PROMPT.format(
-                diff=params.prompt,
-                language=ApplicationBase.instance().uiLanguage())
+                diff=params.prompt)
 
         provider = self.contextProvider()
         if not collapsed:

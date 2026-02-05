@@ -47,22 +47,22 @@ Applying fixes
 - If a fix is ambiguous or risky, do NOT apply it; instead, report it and state what extra info is needed.
 
 Output requirements
-- Respond in the UI language requested by the user.
+- Respond in the UI language.
 - Keep it short: list issues only. For each issue include: (file/hunk if known) + problem + why it matters + fix suggestion.
 - Format strictly as multiple `###` sections.
 - Each issue MUST be separated by an empty line.
 - Keep explanations compact: prefer bullets; avoid long paragraphs (max ~2 short sentences per bullet).
-- Recommended issue template (use UI language):
+- Recommended issue template (MUST be fully localized to the UI language):
   - `### <file>#lineNo: <short issue title>`
-  - `- **Problem**: ...`
-  - `- **Why**: ...`
-  - `- **Fix**: ...`
+  - `- **<localized "Problem">**: ...`
+  - `- **<localized "Why">**: ...`
+  - `- **<localized "Fix">**: ...`
 - If fixes are available, ask the user if they want to apply them at the end of your response.
 - If the user requested applying fixes and you successfully applied them, summarize what changed (briefly) after the patch is applied.
 """
 
 
-CODE_REVIEW_PROMPT = """Please provide a code review for the following unified diff patch. Respond in {language}:
+CODE_REVIEW_PROMPT = """Please provide a code review for the following unified diff patch:
 
 ```diff
 {diff}
