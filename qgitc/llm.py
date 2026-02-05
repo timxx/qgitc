@@ -115,6 +115,7 @@ class AiModelBase(QObject):
         self._choiceReasonings = {}
         # Nested mapping: choiceIndex -> (toolCallIndex -> toolCall dict accumulator)
         self._choiceToolCallAcc = {}
+        self._isReasoningFinishedEmitted = False
 
         # Responses API per-request state.
         self._responsesText: str = ""
@@ -306,6 +307,7 @@ class AiModelBase(QObject):
         self._choiceContents = {}
         self._choiceReasonings = {}
         self._choiceToolCallAcc = {}
+        self._isReasoningFinishedEmitted = False
 
         self._responsesText = ""
         self._responsesReasoning = ""
@@ -395,6 +397,9 @@ class AiModelBase(QObject):
             if fullContent or fullReasoning or toolCalls:
                 self.addHistory(role, fullContent,
                                 reasoning=fullReasoning, toolCalls=toolCalls)
+                if fullReasoning and not self._isReasoningFinishedEmitted:
+                    self.reasoningFinished.emit()
+                    self._isReasoningFinishedEmitted = True
 
     def _handleFinishedResponses(self):
         if self._responsesText or self._responsesReasoning or self._responsesToolCalls:
@@ -493,11 +498,13 @@ class AiModelBase(QObject):
                             func.get("arguments")
                     accMap[idx] = acc
                 self._choiceToolCallAcc[choiceIndex] = accMap
+                self._emitReasoningFinishedIfNeeded(choiceIndex)
 
             content = self._getContent(delta)
             if content:
                 self._choiceContents[choiceIndex] = self._choiceContents.get(
                     choiceIndex) + content
+                self._emitReasoningFinishedIfNeeded(choiceIndex)
 
             reasoning = self._getReasoning(delta)
             if reasoning:
@@ -505,14 +512,9 @@ class AiModelBase(QObject):
                 assert not content
                 self._choiceReasonings[choiceIndex] = self._choiceReasonings.get(
                     choiceIndex) + reasoning
+                self._isReasoningFinishedEmitted = False
 
             if content or reasoning:
-                if not self._firstDelta and content:
-                    if self._choiceReasonings.get(choiceIndex) and \
-                            self._choiceContents.get(choiceIndex) == content:
-                        # To prevent mixing reasoning and content in a single UI message
-                        self._firstDelta = True
-                        self.reasoningFinished.emit()
                 role = self._choiceRoles.get(choiceIndex, AiRole.Assistant)
                 self._emitResponse(content, reasoning, role=role)
 
@@ -533,6 +535,12 @@ class AiModelBase(QObject):
                 if fullContent or fullReasoning or toolCalls:
                     self.addHistory(
                         role, fullContent, reasoning=fullReasoning, toolCalls=toolCalls)
+
+    def _emitReasoningFinishedIfNeeded(self, choiceIndex: int):
+        if not self._isReasoningFinishedEmitted and self._choiceReasonings.get(choiceIndex):
+            self._firstDelta = True
+            self.reasoningFinished.emit()
+            self._isReasoningFinishedEmitted = True
 
     def _handleStreamResponseResponses(self, line: bytes):
         if not line:
