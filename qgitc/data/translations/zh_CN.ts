@@ -233,74 +233,6 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWidget</name>
     <message>
-        <source>Enter the query prompt here</source>
-        <translation type="vanished">请在此输入请求提示词</translation>
-    </message>
-    <message>
-        <source>System</source>
-        <translation type="vanished">系统</translation>
-    </message>
-    <message>
-        <source>User</source>
-        <translation type="vanished">用户</translation>
-    </message>
-    <message>
-        <source>Max Tokens</source>
-        <translation type="vanished">最大Token数</translation>
-    </message>
-    <message>
-        <source>Max tokens to generate</source>
-        <translation type="vanished">生成的最大Token数量</translation>
-    </message>
-    <message>
-        <source>Temperature</source>
-        <translation type="vanished">温度</translation>
-    </message>
-    <message>
-        <source>Stop</source>
-        <translation type="vanished">停止</translation>
-    </message>
-    <message>
-        <source>Chat</source>
-        <translation type="vanished">对话</translation>
-    </message>
-    <message>
-        <source>Completion</source>
-        <translation type="vanished">补全</translation>
-    </message>
-    <message>
-        <source>Infilling</source>
-        <translation type="vanished">填充</translation>
-    </message>
-    <message>
-        <source>Code Review</source>
-        <translation type="vanished">代码审查</translation>
-    </message>
-    <message>
-        <source>Code Fix</source>
-        <translation type="vanished">代码修复</translation>
-    </message>
-    <message>
-        <source>Code Explanation</source>
-        <translation type="vanished">代码解释</translation>
-    </message>
-    <message>
-        <source>Initializing models...</source>
-        <translation type="vanished">正在初始化模型...</translation>
-    </message>
-    <message>
-        <source>Send</source>
-        <translation type="vanished">发送</translation>
-    </message>
-    <message>
-        <source>Enter the system prompt here</source>
-        <translation type="vanished">请在此输入系统提示词</translation>
-    </message>
-    <message>
-        <source>Work in progress...</source>
-        <translation type="vanished">正在请求中……</translation>
-    </message>
-    <message>
         <location filename="../../aichatwidget.py" line="404"/>
         <source>Go Back</source>
         <translation>返回</translation>
@@ -407,18 +339,6 @@ This action cannot be undone.</source>
         <location filename="../../aichatbot.py" line="472"/>
         <source>System: {0}</source>
         <translation>系统：{0}</translation>
-    </message>
-    <message>
-        <source>User:</source>
-        <translation type="vanished">用户：</translation>
-    </message>
-    <message>
-        <source>Assistant:</source>
-        <translation type="vanished">助手：</translation>
-    </message>
-    <message>
-        <source>System:</source>
-        <translation type="vanished">系统：</translation>
     </message>
 </context>
 <context>
@@ -1860,14 +1780,6 @@ To avoid interrupting it, you can run the review in the standalone window instea
         <translation>复制记录摘要(&amp;C)</translation>
     </message>
     <message>
-        <source>&amp;Mark this commit</source>
-        <translation type="vanished">标记此记录(&amp;M)</translation>
-    </message>
-    <message>
-        <source>Mark &amp;to this commit</source>
-        <translation type="vanished">标记到此记录(&amp;T)</translation>
-    </message>
-    <message>
         <location filename="../../logview.py" line="748"/>
         <source>Clea&amp;r Marks</source>
         <translation>清除标记(&amp;R)</translation>
@@ -1901,10 +1813,6 @@ To avoid interrupting it, you can run the review in the standalone window instea
         <location filename="../../logview.py" line="756"/>
         <source>Generate &amp;diff</source>
         <translation>生成&amp;diff</translation>
-    </message>
-    <message>
-        <source>Re&amp;vert this commit</source>
-        <translation type="vanished">回滚此记录(&amp;V)</translation>
     </message>
     <message>
         <location filename="../../logview.py" line="764"/>
@@ -2124,45 +2032,9 @@ Please checkout the branch first.</source>
 请先检出该分支。</translation>
     </message>
     <message>
-        <source>Cherry-picking commits...</source>
-        <translation type="vanished">正在拣选提交...</translation>
-    </message>
-    <message>
-        <source>Cherry-pick of commit {0} failed:
-
-{1}</source>
-        <translation type="vanished">拣选提交 {0} 失败：
-
-{1}</translation>
-    </message>
-    <message>
         <location filename="../../logview.py" line="3144"/>
         <source>Unknown error</source>
         <translation>未知错误</translation>
-    </message>
-    <message>
-        <source>Merge Tool Failed</source>
-        <translation type="vanished">合并工具失败</translation>
-    </message>
-    <message>
-        <source>Merge tool failed with error:
-
-{0}</source>
-        <translation type="vanished">合并工具出错：
-
-{0}</translation>
-    </message>
-    <message>
-        <source>Empty Cherry-pick</source>
-        <translation type="vanished">空拣选</translation>
-    </message>
-    <message>
-        <source>Commit {0} results in an empty commit (possibly already applied).
-
-Do you want to skip it?</source>
-        <translation type="vanished">提交 {0} 将产生空提交（可能已应用过）。
-
-是否跳过此提交？</translation>
     </message>
     <message>
         <location filename="../../logview.py" line="3127"/>
@@ -2185,70 +2057,6 @@ Do you want to skip it?</source>
         <translation>应用本地更改失败：
 
 {0}</translation>
-    </message>
-    <message>
-        <source>Failed to generate patch from source repository:
-
-{0}</source>
-        <translation type="vanished">无法从源仓库生成补丁：
-
-{0}</translation>
-    </message>
-    <message>
-        <source>No patch content generated for commit {0}.</source>
-        <translation type="vanished">提交 {0} 没有生成补丁内容。</translation>
-    </message>
-    <message>
-        <source>Failed to apply patch to target repository:
-
-{0}</source>
-        <translation type="vanished">无法将补丁应用到目标仓库：
-
-{0}</translation>
-    </message>
-    <message>
-        <source>Failed to apply patch from another repository:
-
-{0}</source>
-        <translation type="vanished">无法应用来自其他仓库的补丁：
-
-{0}</translation>
-    </message>
-    <message>
-        <source>Cherry-pick Conflict</source>
-        <translation type="vanished">拣选冲突</translation>
-    </message>
-    <message>
-        <source>Cherry-pick of commit {0} failed with conflicts:
-
-{1}
-
-Do you want to resolve the conflicts using mergetool?</source>
-        <translation type="vanished">拣选提交 {0} 时发生冲突：
-
-{1}
-
-您是否要使用合并工具解决这些冲突？</translation>
-    </message>
-    <message>
-        <source>Already Resolved</source>
-        <translation type="vanished">已解决</translation>
-    </message>
-    <message>
-        <source>Merge Tool Not Configured</source>
-        <translation type="vanished">合并工具未配置</translation>
-    </message>
-    <message>
-        <source>No merge tool is configured.
-
-Please configure a merge tool in:
-- Git global config: git config --global merge.tool &lt;tool-name&gt;
-- Or in Preferences &gt; Tools tab</source>
-        <translation type="vanished">未配置合并工具。
-
-请在以下位置配置合并工具：
-- Git 全局配置：git config --global merge.tool &lt;工具名称&gt;
-- 或在 首选项 &gt; 工具 选项卡中配置</translation>
     </message>
     <message>
         <location filename="../../logview.py" line="739"/>
@@ -2448,10 +2256,6 @@ Please configure a merge tool in:
         <translation>Ctrl+Alt+I</translation>
     </message>
     <message>
-        <source>Show AI &amp;Assistant...</source>
-        <translation type="vanished">显示&amp;AI助手...</translation>
-    </message>
-    <message>
         <location filename="../../mainwindow.ui" line="426"/>
         <source>Code &amp;Review...</source>
         <translation>代码审查(&amp;R)...</translation>
@@ -2465,22 +2269,6 @@ Please configure a merge tool in:
         <location filename="../../mainwindow.ui" line="436"/>
         <source>Cherry-&amp;Pick...</source>
         <translation>Cherry-&amp;Pick...</translation>
-    </message>
-    <message>
-        <source>&amp;Commit</source>
-        <translation type="vanished">提交(&amp;C)</translation>
-    </message>
-    <message>
-        <source>Show AI &amp;Assistant</source>
-        <translation type="vanished">显示&amp;AI助手</translation>
-    </message>
-    <message>
-        <source>Code &amp;Review</source>
-        <translation type="vanished">代码审查(&amp;R)</translation>
-    </message>
-    <message>
-        <source>&amp;Branch Compare</source>
-        <translation type="vanished">分支比较&amp;B)</translation>
     </message>
     <message>
         <location filename="../../mainwindow.ui" line="441"/>
@@ -3049,14 +2837,6 @@ Please checkout the branch first.</source>
         <translation>目标分支‘{0}’未被检出。
 
 请先检出该分支。</translation>
-    </message>
-    <message>
-        <source>Cherry-picking commits...</source>
-        <translation type="vanished">正在拣选提交...</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="vanished">取消</translation>
     </message>
     <message>
         <location filename="../../pickbranchwindow.ui" line="14"/>
