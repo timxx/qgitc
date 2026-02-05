@@ -447,6 +447,50 @@ class TestAiChatLoadHistory(TestBase):
             any(h.message == "I'll commit your changes now." for h in assistant_history)
         )
 
+    def test_tool_calls_content_not_appended_when_addToChatBot_false(self):
+        """Regression: switching models must not append stray UI messages.
+
+        When restoring history with `addToChatBot=False` (used when the model is
+        switched), we must not append assistant `content` from a message that
+        also contains `tool_calls`.
+        """
+        self.chatWidget.messages.appendResponse = MagicMock()
+        self.chatWidget.messages.insertToolConfirmation = MagicMock()
+
+        messages = [
+            {"role": "user", "content": "show me status"},
+            {
+                "role": "assistant",
+                "content": "I'll check the repo status.",
+                "tool_calls": [
+                    {
+                        "id": "tc_content_ro_1",
+                        "type": "function",
+                        "function": {"name": "git_status", "arguments": "{}"},
+                    }
+                ],
+            },
+            {
+                "role": "tool",
+                "content": "clean",
+                "tool_calls": {"tool_call_id": "tc_content_ro_1"},
+            },
+        ]
+
+        self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=False)
+
+        # No UI updates should occur in this mode.
+        self.chatWidget.messages.appendResponse.assert_not_called()
+        self.chatWidget.messages.insertToolConfirmation.assert_not_called()
+
+        # The underlying model history is still reconstructed.
+        assistant_history = [
+            h for h in self._mockChatModel.history if h.role == AiRole.Assistant
+        ]
+        self.assertTrue(
+            any(h.message == "I'll check the repo status." for h in assistant_history)
+        )
+
     def test_write_tool_cancelled_if_conversation_continued(self):
         """WRITE tools without results should be cancelled if conversation continued after."""
         calls = []
