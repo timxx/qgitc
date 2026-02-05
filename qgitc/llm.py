@@ -88,6 +88,7 @@ class AiChatMode(Enum):
 
 class AiModelBase(QObject):
     responseAvailable = Signal(AiResponse)
+    reasoningFinished = Signal()
     serviceUnavailable = Signal()
     networkError = Signal(str)
     modelsReady = Signal()
@@ -502,6 +503,7 @@ class AiModelBase(QObject):
                             self._choiceContents.get(choiceIndex) == content:
                         # To prevent mixing reasoning and content in a single UI message
                         self._firstDelta = True
+                        self.reasoningFinished.emit()
                 role = self._choiceRoles.get(choiceIndex, AiRole.Assistant)
                 self._emitResponse(content, reasoning, role=role)
 
@@ -737,6 +739,7 @@ class AiModelBase(QObject):
                 self._responsesReasoningData["encrypted_content"] = item.get(
                     "encrypted_content", "")
                 self._responsesReasoningData["id"] = item.get("id", "")
+                self.reasoningFinished.emit()
 
         # A response is complete
         elif evtType == "response.completed":

@@ -926,3 +926,17 @@ class AiChatbot(QPlainTextEdit):
         elif self._highlighter is not None:
             self._highlighter.setDocument(None)
             self._highlighter = None
+
+    def collapseLatestReasoningBlock(self):
+        """Collapse the most recent assistant reasoning block (🧠 ...)."""
+
+        doc = self.document()
+        block = doc.lastBlock()
+        while block.isValid():
+            headerData = self._headerData(block)
+            if headerData and headerData.role == AiRole.Assistant and headerData.descPos != -1:
+                if not headerData.collapsed:
+                    headerData.collapsed = True
+                    self._applyCollapsedState(block)
+                return
+            block = block.previous()

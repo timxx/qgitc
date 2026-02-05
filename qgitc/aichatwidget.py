@@ -571,6 +571,7 @@ class AiChatWidget(QWidget):
         for i, model in enumerate(aiModels):
             self._contextPanel.cbBots.addItem(model.name, model)
             model.responseAvailable.connect(self._onMessageReady)
+            model.reasoningFinished.connect(self._onReasoningFinished)
             model.finished.connect(self._onResponseFinish)
             model.serviceUnavailable.connect(self._onServiceUnavailable)
             model.networkError.connect(self._onNetworkError)
@@ -836,6 +837,10 @@ class AiChatWidget(QWidget):
             self._doMessageReady(model, reasoningResponse)
 
         self._doMessageReady(model, response)
+
+    def _onReasoningFinished(self):
+        # Collapse the most recently displayed reasoning block (if any).
+        self._chatBot.collapseLatestReasoningBlock()
 
     def _doMessageReady(self, model: AiModelBase, response: AiResponse, collapsed=False):
         index = self._contextPanel.cbBots.findData(model)
