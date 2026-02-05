@@ -212,11 +212,7 @@ class AiChatbot(QPlainTextEdit):
             description: str = None):
         if self.blockCount() > 1:
             cursor.insertBlock()
-        title = self._roleString(role)
-        descPos = -1
-        if description:
-            descPos = len(title) + 1
-            title += " " + description
+        title, descPos = self._headerString(role, description)
         cursor.insertText(title)
         block = cursor.block()
         block.setUserData(AiChatHeaderData(role, collapsed, descPos))
@@ -465,15 +461,21 @@ class AiChatbot(QPlainTextEdit):
 
         return super().event(event)
 
-    def _roleString(self, role: AiRole):
+    def _headerString(self, role: AiRole, description: str = None):
         if role == AiRole.User:
-            return self.tr("User:")
-        if role == AiRole.Assistant:
-            return self.tr("Assistant:")
-        if role == AiRole.Tool:
-            return self.tr("Tool:")
+            template = self.tr("User: {0}")
+        elif role == AiRole.Assistant:
+            template = self.tr("Assistant: {0}")
+        elif role == AiRole.Tool:
+            template = self.tr("Tool: {0}")
+        else:
+            template = self.tr("System: {0}")
 
-        return self.tr("System:")
+        if not description:
+            return template.format(""), -1
+
+        descPos = len(template.format("")) + 1
+        return template.format(description), descPos
 
     def paintEvent(self, event):
         if self.document().isEmpty():
