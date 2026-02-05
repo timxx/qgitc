@@ -3,7 +3,7 @@
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
@@ -128,13 +128,22 @@ class AiModelBase(QObject):
     def queryAsync(self, params: AiParameters):
         pass
 
-    def addHistory(self, role: AiRole, message: str, description: str = None,
-                   toolCalls=None, reasoning: str = None,
-                   reasoningData: Dict[str, Any] = None):
+    def addHistory(self, role: Union[AiRole, AiChatMessage], message: str = None, **kwargs):
+        """Append a message to the internal history.
+
+        Supports two call styles:
+        - addHistory(AiChatMessage(...))
+        - addHistory(role, message, **AiChatMessage fields)
+
+        The **kwargs form keeps this API stable as AiChatMessage evolves.
+        """
+
+        if isinstance(role, AiChatMessage):
+            self._history.append(role)
+            return
+
         self._history.append(AiChatMessage(
-            role, message, description=description,
-            toolCalls=toolCalls, reasoning=reasoning,
-            reasoningData=reasoningData))
+            role=role, message=message, **kwargs))
 
     def toOpenAiMessages(self):
         """Convert internal chat history to OpenAI Chat Completions messages.
