@@ -522,15 +522,16 @@ class AiChatWidget(QWidget):
         if not self._conversationHeader:
             return
 
-        cur = self._historyPanel.currentHistory()
-        isNewConversation = (cur is None) or (not cur.messages)
+        model = self.currentChatModel()
+        isNewConversation = (model is None) or (not model.history)
 
         self._conversationHeader.setVisible(not isNewConversation)
         if isNewConversation:
             return
 
+        cur = self._historyPanel.currentHistory()
         title = (cur.title or "").strip() if cur else ""
-        display = title if title else self.tr("Conversation")
+        display = title if title else self.tr("New Conversation")
         self._conversationTitleLabel.setText(display)
 
     def setEmbeddedOuterMargins(self, left: int, top: int, right: int, bottom: int):
@@ -726,8 +727,6 @@ class AiChatWidget(QWidget):
         if model.isLocal():
             params.max_tokens = settings.llmMaxTokens()
 
-        self._setEmbeddedRecentListVisible(False)
-
         # Keep title generation based on the user's original prompt (no injected context).
         titleSeed = (params.sys_prompt + "\n" +
                      prompt) if params.sys_prompt else prompt
@@ -794,6 +793,7 @@ class AiChatWidget(QWidget):
                 self._historyPanel.currentHistory().historyId, titleSeed)
 
         self._updateChatHistoryModel(model)
+        self._setEmbeddedRecentListVisible(False)
 
     @staticmethod
     def _historyHasSameSystemPrompt(history, sp: str) -> bool:
