@@ -733,15 +733,11 @@ class AiChatbot(QPlainTextEdit):
         if hoveredConfirmData != self._hoveredConfirmation:
             # Clear previous hover
             if self._hoveredConfirmation:
-                self._hoveredConfirmation.hovered = False
                 self._hoveredConfirmation.hovered_button = ButtonType.NONE
                 needsUpdate = True
 
             # Set new hover
             self._hoveredConfirmation = hoveredConfirmData
-            if hoveredConfirmData:
-                hoveredConfirmData.hovered = True
-                needsUpdate = True
 
         # Update button hover state
         cursorShape = Qt.IBeamCursor

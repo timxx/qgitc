@@ -70,6 +70,9 @@ from qgitc.preferences import Preferences
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
 
+SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
+
+
 class DiffAvailableEvent(QEvent):
 
     Type = QEvent.registerEventType()
@@ -1011,13 +1014,12 @@ class AiChatWidget(QWidget):
         # If the assistant previously requested a tool via tool_calls, OpenAI-style
         # chat requires that each tool_call_id gets a corresponding tool message.
         if tool_call_id:
-            description = self.tr("✗ `{}` rejected").format(tool_name)
-            model.addHistory(AiRole.Tool, "Rejected by user",
+            description = self.tr("✗ `{}` skipped").format(tool_name)
+            model.addHistory(AiRole.Tool, SKIP_TOOL,
                              description=description,
                              toolCalls={"tool_call_id": tool_call_id})
-            msg = self.tr("User rejected")
             self._doMessageReady(model, AiResponse(
-                AiRole.Tool, msg, description=description))
+                AiRole.Tool, SKIP_TOOL, description=description))
             self._markToolResultComplete(tool_call_id)
         # Only continue when all tool_call_id results are present.
         if not self._awaitingToolResults:
@@ -1067,16 +1069,16 @@ class AiChatWidget(QWidget):
             # Anything else is treated as requiring confirmation.
             self._chatBot.setToolConfirmationStatus(
                 tcid, ConfirmationStatus.REJECTED)
-            description = self.tr("✗ `{}` rejected").format(toolName)
+            description = self.tr("✗ `{}` skipped").format(toolName)
             model.addHistory(
                 AiRole.Tool,
-                "Rejected by user",
+                SKIP_TOOL,
                 description=description,
                 toolCalls={"tool_call_id": tcid},
             )
             self._doMessageReady(
                 model,
-                AiResponse(AiRole.Tool, self.tr("User rejected"),
+                AiResponse(AiRole.Tool, SKIP_TOOL,
                            description=description),
                 collapsed=True,
             )

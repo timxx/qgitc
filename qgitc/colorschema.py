@@ -90,22 +90,20 @@ class ColorSchema:
     ResolvedFg = QColor()
 
     ApproveText = QColor()
+    ApproveButtonText = QColor()
     ApproveButtonBg = QColor()
+    ApproveButtonBorder = QColor()
     ApproveButtonHoverBg = QColor()
     RejectText = QColor()
+    RejectButtonText = QColor()
     RejectButtonBg = QColor()
+    RejectButtonBorder = QColor()
     RejectButtonHoverBg = QColor()
 
     # Tool confirmation card colors
-    ToolReadOnlyBg = QColor()
     ToolReadOnlyBorder = QColor()
-    ToolReadOnlyHoverBorder = QColor()
-    ToolWriteBg = QColor()
     ToolWriteBorder = QColor()
-    ToolWriteHoverBorder = QColor()
-    ToolDangerousBg = QColor()
     ToolDangerousBorder = QColor()
-    ToolDangerousHoverBorder = QColor()
 
 
 class ColorSchemaLight(ColorSchema):
@@ -213,22 +211,20 @@ class ColorSchemaLight(ColorSchema):
     ResolvedFg = QColor(0x81c784)
 
     ApproveText = QColor(0x0B8043)
-    ApproveButtonBg = QColor(0x0B8043)
-    ApproveButtonHoverBg = QColor(0x0D9A52)
+    ApproveButtonText = QColor(0xffffff)
+    ApproveButtonBg = QColor(0x3a5db4)
+    ApproveButtonBorder = QColor(0x3453a1)
+    ApproveButtonHoverBg = QColor(0x2657a6)
     RejectText = QColor(240, 126, 116)
-    RejectButtonBg = QColor(0xd32f2f)
-    RejectButtonHoverBg = QColor(0xe53935)
+    RejectButtonText = QColor(0x3b3b3b)
+    RejectButtonBg = QColor(0xe5e5e5)
+    RejectButtonBorder = QColor(0xcecece)
+    RejectButtonHoverBg = QColor(0xcccccc)
 
     # Tool confirmation card colors
-    ToolReadOnlyBg = QColor(40, 167, 69, 25)
-    ToolReadOnlyBorder = QColor(40, 167, 69, 80)
-    ToolReadOnlyHoverBorder = QColor(40, 167, 69)
-    ToolWriteBg = QColor(255, 193, 7, 25)
-    ToolWriteBorder = QColor(255, 193, 7, 80)
-    ToolWriteHoverBorder = QColor(255, 193, 7)
-    ToolDangerousBg = QColor(220, 53, 69, 25)
-    ToolDangerousBorder = QColor(220, 53, 69, 80)
-    ToolDangerousHoverBorder = QColor(220, 53, 69)
+    ToolReadOnlyBorder = QColor(40, 167, 69)
+    ToolWriteBorder = QColor(255, 193, 7)
+    ToolDangerousBorder = QColor(220, 53, 69)
 
 
 class ColorSchemaDark(ColorSchema):
@@ -336,19 +332,17 @@ class ColorSchemaDark(ColorSchema):
     ResolvedFg = QColor(0x50fa7b)
 
     ApproveText = QColor(0x81C995)
-    ApproveButtonBg = QColor(0x2E7D4E)
-    ApproveButtonHoverBg = QColor(0x3A9C62)
+    ApproveButtonText = QColor(0xffffff)
+    ApproveButtonBg = QColor(0x4676d0)
+    ApproveButtonBorder = QColor(0x5180d3)
+    ApproveButtonHoverBg = QColor(0x2e6dbf)
     RejectText = QColor(203, 80, 70)
-    RejectButtonBg = QColor(0xC62828)
-    RejectButtonHoverBg = QColor(0xD32F2F)
+    RejectButtonText = QColor(0xcccccc)
+    RejectButtonBg = QColor(0x313131)
+    RejectButtonBorder = QColor(0x3b3b3b)
+    RejectButtonHoverBg = QColor(0x3c3c3c)
 
     # Tool confirmation card colors
-    ToolReadOnlyBg = QColor(40, 167, 69, 35)
-    ToolReadOnlyBorder = QColor(76, 175, 80, 80)
-    ToolReadOnlyHoverBorder = QColor(76, 175, 80)
-    ToolWriteBg = QColor(255, 193, 7, 35)
-    ToolWriteBorder = QColor(255, 213, 0, 80)
-    ToolWriteHoverBorder = QColor(255, 213, 0)
-    ToolDangerousBg = QColor(220, 53, 69, 35)
-    ToolDangerousBorder = QColor(239, 83, 80, 80)
-    ToolDangerousHoverBorder = QColor(239, 83, 80)
+    ToolReadOnlyBorder = QColor(76, 175, 80)
+    ToolWriteBorder = QColor(255, 213, 0)
+    ToolDangerousBorder = QColor(239, 83, 80)

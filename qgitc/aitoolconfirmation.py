@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QPlainTextEdit
 from qgitc.agenttools import ToolType
 from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchema
+from qgitc.drawutils import drawRoundedRect
 
 
 class ConfirmationStatus:
@@ -49,7 +50,6 @@ class ToolConfirmationData:
         # to the corresponding assistant tool call.
         self.tool_call_id = tool_call_id
         self.status = ConfirmationStatus.PENDING
-        self.hovered = False  # Track hover state for entire card
         self.hovered_button = ButtonType.NONE  # Track which button is hovered
 
 
@@ -117,7 +117,7 @@ class ToolConfirmationInterface(QPyTextObject):
     def _statusTextForData(self, data: ToolConfirmationData) -> str:
         if data.status == ConfirmationStatus.APPROVED:
             return self.tr("✓ Approved, executing...")
-        return self.tr("✗ Rejected")
+        return self.tr("✗ Skipped")
 
     def viewportWidth(self):
         """Get the width of the viewport for layout purposes"""
@@ -179,12 +179,9 @@ class ToolConfirmationInterface(QPyTextObject):
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Draw card background and border
-        bgColor, borderColor = self._getColors(data.tool_type, data.hovered)
-        painter.setPen(borderColor)
-        painter.setBrush(bgColor)
-        painter.drawRoundedRect(
-            rect, self.cardCornerRadius, self.cardCornerRadius)
+        # Draw card border
+        borderColor = self._getCardBorderColor(data.tool_type)
+        drawRoundedRect(painter, rect, self.cardCornerRadius, borderColor)
 
         # Calculate layout areas within the card
         padding = self.cardPadding
@@ -233,7 +230,7 @@ class ToolConfirmationInterface(QPyTextObject):
         painter.restore()
 
     def _drawButtons(self, painter: QPainter, rect: QRectF, data: ToolConfirmationData):
-        """Draw approve and reject buttons"""
+        """Draw allow and skip buttons"""
         approveRect, rejectRect = self.getButtonRects(rect)
 
         schema = ApplicationBase.instance().colorSchema()
@@ -243,22 +240,22 @@ class ToolConfirmationInterface(QPyTextObject):
         else:
             approveColor = schema.ApproveButtonBg
         painter.setBrush(approveColor)
-        painter.setPen(approveColor)
+        painter.setPen(schema.ApproveButtonBorder)
         painter.drawRoundedRect(approveRect, 4, 4)
 
-        painter.setPen(Qt.white)
-        painter.drawText(approveRect, Qt.AlignCenter, self.tr("Approve"))
+        painter.setPen(schema.ApproveButtonText)
+        painter.drawText(approveRect, Qt.AlignCenter, self.tr("Allow"))
 
         if data.hovered_button == ButtonType.REJECT:
             rejectColor = schema.RejectButtonHoverBg
         else:
             rejectColor = schema.RejectButtonBg
         painter.setBrush(rejectColor)
-        painter.setPen(rejectColor)
+        painter.setPen(schema.RejectButtonBorder)
         painter.drawRoundedRect(rejectRect, 4, 4)
 
-        painter.setPen(Qt.white)
-        painter.drawText(rejectRect, Qt.AlignCenter, self.tr("Reject"))
+        painter.setPen(schema.RejectButtonText)
+        painter.drawText(rejectRect, Qt.AlignCenter, self.tr("Skip"))
 
     def getButtonRects(self, rect: QRectF):
         """Calculate button rectangles for hit testing"""
@@ -284,12 +281,12 @@ class ToolConfirmationInterface(QPyTextObject):
 
         return approveRect, rejectRect
 
-    def _getColors(self, tool_type: int, hover=False):
-        """Get background and border colors based on tool type"""
+    def _getCardBorderColor(self, tool_type: int):
+        """Get border color based on tool type"""
         schema: ColorSchema = ApplicationBase.instance().colorSchema()
         if tool_type == ToolType.READ_ONLY:
-            return schema.ToolReadOnlyBg, schema.ToolReadOnlyHoverBorder if hover else schema.ToolReadOnlyBorder
+            return schema.ToolReadOnlyBorder
         elif tool_type == ToolType.WRITE:
-            return schema.ToolWriteBg, schema.ToolWriteHoverBorder if hover else schema.ToolWriteBorder
+            return schema.ToolWriteBorder
         else:  # DANGEROUS
-            return schema.ToolDangerousBg, schema.ToolDangerousHoverBorder if hover else schema.ToolDangerousBorder
+            return schema.ToolDangerousBorder
