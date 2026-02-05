@@ -135,6 +135,10 @@ class AiContextToolButton(ColoredIconToolButton):
         painter.setPen(self.palette().windowText().color())
         elided = self.fontMetrics().elidedText(
             self._label, Qt.ElideRight, max(0, textRect.width()))
+        if not self._selected:
+            font = painter.font()
+            font.setItalic(True)
+            painter.setFont(font)
         painter.drawText(textRect, Qt.AlignVCenter | Qt.AlignLeft, elided)
 
         painter.end()
