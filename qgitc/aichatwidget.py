@@ -69,7 +69,6 @@ from qgitc.models.prompts import (
 from qgitc.preferences import Preferences
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
-
 SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
 
 
@@ -1537,9 +1536,9 @@ class AiChatWidget(QWidget):
 
                 if addToChatBot:
                     _addReasoning(reasoning)
-                if content:
-                    response = AiResponse(role, content)
-                    chatbot.appendResponse(response, collapsed=False)
+                    if content:
+                        response = AiResponse(role, content)
+                        chatbot.appendResponse(response, collapsed=False)
 
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
