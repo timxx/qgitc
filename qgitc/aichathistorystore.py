@@ -164,6 +164,7 @@ class AiChatHistoryStore(QObject):
                 "reasoning": message.reasoning,
                 "description": message.description,
                 "tool_calls": message.toolCalls,
+                "reasoning_data": message.reasoningData
             })
 
         history.messages = messages

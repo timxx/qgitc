@@ -1519,9 +1519,11 @@ class AiChatWidget(QWidget):
             reasoning = msg.get('reasoning', None)
             description = msg.get('description', None)
             toolCalls = msg.get('tool_calls', None)
+            reasoningData = msg.get('reasoning_data', None)
 
             model.addHistory(role, content, description=description,
-                             toolCalls=toolCalls, reasoning=reasoning)
+                             toolCalls=toolCalls, reasoning=reasoning,
+                             reasoningData=reasoningData)
             # Don't add tool calls to UI (both for assistant and tool roles)
             if addToChatBot and not toolCalls:
                 _addReasoning(reasoning)

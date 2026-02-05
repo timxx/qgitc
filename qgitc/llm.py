@@ -39,6 +39,7 @@ class AiChatMessage:
     reasoning: str = None
     description: str = None
     toolCalls: Optional[List[Dict[str, Any]]] = None
+    reasoningData: Dict[str, Any] = None
 
 
 @dataclass
@@ -117,6 +118,7 @@ class AiModelBase(QObject):
         # Responses API per-request state.
         self._responsesText: str = ""
         self._responsesReasoning: str = ""
+        self._responsesReasoningData = {}
         self._responsesToolCalls = []
 
     def clear(self):
@@ -126,10 +128,12 @@ class AiModelBase(QObject):
         pass
 
     def addHistory(self, role: AiRole, message: str, description: str = None,
-                   toolCalls=None, reasoning: str = None):
+                   toolCalls=None, reasoning: str = None,
+                   reasoningData: Dict[str, Any] = None):
         self._history.append(AiChatMessage(
             role, message, description=description,
-            toolCalls=toolCalls, reasoning=reasoning))
+            toolCalls=toolCalls, reasoning=reasoning,
+            reasoningData=reasoningData))
 
     def toOpenAiMessages(self):
         """Convert internal chat history to OpenAI Chat Completions messages.
@@ -295,6 +299,7 @@ class AiModelBase(QObject):
 
         self._responsesText = ""
         self._responsesReasoning = ""
+        self._responsesReasoningData = {}
         self._responsesToolCalls = []
 
         if not reply:
@@ -611,8 +616,25 @@ class AiModelBase(QObject):
 
         converted: List[Dict[str, Any]] = []
         for h in history:
+            # Reasoning
+            if h.reasoning and h.reasoningData:
+                item = {
+                    "type": "reasoning",
+                    "summary": [],
+                }
+                item.update(h.reasoningData)
+                converted.append(item)
+
             # Tool calls
             if h.role == AiRole.Assistant and isinstance(h.toolCalls, list) and h.toolCalls:
+                # Tool message
+                if h.message:
+                    item = {
+                        "role": h.role.name.lower(),
+                        "content": h.message,
+                    }
+                    converted.append(item)
+
                 for tc in h.toolCalls:
                     function = tc.get("function", {})
                     item = {
@@ -706,18 +728,23 @@ class AiModelBase(QObject):
 
         # Parse function call in done event (we don't need deltas for tool calls).
         elif evtType == "response.output_item.done":
-            item = evt.get("item", {})
+            item: Dict[str, any] = evt.get("item", {})
             itemType = item.get("type")
             if itemType == "function_call":
                 toolCalls = [self._parseResponsesFunctionCall(item)]
                 self._responsesToolCalls.extend(toolCalls)
+            elif itemType == "reasoning":
+                self._responsesReasoningData["encrypted_content"] = item.get(
+                    "encrypted_content", "")
+                self._responsesReasoningData["id"] = item.get("id", "")
 
         # A response is complete
         elif evtType == "response.completed":
             if self._responsesText or self._responsesReasoning or self._responsesToolCalls:
                 self.addHistory(AiRole.Assistant, self._responsesText,
                                 reasoning=self._responsesReasoning,
-                                toolCalls=self._responsesToolCalls)
+                                toolCalls=self._responsesToolCalls,
+                                reasoningData=self._responsesReasoningData)
 
                 if self._responsesToolCalls:
                     self._emitResponse(
@@ -725,6 +752,7 @@ class AiModelBase(QObject):
 
                 self._responsesText = ""
                 self._responsesReasoning = ""
+                self._responsesReasoningData = {}
                 self._responsesToolCalls = []
 
     def _processResponsesResponseObject(self, data: dict):
