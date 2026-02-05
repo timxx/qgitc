@@ -31,6 +31,7 @@ from qgitc.aitoolconfirmation import (
     ToolConfirmationInterface,
 )
 from qgitc.applicationbase import ApplicationBase
+from qgitc.drawutils import drawRoundedRect
 from qgitc.findconstants import FindFlags
 from qgitc.findpanel import FindPanel
 from qgitc.llm import AiResponse, AiRole
@@ -604,23 +605,19 @@ class AiChatbot(QPlainTextEdit):
 
         schema = ApplicationBase.instance().colorSchema()
         if role == AiRole.User:
-            painter.setPen(schema.UserBlockBorder)
+            borderColor = schema.UserBlockBorder
         elif role == AiRole.Assistant:
-            painter.setPen(schema.AssistantBlockBorder)
+            borderColor = schema.AssistantBlockBorder
         elif role == AiRole.System:
-            painter.setPen(schema.SystemBlockBorder)
+            borderColor = schema.SystemBlockBorder
         elif role == AiRole.Tool:
-            painter.setPen(schema.ToolBlockBorder)
+            borderColor = schema.ToolBlockBorder
 
         if clipTop:
             # make the top out of viewport
             blockAreaRect.setTop(blockAreaRect.top() - self.cornerRadius)
 
-        blockAreaRect.adjust(1, 1, -1, -1)
-        painter.drawRoundedRect(
-            blockAreaRect,
-            self.cornerRadius,
-            self.cornerRadius)
+        drawRoundedRect(painter, blockAreaRect, self.cornerRadius, borderColor)
 
     def _aiBlockBgColor(self, role: Optional[AiRole]):
         schema = ApplicationBase.instance().colorSchema()
