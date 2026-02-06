@@ -15,12 +15,14 @@ from qgitc.agenttools import (
     ApplyPatchParams,
     CreateFileParams,
     GitAddParams,
+    GitBlameParams,
     GitBranchParams,
     GitCheckoutParams,
     GitCherryPickParams,
     GitCommitParams,
     GitCurrentBranchParams,
     GitDiffParams,
+    GitDiffRangeParams,
     GitDiffStagedParams,
     GitDiffUnstagedParams,
     GitLogParams,
@@ -86,11 +88,13 @@ class AgentToolExecutor(QObject):
             "git_status": self._handle_git_status,
             "git_log": self._handle_git_log,
             "git_diff": self._handle_git_diff,
+            "git_diff_range": self._handle_git_diff_range,
             "git_diff_unstaged": self._handle_git_diff_unstaged,
             "git_diff_staged": self._handle_git_diff_staged,
             "git_show": self._handle_git_show,
             "git_show_file": self._handle_git_show_file,
             "git_show_index_file": self._handle_git_show_index_file,
+            "git_blame": self._handle_git_blame,
             "git_current_branch": self._handle_git_current_branch,
             "git_branch": self._handle_git_branch,
             "git_checkout": self._handle_git_checkout,
@@ -199,32 +203,42 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
+        repoDir = validated.repoDir or Git.REPO_DIR
+        args = ["log", "--oneline"]
+        if validated.nth:
+            args += ["-n", "1", "--skip", str(validated.nth - 1)]
+        else:
+            args += ["-n", str(validated.maxCount)]
 
-        if validated.nth is not None:
-            # Fetch exactly one commit, skipping the first (nth-1) commits.
-            # This avoids returning commits 1..(nth-1) to the UI.
-            args = ["log", "--oneline", "-n", "1",
-                    "--skip", str(validated.nth - 1)]
-            ok, output = _runGit(repo_dir, args)
-            if ok:
+        if validated.since:
+            args += ["--since", validated.since]
+        if validated.until:
+            args += ["--until", validated.until]
+        if validated.nameStatus:
+            args.append("--name-status")
+        if validated.rev:
+            args.append(validated.rev)
+
+        if validated.path:
+            if validated.follow:
+                args.append("--follow")
+            args += ["--", validated.path]
+
+        ok, output = _runGit(repoDir, args)
+        if ok:
+            if validated.nth:
                 line = output.splitlines()[0].strip() if output.strip() else ""
                 if line:
                     # Include explicit metadata so the LLM can trust this is the requested position.
-                    return AgentToolResult(
-                        tool_name,
-                        True,
-                        f"nth={validated.nth} (1-based from HEAD): {line}",
-                    )
+                    label = f"nth={validated.nth} (1-based from HEAD)"
+                    if validated.path:
+                        label += f" (filtered by path={validated.path})"
+                    return AgentToolResult(tool_name, True, f"{label}: {line}")
                 return AgentToolResult(tool_name, False, f"No commit found at nth={validated.nth} (1-based from HEAD).")
-            return AgentToolResult(tool_name, False, output)
 
-        args = ["log", "--oneline", "-n", str(validated.maxCount)]
-        if validated.since:
-            args += ["--since", str(validated.since)]
-        if validated.until:
-            args += ["--until", str(validated.until)]
-        ok, output = _runGit(repo_dir, args)
+        if ok and not output.strip():
+            output = "No commits found."
+
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -240,6 +254,35 @@ class AgentToolExecutor(QObject):
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
         ok, output = _runGit(repo_dir, args)
+        if ok and not output.strip():
+            output = "No differences found"
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_diff_range(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = GitDiffRangeParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repoDir = validated.repoDir or Git.REPO_DIR
+
+        args = ["diff"]
+        if validated.nameStatus:
+            args += ["--name-status"]
+        else:
+            args += [f"-U{validated.contextLines}"]
+
+        if validated.findRenames:
+            args += ["-M", "-C"]
+
+        args.append(validated.rev)
+
+        if validated.files:
+            args += ["--"] + [f for f in validated.files]
+
+        ok, output = _runGit(repoDir, args)
+        if ok and not output.strip():
+            output = "No differences found"
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_diff_unstaged(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -328,6 +371,36 @@ class AgentToolExecutor(QObject):
         end_line = validated.endLine if validated.endLine else len(lines)
         output = "\n".join(lines[start_line:end_line])
 
+        return AgentToolResult(tool_name, ok, output)
+
+    def _handle_git_blame(self, tool_name: str, params: Dict) -> AgentToolResult:
+        try:
+            validated = GitBlameParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        repoDir = validated.repoDir or Git.REPO_DIR
+
+        args = ["blame"]
+        if validated.ignoreWhitespace:
+            args.append("-w")
+
+        if validated.startLine and validated.endLine:
+            args += ["-L",
+                     f"{validated.startLine},{validated.endLine}"]
+        elif validated.startLine and not validated.endLine:
+            args += ["-L", f"{validated.startLine},"]
+        elif validated.endLine:
+            args += ["-L", f"1,{validated.endLine}"]
+
+        if validated.rev:
+            args.append(validated.rev)
+
+        args += ["--", validated.path]
+
+        ok, output = _runGit(repoDir, args)
+        if ok and not output.strip():
+            output = "No blame output"
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_current_branch(self, tool_name: str, params: Dict) -> AgentToolResult:

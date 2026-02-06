@@ -43,7 +43,11 @@ class GitStatusParams(BaseModel):
 
 
 class GitLogParams(BaseModel):
-    """Parameters for git_log tool."""
+    """Parameters for git_log tool.
+
+    By default, this is repository-wide history (equivalent to `git log --oneline`).
+    If `path` is provided, this becomes file history (and can follow renames).
+    """
     repoDir: Optional[str] = None
     nth: Optional[int] = Field(
         None, ge=1, le=10000, description="Fetch only the Nth commit from HEAD (1-based). If set, returns exactly one commit.")
@@ -53,13 +57,40 @@ class GitLogParams(BaseModel):
         None, description="Show commits more recent than a specific date (e.g., '2 weeks ago', '2023-01-01').")
     until: Optional[str] = Field(
         None, description="Show commits older than a specific date.")
+    rev: Optional[str] = Field(
+        None,
+        description=(
+            "Optional revision/range to start from (e.g. 'HEAD', a SHA, 'main', or 'A..B'). "
+            "If omitted, uses the current HEAD."
+        ),
+    )
+    path: Optional[str] = Field(
+        None,
+        description=(
+            "Optional file path to filter history by. "
+            "When set, git_log becomes file history (equivalent to `git log -- <path>`)."
+        ),
+    )
+    follow: bool = Field(
+        True,
+        description=(
+            "When path is set: follow renames (equivalent to --follow). "
+            "Ignored when path is not set."
+        ),
+    )
+    nameStatus: bool = Field(
+        False,
+        description=(
+            "When set: include --name-status (helps detect renames/moves)."
+        ),
+    )
 
 
 class GitDiffParams(BaseModel):
     """Parameters for git_diff tool."""
     repoDir: Optional[str] = None
     rev: str = Field(...,
-                     description="The commit SHA or revision range to diff")
+                     description="A single commit-ish to diff (typically a commit SHA).")
     files: Optional[List[str]] = Field(
         None, description="If provided, limits the diff to these files.")
 
@@ -110,6 +141,46 @@ class GitShowIndexFileParams(BaseModel):
         None, ge=1, description="Starting line number (1-based). If not provided, starts from the beginning.")
     endLine: Optional[int] = Field(
         None, ge=1, description="Ending line number (1-based). If not provided, reads until the end.")
+
+
+class GitBlameParams(BaseModel):
+    """Parameters for git_blame tool."""
+    repoDir: Optional[str] = None
+    path: str = Field(...,
+                      description="File path within the repository to blame.")
+    rev: Optional[str] = Field(
+        None,
+        description=(
+            "Optional revision to blame (e.g. 'HEAD', a SHA, or a branch name). "
+            "If omitted, defaults to HEAD."
+        ),
+    )
+    startLine: Optional[int] = Field(
+        None, ge=1, description="Starting line number (1-based). If not provided, starts from the beginning.")
+    endLine: Optional[int] = Field(
+        None, ge=1, description="Ending line number (1-based). If not provided, blames until the end.")
+    ignoreWhitespace: bool = Field(
+        True, description="If true, ignore whitespace changes (-w).")
+
+
+class GitDiffRangeParams(BaseModel):
+    """Parameters for git_diff_range tool."""
+    repoDir: Optional[str] = None
+    rev: str = Field(
+        ...,
+        description=(
+            "A git diff revision spec (e.g. 'HEAD', 'A..B', 'A...B'). "
+            "Note: for two explicit revisions, prefer using a range like 'A..B'."
+        ),
+    )
+    files: Optional[List[str]] = Field(
+        None, description="If provided, limits the diff to these files.")
+    nameStatus: bool = Field(
+        False, description="If true, show only file name changes (with rename detection).")
+    contextLines: int = Field(
+        3, ge=0, le=20, description="Number of context lines for the diff (default 3).")
+    findRenames: bool = Field(
+        True, description="Enable rename/copy detection (-M -C).")
 
 
 class GitCurrentBranchParams(BaseModel):
@@ -287,13 +358,19 @@ class AgentToolRegistry:
             ),
             createToolFromModel(
                 name="git_log",
-                description="Show commit logs. Can filter by date range and limit number of commits.",
+                description=(
+                    "Show commit history. By default shows repository-wide history. "
+                    "If you pass `path`, shows history for that file and can follow renames."
+                ),
                 toolType=ToolType.READ_ONLY,
                 modeClass=GitLogParams,
             ),
             createToolFromModel(
                 name="git_diff",
-                description="Get the diff of a specific commit",
+                description=(
+                    "Get the diff (patch) introduced by a specific commit (commit-ish). "
+                    "For comparing two revisions/ranges (A..B / A...B) or investigating renames, use git_diff_range."
+                ),
                 toolType=ToolType.READ_ONLY,
                 modeClass=GitDiffParams,
             ),
@@ -334,6 +411,24 @@ class AgentToolRegistry:
                 ),
                 toolType=ToolType.READ_ONLY,
                 modeClass=GitShowIndexFileParams,
+            ),
+            createToolFromModel(
+                name="git_blame",
+                description=(
+                    "Show blame information for a file (optionally for a line range). "
+                    "Useful for understanding intent/ownership around conflicted lines."
+                ),
+                toolType=ToolType.READ_ONLY,
+                modeClass=GitBlameParams,
+            ),
+            createToolFromModel(
+                name="git_diff_range",
+                description=(
+                    "Show git diff for a revision spec or range (e.g. A..B). "
+                    "Supports rename/copy detection and name-status mode for rename/move investigation."
+                ),
+                toolType=ToolType.READ_ONLY,
+                modeClass=GitDiffRangeParams,
             ),
             createToolFromModel(
                 name="git_current_branch",
