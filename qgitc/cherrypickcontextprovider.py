@@ -25,6 +25,9 @@ class CherryPickContextProvider(AiChatContextProvider):
         self._operation: str = ""
         self._conflictFiles: List[str] = []
 
+    def canAddContext(self):
+        return False
+
     def setBaseDirs(self, *, targetBaseRepoDir: str, sourceBaseRepoDir: str):
         self._targetBaseRepoDir = targetBaseRepoDir or ""
         self._sourceBaseRepoDir = sourceBaseRepoDir or ""
