@@ -2157,27 +2157,20 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         if next + length < len(text) and text[next + length] == c:
             return currentPos
 
-        # get existing format if any
-        # we want to append to the existing format, not overwrite it
+        # Get existing format at this position (e.g. headings apply a
+        # QTextFormat.FontSizeAdjustment property, not an absolute point size).
+        # We want to *preserve* that formatting and only layer code/strike
+        # styling on top.
         fmt = self._formatPy(start + 1)
-        inlineFmt = QTextCharFormat()
-
-        # select appropriate format for current text
-        if c != '~':
-            inlineFmt = QTextCharFormat(
-                self._formats[HighlighterState.InlineCodeBlock])
-
-        # make sure we don't change font size / existing formatting
-        if fmt.fontPointSize() > 0:
-            inlineFmt.setFontPointSize(fmt.fontPointSize())
+        inlineFmt = QTextCharFormat(fmt)
 
         if c == '~':
             inlineFmt.setFontStrikeOut(True)
-            # we don't want these properties for "inline code span"
-            inlineFmt.setFontItalic(fmt.fontItalic())
-            inlineFmt.setFontWeight(fmt.fontWeight())
-            inlineFmt.setFontUnderline(fmt.fontUnderline())
-            inlineFmt.setUnderlineStyle(fmt.underlineStyle())
+        else:
+            # inline code span: keep existing font sizing/styling (including
+            # heading size adjustment) and only apply inline-code coloring
+            inlineCodeFmt = self._formats[HighlighterState.InlineCodeBlock]
+            inlineFmt.setForeground(inlineCodeFmt.foreground())
 
         if c == '`':
             self._ranges.setdefault(self.currentBlock().blockNumber(), []).append(

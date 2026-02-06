@@ -1720,3 +1720,26 @@ Line break above.
             self.edit.setPlainText(text)
         except Exception as e:
             self.fail(f"Setting plain text caused an exception: {e}")
+
+    def test_inline_font_size(self):
+        text = "## hello `world`!"
+        self.edit.setPlainText(text)
+        cursor = self.edit.textCursor()
+        self.edit.show()
+
+        cursor.setPosition(3)
+        cursor.setPosition(8, QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "hello")
+        fmtHello = self._getFormatForSelection(cursor)
+
+        cursor.setPosition(10)
+        cursor.setPosition(15, QTextCursor.KeepAnchor)
+        self.assertEqual(cursor.selectedText(), "world")
+        fmtWorld = self._getFormatForSelection(cursor)
+
+        fontHello = fmtHello.font()
+        fontWorld = fmtWorld.font()
+        if fontHello.pointSize() <= 0 or fontWorld.pointSize() <= 0:
+            self.assertEqual(fontHello.pixelSize(), fontWorld.pixelSize())
+        else:
+            self.assertEqual(fontHello.pointSize(), fontWorld.pointSize())
