@@ -48,13 +48,53 @@ from qgitc.tools.readfile import (
 from qgitc.tools.utils import detectBom, runGit
 
 
-def _runGit(repo_dir: str, args: List[str]) -> Tuple[bool, str]:
-    if not repo_dir:
-        return False, "No repository is currently opened."
-    if not os.path.isdir(repo_dir):
-        return False, f"Invalid repo_dir: {repo_dir}"
+def _resolveToolRepoDir(repoDir: Optional[str]) -> Tuple[bool, str]:
+    """Resolve an optional repoDir coming from a tool call.
 
-    ok, out, err = runGit(repo_dir, [str(a) for a in args], text=True)
+    - If repoDir is empty/None: uses Git.REPO_DIR
+    - If repoDir is relative: resolves it against Git.REPO_DIR
+    - If repoDir is absolute: must stay within Git.REPO_DIR
+
+    Returns (ok, abs_repo_dir_or_error).
+    """
+
+    baseRepoDir = Git.REPO_DIR
+    if not baseRepoDir:
+        return False, "No repository is currently opened."
+
+    baseRepoDir = os.path.abspath(baseRepoDir)
+    if not os.path.isdir(baseRepoDir):
+        return False, f"Invalid repoDir: {baseRepoDir}"
+
+    p = (repoDir or "").strip().strip('"').strip("'")
+    p = normalizeToolFilePath(p) if p else ""
+
+    candidate = baseRepoDir if not p else (
+        p if os.path.isabs(p) else os.path.join(baseRepoDir, p))
+    absRepoDir = os.path.abspath(candidate)
+
+    try:
+        baseReal = os.path.realpath(baseRepoDir)
+        absReal = os.path.realpath(absRepoDir)
+        common = os.path.commonpath([baseReal, absReal])
+    except Exception:
+        return False, f"Invalid repoDir: {repoDir}"
+
+    if common != baseReal:
+        return False, f"Refusing to access paths outside the repository: {repoDir}"
+
+    if not os.path.isdir(absRepoDir):
+        return False, f"Invalid repoDir: {absRepoDir}"
+
+    return True, absRepoDir
+
+
+def _runGit(repoDir: Optional[str], args: List[str]) -> Tuple[bool, str]:
+    okRepo, absRepoDirOrErr = _resolveToolRepoDir(repoDir)
+    if not okRepo:
+        return False, absRepoDirOrErr
+
+    ok, out, err = runGit(absRepoDirOrErr, [str(a) for a in args], text=True)
     output = out.strip("\n")
 
     # Only include stderr when the command fails.
@@ -110,36 +150,36 @@ class AgentToolExecutor(QObject):
         }
 
     @staticmethod
-    def _normalize_patch_path(path: str) -> str:
+    def _normalizePatchPath(path: str) -> str:
         # Accept Windows paths from tool output and normalize quotes.
         p = (path or "").strip().strip('"').strip("'")
         return p
 
     @staticmethod
-    def _resolve_repo_path(repo_dir: str, file_path: str) -> Tuple[bool, str]:
-        """Resolve file_path against repo_dir and ensure it stays within the repo."""
-        if not repo_dir or not os.path.isdir(repo_dir):
-            return False, f"Invalid repo_dir: {repo_dir}"
+    def _resolveRepoPath(repoDir: str, filePath: str) -> Tuple[bool, str]:
+        """Resolve filePath against repoDir and ensure it stays within the repo."""
+        if not repoDir or not os.path.isdir(repoDir):
+            return False, f"Invalid repo_dir: {repoDir}"
 
-        if os.name == 'nt' and file_path.startswith('/') and file_path.find(':') != 1:
+        if os.name == 'nt' and filePath.startswith('/') and filePath.find(':') != 1:
             # Handle Unix-style absolute paths on Windows (e.g. /C:/path/to/file).
-            file_path = file_path.lstrip('/')
+            filePath = filePath.lstrip('/')
 
-        if os.path.isabs(file_path):
-            abs_path = os.path.abspath(file_path)
+        if os.path.isabs(filePath):
+            absPath = os.path.abspath(filePath)
         else:
-            abs_path = os.path.abspath(os.path.join(repo_dir, file_path))
+            absPath = os.path.abspath(os.path.join(repoDir, filePath))
 
         try:
-            repo_root = os.path.abspath(repo_dir)
-            common = os.path.commonpath([repo_root, abs_path])
+            repoRoot = os.path.abspath(repoDir)
+            common = os.path.commonpath([repoRoot, absPath])
         except Exception:
-            return False, f"Invalid file path: {file_path}"
+            return False, f"Invalid file path: {filePath}"
 
-        if common != repo_root:
-            return False, f"Refusing to access paths outside the repository: {file_path}"
+        if common != repoRoot:
+            return False, f"Refusing to access paths outside the repository: {filePath}"
 
-        return True, abs_path
+        return True, absPath
 
     def executeAsync(self, tool_name: str, params: Dict) -> bool:
         if self._inflight and not self._inflight.done():
@@ -181,11 +221,10 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["status", "--porcelain=v1", "-b"]
         if not validated.untracked:
             args.append("--untracked-files=no")
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if ok:
             # Porcelain v1 with -b typically includes a branch line like:
             #   ## main...origin/main [ahead 1]
@@ -203,7 +242,6 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repoDir = validated.repoDir or Git.REPO_DIR
         args = ["log", "--oneline"]
         if validated.nth:
             args += ["-n", "1", "--skip", str(validated.nth - 1)]
@@ -224,7 +262,7 @@ class AgentToolExecutor(QObject):
                 args.append("--follow")
             args += ["--", validated.path]
 
-        ok, output = _runGit(repoDir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if ok:
             if validated.nth:
                 line = output.splitlines()[0].strip() if output.strip() else ""
@@ -247,13 +285,12 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["diff-tree", "-r", "--root", validated.rev,
                 "-p", "--textconv", "--submodule",
                 "-C", "--no-commit-id", "-U3"]
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if ok and not output.strip():
             output = "No differences found"
         return AgentToolResult(tool_name, ok, output)
@@ -263,8 +300,6 @@ class AgentToolExecutor(QObject):
             validated = GitDiffRangeParams(**params)
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
-
-        repoDir = validated.repoDir or Git.REPO_DIR
 
         args = ["diff"]
         if validated.nameStatus:
@@ -280,7 +315,7 @@ class AgentToolExecutor(QObject):
         if validated.files:
             args += ["--"] + [f for f in validated.files]
 
-        ok, output = _runGit(repoDir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if ok and not output.strip():
             output = "No differences found"
         return AgentToolResult(tool_name, ok, output)
@@ -291,7 +326,6 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         if validated.nameOnly:
             args = ["diff", "--name-only"]
         else:
@@ -299,7 +333,7 @@ class AgentToolExecutor(QObject):
                     "--submodule", "-C", "-U3"]
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if not output:
             output = "No changed files found"
         return AgentToolResult(tool_name, ok, output)
@@ -310,7 +344,6 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         if validated.nameOnly:
             args = ["diff", "--name-only", "--cached"]
         else:
@@ -319,7 +352,7 @@ class AgentToolExecutor(QObject):
                     "--submodule", "-C", "-U3"]
         if validated.files:
             args += ["--"] + [str(f) for f in validated.files]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if not output:
             output = "No changed files found"
         return AgentToolResult(tool_name, ok, output)
@@ -330,9 +363,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["show", str(validated.rev)]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_show_file(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -341,9 +373,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         spec = f"{validated.rev}:{validated.path}"
-        ok, output = _runGit(repo_dir, ["show", spec])
+        ok, output = _runGit(validated.repoDir, ["show", spec])
         if not ok:
             return AgentToolResult(tool_name, ok, output)
 
@@ -360,9 +391,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         spec = f":{validated.path}"
-        ok, output = _runGit(repo_dir, ["show", spec])
+        ok, output = _runGit(validated.repoDir, ["show", spec])
         if not ok:
             return AgentToolResult(tool_name, ok, output)
 
@@ -378,8 +408,6 @@ class AgentToolExecutor(QObject):
             validated = GitBlameParams(**params)
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
-
-        repoDir = validated.repoDir or Git.REPO_DIR
 
         args = ["blame"]
         if validated.ignoreWhitespace:
@@ -398,7 +426,7 @@ class AgentToolExecutor(QObject):
 
         args += ["--", validated.path]
 
-        ok, output = _runGit(repoDir, args)
+        ok, output = _runGit(validated.repoDir, args)
         if ok and not output.strip():
             output = "No blame output"
         return AgentToolResult(tool_name, ok, output)
@@ -409,17 +437,16 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         # Prefer a cheap command that returns only the current branch name.
         ok, output = _runGit(
-            repo_dir, ["rev-parse", "--abbrev-ref", "HEAD"])
+            validated.repoDir, ["rev-parse", "--abbrev-ref", "HEAD"])
         if not ok:
             return AgentToolResult(tool_name, False, output)
         branch = output.strip()
         if not branch:
             return AgentToolResult(tool_name, False, "Failed to determine current branch.")
         if branch == "HEAD":
-            ok2, sha = _runGit(repo_dir, ["rev-parse", "--short", "HEAD"])
+            ok2, sha = _runGit(validated.repoDir, ["rev-parse", "--short", "HEAD"])
             sha = (sha or "").strip() if ok2 else ""
             msg = f"detached HEAD" + (f" at {sha}" if sha else "")
             return AgentToolResult(tool_name, True, msg)
@@ -431,9 +458,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["branch"] + (["-a"] if validated.all else [])
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_checkout(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -442,9 +468,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["checkout", str(validated.branch)]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_cherry_pick(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -453,9 +478,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["cherry-pick"] + [str(c) for c in validated.commits]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_commit(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -464,9 +488,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["commit", "-m", str(validated.message), "--no-edit"]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_git_add(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -475,9 +498,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = validated.repoDir or Git.REPO_DIR
         args = ["add"] + [str(f) for f in validated.files]
-        ok, output = _runGit(repo_dir, args)
+        ok, output = _runGit(validated.repoDir, args)
         return AgentToolResult(tool_name, ok, output)
 
     def _handle_run_command(self, tool_name: str, params: Dict) -> AgentToolResult:
@@ -585,10 +607,12 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repoDir = validated.repoDir or Git.REPO_DIR
+        okRepo, repoDirOrErr = _resolveToolRepoDir(validated.repoDir)
+        if not okRepo:
+            return AgentToolResult(tool_name, False, repoDirOrErr)
         try:
             output = grepSearch(
-                repoDir=repoDir,
+                repoDir=repoDirOrErr,
                 query=validated.query,
                 isRegexp=validated.isRegexp,
                 includeIgnoredFiles=validated.includeIgnoredFiles,
@@ -606,26 +630,26 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = Git.REPO_DIR
-        file_path = self._normalize_patch_path(validated.filePath)
-        ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+        repoDir = Git.REPO_DIR
+        filePath = self._normalizePatchPath(validated.filePath)
+        ok, absPath = self._resolveRepoPath(repoDir, filePath)
         if not ok:
-            return AgentToolResult(tool_name, False, abs_path)
+            return AgentToolResult(tool_name, False, absPath)
 
-        if os.path.exists(abs_path):
-            return AgentToolResult(tool_name, False, f"File already exists: {abs_path}")
+        if os.path.exists(absPath):
+            return AgentToolResult(tool_name, False, f"File already exists: {absPath}")
 
-        parent = os.path.dirname(abs_path)
+        parent = os.path.dirname(absPath)
         try:
             os.makedirs(parent, exist_ok=True)
         except Exception as e:
             return AgentToolResult(tool_name, False, f"Failed to create directories: {e}")
 
         try:
-            with open(abs_path, 'w', encoding='utf-8', newline='\n') as f:
+            with open(absPath, 'w', encoding='utf-8', newline='\n') as f:
                 f.write(validated.content)
-            rel = os.path.relpath(abs_path, repo_dir)
-            size = os.path.getsize(abs_path)
+            rel = os.path.relpath(absPath, repoDir)
+            size = os.path.getsize(absPath)
             return AgentToolResult(tool_name, True, f"Created {rel} ({size} bytes).")
         except Exception as e:
             return AgentToolResult(tool_name, False, f"Failed to create file: {e}")
@@ -636,8 +660,8 @@ class AgentToolExecutor(QObject):
         except ValidationError as e:
             return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
 
-        repo_dir = Git.REPO_DIR
-        if not repo_dir or not os.path.isdir(repo_dir):
+        repoDir = Git.REPO_DIR
+        if not repoDir or not os.path.isdir(repoDir):
             return AgentToolResult(tool_name, False, "No repository is currently opened.")
 
         patch_text = (validated.input or "").strip("\ufeff")
@@ -678,36 +702,36 @@ class AgentToolExecutor(QObject):
             return bom, encoding, text
 
         def _open_file(path: str) -> str:
-            file_path = self._normalize_patch_path(path)
-            ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+            filePath = self._normalizePatchPath(path)
+            ok, absPath = self._resolveRepoPath(repoDir, filePath)
             if not ok:
-                raise DiffError(abs_path)
+                raise DiffError(absPath)
 
-            if not os.path.isfile(abs_path):
-                raise DiffError(f"File does not exist: {file_path}")
+            if not os.path.isfile(absPath):
+                raise DiffError(f"File does not exist: {filePath}")
 
-            bom, encoding, text = _probe_file_format(abs_path)
+            bom, encoding, text = _probe_file_format(absPath)
             # Cache format by the repo-relative patch path.
-            file_format[file_path] = (bom, encoding)
+            file_format[filePath] = (bom, encoding)
             return text
 
         def _write_file(path: str, content: str, source_path: Optional[str] = None):
-            file_path = self._normalize_patch_path(path)
-            ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+            filePath = self._normalizePatchPath(path)
+            ok, absPath = self._resolveRepoPath(repoDir, filePath)
             if not ok:
-                raise DiffError(abs_path)
-            parent = os.path.dirname(abs_path)
+                raise DiffError(absPath)
+            parent = os.path.dirname(absPath)
             os.makedirs(parent, exist_ok=True)
 
             # Determine target format.
-            fmt = file_format.get(file_path)
+            fmt = file_format.get(filePath)
             if fmt is None and source_path:
-                src = self._normalize_patch_path(source_path)
+                src = self._normalizePatchPath(source_path)
                 fmt = file_format.get(src)
 
-            if fmt is None and os.path.isfile(abs_path):
+            if fmt is None and os.path.isfile(absPath):
                 # Patch may write without ever having opened the file.
-                bom, encoding, _ = _probe_file_format(abs_path)
+                bom, encoding, _ = _probe_file_format(absPath)
                 fmt = (bom, encoding)
 
             if fmt is None:
@@ -724,23 +748,23 @@ class AgentToolExecutor(QObject):
                 payload = content.encode(enc_for_bytes)
             except UnicodeEncodeError as e:
                 raise DiffError(
-                    f"Failed to encode {file_path} as {enc_for_bytes}: {e}")
+                    f"Failed to encode {filePath} as {enc_for_bytes}: {e}")
 
-            with open(abs_path, 'wb') as f:
+            with open(absPath, 'wb') as f:
                 if bom:
                     f.write(bom)
                 f.write(payload)
 
             # Update cache to reflect what we just wrote.
-            file_format[file_path] = (bom, encoding)
+            file_format[filePath] = (bom, encoding)
 
         def _remove_file(path: str):
-            file_path = self._normalize_patch_path(path)
-            ok, abs_path = self._resolve_repo_path(repo_dir, file_path)
+            filePath = self._normalizePatchPath(path)
+            ok, absPath = self._resolveRepoPath(repoDir, filePath)
             if not ok:
-                raise DiffError(abs_path)
-            if os.path.isfile(abs_path):
-                os.unlink(abs_path)
+                raise DiffError(absPath)
+            if os.path.isfile(absPath):
+                os.unlink(absPath)
 
         try:
             message = process_patch(
