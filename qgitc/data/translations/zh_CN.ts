@@ -32,37 +32,37 @@
 <context>
     <name>AiChatContextPanel</name>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="48"/>
+        <location filename="../../aichatcontextpanel.py" line="49"/>
         <source>Ask anything...</source>
         <translation>随便问...</translation>
     </message>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="83"/>
+        <location filename="../../aichatcontextpanel.py" line="84"/>
         <source>Configure Chat</source>
         <translation>配置聊天</translation>
     </message>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="91"/>
+        <location filename="../../aichatcontextpanel.py" line="92"/>
         <source>Send</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="110"/>
+        <location filename="../../aichatcontextpanel.py" line="111"/>
         <source>Add context</source>
         <translation>添加上下文</translation>
     </message>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="348"/>
+        <location filename="../../aichatcontextpanel.py" line="352"/>
         <source>Agent</source>
         <translation>Agent</translation>
     </message>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="349"/>
+        <location filename="../../aichatcontextpanel.py" line="353"/>
         <source>Chat</source>
         <translation>对话</translation>
     </message>
     <message>
-        <location filename="../../aichatcontextpanel.py" line="350"/>
+        <location filename="../../aichatcontextpanel.py" line="354"/>
         <source>Code Review</source>
         <translation>代码审查</translation>
     </message>
@@ -233,74 +233,74 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwidget.py" line="404"/>
+        <location filename="../../aichatwidget.py" line="457"/>
         <source>Go Back</source>
         <translation>返回</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="413"/>
+        <location filename="../../aichatwidget.py" line="466"/>
         <source>Pick Conversation</source>
         <translation>选择对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="534"/>
+        <location filename="../../aichatwidget.py" line="587"/>
         <source>New Conversation</source>
         <translation>新对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="833"/>
-        <location filename="../../aichatwidget.py" line="1515"/>
+        <location filename="../../aichatwidget.py" line="886"/>
+        <location filename="../../aichatwidget.py" line="1568"/>
         <source>🧠 Reasoning</source>
         <translation>🧠 推理</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="869"/>
-        <location filename="../../aichatwidget.py" line="928"/>
-        <location filename="../../aichatwidget.py" line="1608"/>
+        <location filename="../../aichatwidget.py" line="922"/>
+        <location filename="../../aichatwidget.py" line="981"/>
+        <location filename="../../aichatwidget.py" line="1661"/>
         <source>Unknown tool requested by model</source>
         <translation>模型请求了未知的工具</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="963"/>
+        <location filename="../../aichatwidget.py" line="1016"/>
         <source>{} run `{}`</source>
         <translation>{} 运行 `{}`</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="999"/>
+        <location filename="../../aichatwidget.py" line="1052"/>
         <source>A tool is already running.</source>
         <translation>已有工具正在运行。</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1011"/>
-        <location filename="../../aichatwidget.py" line="1176"/>
+        <location filename="../../aichatwidget.py" line="1064"/>
+        <location filename="../../aichatwidget.py" line="1229"/>
         <source>Failed to start tool execution.</source>
         <translation>启动工具执行失败。</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1020"/>
-        <location filename="../../aichatwidget.py" line="1075"/>
+        <location filename="../../aichatwidget.py" line="1073"/>
+        <location filename="../../aichatwidget.py" line="1128"/>
         <source>✗ `{}` skipped</source>
         <translation>✗ `{}` 已跳过</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1054"/>
-        <location filename="../../aichatwidget.py" line="1589"/>
+        <location filename="../../aichatwidget.py" line="1107"/>
+        <location filename="../../aichatwidget.py" line="1642"/>
         <source>✗ `{}` cancelled</source>
         <translation>✗ `{}` 已取消</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1055"/>
+        <location filename="../../aichatwidget.py" line="1108"/>
         <source>tool</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1065"/>
-        <location filename="../../aichatwidget.py" line="1599"/>
+        <location filename="../../aichatwidget.py" line="1118"/>
+        <location filename="../../aichatwidget.py" line="1652"/>
         <source>Cancelled</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1121"/>
+        <location filename="../../aichatwidget.py" line="1174"/>
         <source>{} `{}` output</source>
         <translation>{} `{}` 输出</translation>
     </message>
@@ -308,7 +308,7 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWindow</name>
     <message>
-        <location filename="../../aichatwindow.py" line="12"/>
+        <location filename="../../aichatwindow.py" line="13"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
@@ -425,22 +425,22 @@ Commit cancelled or failed</source>
 <context>
     <name>AiResolveHandler</name>
     <message>
-        <location filename="../../resolver/handlers/ai.py" line="97"/>
+        <location filename="../../resolver/handlers/ai.py" line="102"/>
         <source>Unhandled (binary file): {path}</source>
         <translation>未处理（二进制文件）：{path}</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/ai.py" line="115"/>
+        <location filename="../../resolver/handlers/ai.py" line="120"/>
         <source>Assistant is resolving {path}</source>
         <translation>助手正在解决 {path}</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/ai.py" line="213"/>
+        <location filename="../../resolver/handlers/ai.py" line="220"/>
         <source>Resolved {path}</source>
         <translation>已解决 {path}</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/ai.py" line="221"/>
+        <location filename="../../resolver/handlers/ai.py" line="228"/>
         <source>Resolved by assistant</source>
         <translation>由助手解决</translation>
     </message>
@@ -709,37 +709,42 @@ What do you want to do?</source>
 <context>
     <name>CherryPickProgressDialog</name>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="41"/>
+        <location filename="../../cherrypickprogressdialog.py" line="42"/>
         <source>Cherry-pick Progress</source>
         <translation>拣选进度</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="90"/>
+        <location filename="../../cherrypickprogressdialog.py" line="93"/>
         <source>Ready</source>
         <translation>已准备好</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="278"/>
+        <location filename="../../cherrypickprogressdialog.py" line="119"/>
+        <source>Open report</source>
+        <translation>打开报告</translation>
+    </message>
+    <message>
+        <location filename="../../cherrypickprogressdialog.py" line="304"/>
         <source>Conflicts detected; resolving…</source>
         <translation>检测到冲突；正在解决…</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="281"/>
+        <location filename="../../cherrypickprogressdialog.py" line="307"/>
         <source>Patch conflicts detected; resolving…</source>
         <translation>检测到补丁冲突；正在解决…</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="296"/>
+        <location filename="../../cherrypickprogressdialog.py" line="322"/>
         <source>Aborted</source>
         <translation>已中止</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="298"/>
+        <location filename="../../cherrypickprogressdialog.py" line="324"/>
         <source>Completed</source>
         <translation>已完成</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="300"/>
+        <location filename="../../cherrypickprogressdialog.py" line="326"/>
         <source>Failed</source>
         <translation>失败</translation>
     </message>
@@ -747,89 +752,89 @@ What do you want to do?</source>
 <context>
     <name>CherryPickSession</name>
     <message>
-        <location filename="../../cherrypicksession.py" line="151"/>
+        <location filename="../../cherrypicksession.py" line="155"/>
         <source>Starting cherry-pick…</source>
         <translation>开始拣选…</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="157"/>
+        <location filename="../../cherrypicksession.py" line="161"/>
         <source>Abort requested; stopping after current step…</source>
         <translation>请求中止；当前步骤后停止…</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="163"/>
-        <location filename="../../cherrypicksession.py" line="222"/>
-        <location filename="../../cherrypicksession.py" line="311"/>
-        <location filename="../../cherrypicksession.py" line="464"/>
-        <location filename="../../cherrypicksession.py" line="480"/>
+        <location filename="../../cherrypicksession.py" line="167"/>
+        <location filename="../../cherrypicksession.py" line="226"/>
+        <location filename="../../cherrypicksession.py" line="315"/>
+        <location filename="../../cherrypicksession.py" line="469"/>
+        <location filename="../../cherrypicksession.py" line="485"/>
         <source>Aborted</source>
         <translation>已中止</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="167"/>
+        <location filename="../../cherrypicksession.py" line="171"/>
         <source>Done</source>
         <translation>完成</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="176"/>
+        <location filename="../../cherrypicksession.py" line="180"/>
         <source>Local changes are not supported in this mode</source>
         <translation>此模式不支持本地更改</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="183"/>
+        <location filename="../../cherrypicksession.py" line="187"/>
         <source>Applying local changes…</source>
         <translation>正在应用本地更改…</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="196"/>
+        <location filename="../../cherrypicksession.py" line="200"/>
         <source>Failed to apply local changes</source>
         <translation>应用本地更改失败</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="204"/>
+        <location filename="../../cherrypicksession.py" line="208"/>
         <source>Cherry-picking {0}…</source>
         <translation>正在拣选 {0}…</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="226"/>
-        <location filename="../../cherrypicksession.py" line="273"/>
+        <location filename="../../cherrypicksession.py" line="230"/>
+        <location filename="../../cherrypicksession.py" line="277"/>
         <source>Cherry-pick failed</source>
         <translation>拣选失败</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="248"/>
+        <location filename="../../cherrypicksession.py" line="252"/>
         <source>Picking from another repo…</source>
         <translation>从另一个仓库拣选…</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="285"/>
+        <location filename="../../cherrypicksession.py" line="289"/>
         <source>No patch content generated</source>
         <translation>未生成补丁内容</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="315"/>
-        <location filename="../../cherrypicksession.py" line="350"/>
+        <location filename="../../cherrypicksession.py" line="319"/>
+        <location filename="../../cherrypicksession.py" line="354"/>
         <source>Pick failed</source>
         <translation>拣选失败</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="379"/>
+        <location filename="../../cherrypicksession.py" line="384"/>
         <source>Resolve failed</source>
         <translation>解决失败</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="397"/>
-        <location filename="../../cherrypicksession.py" line="404"/>
+        <location filename="../../cherrypicksession.py" line="402"/>
+        <location filename="../../cherrypicksession.py" line="409"/>
         <source>Resolve needs user action</source>
         <translation>解决需要用户操作</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="410"/>
+        <location filename="../../cherrypicksession.py" line="415"/>
         <source>Finalizing…</source>
         <translation>正在完成…</translation>
     </message>
     <message>
-        <location filename="../../cherrypicksession.py" line="453"/>
+        <location filename="../../cherrypicksession.py" line="458"/>
         <source>Finalize failed</source>
         <translation>完成失败</translation>
     </message>
@@ -2491,142 +2496,147 @@ To avoid interrupting it, you can run the review in the standalone window instea
 <context>
     <name>MergeWidget</name>
     <message>
-        <location filename="../../mergewidget.py" line="92"/>
+        <location filename="../../mergewidget.py" line="93"/>
         <source>Conflict List</source>
         <translation>冲突列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="148"/>
+        <location filename="../../mergewidget.py" line="150"/>
         <source>Click to refresh the list</source>
         <translation>点击以刷新列表</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="149"/>
+        <location filename="../../mergewidget.py" line="151"/>
         <source>Continuous resolve</source>
         <translation>持续解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="150"/>
+        <location filename="../../mergewidget.py" line="152"/>
         <source>Auto-resolve</source>
         <translation>自动解决</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="152"/>
+        <location filename="../../mergewidget.py" line="154"/>
         <source>Use assistant to auto-resolve conflicts if possible</source>
         <translation>如果可能，使用助手自动解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="153"/>
+        <location filename="../../mergewidget.py" line="155"/>
         <source>Resolve</source>
         <translation>解决冲突</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="216"/>
+        <location filename="../../mergewidget.py" line="176"/>
+        <source>Auto-resolve record</source>
+        <translation>自动解决记录</translation>
+    </message>
+    <message>
+        <location filename="../../mergewidget.py" line="230"/>
         <source>&amp;Resolve</source>
         <translation>解决冲突(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="224"/>
+        <location filename="../../mergewidget.py" line="238"/>
         <source>Use &amp;ours</source>
         <translation>使用我们的(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="227"/>
+        <location filename="../../mergewidget.py" line="241"/>
         <source>Use &amp;theirs</source>
         <translation>使用他们的(&amp;T)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="294"/>
+        <location filename="../../mergewidget.py" line="316"/>
         <source>You are resolving this file, please close it first.</source>
         <translation>您正在处理此文件的冲突，请先关闭它。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="313"/>
+        <location filename="../../mergewidget.py" line="335"/>
         <source>You can&apos;t refresh before close the merge window.</source>
         <translation>您不能在合并窗口打开时刷新列表。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="502"/>
+        <location filename="../../mergewidget.py" line="524"/>
         <source>Use &amp;created</source>
         <translation>使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="502"/>
+        <location filename="../../mergewidget.py" line="524"/>
         <source>Use &amp;modified</source>
         <translation>使用修改的(&amp;)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="504"/>
+        <location filename="../../mergewidget.py" line="526"/>
         <source>&amp;Deleted file</source>
         <translation>删除文件(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="529"/>
+        <location filename="../../mergewidget.py" line="551"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="530"/>
+        <location filename="../../mergewidget.py" line="552"/>
         <source>Use &amp;remote</source>
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="719"/>
+        <location filename="../../mergewidget.py" line="744"/>
         <source>No resolve handler available</source>
         <translation>没有可用的解决处理程序</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="427"/>
+        <location filename="../../mergewidget.py" line="449"/>
         <source>All resolved!</source>
         <translation>冲突解决完毕！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="460"/>
+        <location filename="../../mergewidget.py" line="482"/>
         <source>Resolve reach to the end of list, do you want to resolve from beginning?</source>
         <translation>已处理到列表末尾，您是否需要从头开始解决冲突？</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="553"/>
+        <location filename="../../mergewidget.py" line="575"/>
         <source>Assistant</source>
         <translation>助手</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="559"/>
+        <location filename="../../mergewidget.py" line="581"/>
         <source>Merge Tool</source>
         <translation>合并工具</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="570"/>
+        <location filename="../../mergewidget.py" line="592"/>
         <source>Conflicts remain; please resolve manually.</source>
         <translation>仍有冲突，请手动解决。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="574"/>
+        <location filename="../../mergewidget.py" line="596"/>
         <source>Resolve failed</source>
         <translation>解决失败</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="630"/>
+        <location filename="../../mergewidget.py" line="652"/>
         <source>This file is already resolved.</source>
         <translation>此文件冲突已处理完。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="635"/>
+        <location filename="../../mergewidget.py" line="657"/>
         <source>Please resolve current conflicts before start a new one.</source>
         <translation>请先处理完当前文件冲突再处理新文件的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="650"/>
+        <location filename="../../mergewidget.py" line="672"/>
         <source>No repository directory</source>
         <translation>无仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="708"/>
+        <location filename="../../mergewidget.py" line="733"/>
         <source>Merge Tool Not Configured</source>
         <translation>合并工具未配置</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="709"/>
+        <location filename="../../mergewidget.py" line="734"/>
         <source>No merge tool is configured.
 
 Please configure a merge tool in:
@@ -2639,64 +2649,64 @@ Please configure a merge tool in:
 - 或在 首选项 &gt; 工具 选项卡中配置</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="454"/>
+        <location filename="../../mergewidget.py" line="476"/>
         <source>All filter conflicts are resolved, please clear the filter to resolve the rest.</source>
         <translation>已解决掉过滤的全部冲突，请清除过滤以解决其它的冲突。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="219"/>
+        <location filename="../../mergewidget.py" line="233"/>
         <source>&amp;Undo merge</source>
         <translation>重置冲突(&amp;U)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="231"/>
+        <location filename="../../mergewidget.py" line="245"/>
         <source>&amp;Copy Path</source>
         <translation>复制路径(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="234"/>
+        <location filename="../../mergewidget.py" line="248"/>
         <source>Copy &amp;Windows Path</source>
         <translation>复制成Windows路径(&amp;W)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="477"/>
+        <location filename="../../mergewidget.py" line="499"/>
         <source>No conflict files to resolve!</source>
         <translation>无冲突文件可解决！</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="164"/>
+        <location filename="../../mergewidget.py" line="166"/>
         <source>Log conflicts to</source>
         <translation>记录冲突到</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="166"/>
+        <location filename="../../mergewidget.py" line="168"/>
         <source>Choose</source>
         <translation>选择</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="329"/>
+        <location filename="../../mergewidget.py" line="351"/>
         <source>Choose file</source>
         <translation>选择文件</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="185"/>
+        <location filename="../../mergewidget.py" line="199"/>
         <source>No pywin32/pywpsrpc or openpyxl found, feature disabled.</source>
         <translation>未安装pywin32/pywpsrpc或者openpyxl，此功能无法启用。</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="361"/>
-        <location filename="../../mergewidget.py" line="555"/>
+        <location filename="../../mergewidget.py" line="383"/>
+        <location filename="../../mergewidget.py" line="577"/>
         <source>Local Branch</source>
         <translation>本地分支</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="374"/>
-        <location filename="../../mergewidget.py" line="557"/>
+        <location filename="../../mergewidget.py" line="396"/>
+        <location filename="../../mergewidget.py" line="579"/>
         <source>Remote Branch</source>
         <translation>远程分支</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="237"/>
+        <location filename="../../mergewidget.py" line="251"/>
         <source>Select &amp;All</source>
         <translation>全选(&amp;A)</translation>
     </message>
@@ -3535,7 +3545,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>解决开始</translation>
     </message>
     <message>
-        <location filename="../../resolver/manager.py" line="91"/>
+        <location filename="../../resolver/manager.py" line="89"/>
         <source>No resolver handler available</source>
         <translation>没有可用的解决处理程序</translation>
     </message>
@@ -3543,54 +3553,54 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>ResolvePanel</name>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="111"/>
-        <location filename="../../resolver/resolvepanel.py" line="194"/>
+        <location filename="../../resolver/resolvepanel.py" line="112"/>
+        <location filename="../../resolver/resolvepanel.py" line="197"/>
         <source>No conflicts</source>
         <translation>无冲突</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="121"/>
+        <location filename="../../resolver/resolvepanel.py" line="122"/>
         <source>Resolve selected</source>
         <translation>解决所选</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="122"/>
+        <location filename="../../resolver/resolvepanel.py" line="123"/>
         <source>Resolve all</source>
         <translation>解决全部</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="126"/>
+        <location filename="../../resolver/resolvepanel.py" line="127"/>
         <source>Auto-resolve</source>
         <translation>自动解决</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="129"/>
+        <location filename="../../resolver/resolvepanel.py" line="130"/>
         <source>Use assistant to auto-resolve conflicts if possible</source>
         <translation>如果可能，使用助手自动解决冲突</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="180"/>
+        <location filename="../../resolver/resolvepanel.py" line="183"/>
         <source>Abort requested; stopping after current step…</source>
         <translation>请求中止；当前步骤后停止…</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="210"/>
+        <location filename="../../resolver/resolvepanel.py" line="213"/>
         <source>Conflicts ({0})</source>
         <translation>冲突（{0}）</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="293"/>
-        <location filename="../../resolver/resolvepanel.py" line="337"/>
+        <location filename="../../resolver/resolvepanel.py" line="296"/>
+        <location filename="../../resolver/resolvepanel.py" line="341"/>
         <source>Resolve context not set</source>
         <translation>解决上下文未设置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="352"/>
+        <location filename="../../resolver/resolvepanel.py" line="356"/>
         <source>Merge Tool Not Configured</source>
         <translation>合并工具未配置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="354"/>
+        <location filename="../../resolver/resolvepanel.py" line="358"/>
         <source>No merge tool is configured.
 
 Please configure a merge tool in:
@@ -3603,57 +3613,57 @@ Please configure a merge tool in:
 - 或在 首选项 &gt; 工具 选项卡中配置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="363"/>
+        <location filename="../../resolver/resolvepanel.py" line="367"/>
         <source>No resolve handler available</source>
         <translation>没有可用的解决处理程序</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="372"/>
+        <location filename="../../resolver/resolvepanel.py" line="376"/>
         <source>Resolving {0}…</source>
         <translation>正在解决 {0}…</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="390"/>
+        <location filename="../../resolver/resolvepanel.py" line="395"/>
         <source>Resolve services not set</source>
         <translation>解决服务未设置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="432"/>
+        <location filename="../../resolver/resolvepanel.py" line="437"/>
         <source>Failed to resolve {0}: {1}</source>
         <translation>解决 {0} 失败：{1}</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="434"/>
+        <location filename="../../resolver/resolvepanel.py" line="439"/>
         <source>Failed to resolve {0}</source>
         <translation>解决 {0} 失败</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="490"/>
+        <location filename="../../resolver/resolvepanel.py" line="495"/>
         <source>Use &amp;created</source>
         <translation>使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="490"/>
+        <location filename="../../resolver/resolvepanel.py" line="495"/>
         <source>Use &amp;modified</source>
         <translation>使用修改的(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="492"/>
+        <location filename="../../resolver/resolvepanel.py" line="497"/>
         <source>&amp;Deleted file</source>
         <translation>删除文件(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="515"/>
+        <location filename="../../resolver/resolvepanel.py" line="520"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="516"/>
+        <location filename="../../resolver/resolvepanel.py" line="521"/>
         <source>Use &amp;remote</source>
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="534"/>
+        <location filename="../../resolver/resolvepanel.py" line="539"/>
         <source>Commit {0} results in an empty commit (possibly already applied).
 
 What do you want to do?</source>
@@ -3662,12 +3672,12 @@ What do you want to do?</source>
 你想要怎么做？</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="538"/>
+        <location filename="../../resolver/resolvepanel.py" line="543"/>
         <source>&amp;Skip</source>
         <translation>跳过(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="540"/>
+        <location filename="../../resolver/resolvepanel.py" line="545"/>
         <source>&amp;Create empty commit</source>
         <translation>创建空提交(&amp;C)</translation>
     </message>
