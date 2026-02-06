@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 class ResolveConflictJobProto(Protocol):
     finished: object  # Signal(bool, str|None)
 
+    def abort(self) -> None: ...
+
 
 class AiConflictResolverProto(Protocol):
     def resolveFileAsync(

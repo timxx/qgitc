@@ -22,6 +22,7 @@ class AiResolveHandler(ResolveHandler):
         self._ctx: Optional[ResolveContext] = None
         self._services: ResolveServices = None
         self._path: Optional[str] = None
+        self._job = None
 
     def start(self, ctx: ResolveContext, services: ResolveServices):
         self._ctx = ctx
@@ -32,6 +33,10 @@ class AiResolveHandler(ResolveHandler):
             return
 
         self._resolveFile(self._path)
+
+    def cancel(self):
+        if self._job:
+            self._job.abort()
 
     def _emit(self, ev: ResolveEvent):
         self._services.manager.emitEvent(ev)
@@ -118,11 +123,11 @@ class AiResolveHandler(ResolveHandler):
             )
         )
 
-        job = services.ai.resolveFileAsync(
+        self._job = services.ai.resolveFileAsync(
             ctx.repoDir, ctx.sha1, path, conflictText, ctx.context,
             ctx.reportFile
         )
-        job.finished.connect(
+        self._job.finished.connect(
             lambda ok3, reason: self._afterAi(path, ok3, reason))
 
     def _isLikelyBinaryPath(self, path: str) -> bool:
@@ -189,6 +194,7 @@ class AiResolveHandler(ResolveHandler):
 
     def _afterAi(self, path: str, ok: bool, reason: object):
         ctx = self._ctx
+        self._job = None
         services = self._services
         if ctx is None or services is None:
             self.finished.emit(False, None)

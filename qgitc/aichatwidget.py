@@ -165,6 +165,10 @@ class ResolveConflictJob(QObject):
 
         w._doRequest(prompt, AiChatMode.Agent, RESOLVE_SYS_PROMPT)
 
+    def abort(self):
+        if self._model:
+            self._model.requestInterruption()
+
     def _lastAssistantTextSince(self, startIndex: int) -> str:
         model = self._model
         if model is None:

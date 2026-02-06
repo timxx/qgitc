@@ -786,6 +786,8 @@ class MergeWidget(QWidget):
         if self.log:
             self.log.save()
             self.log = None
+        if self.isResolving():
+            self._resolveManager.cancel()
         return True
 
     def setBranches(self, localBranch, remoteBranch):

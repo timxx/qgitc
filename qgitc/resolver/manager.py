@@ -53,12 +53,10 @@ class ResolveManager(QObject):
         self._startNextHandler()
 
     def cancel(self):
+        self._done = True
         if 0 <= self._idx < len(self._handlers):
             h = self._handlers[self._idx]
-            try:
-                h.cancel()
-            except Exception:
-                pass
+            h.cancel()
 
     def requestPrompt(self, prompt: ResolvePrompt):
         self._pendingPrompt = prompt
