@@ -164,11 +164,17 @@ Hard requirements
 
 Output protocol
 - Respond in the UI language.
-- You MAY write a short “Conflict analysis” message BEFORE applying the patch (for humans to review).
-- After successfully applying the patch, output EXACTLY one final assistant message:
-  QGITC_RESOLVE_OK
-- If you cannot resolve safely (missing context, binary file, ambiguous intent, or tool failures), output EXACTLY one final assistant message:
-  QGITC_RESOLVE_FAILED: <short reason>
+- After successfully resolved the conflict, output EXACTLY one final assistant message in this format:
+  - Line 1: `QGITC_RESOLVE_OK`
+  - Line 2: (empty line)
+  - Remaining lines: a short summary (2-6 bullets max) of how you resolved the conflict.
+    - Must include which side(s) you kept and any transformations (move/rename/adapt).
+    - If you know the conflict-causing commit (while resolving, you should run tools to investigation), include it as a bullet (e.g. `- our commit: <sha1> | their commit: <sha1>`).
+    - Keep it short.
+- If you cannot resolve safely (missing context, binary file, ambiguous intent, or tool failures), output EXACTLY one final assistant message in this format:
+  - Line 1: `QGITC_RESOLVE_FAILED`
+  - Line 2: (empty line)
+  - Remaining lines: a short reason / next step (1-3 lines).
   and do not attempt further changes.
 """
 

@@ -67,6 +67,10 @@ from qgitc.models.prompts import (
     RESOLVE_SYS_PROMPT,
 )
 from qgitc.preferences import Preferences
+from qgitc.resolutionreport import (
+    appendResolutionReportEntry,
+    buildResolutionReportEntry,
+)
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
 SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
@@ -101,6 +105,7 @@ class ResolveConflictJob(QObject):
         path: str,
         conflictText: str,
         context: str = None,
+        reportFile: str = None,
         parent: QObject = None,
     ):
         super().__init__(parent or widget)
@@ -110,6 +115,7 @@ class ResolveConflictJob(QObject):
         self._path = path
         self._conflictText = conflictText
         self._context = context
+        self._reportFile = reportFile
 
         self._done = False
         self._prevAllowWrite = False
@@ -178,6 +184,35 @@ class ResolveConflictJob(QObject):
     def _onNetworkError(self, errorMsg: str):
         self._finish(False, errorMsg)
 
+    @staticmethod
+    def _parseFinalResolveMessage(text: str) -> Tuple[Optional[str], str]:
+        """Parse the final assistant message.
+
+        Expected unified format:
+          QGITC_RESOLVE_OK|QGITC_RESOLVE_FAILED\n\n<detail>
+        Returns (status, detail) where status is 'ok'|'failed'|None.
+        """
+        if not text:
+            return None, ""
+
+        # AI may not always follow the format strictly
+        # we have to search for the markers.
+        pos = text.find("QGITC_RESOLVE_OK")
+        if pos != -1:
+            detail = text[pos+len("QGITC_RESOLVE_OK"):]
+            # Strip leading newlines but preserve intended formatting.
+            # Expected format: marker\n\ndetail, so we skip up to 2 leading \n.
+            detail = detail.lstrip('\n')
+            return "ok", detail
+
+        pos = text.find("QGITC_RESOLVE_FAILED")
+        if pos != -1:
+            detail = text[pos+len("QGITC_RESOLVE_FAILED"):]
+            detail = detail.lstrip('\n')
+            return "failed", detail
+
+        return None, ""
+
     def _checkDone(self, *args):
         if self._done:
             return
@@ -192,13 +227,12 @@ class ResolveConflictJob(QObject):
 
         response = self._lastAssistantTextSince(self._oldHistoryCount)
 
-        if "QGITC_RESOLVE_FAILED:" in response:
-            parts = response.split("QGITC_RESOLVE_FAILED:", 1)
-            reason = parts[1].strip() if len(parts) > 1 else ""
-            self._finish(False, reason or "Assistant reported failure")
+        status, detail = self._parseFinalResolveMessage(response)
+        if status == "failed":
+            self._finish(False, detail or "Assistant reported failure")
             return
 
-        if "QGITC_RESOLVE_OK" not in response:
+        if status != "ok":
             return
 
         # Verify the working tree file is conflict-marker-free.
@@ -214,7 +248,7 @@ class ResolveConflictJob(QObject):
             self._finish(False, "conflict_markers_remain")
             return
 
-        self._finish(True, None)
+        self._finish(True, detail or "Assistant reported success")
 
     def _disconnect(self):
         model = self._model
@@ -228,6 +262,21 @@ class ResolveConflictJob(QObject):
         if self._done:
             return
         self._done = True
+
+        if self._reportFile:
+            try:
+                entry = buildResolutionReportEntry(
+                    repoDir=self._repoDir,
+                    path=self._path,
+                    sha1=self._sha1,
+                    operation="cherry-pick" if self._sha1 else "merge",
+                    ok=ok,
+                    reason=reason
+                )
+                appendResolutionReportEntry(self._reportFile, entry)
+            except Exception:
+                # Reporting must never break the resolve flow.
+                pass
 
         self._disconnect()
         self._timer.stop()
@@ -1733,6 +1782,7 @@ class AiChatWidget(QWidget):
         path: str,
         conflictText: str,
         context: str = None,
+        reportFile: Optional[str] = None,
     ) -> ResolveConflictJob:
         job = ResolveConflictJob(
             self,
@@ -1741,6 +1791,7 @@ class AiChatWidget(QWidget):
             path=path,
             conflictText=conflictText,
             context=context,
+            reportFile=reportFile,
         )
         QTimer.singleShot(0, job.start)
         return job

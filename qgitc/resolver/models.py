@@ -27,6 +27,7 @@ class ResolveContext:
     initialError: Optional[str] = None
     mergetoolName: Optional[str] = None
     meta: Dict[str, Any] = field(default_factory=dict)
+    reportFile: Optional[str] = None
 
 
 @dataclass(**_DATACLASS_KWARGS)

@@ -99,12 +99,16 @@ class CherryPickSession(QObject):
         self._markCallback: Optional[Callable[[str, bool], None]] = None
 
         self._finishedOnce = False
+        self._reportFile = None
 
     def setMarkCallback(self, callback: Optional[Callable[[str, bool], None]]):
         self._markCallback = callback
 
     def setAiChatWidget(self, chatWidget: Optional[object]):
         self._aiChatWidget = chatWidget
+
+    def setReportFile(self, reportFile: Optional[str]):
+        self._reportFile = reportFile
 
     def start(
         self,
@@ -367,6 +371,7 @@ class CherryPickSession(QObject):
             sha1=sha1,
             initialError=initialError or "",
             chatWidget=self._aiChatWidget,
+            reportFile=self._reportFile,
         )
         self._resolvePanel.setConflictFiles(self._conflictFiles)
         self._resolvePanel.startResolveAll()

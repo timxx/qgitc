@@ -44,7 +44,7 @@ class _FakeAi:
     def __init__(self, ok=True):
         self._ok = ok
 
-    def resolveFileAsync(self, repoDir, sha1, path, conflictText, context=None):
+    def resolveFileAsync(self, repoDir, sha1, path, conflictText, context=None, reportFile=None):
         job = _FakeJob()
         QTimer.singleShot(0, lambda: job.finished.emit(self._ok, None))
         return job

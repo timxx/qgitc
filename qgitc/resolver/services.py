@@ -23,6 +23,7 @@ class AiConflictResolverProto(Protocol):
         path: str,
         conflictText: str,
         context: str = None,
+        reportFile: str = None,
     ) -> ResolveConflictJobProto: ...
 
 

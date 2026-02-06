@@ -52,6 +52,7 @@ from qgitc.conflictlog import (
 )
 from qgitc.events import CopyConflictCommit
 from qgitc.gitutils import Git
+from qgitc.resolutionreport import defaultResolutionReportFile
 from qgitc.resolver.enums import (
     ResolveEventKind,
     ResolveMethod,
@@ -105,6 +106,7 @@ class MergeWidget(QWidget):
         self._firstShown = True
 
         self.log = None
+        self._aiReportFile = None
 
         self.__setupUi()
         self.__setupSignals()
@@ -169,6 +171,18 @@ class MergeWidget(QWidget):
         hlayout.addWidget(self.cbAutoLog)
         hlayout.addWidget(self.leLogFile)
         hlayout.addWidget(self.btnChooseLog)
+        vlayout.addLayout(hlayout)
+
+        self._aiReportLabel = QLabel(self.tr("Auto-resolve record"), self)
+        self._aiReportLabel.setVisible(False)
+
+        self._aiReportPathEdit = QLineEdit(self)
+        self._aiReportPathEdit.setReadOnly(True)
+        self._aiReportPathEdit.setVisible(False)
+
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self._aiReportLabel)
+        hlayout.addWidget(self._aiReportPathEdit)
         vlayout.addLayout(hlayout)
 
         self.cbAutoNext.setChecked(True)
@@ -274,6 +288,14 @@ class MergeWidget(QWidget):
         self.status.setText(
             "<a href='#refresh'>{}/{}</a>".format(self.resolvedCount,
                                                   total))
+
+    def __ensureAiReportFile(self):
+        if self._aiReportFile:
+            return
+        self._aiReportFile = defaultResolutionReportFile()
+        self._aiReportPathEdit.setText(self._aiReportFile)
+        self._aiReportPathEdit.setVisible(True)
+        self._aiReportLabel.setVisible(True)
 
     def __updateFilterCount(self):
         text = self.proxyModel.filterRegularExpression().pattern()
@@ -688,6 +710,9 @@ class MergeWidget(QWidget):
         if aiAutoResolveEnabled and self._chatDock is not None:
             chatWidget = self._chatDock.chatWidget()
 
+        if aiAutoResolveEnabled and chatWidget is not None:
+            self.__ensureAiReportFile()
+
         # Build handler chain.
         services = ResolveServices(runner=self._resolveRunner, ai=chatWidget)
 
@@ -726,6 +751,7 @@ class MergeWidget(QWidget):
             path=file,
             context=context,
             mergetoolName=toolName,
+            reportFile=self._aiReportFile,
         )
 
         self._resolveManager = ResolveManager(handlers, services, parent=self)

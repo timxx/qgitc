@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from typing import Callable, List, Optional
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFrame,
+    QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QProgressBar,
+    QPushButton,
     QSizePolicy,
     QSplitter,
     QVBoxLayout,
@@ -22,14 +24,13 @@ from PySide6.QtWidgets import (
 
 from qgitc.aichatwidget import AiChatWidget
 from qgitc.applicationbase import ApplicationBase
-from qgitc.cherrypickcontextprovider import (
-    CherryPickContextProvider,
-)
+from qgitc.cherrypickcontextprovider import CherryPickContextProvider
 from qgitc.cherrypicksession import (
     CherryPickItem,
     CherryPickItemStatus,
     CherryPickSession,
 )
+from qgitc.resolutionreport import defaultResolutionReportFile
 from qgitc.resolver.enums import ResolveOperation
 from qgitc.resolver.resolvepanel import ResolvePanel
 
@@ -59,6 +60,8 @@ class CherryPickProgressDialog(QDialog):
         self._ensureVisibleCallback: Optional[Callable[[int], None]] = None
         self._applyLocalChangesCallback: Optional[Callable[[
             str, str, str], bool]] = None
+
+        self._reportFile: Optional[str] = None
 
         self._setupUi()
         self._setupSignals()
@@ -112,7 +115,17 @@ class CherryPickProgressDialog(QDialog):
         self._abortBtn = self._buttons.addButton(QDialogButtonBox.Abort)
         self._closeBtn = self._buttons.addButton(QDialogButtonBox.Close)
         self._closeBtn.setEnabled(False)
-        leftLayout.addWidget(self._buttons)
+
+        self._reportBtn = QPushButton(self.tr("Open report"), leftPane)
+        self._reportBtn.setVisible(False)
+
+        bottomLayout = QHBoxLayout()
+        bottomLayout.setContentsMargins(0, 0, 0, 0)
+        bottomLayout.setSpacing(8)
+        bottomLayout.addWidget(self._reportBtn)
+        bottomLayout.addStretch(1)
+        bottomLayout.addWidget(self._buttons)
+        leftLayout.addLayout(bottomLayout)
 
         self._mainSplitter.addWidget(leftPane)
 
@@ -140,6 +153,13 @@ class CherryPickProgressDialog(QDialog):
             self._onResolveCurrentFileChanged)
         self._resolvePanel.aiAutoResolveToggled.connect(
             self._onAiAutoResolveToggled)
+
+        self._reportBtn.clicked.connect(self._onReportClicked)
+
+    def _onReportClicked(self):
+        if not self._reportFile:
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(self._reportFile))
 
     def setMarkCallback(self, callback: Optional[Callable[[str, bool], None]]):
         self._session.setMarkCallback(callback)
@@ -183,7 +203,8 @@ class CherryPickProgressDialog(QDialog):
 
     def _onAiAutoResolveToggled(self, checked: bool):
         # Session-scoped toggle: affects subsequent resolve attempts.
-        self._ensureAiChatEnabled(bool(checked))
+        self._ensureAiChatEnabled(checked)
+        self._reportBtn.setVisible(checked)
 
     def startSession(
         self,
@@ -213,6 +234,11 @@ class CherryPickProgressDialog(QDialog):
 
         self._progress.setRange(0, max(1, len(self._items)))
         self._progress.setValue(0)
+
+        reportFile = defaultResolutionReportFile()
+        self._reportFile = reportFile
+        self._session.setReportFile(reportFile)
+        self._reportBtn.setToolTip(reportFile)
 
         self._session.start(
             items=self._items,

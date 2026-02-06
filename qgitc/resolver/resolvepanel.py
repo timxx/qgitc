@@ -57,6 +57,7 @@ class ResolvePanelContext:
     initialError: str = ""
     context: Optional[str] = None
     chatWidget: Optional[object] = None
+    reportFile: Optional[str] = None
 
 
 class ResolvePanel(QWidget):
@@ -150,6 +151,7 @@ class ResolvePanel(QWidget):
         initialError: str = "",
         context: Optional[str] = None,
         chatWidget: Optional[object] = None,
+        reportFile: Optional[str] = None,
     ):
         self._ctx = ResolvePanelContext(
             repoDir=repoDir,
@@ -158,6 +160,7 @@ class ResolvePanel(QWidget):
             initialError=initialError or "",
             context=context,
             chatWidget=chatWidget,
+            reportFile=reportFile,
         )
         self._services = ResolveServices(runner=self._runner, ai=chatWidget)
 
@@ -307,6 +310,7 @@ class ResolvePanel(QWidget):
             initialError=ctx.initialError,
             context=ctx.context,
             mergetoolName=None,
+            reportFile=ctx.reportFile,
         )
 
         self._startManager([handler], rc, isFinalize=True)
@@ -379,6 +383,7 @@ class ResolvePanel(QWidget):
             initialError=ctx.initialError,
             context=ctx.context,
             mergetoolName=mergeToolName,
+            reportFile=ctx.reportFile,
         )
 
         self._startManager(handlers, rc, isFinalize=False)
