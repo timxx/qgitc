@@ -43,6 +43,10 @@ class AiChatContextProvider(QObject):
         """
         return ""
 
+    def canAddContext(self) -> bool:
+        """Whether the UI should show an attach/menu for selecting contexts."""
+        return True
+
     def agentSystemPrompt(self) -> Optional[str]:
         """Optional Agent-mode system prompt override.
 

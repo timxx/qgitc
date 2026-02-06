@@ -1,6 +1,7 @@
 from typing import Union
 
 from qgitc.aichatwidget import AiChatWidget
+from qgitc.aichatwindowcontextprovider import AiChatWindowContextProvider
 from qgitc.statewindow import StateWindow
 
 
@@ -11,6 +12,7 @@ class AiChatWindow(StateWindow):
 
         self.setWindowTitle(self.tr("AI Assistant"))
         centralWidget = AiChatWidget(self)
+        centralWidget.setContextProvider(AiChatWindowContextProvider(self))
         self.setCentralWidget(centralWidget)
 
     def codeReview(self, commit):

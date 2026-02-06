@@ -42,6 +42,7 @@ class AiChatContextPanel(QFrame):
         self._selectedContextIds: List[str] = []
         self._contextProvider: Optional[AiChatContextProvider] = None
         self._contextChipsLayout: Optional[FlowLayout] = None
+        self._btnAttachContext = None
 
         # Text input (auto-expanding) at top
         self.edit = AiChatEdit(self)
@@ -116,12 +117,13 @@ class AiChatContextPanel(QFrame):
 
         self._contextChipsLayout.addWidget(btnAttachContext)
         parentLayout.insertLayout(0, self._contextChipsLayout)
+        self._btnAttachContext = btnAttachContext
 
     def setContextProvider(self, provider: Optional[AiChatContextProvider]):
         if self._contextProvider == provider:
             return
 
-        if self._contextChipsLayout is None:
+        if provider and self._contextChipsLayout is None:
             self._setupContextBar(self.layout())
 
         if self._contextProvider is not None:
@@ -131,6 +133,8 @@ class AiChatContextPanel(QFrame):
         self._contextProvider = provider
         if self._contextProvider is not None:
             self._contextProvider.contextsChanged.connect(self.refreshContexts)
+            self._btnAttachContext.setVisible(
+                self._contextProvider.canAddContext())
 
         self.refreshContexts()
 
