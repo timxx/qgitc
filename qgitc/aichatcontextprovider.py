@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import datetime
 import platform
-from typing import List, NamedTuple, Optional, Tuple
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QIcon
 
+from qgitc.agenttools import AgentTool
 from qgitc.applicationbase import ApplicationBase
 from qgitc.gitutils import Git
 
@@ -53,6 +54,23 @@ class AiChatContextProvider(QObject):
         Return None to use the default AGENT_SYS_PROMPT.
         """
         return None
+
+    # ==================== UI tools (optional) ====================
+
+    def uiTools(self) -> List[AgentTool]:
+        """Optional UI tools exposed to the LLM for this chat location.
+
+        These tools typically affect UI state (selection/navigation) and must be
+        executed on the Qt UI thread.
+        """
+        return []
+
+    def executeUiTool(self, toolName: str, params: Dict[str, Any]) -> Tuple[bool, str]:
+        """Execute a provider-defined UI tool.
+
+        Returns (ok, output). Default implementation reports unsupported.
+        """
+        return False, f"UI tool not supported: {toolName}"
 
     def commonContext(self) -> List[str]:
         blocks = []

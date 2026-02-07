@@ -446,7 +446,8 @@ class AgentToolExecutor(QObject):
         if not branch:
             return AgentToolResult(tool_name, False, "Failed to determine current branch.")
         if branch == "HEAD":
-            ok2, sha = _runGit(validated.repoDir, ["rev-parse", "--short", "HEAD"])
+            ok2, sha = _runGit(validated.repoDir, [
+                               "rev-parse", "--short", "HEAD"])
             sha = (sha or "").strip() if ok2 else ""
             msg = f"detached HEAD" + (f" at {sha}" if sha else "")
             return AgentToolResult(tool_name, True, msg)
