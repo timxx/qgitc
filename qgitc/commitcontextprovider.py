@@ -1,15 +1,33 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
 
+from qgitc.agenttools import AgentTool, ToolType, createToolFromModel
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
+from qgitc.basemodel import BaseModel, Field, ValidationError
 from qgitc.common import dataDirPath, toSubmodulePath
 from qgitc.drawutils import makeColoredIconPixmap
 from qgitc.filestatus import StatusFileListModel
 from qgitc.models.prompts import REPO_DESC
+
+
+class UiReloadStatusParams(BaseModel):
+    """Parameters for ui_reload_status."""
+
+
+class UiSetCommitMessageParams(BaseModel):
+    """Parameters for ui_set_commit_message."""
+
+    message: str = Field(
+        ...,
+        description=(
+            "Commit message text to put into the CommitWindow editor. "
+            "Do not include comment lines that start with '#'."
+        ),
+    )
 
 
 class CommitContextProvider(AiChatContextProvider):
@@ -31,7 +49,64 @@ class CommitContextProvider(AiChatContextProvider):
         self._emitTimer.setSingleShot(True)
         self._emitTimer.timeout.connect(self.contextsChanged.emit)
 
+        self._uiToolsCache: Optional[List[AgentTool]] = None
+
         self._installHooks()
+
+    def uiTools(self) -> List[AgentTool]:
+        if self._uiToolsCache is None:
+            self._uiToolsCache = [
+                createToolFromModel(
+                    name="ui_reload_status",
+                    description=(
+                        "Reload the CommitWindow staged/unstaged status lists from Git. "
+                        "Use this after staging/unstaging or any file-changing operations."
+                    ),
+                    toolType=ToolType.READ_ONLY,
+                    modeClass=UiReloadStatusParams,
+                ),
+                createToolFromModel(
+                    name="ui_set_commit_message",
+                    description=(
+                        "Replace the commit message text in the CommitWindow editor. "
+                        "Use this after generating/refining a commit message."
+                    ),
+                    toolType=ToolType.READ_ONLY,
+                    modeClass=UiSetCommitMessageParams,
+                ),
+            ]
+        return self._uiToolsCache
+
+    @staticmethod
+    def _stripCommentLines(message: str) -> str:
+        if not message:
+            return ""
+        lines = []
+        for line in message.splitlines():
+            if line.startswith("#"):
+                continue
+            lines.append(line.rstrip())
+        return "\n".join(lines).strip()
+
+    def executeUiTool(self, toolName: str, params: Dict[str, Any]) -> Tuple[bool, str]:
+        if toolName == "ui_reload_status":
+            self._commitWindow.reloadLocalChanges()
+            return True, "Reloaded staged/unstaged status lists."
+
+        if toolName == "ui_set_commit_message":
+            try:
+                validated = UiSetCommitMessageParams(**params)
+            except ValidationError as e:
+                return False, f"Invalid parameters: {e}"
+
+            message = self._stripCommentLines(validated.message)
+            if not message:
+                return False, "Commit message is empty after removing comment lines."
+
+            self._commitWindow.replaceMessage(message)
+            return True, "Updated commit message in the UI."
+
+        return super().executeUiTool(toolName, params)
 
     def _scheduleChanged(self):
         if not self._emitTimer.isActive():
@@ -183,12 +258,12 @@ class CommitContextProvider(AiChatContextProvider):
 
         # Environment (always present)
         self.addSection(sections, "Environment",
-                         self.formatBullets(self.commonContext()))
+                        self.formatBullets(self.commonContext()))
 
         # UI state
         branch = self._commitWindow.currentBranch().strip()
         self.addSection(sections, "UI State",
-                         self.formatBullets([f"Active branch (UI): {branch}"]))
+                        self.formatBullets([f"Active branch (UI): {branch}"]))
 
         for cid in contextIds:
             if cid == self.CTX_STAGED_FILES:
@@ -258,6 +333,10 @@ IMPORTANT - Commit Message Format:
 - When referring to or generating commit messages, exclude lines that start with '#'
 - These comment lines are typically used for instructions or templates
 - Only include actual commit content (non-comment lines) in your responses
+
+Auto-update the UI
+- After running any tool/command that changes files or the Git index (stage/unstage, `git add`, `git reset`, editing files, etc.), call `ui_reload_status` so the staged/unstaged lists reflect the latest state.
+- If you generate or modify the commit message, call `ui_set_commit_message` with the updated message to refresh the editor.
 
 {REPO_DESC}
 

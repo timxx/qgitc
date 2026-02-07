@@ -874,7 +874,7 @@ class CommitWindow(StateWindow):
             doc = self.ui.teMessage.document()
             if evt.updateMessage:
                 if self._canUpdateMessage():
-                    self._replaceMessage(evt.template)
+                    self.replaceMessage(evt.template)
             elif not doc.isUndoAvailable() and not doc.isRedoAvailable():
                 # only set template if user has not modified the message
                 self.ui.teMessage.setPlainText(evt.template)
@@ -1361,7 +1361,7 @@ class CommitWindow(StateWindow):
         if oldMessage == message:
             return
 
-        self._replaceMessage(message)
+        self.replaceMessage(message)
 
     def _onAiMessageError(self, message: str):
         self._restoreAiMessageButtons()
@@ -1372,7 +1372,7 @@ class CommitWindow(StateWindow):
             QMessageBox.Ok
         )
 
-    def _replaceMessage(self, message: str):
+    def replaceMessage(self, message: str):
         cursor = self.ui.teMessage.textCursor()
         cursor.beginEditBlock()
         cursor.select(QTextCursor.Document)
