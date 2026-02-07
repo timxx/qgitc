@@ -206,7 +206,7 @@ class MergeWidget(QWidget):
         dir = QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)
         dt = datetime.now()
         fileName = "conflicts-{}.xlsx".format(dt.strftime("%Y%m%d%H%M%S"))
-        return dir + QDir.separator() + fileName
+        return os.path.normpath(dir + QDir.separator() + fileName)
 
     def __ensureLogWriter(self):
         if self.log is not None:

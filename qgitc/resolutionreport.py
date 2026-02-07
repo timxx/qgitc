@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from PySide6.QtCore import QDir, QStandardPaths
@@ -13,7 +13,7 @@ def defaultResolutionReportFile() -> str:
     dt = datetime.now()
     fileName = "qgitc-auto-resolve/{}.jsonl".format(
         dt.strftime("%Y%m%d%H%M%S"))
-    return dirPath + QDir.separator() + fileName
+    return os.path.normpath(dirPath + QDir.separator() + fileName)
 
 
 def appendResolutionReportEntry(reportFile: str, entry: Dict[str, Any]):
