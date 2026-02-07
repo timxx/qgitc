@@ -72,6 +72,7 @@ from qgitc.resolutionreport import (
     buildResolutionReportEntry,
 )
 from qgitc.submoduleexecutor import SubmoduleExecutor
+from qgitc.uitoolexecutor import UiToolExecutor
 
 SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
 
@@ -322,6 +323,8 @@ class AiChatWidget(QWidget):
         self._titleGenerator: AiChatTitleGenerator = None
         self._agentExecutor = AgentToolExecutor(self)
         self._agentExecutor.toolFinished.connect(self._onAgentToolFinished)
+        self._uiToolExecutor = UiToolExecutor(self)
+        self._uiToolExecutor.toolFinished.connect(self._onAgentToolFinished)
         self._pendingAgentTool: str = None
         self._pendingToolCallId: Optional[str] = None
 
@@ -646,6 +649,9 @@ class AiChatWidget(QWidget):
         if self._agentExecutor:
             self._agentExecutor.shutdown()
 
+        if self._uiToolExecutor:
+            self._uiToolExecutor.shutdown()
+
         for i in range(self._contextPanel.cbBots.count()):
             model: AiModelBase = self._contextPanel.cbBots.itemData(i)
             if model.isRunning():
@@ -749,7 +755,7 @@ class AiChatWidget(QWidget):
         params.temperature = 0.1
         params.chat_mode = AiChatMode.Agent
         params.model = self._contextPanel.currentModelId()
-        params.tools = AgentToolRegistry.openai_tools()
+        params.tools = self._availableOpenAiTools()
         params.tool_choice = "auto"
         params.continue_only = True
 
@@ -788,7 +794,7 @@ class AiChatWidget(QWidget):
         injectedContext = self._injectedContext
 
         if chatMode == AiChatMode.Agent:
-            params.tools = AgentToolRegistry.openai_tools()
+            params.tools = self._availableOpenAiTools()
             params.tool_choice = "auto"
 
             # Don't add system prompt if there is already one
@@ -799,7 +805,7 @@ class AiChatWidget(QWidget):
         elif chatMode == AiChatMode.CodeReview:
             # Code review can also use tools to fetch missing context.
             # (Models that don't support tool calls will simply ignore them.)
-            params.tools = AgentToolRegistry.openai_tools()
+            params.tools = self._availableOpenAiTools()
             params.tool_choice = "auto"
             params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
             params.prompt = CODE_REVIEW_PROMPT.format(
@@ -915,8 +921,7 @@ class AiChatWidget(QWidget):
                 func = (tc or {}).get("function") or {}
                 toolName = func.get("name")
                 args = parseToolArguments(func.get("arguments"))
-                tool = AgentToolRegistry.tool_by_name(
-                    toolName) if toolName else None
+                tool = self._toolByName(toolName)
                 toolType = tool.toolType if tool else ToolType.WRITE
                 toolDesc = tool.description if tool else self.tr(
                     "Unknown tool requested by model")
@@ -937,8 +942,7 @@ class AiChatWidget(QWidget):
                 toolName = func.get("name")
                 args = parseToolArguments(func.get("arguments"))
                 toolCallId = (tc or {}).get("id")
-                tool = AgentToolRegistry.tool_by_name(
-                    toolName) if toolName else None
+                tool = self._toolByName(toolName)
 
                 # Auto-run only READ_ONLY tools by default. For certain sync helper
                 # flows we optionally auto-run *WRITE* tools, but never DANGEROUS.
@@ -956,7 +960,10 @@ class AiChatWidget(QWidget):
                     continue
 
                 # Anything else requires explicit confirmation.
-                uiResponse = self._makeUiToolCallResponse(tool, args)
+                uiResponse = self._makeUiToolCallResponse(
+                    tool if tool is not None else (toolName or "unknown"),
+                    args,
+                )
                 messages.appendResponse(uiResponse)
 
                 if toolName and tool:
@@ -1008,7 +1015,7 @@ class AiChatWidget(QWidget):
 
     def _makeUiToolCallResponse(self, *args):
         if isinstance(args[0], str):
-            tool = AgentToolRegistry.tool_by_name(args[0])
+            tool = self._toolByName(args[0])
         else:
             tool = args[0]
 
@@ -1020,6 +1027,44 @@ class AiChatWidget(QWidget):
         else:
             body = json.dumps(args[1], ensure_ascii=False)
         return AiResponse(AiRole.Tool, body, title)
+
+    def _providerUiTools(self) -> List[AgentTool]:
+        provider = self.contextProvider()
+        if provider is None:
+            return []
+
+        return provider.uiTools() or []
+
+    def _toolByName(self, toolName: str) -> Optional[AgentTool]:
+        if not toolName:
+            return None
+        for t in self._providerUiTools():
+            if t.name == toolName:
+                return t
+        return AgentToolRegistry.tool_by_name(toolName)
+
+    def _availableOpenAiTools(self) -> List[Dict[str, Any]]:
+        tools = list(AgentToolRegistry.openai_tools())
+        for t in self._providerUiTools():
+            tools.append(t.to_openai_tool())
+        return tools
+
+    def _executeToolAsync(self, toolName: str, params: dict) -> bool:
+        provider = self.contextProvider()
+
+        # Provider-defined UI tools run on the UI thread.
+        if toolName and toolName.startswith("ui_") and provider is not None:
+            for t in self._providerUiTools():
+                if t.name == toolName:
+                    return self._uiToolExecutor.executeAsync(toolName, params or {}, provider)
+
+            # If a ui_ tool is requested but isn't available, fail fast.
+            self._onAgentToolFinished(AgentToolResult(
+                toolName, False, self.tr("UI tool not available in this context.")))
+            return True
+
+        # Non-UI tools run in the background executor.
+        return self._agentExecutor.executeAsync(toolName, params or {})
 
     def _onResponseFinish(self):
         model = self.currentChatModel()
@@ -1057,7 +1102,7 @@ class AiChatWidget(QWidget):
         self._pendingAutoGroupId = None
         self._pendingToolCallId = tool_call_id
 
-        started = self._agentExecutor.executeAsync(tool_name, params or {})
+        started = self._executeToolAsync(tool_name, params or {})
         if not started:
             # Produce a correlated tool result so the conversation can continue.
             self._onAgentToolFinished(AgentToolResult(
@@ -1222,7 +1267,7 @@ class AiChatWidget(QWidget):
 
         uiResponse = self._makeUiToolCallResponse(tool_name, params or {})
         self._chatBot.appendResponse(uiResponse, collapsed=True)
-        started = self._agentExecutor.executeAsync(tool_name, params or {})
+        started = self._executeToolAsync(tool_name, params or {})
         if not started:
             # Fall back to a synthetic failure result and keep draining.
             self._onAgentToolFinished(AgentToolResult(
@@ -1611,8 +1656,7 @@ class AiChatWidget(QWidget):
                     func = (tc.get("function") or {})
                     toolName = func.get("name")
                     responseMsg: Dict[str, Any] = toolCallResult.get(tcid)
-                    tool = AgentToolRegistry.tool_by_name(
-                        toolName) if toolName else None
+                    tool = self._toolByName(toolName)
                     toolType = tool.toolType if tool else ToolType.WRITE
 
                     if addToChatBot:
