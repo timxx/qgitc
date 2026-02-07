@@ -1,10 +1,6 @@
 name: tests
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 jobs:
  build:
@@ -62,6 +58,10 @@ jobs:
       - name: Generate Coverage Report
         run: |
           python -m coverage json --include="qgitc/*,tests/*"
+
+      - name: Restore files for coverage
+        run: |
+          git checkout -- pyproject.toml requirements.txt
 
       - name: Update Coverage Badge
         if: matrix.python-version == '3.11'

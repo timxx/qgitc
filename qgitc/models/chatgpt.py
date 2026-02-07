@@ -12,14 +12,20 @@ class ChatGPTModel(AiModelBase):
     def queryAsync(self, params: AiParameters):
         payload = {
             "frequency_penalty": 0,
-            "max_tokens": params.max_tokens,
+            "max_tokens": params.max_tokens or 4096,
             "model": params.model or self.modelId or "gpt-4.1",
             "presence_penalty": 0,
             "temperature": params.temperature,
             "stream": params.stream
         }
 
-        if params.fill_point is not None:
+        if params.tools:
+            payload["tools"] = params.tools
+            payload["tool_choice"] = params.tool_choice or "auto"
+
+        if params.continue_only:
+            payload["messages"] = self.toOpenAiMessages()
+        elif params.fill_point is not None:
             payload["prefix"] = params.prompt[:params.fill_point]
             payload["suffix"] = params.prompt[params.fill_point:]
             if params.language is not None and params.language != "None":
@@ -42,7 +48,3 @@ class ChatGPTModel(AiModelBase):
             b"Content-Type": b"application/json; charset=utf-8"
         }
         self.post(self.url, headers=headers, data=payload, stream=stream)
-
-    def _handleFinished(self):
-        if self._content:
-            self.addHistory(self._role, self._content)

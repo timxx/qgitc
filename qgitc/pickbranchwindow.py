@@ -5,18 +5,15 @@ from typing import List, Tuple
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import (
-    QComboBox,
-    QCompleter,
-    QDialog,
-    QMessageBox,
-    QProgressDialog,
-)
+from PySide6.QtWidgets import QComboBox, QCompleter, QDialog, QMessageBox
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import Commit, dataDirPath, fullRepoDir
+from qgitc.cherrypickprogressdialog import CherryPickProgressDialog
+from qgitc.cherrypicksession import CherryPickItem
+from qgitc.common import Commit, dataDirPath
 from qgitc.events import ShowCommitEvent
 from qgitc.gitutils import Git
+from qgitc.logview import LogView, MarkType
 from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_pickbranchwindow import Ui_PickBranchWindow
@@ -66,6 +63,11 @@ class PickBranchWindow(StateWindow):
 
         self._setupSpinner(self.ui.spinnerCommits)
         self._setupSignals()
+
+        # Default Auto-Resolve AI based on preferences.
+        settings = ApplicationBase.instance().settings()
+        self.ui.cbAutoResolveAi.setChecked(
+            settings.autoResolveConflictsWithAssistant())
 
         # Setup DiffView with vertical orientation (file list on bottom)
         self.ui.diffView.setFileListOrientation(Qt.Vertical)
@@ -124,6 +126,8 @@ class PickBranchWindow(StateWindow):
         self.ui.btnCherryPick.clicked.connect(self._onCherryPickClicked)
         self.ui.cbRecordOrigin.toggled.connect(
             lambda checked: ApplicationBase.instance().settings().setRecordOrigin(checked))
+
+        self.ui.cbAutoResolveAi.toggled.connect(self._onAutoResolveAiToggled)
 
         # LogView signals
         self.ui.logView.currentIndexChanged.connect(self._onCommitSelected)
@@ -349,10 +353,11 @@ class PickBranchWindow(StateWindow):
         app = ApplicationBase.instance()
         settings = app.settings()
         filterReverted = settings.filterRevertedCommits()
+        filterMerge = settings.filterMergeCommits()
         filterPatterns = settings.filterCommitPatterns()
         useRegex = settings.filterUseRegex()
 
-        if not filterReverted and not filterPatterns:
+        if not filterReverted and not filterMerge and not filterPatterns:
             # No filters enabled, show message
             self._updateStatus(
                 self.tr("No filters configured. Please configure filters in Settings > Cherry-Pick"))
@@ -360,6 +365,7 @@ class PickBranchWindow(StateWindow):
 
         app.trackFeatureUsage("cherry_pick_filter_commits", {
             "filter_reverted": filterReverted,
+            "filter_merge": filterMerge,
             "filter_patterns": bool(filterPatterns),
             "use_regex": useRegex,
             "by_default": settings.applyFilterByDefault(),
@@ -400,6 +406,11 @@ class PickBranchWindow(StateWindow):
             # TODO: check if it is reverted later
             if filterReverted:
                 if "This reverts commit " in commit.comments:
+                    shouldFilter = True
+
+            # Check if commit is a merge commit
+            if not shouldFilter and filterMerge:
+                if len(commit.parents) > 1:
                     shouldFilter = True
 
             # Check if commit matches any pattern
@@ -509,31 +520,41 @@ class PickBranchWindow(StateWindow):
                         "Please checkout the branch first.").format(targetBranch))
             return
 
-        progress = QProgressDialog(
-            self.tr("Cherry-picking commits..."),
-            self.tr("Cancel"),
-            0, len(markedCommits), self)
-        progress.setWindowTitle(self.window().windowTitle())
-        progress.setWindowModality(Qt.NonModal)
-
         recordOrigin = self.ui.cbRecordOrigin.isChecked()
+        aiEnabled = self.ui.cbAutoResolveAi.isChecked()
+
         sourceBranchDir = Git.branchDir(sourceBranch)
-        app = ApplicationBase.instance()
-        for step, (commit, index) in enumerate(markedCommits):
-            progress.setValue(step)
-            app.processEvents()
-            if progress.wasCanceled():
-                break
 
-            self.ui.logView.ensureVisible(index)
+        items: List[CherryPickItem] = []
+        for commit, index in markedCommits:
+            items.append(CherryPickItem(
+                sha1=commit.sha1,
+                repoDir=commit.repoDir,
+                sourceIndex=index,
+            ))
 
-            fullTargetRepoDir = fullRepoDir(commit.repoDir, targetRepoDir)
-            fullSourceDir = fullRepoDir(commit.repoDir, sourceBranchDir)
-            if not self.ui.logView.doCherryPick(fullTargetRepoDir, commit.sha1, fullSourceDir, self.ui.logView, recordOrigin):
-                break
+        dlg = CherryPickProgressDialog(self)
 
-        progress.setValue(len(markedCommits))
+        dlg.setEnsureVisibleCallback(self.ui.logView.ensureVisible)
+        dlg.setMarkCallback(lambda sha1, ok: LogView._markPickStatus(
+            self.ui.logView,
+            sha1,
+            MarkType.PICKED if ok else MarkType.FAILED,
+        ))
+
+        dlg.startSession(
+            items=items,
+            targetBaseRepoDir=targetRepoDir,
+            sourceBaseRepoDir=sourceBranchDir,
+            recordOrigin=recordOrigin,
+            allowPatchPick=False,
+            aiEnabled=aiEnabled,
+        )
 
     def _updateStatus(self, message: str):
         """Update status label"""
         self.ui.labelStatus.setText(message)
+
+    def _onAutoResolveAiToggled(self, checked: bool):
+        settings = ApplicationBase.instance().settings()
+        settings.setAutoResolveConflictsWithAssistant(checked)

@@ -73,34 +73,6 @@ class TestAiChatTitleGenerator(TestBase):
             self.assertEqual(titles_received[0][0], "test-history-123")
             self.assertEqual(titles_received[0][1], "Test Generated Title")
 
-    def test_start_generate_with_ui_language(self):
-        """Test that UI language is included in prompt"""
-        with mock.patch('qgitc.aichattitlegenerator.AiModelProvider.createModel') as mock_create:
-            with mock.patch('qgitc.aichattitlegenerator.ApplicationBase.instance') as mock_app:
-                mock_app.return_value.uiLanguage.return_value = "zh_CN"
-
-                mock_model = MockAiModel()
-                captured_params = []
-
-                def capture_query(params):
-                    captured_params.append(params)
-                    if mock_model._should_emit_response:
-                        response = AiResponse()
-                        response.message = mock_model._response_message
-                        mock_model.responseAvailable.emit(response)
-                    mock_model.finished.emit()
-
-                mock_model.queryAsync = capture_query
-                mock_create.return_value = mock_model
-
-                self.generator.startGenerate("test-id", "Test message")
-
-                # Verify prompt includes UI language
-                self.assertEqual(len(captured_params), 1)
-                prompt = captured_params[0].prompt
-                self.assertIn("zh_CN", prompt)
-                self.assertIn("Test message", prompt)
-
     def test_response_handling_with_quotes(self):
         """Test response handling strips quotes and whitespace"""
         # Test various quote and whitespace combinations
@@ -280,5 +252,5 @@ class TestAiChatTitleGenerator(TestBase):
             self.assertEqual(params.max_tokens, 1024)
             self.assertEqual(params.stream, False)
             # Check that the base prompt template is in the prompt (before formatting)
-            self.assertIn("Generate a short, descriptive title", params.prompt)
+            self.assertIn("Please write a brief title for the following request", params.prompt)
             self.assertIn("Test message", params.prompt)

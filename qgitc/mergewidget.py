@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import os
 import shutil
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import (
     QDir,
     QEvent,
-    QProcess,
-    QProcessEnvironment,
     QSize,
     QSortFilterProxyModel,
     QStandardPaths,
@@ -42,7 +42,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import dataDirPath, logger
+from qgitc.common import dataDirPath
 from qgitc.conflictlog import (
     HAVE_EXCEL_API,
     HAVE_XLSX_WRITER,
@@ -51,7 +51,28 @@ from qgitc.conflictlog import (
     MergeInfo,
 )
 from qgitc.events import CopyConflictCommit
-from qgitc.gitutils import Git, GitProcess
+from qgitc.gitutils import Git
+from qgitc.resolutionreport import defaultResolutionReportFile
+from qgitc.resolver.enums import (
+    ResolveEventKind,
+    ResolveMethod,
+    ResolveOperation,
+    ResolveOutcomeStatus,
+    ResolvePromptKind,
+)
+from qgitc.resolver.helpers import buildResolveHandlers, selectMergetoolNameForPath
+from qgitc.resolver.manager import ResolveManager
+from qgitc.resolver.models import (
+    ResolveContext,
+    ResolveEvent,
+    ResolveOutcome,
+    ResolvePrompt,
+)
+from qgitc.resolver.services import ResolveServices
+from qgitc.resolver.taskrunner import TaskRunner
+
+if TYPE_CHECKING:
+    from qgitc.aichatdockwidget import AiChatDockWidget
 
 STATE_CONFLICT = 0
 STATE_RESOLVED = 1
@@ -77,16 +98,28 @@ class MergeWidget(QWidget):
         self.iconConflict = self.__makeTextIcon('!', schema.ConflictFg)
 
         self.resolveIndex = -1
-        self.process = None
+        self._chatDock: "AiChatDockWidget" = None
+
+        self._resolveRunner = TaskRunner(self)
+        self._resolveManager: ResolveManager = None
 
         self._firstShown = True
 
         self.log = None
+        self._aiReportFile = None
 
         self.__setupUi()
         self.__setupSignals()
 
         self._mergeInfo = None
+
+    def setChatDockWidget(self, chatDockWidget):
+        self._chatDock = chatDockWidget
+
+    def __ensureChatDockVisible(self):
+        if not self._chatDock:
+            return
+        self._chatDock.setVisible(True)
 
     def __setupUi(self):
         self.view = QListView(self)
@@ -116,12 +149,16 @@ class MergeWidget(QWidget):
         self.status = QLabel(self)
         self.status.setToolTip(self.tr("Click to refresh the list"))
         self.cbAutoNext = QCheckBox(self.tr("Continuous resolve"))
+        self.cbAutoResolve = QCheckBox(self.tr("Auto-resolve"))
+        self.cbAutoResolve.setToolTip(
+            self.tr("Use assistant to auto-resolve conflicts if possible"))
         self.btnResolve = QPushButton(self.tr("Resolve"))
 
         hlayout.addWidget(self.status)
         hlayout.addSpacerItem(QSpacerItem(
             20, 20, QSizePolicy.MinimumExpanding))
         hlayout.addWidget(self.cbAutoNext)
+        hlayout.addWidget(self.cbAutoResolve)
         hlayout.addWidget(self.btnResolve)
 
         vlayout.addLayout(hlayout)
@@ -136,7 +173,22 @@ class MergeWidget(QWidget):
         hlayout.addWidget(self.btnChooseLog)
         vlayout.addLayout(hlayout)
 
+        self._aiReportLabel = QLabel(self.tr("Auto-resolve record"), self)
+        self._aiReportLabel.setVisible(False)
+
+        self._aiReportPathEdit = QLineEdit(self)
+        self._aiReportPathEdit.setReadOnly(True)
+        self._aiReportPathEdit.setVisible(False)
+
+        hlayout = QHBoxLayout()
+        hlayout.addWidget(self._aiReportLabel)
+        hlayout.addWidget(self._aiReportPathEdit)
+        vlayout.addLayout(hlayout)
+
         self.cbAutoNext.setChecked(True)
+        settings = ApplicationBase.instance().settings()
+        self.cbAutoResolve.setChecked(
+            settings.autoResolveConflictsWithAssistant())
         if HAVE_EXCEL_API or HAVE_XLSX_WRITER:
             self.cbAutoLog.setChecked(True)
             self.__onAutoLogChanged(Qt.Checked)
@@ -161,6 +213,7 @@ class MergeWidget(QWidget):
             return
 
         logFile = self.leLogFile.text()
+        os.makedirs(os.path.dirname(logFile), exist_ok=True)
         shutil.copy(dataDirPath() + "/templates/builtin.xlsx", logFile)
 
         if HAVE_EXCEL_API:
@@ -206,6 +259,14 @@ class MergeWidget(QWidget):
         self.leFilter.textChanged.connect(self.__onFilterChanged)
         self.cbAutoLog.stateChanged.connect(self.__onAutoLogChanged)
         self.btnChooseLog.clicked.connect(self.__onChooseLogFile)
+        self.cbAutoResolve.toggled.connect(self.__onAutoResolveToggled)
+
+    def __onAutoResolveToggled(self, checked: bool):
+        settings = ApplicationBase.instance().settings()
+        settings.setAutoResolveConflictsWithAssistant(checked)
+
+        if checked:
+            self.__ensureChatDockVisible()
 
     def __makeTextIcon(self, text, color):
         img = QPixmap(QSize(32, 32))
@@ -227,6 +288,14 @@ class MergeWidget(QWidget):
         self.status.setText(
             "<a href='#refresh'>{}/{}</a>".format(self.resolvedCount,
                                                   total))
+
+    def __ensureAiReportFile(self):
+        if self._aiReportFile:
+            return
+        self._aiReportFile = defaultResolutionReportFile()
+        self._aiReportPathEdit.setText(self._aiReportFile)
+        self._aiReportPathEdit.setVisible(True)
+        self._aiReportLabel.setVisible(True)
 
     def __updateFilterCount(self):
         text = self.proxyModel.filterRegularExpression().pattern()
@@ -260,7 +329,7 @@ class MergeWidget(QWidget):
         self.resolve(index)
 
     def __onStatusRefresh(self, link):
-        if self.process:
+        if self.isResolving():
             QMessageBox.information(self,
                                     ApplicationBase.instance().applicationName(),
                                     self.tr("You can't refresh before close the merge window."))
@@ -348,96 +417,28 @@ class MergeWidget(QWidget):
     def __onMenuSelectAll(self):
         self.view.selectAll()
 
-    def __onReadyRead(self):
-        # FIXME: since git might not flush all output at one time
-        # delay some time to read all data for "Deleted merge"
-        QTimer.singleShot(50, self.__onResolveReadyRead)
-
-    def __onResolveReadyRead(self):
-        if not self.process or not self.process.bytesAvailable():
-            return
-
-        data = self.process.readAllStandardOutput().data()
-        # seems no options to control this buggy prompt
-        if b'Continue merging other unresolved paths [y/n]?' in data:
-            self.process.write(b"n\n")
-        elif b'Deleted merge conflict for' in data:
-            text = data.decode("utf-8")
-            isCreated = "(c)reated" in text
-            if isCreated:
-                text = text.replace("(c)reated", "created")
-            else:
-                text = text.replace("(m)odified", "modified")
-            text = text.replace("(d)eleted", "deleted")
-            text = text.replace("(a)bort", "abort")
-
-            msgBox = QMessageBox(
-                QMessageBox.Question, ApplicationBase.instance().applicationName(), text, QMessageBox.NoButton, self)
-            msgBox.addButton(self.tr("Use &created") if isCreated
-                             else self.tr("Use &modified"),
-                             QMessageBox.AcceptRole)
-            msgBox.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
-            msgBox.addButton(QMessageBox.Abort)
-            r = msgBox.exec()
-            if r == QMessageBox.AcceptRole:
-                if isCreated:
-                    self.process.write(b"c\n")
-                else:
-                    self.process.write(b"m\n")
-            elif r == QMessageBox.RejectRole:
-                self.process.write(b"d\n")
-            else:  # r == QMessageBox.Abort:
-                self.process.write(b"a\n")
-        elif b'Symbolic link merge conflict for' in data:
-            text = data.decode("utf-8")
-            text = text.replace("(l)ocal", "local")
-            text = text.replace("(r)emote", "remote")
-            text = text.replace("(a)bort", "abort")
-
-            msgBox = QMessageBox(
-                QMessageBox.Question, ApplicationBase.instance().applicationName(), text, QMessageBox.NoButton, self)
-            msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
-            msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
-            msgBox.addButton(QMessageBox.Abort)
-            r = msgBox.exec()
-            if r == QMessageBox.AcceptRole:
-                self.process.write(b"l\n")
-            elif r == QMessageBox.RejectRole:
-                self.process.write(b"r\n")
-            else:
-                self.process.write(b"a\n")
-        elif b'Was the merge successful [y/n]?' in data:
-            # TODO:
-            self.process.write(b"n\n")
-        elif b'?' in data:
-            # TODO: might have other prompt need yes no
-            logger.warning("unhandled prompt: %s", data)
-
-    def __onResolveFinished(self, exitCode, exitStatus):
-        errorData = None
-        if exitCode == 0:
+    def __finishResolveCommon(self, success: bool, errorText: str = None):
+        if success:
             index = self.proxyModel.index(self.resolveIndex, 0)
             self.__resolvedIndex(index)
         else:
-            errorData = self.process.readAllStandardError()
+            if errorText:
+                QMessageBox.critical(
+                    self, self.window().windowTitle(), errorText)
 
-        self.process = None
         curRow = self.resolveIndex
         self.resolveIndex = -1
 
-        self.resolveFinished.emit(RESOLVE_SUCCEEDED if exitCode == 0
+        self.resolveFinished.emit(RESOLVE_SUCCEEDED if success
                                   else RESOLVE_FAILED)
 
         self.leFilter.setEnabled(True)
         if HAVE_EXCEL_API or HAVE_XLSX_WRITER:
             self.cbAutoLog.setEnabled(True)
             self.__onAutoLogChanged(self.cbAutoLog.checkState())
+
         # auto next only when success
-        if exitCode != 0:
-            if errorData:
-                QMessageBox.critical(
-                    self, self.window().windowTitle(),
-                    errorData.data().decode("utf-8"))
+        if not success:
             return
 
         if not self.cbAutoNext.isChecked():
@@ -489,12 +490,111 @@ class MergeWidget(QWidget):
 
     def __onFirstShow(self):
         self.updateList()
+        if self.cbAutoResolve.isChecked():
+            self.__ensureChatDockVisible()
         if self.model.rowCount() == 0:
             QMessageBox.information(
                 self,
                 self.window().windowTitle(),
                 self.tr("No conflict files to resolve!"),
                 QMessageBox.Ok)
+
+    def __onResolvePrompt(self, prompt: ResolvePrompt):
+        if not self._resolveManager:
+            return
+
+        # Deleted merge conflict prompt - must be user-driven.
+        if prompt.kind == ResolvePromptKind.DELETED_CONFLICT_CHOICE:
+            text = prompt.text
+            isCreated = bool((prompt.meta or {}).get("isCreated"))
+            msgBox = QMessageBox(
+                QMessageBox.Question,
+                ApplicationBase.instance().applicationName(),
+                text,
+                QMessageBox.NoButton,
+                self,
+            )
+
+            # options are: ['c' or 'm', 'd', 'a']
+            primary = prompt.options[0] if prompt.options else "m"
+            deleteOpt = prompt.options[1] if len(prompt.options) > 1 else "d"
+            abortOpt = prompt.options[2] if len(prompt.options) > 2 else "a"
+
+            primaryText = self.tr(
+                "Use &created") if isCreated else self.tr("Use &modified")
+            msgBox.addButton(primaryText, QMessageBox.AcceptRole)
+            msgBox.addButton(self.tr("&Deleted file"), QMessageBox.RejectRole)
+            msgBox.addButton(QMessageBox.Abort)
+            r = msgBox.exec()
+            if r == QMessageBox.AcceptRole:
+                choice = primary
+            elif r == QMessageBox.RejectRole:
+                choice = deleteOpt
+            else:
+                choice = abortOpt
+
+            self._resolveManager.replyPrompt(prompt.promptId, choice)
+            return
+
+        if prompt.kind == ResolvePromptKind.SYMLINK_CONFLICT_CHOICE:
+            text = prompt.text
+            msgBox = QMessageBox(
+                QMessageBox.Question,
+                ApplicationBase.instance().applicationName(),
+                text,
+                QMessageBox.NoButton,
+                self,
+            )
+            localOpt = prompt.options[0] if prompt.options else "l"
+            remoteOpt = prompt.options[1] if len(prompt.options) > 1 else "r"
+            abortOpt = prompt.options[2] if len(prompt.options) > 2 else "a"
+            msgBox.addButton(self.tr("Use &local"), QMessageBox.AcceptRole)
+            msgBox.addButton(self.tr("Use &remote"), QMessageBox.RejectRole)
+            msgBox.addButton(QMessageBox.Abort)
+            r = msgBox.exec()
+            if r == QMessageBox.AcceptRole:
+                choice = localOpt
+            elif r == QMessageBox.RejectRole:
+                choice = remoteOpt
+            else:
+                choice = abortOpt
+            self._resolveManager.replyPrompt(prompt.promptId, choice)
+            return
+
+    def __onResolveEvent(self, ev: ResolveEvent):
+        if ev.kind != ResolveEventKind.FILE_RESOLVED:
+            return
+        if not ev.path:
+            return
+
+        if not self.logEnabled():
+            return
+
+        self.__ensureLogWriter()
+        if ev.method == ResolveMethod.AI:
+            self.log.setResolveMethod(ev.path, self.tr("Assistant"))
+        elif ev.method == ResolveMethod.OURS:
+            self.log.setResolveMethod(ev.path, self.tr("Local Branch"))
+        elif ev.method == ResolveMethod.THEIRS:
+            self.log.setResolveMethod(ev.path, self.tr("Remote Branch"))
+        elif ev.method == ResolveMethod.MERGETOOL:
+            self.log.setResolveMethod(ev.path, self.tr("Merge Tool"))
+
+    def __onResolveCompleted(self, outcome: ResolveOutcome):
+        self._resolveManager = None
+
+        if outcome.status == ResolveOutcomeStatus.RESOLVED:
+            self.__finishResolveCommon(True, None)
+            return
+
+        if outcome.status == ResolveOutcomeStatus.NEEDS_USER:
+            msg = outcome.message or self.tr(
+                "Conflicts remain; please resolve manually.")
+            self.__finishResolveCommon(False, msg)
+            return
+
+        msg = outcome.message or self.tr("Resolve failed")
+        self.__finishResolveCommon(False, msg)
 
     def contextMenuEvent(self, event):
         index = self.view.currentIndex()
@@ -552,7 +652,7 @@ class MergeWidget(QWidget):
                                     self.tr("This file is already resolved."))
             return
 
-        if self.process:
+        if self.isResolving():
             QMessageBox.information(self, ApplicationBase.instance().applicationName(),
                                     self.tr("Please resolve current conflicts before start a new one."))
             return
@@ -562,54 +662,103 @@ class MergeWidget(QWidget):
         if HAVE_XLSX_WRITER or HAVE_EXCEL_API:
             self.cbAutoLog.setEnabled(False)
             self.__onAutoLogChanged(Qt.Unchecked)
+
         self.resolveIndex = index.row()
         file = index.data()
-        args = ["mergetool", "--no-prompt"]
 
-        toolName = None
-        tools = ApplicationBase.instance().settings().mergeToolList()
-        # ignored case even on Unix platform
-        lowercase_file = file.lower()
-        for tool in tools:
-            if tool.canMerge() and tool.isValid():
-                if lowercase_file.endswith(tool.suffix.lower()):
-                    toolName = tool.command
-                    break
+        repoDir = Git.REPO_DIR
+        if not repoDir:
+            self.__finishResolveCommon(
+                False, self.tr("No repository directory"))
+            return
 
-        if not toolName:
-            toolName = ApplicationBase.instance().settings().mergeToolName()
-
-            if not toolName:
-                gitMergeTool = Git.getConfigValue("merge.tool", False)
-                if not gitMergeTool:
-                    QMessageBox.warning(
-                        self, self.tr("Merge Tool Not Configured"),
-                        self.tr("No merge tool is configured.\n\n"
-                                "Please configure a merge tool in:\n"
-                                "- Git global config: git config --global merge.tool <tool-name>\n"
-                                "- Or in Preferences > Tools tab"))
-                    return
-
-        if toolName:
-            args.append("--tool=%s" % toolName)
-
-        args.append(file)
-
-        # subprocess is not suitable here
-        self.process = QProcess(self)
-        self.process.readyReadStandardOutput.connect(self.__onReadyRead)
-        self.process.finished.connect(self.__onResolveFinished)
-        self.process.setWorkingDirectory(Git.REPO_DIR)
-
-        env = QProcessEnvironment.systemEnvironment()
-        env.insert("LANGUAGE", "en_US")
-        self.process.setProcessEnvironment(env)
-        self.process.start(GitProcess.GIT_BIN, args)
-
+        # Keep existing side-effects: jump/filter file in the main log view.
         self.requestResolve.emit(file)
         if self.logEnabled():
             self.__ensureLogWriter()
             self.log.addFile(file)
+
+        aiAutoResolveEnabled = self.cbAutoResolve.isChecked()
+        if aiAutoResolveEnabled:
+            self.__ensureChatDockVisible()
+
+        sha1 = ""
+        contextParts = [
+            f"Repo dir: {repoDir}",
+            f"Conflicted file: {file}",
+        ]
+        operation = ResolveOperation.MERGE
+        if Git.isCherryPicking(repoDir):
+            sha1 = Git.cherryPickHeadSha1(repoDir)
+            operation = ResolveOperation.CHERRY_PICK
+        elif self._mergeInfo is not None:
+            contextParts.extend([
+                f"Local branch: {self._mergeInfo.local}",
+                f"Remote branch: {self._mergeInfo.remote}",
+            ])
+
+        if sha1:
+            contextParts.append(f"Sha1: {sha1}")
+
+        context = "\n".join(p for p in contextParts if p).strip() or None
+
+        toolName = selectMergetoolNameForPath(file)
+        hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
+
+        # AI needs chat widget.
+        chatWidget = None
+        if aiAutoResolveEnabled and self._chatDock is not None:
+            chatWidget = self._chatDock.chatWidget()
+
+        if aiAutoResolveEnabled and chatWidget is not None:
+            self.__ensureAiReportFile()
+
+        # Build handler chain.
+        services = ResolveServices(runner=self._resolveRunner, ai=chatWidget)
+
+        handlers, toolNameFromHelper, hasGitDefaultToolFromHelper = buildResolveHandlers(
+            parent=self,
+            path=file,
+            aiEnabled=aiAutoResolveEnabled,
+            chatWidget=chatWidget,
+        )
+        if toolNameFromHelper is not None:
+            toolName = toolNameFromHelper
+        hasGitDefaultTool = hasGitDefaultTool or hasGitDefaultToolFromHelper
+
+        if not handlers and not aiAutoResolveEnabled:
+            # If AI isn't enabled, we cannot proceed.
+            QMessageBox.warning(
+                self,
+                self.tr("Merge Tool Not Configured"),
+                self.tr("No merge tool is configured.\n\n"
+                        "Please configure a merge tool in:\n"
+                        "- Git global config: git config --global merge.tool <tool-name>\n"
+                        "- Or in Preferences > Tools tab"),
+            )
+            self.__finishResolveCommon(False, None)
+            return
+
+        if not handlers:
+            self.__finishResolveCommon(
+                False, self.tr("No resolve handler available"))
+            return
+
+        ctx = ResolveContext(
+            repoDir=repoDir,
+            operation=operation,
+            sha1=sha1,
+            path=file,
+            context=context,
+            mergetoolName=toolName,
+            reportFile=self._aiReportFile,
+        )
+
+        self._resolveManager = ResolveManager(handlers, services, parent=self)
+        self._resolveManager.promptRequested.connect(self.__onResolvePrompt)
+        self._resolveManager.eventEmitted.connect(self.__onResolveEvent)
+        self._resolveManager.completed.connect(self.__onResolveCompleted)
+        self._resolveManager.start(ctx)
 
     def event(self, e):
         if e.type() == CopyConflictCommit.Type:
@@ -628,7 +777,7 @@ class MergeWidget(QWidget):
         return super().eventFilter(obj, event)
 
     def isResolving(self):
-        return self.process is not None
+        return self._resolveManager is not None
 
     def logEnabled(self):
         return self.cbAutoLog.isChecked()
@@ -637,6 +786,8 @@ class MergeWidget(QWidget):
         if self.log:
             self.log.save()
             self.log = None
+        if self.isResolving():
+            self._resolveManager.cancel()
         return True
 
     def setBranches(self, localBranch, remoteBranch):

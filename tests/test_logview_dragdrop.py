@@ -114,7 +114,8 @@ class TestLogViewDragDrop(TestBase):
 
         # Simulate mouse press
         pos = self.logview.itemRect(0).center()
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
 
         self.logview.mousePressEvent(event)
 
@@ -125,7 +126,8 @@ class TestLogViewDragDrop(TestBase):
         """Test that non-left button press resets drag state"""
         # First set a drag start position
         pos = self.logview.itemRect(0).center()
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (pos.x(), pos.y()))
         self.logview.mousePressEvent(event)
         self.assertIsNotNone(self.logview._dragStartPos)
 
@@ -146,7 +148,8 @@ class TestLogViewDragDrop(TestBase):
 
         center = self.logview.itemRect(0).center()
         # Store initial position
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (center.x(), center.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (center.x(), center.y()))
         self.logview.mousePressEvent(event)
 
         # Mock _startDrag to verify it's called
@@ -197,7 +200,8 @@ class TestLogViewDragDrop(TestBase):
 
         center = self.logview.itemRect(0).center()
 
-        event = self._createMouseEvent(QMouseEvent.MouseButtonPress, (center.x(), center.y()))
+        event = self._createMouseEvent(
+            QMouseEvent.MouseButtonPress, (center.x(), center.y()))
         self.logview.mousePressEvent(event)
 
         with patch.object(self.logview, '_startDrag') as mock_start_drag:
@@ -502,87 +506,77 @@ class TestLogViewDragDrop(TestBase):
             self.logview._branchDir = original_branch_dir
 
     # ============================================================================
-    # Test Cherry-Pick Operations
+    # Test Cherry-Pick Operations (Progress Dialog Flow)
     # ============================================================================
 
-    @patch('qgitc.gitutils.Git.cherryPick')
-    def test_doCherryPick_success(self, mock_cherry_pick):
-        """Test successful cherry-pick operation"""
-        mock_cherry_pick.return_value = (0, "", "")
+    def test_executeCherryPick_builds_items_oldest_first(self):
+        """Test that _executeCherryPick passes items in oldest->newest order."""
+        commits = [
+            {"sha1": "newest", "repoDir": "."},
+            {"sha1": "middle", "repoDir": "."},
+            {"sha1": "oldest", "repoDir": "."},
+        ]
 
-        result = self.logview.doCherryPick(
-            self.gitDir.name, "abc123", self.gitDir.name, None
-        )
+        with patch('qgitc.logview.CherryPickProgressDialog') as MockDlg:
+            dlg = Mock()
+            MockDlg.return_value = dlg
+            dlg.startSession.return_value = 0
 
-        self.assertTrue(result)
-        mock_cherry_pick.assert_called_once()
+            with patch.object(self.logview, 'reloadLogs'):
+                self.logview._executeCherryPick(
+                    commits, None, self.gitDir.name, None)
 
-    @patch('qgitc.gitutils.Git.cherryPick')
-    def test_doCherryPick_handles_conflict(self, mock_cherry_pick):
-        """Test cherry-pick with conflict"""
-        mock_cherry_pick.return_value = (1, "conflict detected", "")
+            dlg.startSession.assert_called_once()
+            kwargs = dlg.startSession.call_args.kwargs
+            items = kwargs.get('items', [])
+            self.assertEqual([i.sha1 for i in items], [
+                             "oldest", "middle", "newest"])
+            self.assertTrue(kwargs.get('allowPatchPick'))
 
-        with patch.object(self.logview, '_resolveCherryPickConflict') as mock_resolve:
-            mock_resolve.return_value = False
+    def test_executeCherryPick_includes_subcommits(self):
+        """Test that _executeCherryPick includes subCommits in items list."""
+        commits = [
+            {
+                "sha1": "main1",
+                "repoDir": ".",
+                "subCommits": [
+                    {"sha1": "sub1", "repoDir": "submodule"},
+                    {"sha1": "sub2", "repoDir": "submodule"},
+                ],
+            }
+        ]
 
-            result = self.logview.doCherryPick(
-                self.gitDir.name, "abc123", self.gitDir.name, None
-            )
+        with patch('qgitc.logview.CherryPickProgressDialog') as MockDlg:
+            dlg = Mock()
+            MockDlg.return_value = dlg
+            dlg.startSession.return_value = 0
 
-            self.assertFalse(result)
-            mock_resolve.assert_called_once()
+            with patch.object(self.logview, 'reloadLogs'):
+                self.logview._executeCherryPick(
+                    commits, None, self.gitDir.name, None)
 
-    @patch('qgitc.gitutils.Git.cherryPick')
-    def test_doCherryPick_handles_empty_commit(self, mock_cherry_pick):
-        """Test cherry-pick resulting in empty commit"""
-        mock_cherry_pick.return_value = (1, "git commit --allow-empty", "")
+            kwargs = dlg.startSession.call_args.kwargs
+            items = kwargs.get('items', [])
+            self.assertEqual([i.sha1 for i in items], [
+                             "main1", "sub1", "sub2"])
 
-        with patch.object(self.logview, '_handleEmptyCherryPick') as mock_handle:
-            mock_handle.return_value = True
+    def test_executeCherryPick_sets_callbacks_for_source_view(self):
+        """Test that sourceView enables mark/apply-local-changes callbacks."""
+        commits = [{"sha1": "abc123", "repoDir": "."}]
 
-            result = self.logview.doCherryPick(
-                self.gitDir.name, "abc123", self.gitDir.name, None
-            )
+        with patch('qgitc.logview.CherryPickProgressDialog') as MockDlg:
+            dlg = Mock()
+            MockDlg.return_value = dlg
+            dlg.startSession.return_value = 0
 
-            self.assertTrue(result)
-            mock_handle.assert_called_once()
+            with patch.object(self.logview, 'reloadLogs'):
+                self.logview._executeCherryPick(
+                    commits, self.logview, self.gitDir.name, None)
 
-    @patch('qgitc.gitutils.Git.cherryPick')
-    def test_doCherryPick_handles_general_error(self, mock_cherry_pick):
-        """Test cherry-pick with general error"""
-        mock_cherry_pick.return_value = (1, "some error occurred", "")
-
-        with patch.object(QMessageBox, 'critical') as mock_critical:
-            result = self.logview.doCherryPick(
-                self.gitDir.name, "abc123", self.gitDir.name, None
-            )
-
-            self.assertFalse(result)
-            mock_critical.assert_called_once()
-
-    def test_doCherryPick_applies_local_uncommitted_changes(self):
-        """Test cherry-pick of local uncommitted changes (LUC)"""
-        with patch.object(self.logview, '_applyLocalChanges') as mock_apply:
-            mock_apply.return_value = True
-
-            result = self.logview.doCherryPick(
-                self.gitDir.name, Git.LUC_SHA1, self.gitDir.name, None
-            )
-
-            self.assertTrue(result)
-            mock_apply.assert_called_once()
-
-    def test_doCherryPick_applies_local_cached_changes(self):
-        """Test cherry-pick of local cached changes (LCC)"""
-        with patch.object(self.logview, '_applyLocalChanges') as mock_apply:
-            mock_apply.return_value = True
-
-            result = self.logview.doCherryPick(
-                self.gitDir.name, Git.LCC_SHA1, self.gitDir.name, None
-            )
-
-            self.assertTrue(result)
-            mock_apply.assert_called_once()
+            dlg.setMarkCallback.assert_called_once()
+            dlg.setApplyLocalChangesCallback.assert_called_once()
+            kwargs = dlg.startSession.call_args.kwargs
+            self.assertFalse(kwargs.get('allowPatchPick'))
 
     # ============================================================================
     # Test Mark Status
@@ -620,44 +614,6 @@ class TestLogViewDragDrop(TestBase):
         self.assertEqual(len(marker._ranges), 0)
 
     # ============================================================================
-    # Test Conflict Resolution
-    # ============================================================================
-
-    def test_handleEmptyCherryPick_skip(self):
-        """Test handling empty cherry-pick with skip option"""
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.Yes):
-            with patch('qgitc.gitutils.Git.cherryPickSkip') as mock_skip:
-                result = self.logview._handleEmptyCherryPick(
-                    self.gitDir.name, "abc123",
-                    "git commit --allow-empty", None
-                )
-
-                self.assertTrue(result)
-                mock_skip.assert_called_once()
-
-    def test_handleEmptyCherryPick_allow_empty(self):
-        """Test handling empty cherry-pick with allow-empty option"""
-        with patch.object(QMessageBox, 'question', return_value=QMessageBox.No):
-            with patch('qgitc.gitutils.Git.cherryPickAllowEmpty') as mock_allow:
-                mock_allow.return_value = (0, "")
-
-                result = self.logview._handleEmptyCherryPick(
-                    self.gitDir.name, "abc123",
-                    "git commit --allow-empty", None
-                )
-
-                self.assertTrue(result)
-                mock_allow.assert_called_once()
-
-    def test_handleEmptyCherryPick_returns_false_for_non_empty_error(self):
-        """Test that _handleEmptyCherryPick returns False for non-empty errors"""
-        result = self.logview._handleEmptyCherryPick(
-            self.gitDir.name, "abc123",
-            "some other error", None
-        )
-
-        self.assertFalse(result)
-
     # ============================================================================
     # Test Local Changes Application
     # ============================================================================
@@ -731,73 +687,6 @@ class TestLogViewDragDrop(TestBase):
         self.assertIn("--index", args)
 
     # ============================================================================
-    # Test Cross-Repository Cherry-Pick
-    # ============================================================================
-
-    @patch('qgitc.gitutils.Git.run')
-    def test_pickFromAnotherRepo_success(self, mock_run):
-        """Test successful cherry-pick from another repository"""
-        # Mock format-patch
-        mock_format_patch = Mock()
-        mock_format_patch.returncode = 0
-        mock_format_patch.communicate.return_value = ("patch content", "")
-
-        # Mock am
-        mock_am = Mock()
-        mock_am.returncode = 0
-        mock_am.communicate.return_value = ("", "")
-
-        mock_run.side_effect = [mock_format_patch, mock_am]
-
-        result = self.logview._pickFromAnotherRepo(
-            self.gitDir.name, self.gitDir.name, "abc123"
-        )
-
-        self.assertTrue(result)
-        self.assertEqual(mock_run.call_count, 2)
-
-    @patch('qgitc.gitutils.Git.run')
-    def test_pickFromAnotherRepo_format_patch_failed(self, mock_run):
-        """Test cherry-pick from another repo when format-patch fails"""
-        mock_process = Mock()
-        mock_process.returncode = 1
-        mock_process.communicate.return_value = ("", "format-patch failed")
-        mock_run.return_value = mock_process
-
-        with patch.object(QMessageBox, 'critical') as mock_critical:
-            result = self.logview._pickFromAnotherRepo(
-                self.gitDir.name, self.gitDir.name, "abc123"
-            )
-
-            self.assertFalse(result)
-            mock_critical.assert_called_once()
-
-    @patch('qgitc.gitutils.Git.run')
-    def test_pickFromAnotherRepo_am_failed(self, mock_run):
-        """Test cherry-pick from another repo when am fails"""
-        # Mock format-patch success
-        mock_format_patch = Mock()
-        mock_format_patch.returncode = 0
-        mock_format_patch.communicate.return_value = ("patch content", "")
-
-        # Mock am failure
-        mock_am = Mock()
-        mock_am.returncode = 1
-        mock_am.communicate.return_value = ("", "am failed")
-
-        mock_run.side_effect = [mock_format_patch, mock_am]
-
-        # Should attempt to resolve conflict
-        with patch.object(self.logview, '_runMergeTool') as mock_merge:
-            mock_merge.return_value = (None, False)
-
-            result = self.logview._pickFromAnotherRepo(
-                self.gitDir.name, self.gitDir.name, "abc123"
-            )
-
-            self.assertFalse(result)
-
-    # ============================================================================
     # Test Edge Cases
     # ============================================================================
 
@@ -853,79 +742,6 @@ class TestLogViewDragDrop(TestBase):
         # Verify drop indicator was cleared
         self.assertEqual(self.logview._dropIndicatorLine, -1)
         self.assertEqual(self.logview._dropIndicatorAlpha, 0.0)
-
-    def test_executeCherryPick_reverses_commit_order(self):
-        """Test that _executeCherryPick reverses commits (oldest first)"""
-        commits = [
-            {"sha1": "newest", "repoDir": "."},
-            {"sha1": "middle", "repoDir": "."},
-            {"sha1": "oldest", "repoDir": "."}
-        ]
-
-        picked_order = []
-
-        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin=True):
-            picked_order.append(sha1)
-            return True
-
-        with patch.object(self.logview, 'doCherryPick', side_effect=mock_cherry_pick):
-            with patch.object(self.logview, 'reloadLogs'):
-                self.logview._executeCherryPick(
-                    commits, None, self.gitDir.name, None)
-
-        # Verify order was reversed
-        self.assertEqual(picked_order, ["oldest", "middle", "newest"])
-
-    def test_executeCherryPick_stops_on_failure(self):
-        """Test that _executeCherryPick stops on first failure"""
-        commits = [
-            {"sha1": "commit1", "repoDir": "."},
-            {"sha1": "commit2", "repoDir": "."},
-            {"sha1": "commit3", "repoDir": "."}
-        ]
-
-        picked_commits = []
-
-        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin=True):
-            picked_commits.append(sha1)
-            # Fail on second commit
-            return sha1 != "commit2"
-
-        with patch.object(self.logview, 'doCherryPick', side_effect=mock_cherry_pick):
-            with patch.object(self.logview, 'reloadLogs'):
-                self.logview._executeCherryPick(
-                    commits, None, self.gitDir.name, None)
-
-        # Should only have tried first two (pick in reverse order)
-        self.assertEqual(picked_commits, ["commit3", "commit2"])
-
-    def test_executeCherryPick_handles_subcommits(self):
-        """Test that _executeCherryPick processes subcommits"""
-        commits = [
-            {
-                "sha1": "main1",
-                "repoDir": ".",
-                "subCommits": [
-                    {"sha1": "sub1", "repoDir": "submodule"}
-                ]
-            }
-        ]
-
-        picked_commits = []
-
-        def mock_cherry_pick(repoDir, sha1, sourceRepoDir, sourceView, recordOrigin=True):
-            picked_commits.append((sha1, repoDir))
-            return True
-
-        with patch.object(self.logview, 'doCherryPick', side_effect=mock_cherry_pick):
-            with patch.object(self.logview, 'reloadLogs'):
-                self.logview._executeCherryPick(
-                    commits, None, self.gitDir.name, None)
-
-        # Verify both main and sub were picked
-        self.assertEqual(len(picked_commits), 2)
-        self.assertIn("main1", [c[0] for c in picked_commits])
-        self.assertIn("sub1", [c[0] for c in picked_commits])
 
     def test_createDragPreview_handles_empty_commits(self):
         """Test that _createDragPreview handles empty commit list"""

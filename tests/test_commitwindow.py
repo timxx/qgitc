@@ -307,28 +307,69 @@ class TestCommitWindow(TestBase):
 
         self.assertTrue(self.window.ui.btnCodeReview.isEnabled())
 
+        chat = self.window._aiChat.chatWidget()
         with patch.object(self.app, 'trackFeatureUsage') as mock_track, \
-                patch.object(self.app, 'postEvent') as mock_post_event:
+                patch.object(self.app, 'postEvent') as mock_post_event, \
+                patch.object(chat, 'isBusyForCodeReview', return_value=False), \
+                patch.object(chat, 'codeReviewForStagedFiles') as mock_dock_review:
 
-            # Click the code review button to trigger the actual flow
             QTest.mouseClick(self.window.ui.btnCodeReview, Qt.LeftButton)
             self.processEvents()
 
-            # Verify feature usage was tracked
             mock_track.assert_called_once_with("commit.ai_cr")
+            mock_post_event.assert_not_called()
+            mock_dock_review.assert_called_once()
 
-            # Verify an event was posted
+            submodule_files = mock_dock_review.call_args[0][0]
+            self.assertIsInstance(submodule_files, dict)
+            self.assertIn(".", submodule_files)
+            self.assertIn("test.py", submodule_files["."])
+
+    def testCodeReviewBusyFallbackToStandalone(self):
+        self.waitForLoaded()
+
+        with open(os.path.join(self.gitDir.name, "test.py"), "w+") as f:
+            f.write("# dummy change\n")
+
+        error = Git.addFiles(repoDir=self.gitDir.name, files=["test.py"])
+        self.assertIsNone(error)
+
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        QTest.mouseClick(self.window.ui.tbStageAll, Qt.LeftButton)
+        self.waitForLoaded()
+
+        self.assertTrue(self.window.ui.btnCodeReview.isEnabled())
+
+        chat = self.window._aiChat.chatWidget()
+        mock_msgbox = MagicMock()
+        btn_standalone = object()
+        btn_abort = object()
+        mock_msgbox.addButton.side_effect = [btn_standalone, btn_abort]
+        mock_msgbox.clickedButton.return_value = btn_standalone
+
+        with patch.object(self.app, 'trackFeatureUsage') as mock_track, \
+                patch.object(self.app, 'postEvent') as mock_post_event, \
+                patch.object(chat, 'isBusyForCodeReview', return_value=True), \
+                patch.object(chat, 'codeReviewForStagedFiles') as mock_dock_review, \
+                patch('qgitc.commitwindow.QMessageBox') as mock_msgbox_class:
+
+            mock_msgbox_class.return_value = mock_msgbox
+            mock_msgbox_class.Warning = QMessageBox.Warning
+            mock_msgbox_class.YesRole = QMessageBox.YesRole
+            mock_msgbox_class.NoRole = QMessageBox.NoRole
+
+            QTest.mouseClick(self.window.ui.btnCodeReview, Qt.LeftButton)
+            self.processEvents()
+
+            mock_track.assert_called_once_with("commit.ai_cr")
+            mock_dock_review.assert_not_called()
             self.assertEqual(mock_post_event.call_count, 1)
-            posted_event: CodeReviewEvent = mock_post_event.call_args[0][1]
-
-            # Verify it's a CodeReviewEvent
+            posted_event = mock_post_event.call_args[0][1]
             self.assertIsInstance(posted_event, CodeReviewEvent)
-
-            # Verify the event contains submodule files
-            self.assertIsNotNone(posted_event.submodules)
             self.assertIsInstance(posted_event.submodules, dict)
-            self.assertIn(".", posted_event.submodules)  # Root submodule
-            # Our test file
+            self.assertIn(".", posted_event.submodules)
             self.assertIn("test.py", posted_event.submodules["."])
 
         # Test AI window creation and model setup with mock models
@@ -341,7 +382,7 @@ class TestCommitWindow(TestBase):
 
         # Mock the model factory to return our mock model
         with patch('qgitc.llmprovider.AiModelFactory.models') as mock_factory_models, \
-                patch('qgitc.aichatwindow.AiChatWindow.codeReviewForStagedFiles') as mock_code_review:
+            patch('qgitc.aichatwindow.AiChatWindow.codeReviewForStagedFiles') as mock_code_review:
 
             chatWindow = self.app.getWindow(WindowType.AiAssistant, False)
             self.assertIsNone(chatWindow)
@@ -371,9 +412,9 @@ class TestCommitWindow(TestBase):
             self.assertIsNotNone(chatWindow)
 
             chatWindow.codeReviewForStagedFiles(test_event.submodules)
-            spyFinished = QSignalSpy(chatWindow._executor.finished)
-
             chatWidget: AiChatWidget = chatWindow.centralWidget()
+            spyFinished = QSignalSpy(chatWidget._codeReviewExecutor.finished)
+
             spyInitialized = QSignalSpy(chatWidget.initialized)
             self.assertFalse(chatWidget._isInitialized)
 

@@ -343,6 +343,28 @@ class Settings(QSettings):
         self.endGroup()
         self.endGroup()
 
+    def llmMaxTokens(self):
+        self.beginGroup("llm")
+        value = self.value("maxTokens", 4096, type=int)
+        self.endGroup()
+        return value
+
+    def setLlmMaxTokens(self, tokens: int):
+        self.beginGroup("llm")
+        self.setValue("maxTokens", tokens)
+        self.endGroup()
+
+    def llmTemperature(self):
+        self.beginGroup("llm")
+        value = self.value("temperature", 0.1, type=float)
+        self.endGroup()
+        return value
+
+    def setLlmTemperature(self, temperature: float):
+        self.beginGroup("llm")
+        self.setValue("temperature", temperature)
+        self.endGroup()
+
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)
 
@@ -708,6 +730,18 @@ class Settings(QSettings):
         self.endGroup()
         return value
 
+    def autoResolveConflictsWithAssistant(self):
+        """Whether to auto-resolve cherry-pick conflicts with the assistant by default"""
+        self.beginGroup("cherryPick")
+        value = self.value("autoResolve", False, type=bool)
+        self.endGroup()
+        return value
+
+    def setAutoResolveConflictsWithAssistant(self, enabled: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("autoResolve", enabled)
+        self.endGroup()
+
     def setRecordOrigin(self, record: bool):
         self.beginGroup("cherryPick")
         self.setValue("recordOrigin", record)
@@ -723,6 +757,18 @@ class Settings(QSettings):
     def setFilterRevertedCommits(self, filter: bool):
         self.beginGroup("cherryPick")
         self.setValue("filterReverted", filter)
+        self.endGroup()
+
+    def filterMergeCommits(self):
+        """Whether to filter out merge commits when cherry-picking"""
+        self.beginGroup("cherryPick")
+        value = self.value("filterMerge", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setFilterMergeCommits(self, filter: bool):
+        self.beginGroup("cherryPick")
+        self.setValue("filterMerge", filter)
         self.endGroup()
 
     def filterCommitPatterns(self):
@@ -764,7 +810,7 @@ class Settings(QSettings):
     def applyFilterByDefault(self):
         """Whether to apply cherry-pick filter automatically when loading commits"""
         self.beginGroup("cherryPick")
-        value = self.value("applyFilterByDefault", False, type=bool)
+        value = self.value("applyFilterByDefault", True, type=bool)
         self.endGroup()
         return value
 

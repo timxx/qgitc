@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
+from unittest.mock import patch
 
 from PySide6.QtCore import QEvent, QPointF, Qt
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QSignalSpy, QTest
+from PySide6.QtWidgets import QMainWindow
 
+from qgitc.events import CodeReviewEvent
 from qgitc.gitutils import Git
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
@@ -231,6 +234,43 @@ class TestLogWindow(TestLogWindowBase):
         self.processEvents()
         self.assertEqual([1], logView.getSelectedIndices())
         self.assertEqual(1, logView.currentIndex())
+
+    def testCodeReviewOnCurrentHandledByWindow(self):
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreaterEqual(logView.getCount(), 1)
+
+        logView.setCurrentIndex(0)
+        self.processEvents()
+
+        with patch.object(self.window, 'startCodeReviewForCommit') as mock_start, \
+                patch.object(self.app, 'postEvent') as mock_post:
+            logView.codeReviewOnCurrent()
+            self.processEvents()
+
+            mock_start.assert_called_once()
+            mock_post.assert_not_called()
+
+    def testCodeReviewOnCurrentFallsBackWhenNotHandled(self):
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        self.assertGreaterEqual(logView.getCount(), 1)
+
+        logView.setCurrentIndex(0)
+        self.processEvents()
+
+        with patch.object(self.window, 'event', side_effect=lambda ev: QMainWindow.event(self.window, ev)), \
+                patch.object(self.window, 'startCodeReviewForCommit') as mock_start, \
+                patch.object(self.app, 'postEvent') as mock_post:
+            logView.codeReviewOnCurrent()
+            self.processEvents()
+
+            mock_start.assert_not_called()
+            self.assertEqual(mock_post.call_count, 1)
+            posted_event = mock_post.call_args[0][1]
+            self.assertIsInstance(posted_event, CodeReviewEvent)
 
     def testMultipleSelectionKeyboard(self):
         """Test multiple selection with keyboard navigation"""

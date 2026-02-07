@@ -511,6 +511,9 @@ class Preferences(QDialog):
             if AiModelFactory.modelKey(model) == prefer:
                 self.ui.cbModels.setCurrentIndex(i)
 
+        self.ui.sbMaxTokens.setValue(self.settings.llmMaxTokens())
+        self.ui.sbTemperature.setValue(self.settings.llmTemperature())
+
         self.ui.cbModels.currentIndexChanged.connect(self._onModelChanged)
         self._onModelChanged(self.ui.cbModels.currentIndex())
 
@@ -537,6 +540,8 @@ class Preferences(QDialog):
             if id == defaultId:
                 self.ui.cbModelIds.setCurrentText(name)
 
+        self.ui.sbMaxTokens.setEnabled(model.isLocal())
+
     def _saveLLMTab(self):
         self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
 
@@ -546,6 +551,9 @@ class Preferences(QDialog):
 
         self.settings.setDefaultLlmModelId(
             modelKey, self.ui.cbModelIds.currentData())
+
+        self.settings.setLlmMaxTokens(self.ui.sbMaxTokens.value())
+        self.settings.setLlmTemperature(self.ui.sbTemperature.value())
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):
@@ -594,9 +602,15 @@ class Preferences(QDialog):
         self.ui.cbRecordOrigin.setChecked(
             self.settings.recordOrigin())
 
+        self.ui.cbAutoResolve.setChecked(
+            self.settings.autoResolveConflictsWithAssistant())
+
         # Filter settings
         self.ui.cbFilterRevertedCommits.setChecked(
             self.settings.filterRevertedCommits())
+
+        self.ui.cbFilterMerge.setChecked(
+            self.settings.filterMergeCommits())
 
         # Load patterns into list
         patterns = self.settings.filterCommitPatterns()
@@ -620,9 +634,15 @@ class Preferences(QDialog):
         self.settings.setRecordOrigin(
             self.ui.cbRecordOrigin.isChecked())
 
+        self.settings.setAutoResolveConflictsWithAssistant(
+            self.ui.cbAutoResolve.isChecked())
+
         # Filter settings
         self.settings.setFilterRevertedCommits(
             self.ui.cbFilterRevertedCommits.isChecked())
+
+        self.settings.setFilterMergeCommits(
+            self.ui.cbFilterMerge.isChecked())
 
         # Save patterns from list
         patterns = []

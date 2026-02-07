@@ -205,7 +205,7 @@
     <property name="title">
      <string>&amp;Assistant</string>
     </property>
-    <addaction name="acShowAIAssistant"/>
+    <addaction name="acToggleChat"/>
     <addaction name="acCodeReview"/>
    </widget>
    <addaction name="menuFile"/>
@@ -413,9 +413,12 @@
     <string>&amp;Commit...</string>
    </property>
   </action>
-  <action name="acShowAIAssistant">
+  <action name="acToggleChat">
    <property name="text">
-    <string>Show AI &amp;Assistant...</string>
+    <string>Chat</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+I</string>
    </property>
   </action>
   <action name="acCodeReview">

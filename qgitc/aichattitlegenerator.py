@@ -2,11 +2,9 @@
 
 from PySide6.QtCore import QObject, Signal
 
-from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiParameters, AiResponse
 from qgitc.llmprovider import AiModelProvider
-
-GEN_TITLE_PROMPT = "Generate a short, descriptive title (3-6 words max) for this conversation based on the first message. Return only the title, no explanations or quotes.\nResponse in language of mesessage or use {ui_lang} if unable to detect the language:\n\n"
+from qgitc.models.prompts import GEN_TITLE_PROMPT, GEN_TITLE_SYS_PROMPT
 
 
 class AiChatTitleGenerator(QObject):
@@ -23,15 +21,15 @@ class AiChatTitleGenerator(QObject):
         self._historyId = historyId
         self._model = AiModelProvider.createModel(self)
 
-        # Create a simple prompt to generate a title
-        ui_lang = ApplicationBase.instance().uiLanguage()
-        prompt = f"{GEN_TITLE_PROMPT.format(ui_lang=ui_lang)}\n\n{firstMessage[:512]}"
+        prompt = f"{GEN_TITLE_PROMPT}{firstMessage[:512]}"
 
         params = AiParameters()
         params.prompt = prompt
         params.temperature = 0.3
         params.max_tokens = 1024
+        params.sys_prompt = GEN_TITLE_SYS_PROMPT
         params.stream = False
+        params.reasoning = False
 
         self._model.responseAvailable.connect(self._onResponse)
         self._model.finished.connect(self._onFinished)

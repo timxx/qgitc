@@ -41,12 +41,14 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.actionrunner import ActionRunner
+from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.aicommitmessage import AiCommitMessage
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
+from qgitc.commitcontextprovider import CommitContextProvider
 from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView
@@ -336,9 +338,19 @@ class CommitWindow(StateWindow):
 
         icon = QIcon(iconsPath + "/reviews.svg")
         self.ui.btnCodeReview.setIcon(icon)
+        self.ui.btnCodeReview.setIconSize(QSize(16, 16))
         self.ui.btnCodeReview.clicked.connect(
             self._onCodeReviewClicked)
         self.ui.btnCodeReview.setEnabled(False)
+
+        self.ui.btnChat.setIcon(QIcon(iconsPath + "chat.svg"))
+        self.ui.btnChat.setIconSize(QSize(16, 16))
+        self.ui.btnChat.setToolTip(self.tr("Chat"))
+        self.ui.btnChat.clicked.connect(self._onChatClicked)
+
+        # Setup AI Chat dock widget
+        self._aiChat: AiChatDockWidget = None
+        self._setupAiChatDock()
 
         icon = QIcon(iconsPath + "/commit.svg")
         self.ui.btnShowLog.setIcon(icon)
@@ -366,6 +378,25 @@ class CommitWindow(StateWindow):
         spinner.setLineLength(height)
         spinner.setInnerRadius(height)
         spinner.setNumberOfLines(14)
+
+    def _setupAiChatDock(self):
+        """Setup AI Chat dock widget with embedded mode"""
+        self._aiChat = AiChatDockWidget(self)
+
+        # Setup context provider for commit window
+        aiChatContextProvider = CommitContextProvider(
+            self, parent=self)
+        self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
+
+        # Add dock widget to commit window
+        self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
+        self._aiChat.hide()
+
+    def _onChatClicked(self):
+        """Toggle the AI chat dock visibility"""
+        self._aiChat.setVisible(not self._aiChat.isVisible())
+        if self._aiChat.isVisible():
+            self._aiChat.chatWidget().contextPanel.setFocus()
 
     def _loadLocalChanges(self):
         submodules = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
@@ -843,7 +874,7 @@ class CommitWindow(StateWindow):
             doc = self.ui.teMessage.document()
             if evt.updateMessage:
                 if self._canUpdateMessage():
-                    self._replaceMessage(evt.template)
+                    self.replaceMessage(evt.template)
             elif not doc.isUndoAvailable() and not doc.isRedoAvailable():
                 # only set template if user has not modified the message
                 self.ui.teMessage.setPlainText(evt.template)
@@ -1330,7 +1361,7 @@ class CommitWindow(StateWindow):
         if oldMessage == message:
             return
 
-        self._replaceMessage(message)
+        self.replaceMessage(message)
 
     def _onAiMessageError(self, message: str):
         self._restoreAiMessageButtons()
@@ -1341,7 +1372,7 @@ class CommitWindow(StateWindow):
             QMessageBox.Ok
         )
 
-    def _replaceMessage(self, message: str):
+    def replaceMessage(self, message: str):
         cursor = self.ui.teMessage.textCursor()
         cursor.beginEditBlock()
         cursor.select(QTextCursor.Document)
@@ -1364,8 +1395,31 @@ class CommitWindow(StateWindow):
             return
 
         ApplicationBase.instance().trackFeatureUsage("commit.ai_cr")
-        event = CodeReviewEvent(submoduleFiles)
-        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
+
+        chat = self._aiChat.chatWidget()
+        if chat.isBusyForCodeReview():
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle(self.tr("Code Review"))
+            msg.setText(self.tr("AI chat is busy."))
+            msg.setInformativeText(self.tr(
+                "The chat is currently generating a response or waiting for a tool confirmation.\n\n"
+                "To avoid interrupting it, you can run the review in the standalone window instead."))
+
+            btnStandalone = msg.addButton(
+                self.tr("Review in Standalone Window"), QMessageBox.YesRole)
+            btnAbort = msg.addButton(
+                self.tr("Abort current chat"), QMessageBox.NoRole)
+            msg.setDefaultButton(btnStandalone)
+            msg.exec()
+
+            if msg.clickedButton() == btnStandalone:
+                event = CodeReviewEvent(submoduleFiles)
+                ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
+                return
+
+        self._aiChat.setVisible(True)
+        chat.codeReviewForStagedFiles(submoduleFiles)
 
     def cancel(self, force=False):
         self._aiMessage.cancel(force)
@@ -1384,6 +1438,7 @@ class CommitWindow(StateWindow):
         logger.debug("Before cancel")
         self.cancel(True)
         logger.debug("After cancel")
+        self._aiChat.queryClose()
         return super().closeEvent(event)
 
     def _onFilesContextMenuRequested(self, pos):
@@ -1841,3 +1896,6 @@ class CommitWindow(StateWindow):
 
     def _onToggleRunCommitActions(self, checked: bool):
         ApplicationBase.instance().settings().setRunCommitActions(checked)
+
+    def currentBranch(self) -> str:
+        return self._branchLabel.text()

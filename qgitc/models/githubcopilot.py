@@ -2,6 +2,7 @@
 
 import json
 import time
+from dataclasses import dataclass
 
 from PySide6.QtCore import QEventLoop, QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
@@ -9,7 +10,7 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import AiChatMode, AiModelBase, AiModelFactory, AiParameters, AiRole
+from qgitc.llm import AiModelBase, AiModelFactory, AiParameters, AiRole
 from qgitc.settings import Settings
 
 
@@ -25,13 +26,12 @@ def _makeHeaders(token: str, intent: bytes = b"conversation-other"):
     }
 
 
-# TODO: upgrade to Python 3.7 to support @dataclass
+@dataclass
 class AiModelCapabilities:
 
-    def __init__(self, streaming: bool = True, tool_calls: bool = False):
-        self.streaming = streaming
-        self.tool_calls = tool_calls
-        self.max_output_tokens = 4096
+    streaming: bool = True
+    tool_calls: bool = False
+    max_output_tokens: int = 4096
 
 
 class ModelsFetcher(QObject):
@@ -42,6 +42,7 @@ class ModelsFetcher(QObject):
         super().__init__(parent)
         self.models = []
         self.capabilities = {}
+        self.endPoints = {}
         self.defaultModel = None
         self._token = token
         self._reply: QNetworkReply = None
@@ -100,6 +101,9 @@ class ModelsFetcher(QObject):
             if model.get("is_chat_default", False):
                 self.defaultModel = id
 
+            endpoints = model.get("supported_endpoints", [])
+            self.endPoints[id] = endpoints
+
         self.finished.emit()
 
     def requestInterruption(self):
@@ -115,6 +119,8 @@ class GithubCopilot(AiModelBase):
 
     _models = None
     _capabilities = {}
+    _defaultModel = None
+    _endPoints = {}
 
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model, parent)
@@ -123,7 +129,14 @@ class GithubCopilot(AiModelBase):
 
         self._eventLoop = None
         self._modelFetcher: ModelsFetcher = None
+
+        self._ensureDefaultModel()
         self._updateModels()
+
+    def _defaultModelId(self):
+        modelKey = AiModelFactory.modelKey(self)
+        settings = ApplicationBase.instance().settings()
+        return settings.defaultLlmModelId(modelKey)
 
     def _updateUrlPrefix(self):
         isIndividual = GithubCopilot.isIndividualToken(self._token)
@@ -149,11 +162,52 @@ class GithubCopilot(AiModelBase):
         if stream and not caps.streaming:
             stream = False
 
-        if params.max_tokens > caps.max_output_tokens:
+        if params.max_tokens is None or params.max_tokens > caps.max_output_tokens:
             params.max_tokens = caps.max_output_tokens
         elif id.startswith("claude-") and "thought" in id:
             # claude-3.7-sonnet-thought seems cannot be 4096
             params.max_tokens = caps.max_output_tokens
+
+        # Decide which endpoint to use for this model.
+        self._isResponsesApiEnabled = self._shouldUseResponsesApi(id)
+        if self._isResponsesApiEnabled:
+            if not params.continue_only:
+                prompt = params.prompt
+                if params.sys_prompt:
+                    self.addHistory(AiRole.System, params.sys_prompt)
+                self.addHistory(AiRole.User, prompt)
+
+            payload = {
+                "model": id,
+                "stream": stream,
+                "store": False,
+                "input": self.toResponsesInput(),
+                "truncation": "disabled",
+            }
+
+            if params.reasoning:
+                payload["reasoning"] = {
+                    "effort": "medium",
+                    "summary": "detailed"
+                }
+                payload["include"] = ["reasoning.encrypted_content"]
+
+            # FIXME: `Unsupported parameter: 'temperature' is not supported with this model.`
+            # Such as gpt-5.2, currently disable temperature for Responses API.
+
+            if params.max_tokens is not None:
+                payload["max_output_tokens"] = params.max_tokens
+
+            if params.top_p is not None:
+                payload["top_p"] = params.top_p
+
+            if params.tools and caps.tool_calls:
+                payload["tools"] = AiModelBase.chatToolsToResponsesTools(
+                    params.tools)
+                payload["tool_choice"] = params.tool_choice or "auto"
+
+            self._doQuery(payload, stream)
+            return
 
         payload = {
             "model": id,
@@ -164,14 +218,21 @@ class GithubCopilot(AiModelBase):
             "stream": stream
         }
 
+        if params.tools and caps.tool_calls:
+            payload["tools"] = params.tools
+            payload["tool_choice"] = params.tool_choice or "auto"
+
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
-        prompt = params.prompt
-        if params.sys_prompt:
-            self.addHistory(AiRole.System, params.sys_prompt)
-        self.addHistory(AiRole.User, prompt)
-        payload["messages"] = self.toOpenAiMessages()
+        if params.continue_only:
+            payload["messages"] = self.toOpenAiMessages()
+        else:
+            prompt = params.prompt
+            if params.sys_prompt:
+                self.addHistory(AiRole.System, params.sys_prompt)
+            self.addHistory(AiRole.User, prompt)
+            payload["messages"] = self.toOpenAiMessages()
 
         self._doQuery(payload, stream)
 
@@ -179,13 +240,23 @@ class GithubCopilot(AiModelBase):
     def name(self):
         return "GitHub Copilot"
 
+    def supportsToolCalls(self, modelId: str) -> bool:
+        caps: AiModelCapabilities = GithubCopilot._capabilities.get(
+            modelId, AiModelCapabilities())
+        return bool(caps.tool_calls)
+
+    def _shouldUseResponsesApi(self, modelId: str) -> bool:
+        """Return True when the model supports the Responses API."""
+        endpoints = GithubCopilot._endPoints.get(modelId)
+        if not endpoints:
+            return False
+
+        return "/responses" in endpoints
+
     def _doQuery(self, payload, stream=True):
         headers = _makeHeaders(self._token)
-        self.post(
-            f"{self._url_prefix}/chat/completions",
-            headers=headers,
-            data=payload,
-            stream=stream)
+        url = f"{self._url_prefix}/responses" if self._isResponsesApiEnabled else f"{self._url_prefix}/chat/completions"
+        self.post(url, headers=headers, data=payload, stream=stream)
 
     def updateToken(self, retry=False):
         settings = Settings(testing=ApplicationBase.instance().testing)
@@ -285,9 +356,6 @@ class GithubCopilot(AiModelBase):
 
         return super().event(evt)
 
-    def supportedChatModes(self):
-        return [AiChatMode.Chat, AiChatMode.CodeReview]
-
     def _updateModels(self):
         if self._modelFetcher:
             return
@@ -312,14 +380,42 @@ class GithubCopilot(AiModelBase):
         fetcher: ModelsFetcher = self.sender()
         GithubCopilot._models = fetcher.models
         GithubCopilot._capabilities = fetcher.capabilities
+        GithubCopilot._defaultModel = fetcher.defaultModel
+        GithubCopilot._endPoints = fetcher.endPoints
 
-        if not self.modelId:
-            modelKey = AiModelFactory.modelKey(self)
-            settings = ApplicationBase.instance().settings()
-            self.modelId = settings.defaultLlmModelId(modelKey) or fetcher.defaultModel or "gpt-4.1"
+        self._ensureDefaultModel()
 
         self._modelFetcher = None
         self.modelsReady.emit()
+
+    def _hasModelId(self, modelId: str) -> bool:
+        if GithubCopilot._models is None:
+            return False
+
+        for id, _ in GithubCopilot._models:
+            if id == modelId:
+                return True
+
+        return False
+
+    def _ensureDefaultModel(self):
+        # If caller already selected a model, keep it unless we know it's invalid.
+        if self.modelId:
+            if GithubCopilot._models is None or self._hasModelId(self.modelId):
+                return
+
+        modelsLoaded = GithubCopilot._models is not None
+
+        preferred = self._defaultModelId()
+        if preferred and (not modelsLoaded or self._hasModelId(preferred)):
+            self.modelId = preferred
+            return
+
+        if GithubCopilot._defaultModel and (not modelsLoaded or self._hasModelId(GithubCopilot._defaultModel)):
+            self.modelId = GithubCopilot._defaultModel
+            return
+
+        self.modelId = "gpt-4.1"
 
     def models(self):
         if GithubCopilot._models is None:
@@ -332,10 +428,6 @@ class GithubCopilot(AiModelBase):
             self._modelFetcher.disconnect(self)
             self._modelFetcher.requestInterruption()
             self._modelFetcher = None
-
-    def _handleFinished(self):
-        if self._content:
-            self.addHistory(self._role, self._content)
 
     def requestInterruption(self):
         if self._eventLoop:

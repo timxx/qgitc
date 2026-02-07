@@ -18,7 +18,7 @@ class GitProcess():
 
     GIT_BIN = None
 
-    def __init__(self, repoDir, args, text=None, env=None):
+    def __init__(self, repoDir, args, text=None, env=None, stdinPipe=False):
         creationflags = 0
         logger.debug(f"run {args} in {repoDir}")
         if os.name == "nt":
@@ -32,6 +32,7 @@ class GitProcess():
         self._process = subprocess.Popen(
             [GitProcess.GIT_BIN] + args,
             cwd=repoDir,
+            stdin=(subprocess.PIPE if stdinPipe else None),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             creationflags=creationflags,
@@ -48,8 +49,8 @@ class GitProcess():
     def returncode(self):
         return self._process.returncode
 
-    def communicate(self):
-        return self._process.communicate()
+    def communicate(self, input=None):
+        return self._process.communicate(input=input)
 
 
 class QGitProcess():
@@ -369,11 +370,11 @@ class Git():
         process = GitProcess(cwd, args)
 
     @staticmethod
-    def conflictFiles():
+    def conflictFiles(repoDir=None):
         args = ["diff", "--name-only",
                 "--diff-filter=U",
                 "--no-color"]
-        data = Git.checkOutput(args)
+        data = Git.checkOutput(args, repoDir=repoDir)
         if not data:
             return None
         return data.rstrip(b'\n').decode("utf-8").split('\n')
@@ -425,17 +426,17 @@ class Git():
         return name
 
     @staticmethod
-    def resolveBy(ours, path):
+    def resolveBy(ours, path, repoDir=None):
         args = ["checkout",
                 "--ours" if ours else "--theirs",
                 path]
-        process = Git.run(args)
+        process = Git.run(args, repoDir=repoDir)
         process.communicate()
         if process.returncode != 0:
             return False
 
         args = ["add", path]
-        process = Git.run(args)
+        process = Git.run(args, repoDir=repoDir)
         process.communicate()
         return True if process.returncode == 0 else False
 
@@ -661,6 +662,17 @@ class Git():
         branchDir = repoDir if repoDir else Git.REPO_DIR
         cherry_pick_head = os.path.join(branchDir, ".git", "CHERRY_PICK_HEAD")
         return os.path.exists(cherry_pick_head)
+
+    @staticmethod
+    def cherryPickHeadSha1(repoDir=None) -> str:
+        """Return CHERRY_PICK_HEAD sha1 if present, else empty string."""
+        branchDir = repoDir if repoDir else Git.REPO_DIR
+        try:
+            path = os.path.join(branchDir, ".git", "CHERRY_PICK_HEAD")
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                return f.read().strip()
+        except Exception:
+            return ""
 
     @staticmethod
     def cherryPickAbort(repoDir=None):
@@ -1081,3 +1093,23 @@ class Git():
             shallowFile = os.path.join(
                 repoDir or Git.REPO_DIR, ".git", "shallow")
             return os.path.exists(shallowFile)
+
+    @staticmethod
+    def getConflictFileBlobIds(filePath, repoDir=None):
+        args = ["ls-files", "-u", "--", filePath]
+        data = Git.checkOutput(args, repoDir=repoDir)
+        if not data:
+            return None
+
+        lines = data.decode("utf-8").split('\n')
+        blobIds = {}
+        for line in lines:
+            if not line.strip():
+                continue
+            parts = line.split()
+            if len(parts) >= 3:
+                stage = int(parts[2])
+                blobId = parts[1]
+                blobIds[stage] = blobId
+
+        return blobIds

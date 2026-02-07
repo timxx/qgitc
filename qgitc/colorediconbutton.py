@@ -6,6 +6,8 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QIcon, QPainter
 from PySide6.QtWidgets import QPushButton
 
+from qgitc.drawutils import makeColoredIconPixmap
+
 
 class ColoredIconButton(QPushButton):
 
@@ -27,21 +29,8 @@ class ColoredIconButton(QPushButton):
 
     def setIcon(self, icon):
         self._originalIcon = icon
-        icon = QIcon(self._makePixmap())
+        icon = QIcon(makeColoredIconPixmap(self, icon, self.iconSize()))
         return super().setIcon(icon)
-
-    def _makePixmap(self):
-        pixmap = self.icon().pixmap(self.iconSize(), self.devicePixelRatio())
-
-        p = QPainter(pixmap)
-        p.setPen(Qt.NoPen)
-
-        brush = self.palette().buttonText()
-        p.setCompositionMode(QPainter.CompositionMode_SourceIn)
-        p.fillRect(pixmap.rect(), brush)
-        p.end()
-
-        return pixmap
 
     def event(self, evt):
         if evt.type() == QEvent.PaletteChange:

@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.llm import AiChatMode, AiModelFactory
+from qgitc.llm import AiModelFactory
 from qgitc.models.chatgpt import ChatGPTModel
 
 
@@ -71,7 +71,9 @@ class LocalLLM(ChatGPTModel):
     _models = {}
 
     def __init__(self, model: str = None, parent=None):
-        url = ApplicationBase.instance().settings().localLlmServer()
+        settings = ApplicationBase.instance().settings()
+        url = settings.localLlmServer()
+        model = model or settings.defaultLlmModelId(self.__class__.__name__)
         super().__init__(url, model, parent)
         self.url = f"{self.url_base}/chat/completions"
 
@@ -95,10 +97,6 @@ class LocalLLM(ChatGPTModel):
         self.nameFetcher.deleteLater()
         self.nameFetcher = None
         self.modelsReady.emit()
-
-    def supportedChatModes(self):
-        return [AiChatMode.Chat,
-                AiChatMode.CodeReview]
 
     def models(self):
         return LocalLLM._models.get(self.url_base, [])

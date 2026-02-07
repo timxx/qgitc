@@ -10,12 +10,12 @@ from qgitc.models.localllm import LocalLLM
 
 class AiModelProvider():
 
-    @classmethod
-    def models(cls):
+    @staticmethod
+    def models():
         return AiModelFactory.models()
 
-    @classmethod
-    def createModel(cls, parent=None):
+    @staticmethod
+    def createModel(parent=None):
         settings = ApplicationBase.instance().settings()
         modelKey = settings.defaultLlmModel()
         id = settings.defaultLlmModelId(modelKey)

@@ -11,11 +11,13 @@ from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import QComboBox, QCompleter, QFileDialog, QLineEdit, QMessageBox
 
 from qgitc.aboutdialog import AboutDialog
+from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.applicationbase import ApplicationBase
 from qgitc.diffview import PatchViewer
 from qgitc.events import (
+    CodeReviewEvent,
+    DockCodeReviewEvent,
     RequestCommitEvent,
-    ShowAiAssistantEvent,
     ShowBranchCompareEvent,
     ShowPickBranchEvent,
 )
@@ -25,6 +27,7 @@ from qgitc.gitview import GitView
 from qgitc.llm import AiModelBase, AiParameters, AiResponse
 from qgitc.llmprovider import AiModelProvider
 from qgitc.logview import LogView
+from qgitc.mainwindowcontextprovider import MainWindowContextProvider
 from qgitc.preferences import Preferences
 from qgitc.statewindow import StateWindow
 from qgitc.ui_mainwindow import Ui_MainWindow
@@ -85,6 +88,10 @@ class MainWindow(StateWindow):
         self._reloadingRepo = False
 
         self._aiModel: AiModelBase = None
+
+        # AI Chat Dock Widget
+        self._aiChat: AiChatDockWidget = None
+        self._setupAiChatDock()
 
         self.ui.cbSubmodule.setVisible(False)
         self.ui.lbSubmodule.setVisible(False)
@@ -200,12 +207,29 @@ class MainWindow(StateWindow):
         self.ui.acBranchPick.triggered.connect(
             self._onPickBranchTriggered)
 
-        self.ui.acShowAIAssistant.triggered.connect(
-            self._onShowAiAssistant)
+        self.ui.acToggleChat.triggered.connect(
+            self.toggleAiChatDock)
         self.ui.acCodeReview.triggered.connect(
             self._onCodeReview)
         self.ui.acChangeCommitAuthor.triggered.connect(
             self._onChangeCommitAuthor)
+
+    def _setupAiChatDock(self):
+        """Setup AI Chat dock widget with embedded mode"""
+        self._aiChat = AiChatDockWidget(self)
+
+        aiChatContextProvider = MainWindowContextProvider(
+            self, parent=self)
+        self._aiChat.chatWidget().setContextProvider(aiChatContextProvider)
+
+        # Add dock widget to main window
+        self.addDockWidget(Qt.RightDockWidgetArea, self._aiChat)
+
+    def toggleAiChatDock(self):
+        """Toggle the AI chat dock visibility"""
+        self._aiChat.setVisible(not self._aiChat.isVisible())
+        if self._aiChat.isVisible():
+            self._aiChat.chatWidget().contextPanel.setFocus()
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)
@@ -595,6 +619,10 @@ class MainWindow(StateWindow):
         if self.gitViewB is not None:
             self.gitViewB.queryClose()
 
+        # Clean up AI chat widget if embedded
+        if self._aiChat:
+            self._aiChat.queryClose()
+
         self.cancel(True)
         super().closeEvent(event)
 
@@ -648,6 +676,7 @@ class MainWindow(StateWindow):
         elif mode == MainWindow.MergeMode:
             from qgitc.mergewidget import MergeWidget
             self.mergeWidget = MergeWidget()
+            self.mergeWidget.setChatDockWidget(self._aiChat)
             self.mergeWidget.requestResolve.connect(
                 self.__onRequestResolve)
 
@@ -698,6 +727,14 @@ class MainWindow(StateWindow):
                 QTimer.singleShot(150, obj.showPopup)
         return super().eventFilter(obj, event)
 
+    def event(self, event: QEvent):
+        if event.type() == DockCodeReviewEvent.Type:
+            # Always accept if we decide to handle it here (including user cancel).
+            self.startCodeReviewForCommit(event.commit)
+            event.accept()
+            return True
+        return super().event(event)
+
     def __onCommitTriggered(self):
         # we can't import application here, because it will cause circular import
         app = ApplicationBase.instance()
@@ -708,10 +745,6 @@ class MainWindow(StateWindow):
         self.ui.gitViewA.ui.logView.reloadLogs()
         if self.gitViewB:
             self.gitViewB.ui.logView.reloadLogs()
-
-    def _onShowAiAssistant(self):
-        ApplicationBase.instance().postEvent(
-            ApplicationBase.instance(), ShowAiAssistantEvent())
 
     def cancel(self, force=False):
         self._delayTimer.stop()
@@ -747,6 +780,7 @@ class MainWindow(StateWindow):
         params.temperature = 0.1
         params.max_tokens = 512
         params.stream = False
+        params.reasoning = False
 
         self._aiModel.queryAsync(params)
 
@@ -820,14 +854,43 @@ class MainWindow(StateWindow):
         self.ui.leRepo.setRecentRepositories(recentRepos)
 
     def _onCodeReview(self):
-        app = ApplicationBase.instance()
-        fw = app.focusWidget()
-        if isinstance(fw, LogView):
-            fw.codeReviewOnCurrent()
-        else:
-            self.ui.gitViewA.logView.codeReviewOnCurrent()
+        fw = self.focusWidget()
+        logView = fw if isinstance(fw, LogView) else self.ui.gitViewA.logView
+        if logView:
+            logView.codeReviewOnCurrent()
 
-        app.trackFeatureUsage("menu.code_review")
+        ApplicationBase.instance().trackFeatureUsage("menu.code_review")
+
+    def startCodeReviewForCommit(self, commit):
+        """Run code review in this window's AI chat dock.
+
+        Falls back to the standalone AI assistant window if the dock chat is busy
+        (model generating or pending tool confirmation).
+        """
+        chat = self._aiChat.chatWidget()
+        if chat.isBusyForCodeReview():
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle(self.windowTitle() or self.tr("Code Review"))
+            msg.setText(self.tr("AI chat is busy."))
+            msg.setInformativeText(self.tr(
+                "The chat is currently generating a response or waiting for a tool confirmation.\n\n"
+                "To avoid interrupting it, you can run the review in the standalone window instead."))
+
+            btnStandalone = msg.addButton(
+                self.tr("Review in Standalone Window"), QMessageBox.YesRole)
+            btnCancel = msg.addButton(
+                self.tr("Abort current chat"), QMessageBox.NoRole)
+            msg.setDefaultButton(btnStandalone)
+            msg.exec()
+
+            if msg.clickedButton() == btnStandalone:
+                app = ApplicationBase.instance()
+                app.postEvent(app, CodeReviewEvent(commit))
+                return
+
+        self._aiChat.setVisible(True)
+        chat.codeReview(commit)
 
     def _onChangeCommitAuthor(self):
         """Handle changing commit author from Git menu"""
@@ -875,3 +938,7 @@ class MainWindow(StateWindow):
         app = ApplicationBase.instance()
         app.postEvent(app, ShowPickBranchEvent(sourceBranch, targetBranch))
         app.trackFeatureUsage("menu.pick_branch")
+
+    def chatDockWidget(self) -> AiChatDockWidget:
+        """Get the AI chat dock widget"""
+        return self._aiChat

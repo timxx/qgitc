@@ -5,6 +5,7 @@ from PySide6.QtGui import QBrush, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QLabel
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.drawutils import makeColoredIconPixmap
 
 
 class ColoredIconLabel(QLabel):
@@ -35,21 +36,12 @@ class ColoredIconLabel(QLabel):
         if not self._icon or self._icon.isNull():
             return None
 
-        pixmap = self._icon.pixmap(self._size, self.devicePixelRatio())
-
-        p = QPainter(pixmap)
-        p.setPen(Qt.NoPen)
-
+        brush = None
         if self._colorSchema:
             brush = QBrush(
                 getattr(ApplicationBase.instance().colorSchema(), self._colorSchema))
-        else:
-            brush = self.palette().windowText()
-        p.setCompositionMode(QPainter.CompositionMode_SourceIn)
-        p.fillRect(pixmap.rect(), brush)
-        p.end()
 
-        return pixmap
+        return makeColoredIconPixmap(self, self._icon, self._size, brush)
 
     def sizeHint(self):
         return self._size
