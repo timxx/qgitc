@@ -1016,11 +1016,20 @@ class AiChatWidget(QWidget):
     def _makeUiToolCallResponse(self, *args):
         if isinstance(args[0], str):
             tool = self._toolByName(args[0])
+            fallbackName = args[0]
         else:
             tool = args[0]
+            fallbackName = "unknown"
 
-        icon = self._getToolIcon(tool.toolType)
-        title = self.tr("{} run `{}`").format(icon, tool.name)
+        if tool:
+            toolType = tool.toolType
+            toolName = tool.name
+        else:
+            toolType = ToolType.DANGEROUS
+            toolName = fallbackName
+
+        icon = self._getToolIcon(toolType)
+        title = self.tr("{} run `{}`").format(icon, toolName)
 
         if isinstance(args[1], str):
             body = args[1]
