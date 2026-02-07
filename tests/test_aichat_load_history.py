@@ -245,6 +245,51 @@ class TestAiChatLoadHistory(TestBase):
         self.assertEqual(1, len(self.chatWidget._awaitingToolResults))
         self.assertIn("w1", self.chatWidget._awaitingToolResults)
 
+    def test_unknown_tool_in_history_uses_fallback_name(self):
+        """Unknown tools should not crash and should show fallback tool name."""
+        calls = []
+
+        def _appendResponse(resp, collapsed=False):
+            calls.append({
+                "role": resp.role.name.lower(),
+                "description": resp.description or "",
+            })
+
+        def _insertToolConfirmation(**kwargs):
+            calls.append({
+                "type": "confirm",
+                "tool": kwargs.get("toolName"),
+            })
+
+        self.chatWidget.messages.appendResponse = MagicMock(
+            side_effect=_appendResponse)
+        self.chatWidget.messages.insertToolConfirmation = MagicMock(
+            side_effect=_insertToolConfirmation)
+
+        messages = [
+            {"role": "user", "content": "run missing tool"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {"id": "tc_missing", "type": "function", "function": {
+                        "name": "missing_tool", "arguments": "{}"}},
+                ],
+            },
+        ]
+
+        self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=True)
+
+        tool_calls = [
+            c for c in calls
+            if c.get("role") == "tool" and "run `missing_tool`" in c.get("description", "")
+        ]
+        self.assertEqual(1, len(tool_calls))
+
+        confirm_calls = [c for c in calls if c.get("type") == "confirm"]
+        self.assertEqual(1, len(confirm_calls))
+        self.assertEqual("missing_tool", confirm_calls[0]["tool"])
+
     def test_tool_calls_reasoning_not_duplicated_per_tool(self):
         """Regression: reasoning should render once for a tool_call batch.
 
