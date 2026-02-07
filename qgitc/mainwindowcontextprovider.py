@@ -1,16 +1,30 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
+import re
+from typing import Any, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
 
+from qgitc.agenttools import AgentTool, ToolType, createToolFromModel
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
 from qgitc.applicationbase import ApplicationBase
+from qgitc.basemodel import BaseModel, Field, ValidationError
 from qgitc.common import Commit, dataDirPath, fileRealCommit, toSubmodulePath
 from qgitc.diffview import FileListModel
 from qgitc.drawutils import makeColoredIconPixmap
 from qgitc.models.prompts import REPO_DESC
+
+
+class UiSwitchToCommitParams(BaseModel):
+    """Parameters for ui_switch_to_commit."""
+
+    sha1: str = Field(
+        ...,
+        description=(
+            "Commit SHA1 to jump to. Abbreviated SHA1 is allowed (7-40 hex)."
+        ),
+    )
 
 
 class MainWindowContextProvider(AiChatContextProvider):
@@ -32,7 +46,57 @@ class MainWindowContextProvider(AiChatContextProvider):
         self._emitTimer.setSingleShot(True)
         self._emitTimer.timeout.connect(self.contextsChanged.emit)
 
+        self._uiToolsCache: Optional[List[AgentTool]] = None
+
         self._installHooks()
+
+    def uiTools(self) -> List[AgentTool]:
+        if self._uiToolsCache is None:
+            self._uiToolsCache = [
+                createToolFromModel(
+                    name="ui_switch_to_commit",
+                    description=(
+                        "Jump (select and scroll) the log view to a given commit SHA1 visible in the current log list."
+                    ),
+                    toolType=ToolType.READ_ONLY,
+                    modeClass=UiSwitchToCommitParams,
+                ),
+            ]
+        return self._uiToolsCache
+
+    def executeUiTool(self, toolName: str, params: Dict[str, Any]) -> Tuple[bool, str]:
+        if toolName == "ui_switch_to_commit":
+            try:
+                validated = UiSwitchToCommitParams(**(params or {}))
+            except ValidationError as e:
+                return False, f"Invalid parameters: {e}"
+
+            sha1 = (validated.sha1 or "").strip().lower()
+            if not sha1:
+                return False, "Missing sha1."
+
+            if not re.fullmatch(r"[0-9a-f]{7,40}", sha1):
+                return False, "Invalid sha1 format. Expected 7-40 hex characters."
+
+            gitView = self._gitView()
+            if not gitView:
+                return False, "Log view is not available."
+
+            logView = gitView.ui.logView
+            if not logView:
+                return False, "Log view is not available."
+
+            isLoading = logView.fetcher.isLoading()
+            ok = logView.switchToCommit(sha1, delay=isLoading)
+            if not ok:
+                return False, "Commit not found in the current log view."
+
+            if isLoading:
+                return True, f"Jump scheduled for {sha1} (logs are loading)."
+
+            return True, f"Jumped to {sha1}."
+
+        return super().executeUiTool(toolName, params)
 
     def _scheduleChanged(self):
         if not self._emitTimer.isActive():
@@ -203,7 +267,7 @@ class MainWindowContextProvider(AiChatContextProvider):
 
         # Environment (always present)
         self.addSection(sections, "Environment",
-                         self.formatBullets(self.commonContext()))
+                        self.formatBullets(self.commonContext()))
 
         # UI state (branch/submodule)
         uiLines: List[str] = []
