@@ -9,6 +9,7 @@ from qgitc.models.cursor_internal.utils import CURSOR_API_URL
 class Cursor(AiModelBase):
 
     _models = None
+    _availableModels = None
 
     def __init__(self, model: str = None, parent=None):
         super().__init__(CURSOR_API_URL, model, parent)
@@ -22,6 +23,9 @@ class Cursor(AiModelBase):
 
     def queryAsync(self, params):
         self.serviceUnavailable.emit()
+
+    def models(self):
+        return Cursor._models
 
     def _updateModels(self):
         if self._modelFetcher:
@@ -43,7 +47,10 @@ class Cursor(AiModelBase):
 
     def _onModelsAvailable(self):
         fetcher: ModelsFetcher = self.sender()
-        Cursor._models = fetcher.models
+        Cursor._availableModels = fetcher.models
+
+        for model in fetcher.models:
+            Cursor._models.append((model.id, model.displayName))
 
         self._modelFetcher = None
         self.modelsReady.emit()
