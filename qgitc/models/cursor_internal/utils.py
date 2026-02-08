@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import gzip
 import platform
 import sys
 import uuid
+
+from qgitc.common import logger
 
 CURSOR_CLIENT_KEY = b"182ca6255603669db02eae7703b593611e33b37a748ad64d7e6817c5e4538035"
 CURSOR_CHECKSUM = b"pjU3LzCn323291706119eb9147e937e4cfbfb9ad2b9177411972a7d4e32cf1864dce02bf/620842d179f31a42da1a7ba3c473c517821f741c71037e257be0a8e302eb31e3"
@@ -39,3 +42,12 @@ def makeHeaders(bearerToken: str):
         b"x-request-id": str(uuid.uuid4()).encode(),
         b"Host": b"api2.cursor.sh"
     }
+
+
+def decompressGzip(data: bytes) -> bytes:
+    try:
+        return gzip.decompress(data)
+    except Exception as e:
+        logger.error(f"Failed to decompress gzip data: {e}")
+
+    return None

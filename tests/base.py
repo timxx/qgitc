@@ -88,6 +88,14 @@ def createRepo(dir, url="https://foo.com/bar/test.git"):
     Git.commit("Add test.py", repoDir=dir, date=date)
 
 
+def getDataDir():
+    return os.path.join(os.path.dirname(__file__), "data")
+
+
+def getDataFilePath(filename):
+    return os.path.join(getDataDir(), filename)
+
+
 def addSubmoduleRepo(dir, submoduleDir, subdir):
     Git.checkOutput(["-c", "protocol.file.allow=always",
                     "submodule", "add", submoduleDir, subdir], repoDir=dir)
