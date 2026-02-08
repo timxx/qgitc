@@ -34,7 +34,7 @@ class TestAiChat(TestBase):
         pass
 
     def testBots(self):
-        self.assertEqual(2, self.chatWidget._contextPanel.cbBots.count())
+        self.assertEqual(3, self.chatWidget._contextPanel.cbBots.count())
 
     def testLocalLLM(self):
         self.assertIsNotNone(self.chatWidget._historyPanel.currentHistory())
