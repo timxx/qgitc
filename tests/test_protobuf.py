@@ -19,7 +19,12 @@ class TestProtobufDecoder(unittest.TestCase):
         decompressed = decompressGzip(data)
         self.assertIsNotNone(decompressed)
 
-        message = ProtobufDecoder.readMessage(decompressed)
-        self.assertIsNotNone(message)
+        result = ProtobufDecoder.decodeModelsMessage(decompressed)
+        self.assertIsNotNone(result)
 
-        #TODO: decode
+        self.assertEqual(len(result), 52)
+
+        totalDefaultOn = sum(1 for model in result if model.defaultOn)
+        self.assertEqual(totalDefaultOn, 7)
+
+        self.assertEqual(result[0].id, "default")
