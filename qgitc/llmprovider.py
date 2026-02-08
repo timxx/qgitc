@@ -3,9 +3,12 @@
 from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiModelFactory
 
+# isort: off
 # To register models with the factory
+from qgitc.models.cursor import Cursor
 from qgitc.models.githubcopilot import GithubCopilot
 from qgitc.models.localllm import LocalLLM
+# isort: on
 
 
 class AiModelProvider():
