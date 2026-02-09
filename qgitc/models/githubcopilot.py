@@ -61,11 +61,14 @@ class ModelsFetcher(QObject):
 
         self._reply = mgr.get(request)
         self._reply.finished.connect(self._onFinished)
+        logger.debug(f"Fetching GitHub Copilot models...")
 
     def _onFinished(self):
         reply = self._reply
         reply.deleteLater()
         self._reply = None
+        logger.debug(
+            f"GitHub Copilot models fetch finished with error code {reply.error()}")
         if reply.error() != QNetworkReply.NoError:
             return
 
@@ -148,6 +151,8 @@ class GithubCopilot(AiModelBase):
 
     def queryAsync(self, params: AiParameters):
         if not self._token or not GithubCopilot.isTokenValid(self._token):
+            logger.debug(
+                "GitHub Copilot token is invalid or expired, updating...")
             if not self.updateToken():
                 self.serviceUnavailable.emit()
                 self.finished.emit()
@@ -363,10 +368,14 @@ class GithubCopilot(AiModelBase):
         if GithubCopilot._models is not None:
             return
 
-        if not self._token:
+        settings = ApplicationBase.instance().settings()
+        accessToken = settings.githubCopilotAccessToken()
+        # If user never logged before, don't try to fetch models
+        if not accessToken:
             return
 
         if not GithubCopilot.isTokenValid(self._token):
+            logger.debug("GitHub Copilot token is expired, updating...")
             self.updateToken()
             return
 
