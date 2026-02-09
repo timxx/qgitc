@@ -27,6 +27,16 @@ class Cursor(AiModelBase):
     def models(self):
         return Cursor._models
 
+    def supportsToolCalls(self, modelId: str) -> bool:
+        if not Cursor._availableModels:
+            return False
+
+        for model in Cursor._availableModels:
+            if model.id == modelId:
+                return model.supportsAgent
+
+        return False
+
     def _updateModels(self):
         if self._modelFetcher:
             return
@@ -50,6 +60,8 @@ class Cursor(AiModelBase):
         Cursor._availableModels = fetcher.models
 
         for model in fetcher.models:
+            if model.id == "default":
+                continue
             Cursor._models.append((model.id, model.displayName))
 
         self._modelFetcher = None
