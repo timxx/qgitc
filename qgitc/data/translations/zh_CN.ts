@@ -233,74 +233,79 @@ This action cannot be undone.</source>
 <context>
     <name>AiChatWidget</name>
     <message>
-        <location filename="../../aichatwidget.py" line="457"/>
+        <location filename="../../aichatwidget.py" line="460"/>
         <source>Go Back</source>
         <translation>返回</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="466"/>
+        <location filename="../../aichatwidget.py" line="469"/>
         <source>Pick Conversation</source>
         <translation>选择对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="587"/>
+        <location filename="../../aichatwidget.py" line="590"/>
         <source>New Conversation</source>
         <translation>新对话</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="886"/>
-        <location filename="../../aichatwidget.py" line="1568"/>
+        <location filename="../../aichatwidget.py" line="892"/>
+        <location filename="../../aichatwidget.py" line="1622"/>
         <source>🧠 Reasoning</source>
         <translation>🧠 推理</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="922"/>
-        <location filename="../../aichatwidget.py" line="981"/>
-        <location filename="../../aichatwidget.py" line="1661"/>
+        <location filename="../../aichatwidget.py" line="927"/>
+        <location filename="../../aichatwidget.py" line="988"/>
+        <location filename="../../aichatwidget.py" line="1714"/>
         <source>Unknown tool requested by model</source>
         <translation>模型请求了未知的工具</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1016"/>
+        <location filename="../../aichatwidget.py" line="1032"/>
         <source>{} run `{}`</source>
         <translation>{} 运行 `{}`</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1052"/>
+        <location filename="../../aichatwidget.py" line="1072"/>
+        <source>UI tool not available in this context.</source>
+        <translation>此上下文中无UI工具可用。</translation>
+    </message>
+    <message>
+        <location filename="../../aichatwidget.py" line="1106"/>
         <source>A tool is already running.</source>
         <translation>已有工具正在运行。</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1064"/>
-        <location filename="../../aichatwidget.py" line="1229"/>
+        <location filename="../../aichatwidget.py" line="1118"/>
+        <location filename="../../aichatwidget.py" line="1283"/>
         <source>Failed to start tool execution.</source>
         <translation>启动工具执行失败。</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1073"/>
-        <location filename="../../aichatwidget.py" line="1128"/>
+        <location filename="../../aichatwidget.py" line="1127"/>
+        <location filename="../../aichatwidget.py" line="1182"/>
         <source>✗ `{}` skipped</source>
         <translation>✗ `{}` 已跳过</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1107"/>
-        <location filename="../../aichatwidget.py" line="1642"/>
+        <location filename="../../aichatwidget.py" line="1161"/>
+        <location filename="../../aichatwidget.py" line="1695"/>
         <source>✗ `{}` cancelled</source>
         <translation>✗ `{}` 已取消</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1108"/>
+        <location filename="../../aichatwidget.py" line="1162"/>
         <source>tool</source>
         <translation>工具</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1118"/>
-        <location filename="../../aichatwidget.py" line="1652"/>
+        <location filename="../../aichatwidget.py" line="1172"/>
+        <location filename="../../aichatwidget.py" line="1705"/>
         <source>Cancelled</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <location filename="../../aichatwidget.py" line="1174"/>
+        <location filename="../../aichatwidget.py" line="1228"/>
         <source>{} `{}` output</source>
         <translation>{} `{}` 输出</translation>
     </message>
@@ -921,27 +926,27 @@ What do you want to do?</source>
 <context>
     <name>CommitContextProvider</name>
     <message>
-        <location filename="../../commitcontextprovider.py" line="126"/>
+        <location filename="../../commitcontextprovider.py" line="201"/>
         <source>Staged files ({0})</source>
         <translation>已暂存的文件（{0}）</translation>
     </message>
     <message>
-        <location filename="../../commitcontextprovider.py" line="135"/>
+        <location filename="../../commitcontextprovider.py" line="210"/>
         <source>Unstaged files ({0})</source>
         <translation>未暂存的文件（{0}）</translation>
     </message>
     <message>
-        <location filename="../../commitcontextprovider.py" line="145"/>
+        <location filename="../../commitcontextprovider.py" line="220"/>
         <source>Selected diff</source>
         <translation>选中的差异</translation>
     </message>
     <message>
-        <location filename="../../commitcontextprovider.py" line="147"/>
+        <location filename="../../commitcontextprovider.py" line="222"/>
         <source>Selected diff text from viewer</source>
         <translation>来自查看器的选中差异文本</translation>
     </message>
     <message>
-        <location filename="../../commitcontextprovider.py" line="152"/>
+        <location filename="../../commitcontextprovider.py" line="227"/>
         <source>Commit message</source>
         <translation>提交信息</translation>
     </message>
@@ -1772,7 +1777,7 @@ To avoid interrupting it, you can run the review in the standalone window instea
 <context>
     <name>LocalLLM</name>
     <message>
-        <location filename="../../models/localllm.py" line="90"/>
+        <location filename="../../models/localllm.py" line="95"/>
         <source>Local LLM</source>
         <translation>本地大语言模型</translation>
     </message>
@@ -2468,27 +2473,27 @@ To avoid interrupting it, you can run the review in the standalone window instea
 <context>
     <name>MainWindowContextProvider</name>
     <message>
-        <location filename="../../mainwindowcontextprovider.py" line="157"/>
+        <location filename="../../mainwindowcontextprovider.py" line="221"/>
         <source>Active commit</source>
         <translation>活动提交</translation>
     </message>
     <message>
-        <location filename="../../mainwindowcontextprovider.py" line="166"/>
+        <location filename="../../mainwindowcontextprovider.py" line="230"/>
         <source>Selected commits ({0})</source>
         <translation>已选择的提交 ({0})</translation>
     </message>
     <message>
-        <location filename="../../mainwindowcontextprovider.py" line="179"/>
+        <location filename="../../mainwindowcontextprovider.py" line="243"/>
         <source>Selected files ({0})</source>
         <translation>已选择的文件 ({0})</translation>
     </message>
     <message>
-        <location filename="../../mainwindowcontextprovider.py" line="188"/>
+        <location filename="../../mainwindowcontextprovider.py" line="252"/>
         <source>Diff selection</source>
         <translation>差异选择</translation>
     </message>
     <message>
-        <location filename="../../mainwindowcontextprovider.py" line="190"/>
+        <location filename="../../mainwindowcontextprovider.py" line="254"/>
         <source>Selected diff text</source>
         <translation>已选择的差异文本</translation>
     </message>
@@ -3066,7 +3071,7 @@ Please checkout the branch first.</source>
     </message>
     <message>
         <location filename="../../preferences.ui" line="562"/>
-        <location filename="../../preferences.ui" line="1369"/>
+        <location filename="../../preferences.ui" line="1390"/>
         <source>&amp;Add</source>
         <translation>添加(&amp;A)</translation>
     </message>
@@ -3136,36 +3141,36 @@ Please checkout the branch first.</source>
         <translation>深色</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="502"/>
-        <location filename="../../preferences.py" line="691"/>
-        <location filename="../../preferences.py" line="699"/>
+        <location filename="../../preferences.py" line="504"/>
+        <location filename="../../preferences.py" line="694"/>
+        <location filename="../../preferences.py" line="702"/>
         <source>Logout</source>
         <translation>注销</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="502"/>
-        <location filename="../../preferences.py" line="694"/>
+        <location filename="../../preferences.py" line="504"/>
+        <location filename="../../preferences.py" line="697"/>
         <source>Login</source>
         <translation>登录</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="579"/>
-        <location filename="../../preferences.ui" line="1199"/>
+        <location filename="../../preferences.py" line="582"/>
+        <location filename="../../preferences.ui" line="1220"/>
         <source>Commit Actions</source>
         <translation>提交动作</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="709"/>
+        <location filename="../../preferences.py" line="712"/>
         <source>System Default</source>
         <translation>系统默认</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="710"/>
+        <location filename="../../preferences.py" line="713"/>
         <source>English</source>
         <translation>英语</translation>
     </message>
     <message>
-        <location filename="../../preferences.py" line="711"/>
+        <location filename="../../preferences.py" line="714"/>
         <source>Simplified Chinese</source>
         <translation>简体中文</translation>
     </message>
@@ -3206,7 +3211,7 @@ Please checkout the branch first.</source>
     </message>
     <message>
         <location filename="../../preferences.ui" line="452"/>
-        <location filename="../../preferences.ui" line="1217"/>
+        <location filename="../../preferences.ui" line="1238"/>
         <source>&amp;Edit Global</source>
         <translation>编辑全局配置(&amp;E)</translation>
     </message>
@@ -3327,177 +3332,192 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
         <translation>本地大语言模型</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="960"/>
+        <location filename="../../preferences.ui" line="959"/>
+        <source>Authorization:</source>
+        <translation>授权：</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="966"/>
+        <source>Enter your authorization token here, or leave empty if your server doesn&apos;t need authentication</source>
+        <translation>在此输入您的授权令牌，如果您的服务器不需要身份验证，则留空</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="969"/>
+        <source>Enter authorization token (e.g., Bearer &lt;token&gt;)</source>
+        <translation>输入授权令牌（例如，Bearer &lt;token&gt;）</translation>
+    </message>
+    <message>
+        <location filename="../../preferences.ui" line="981"/>
         <source>GitHub Copilot</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="968"/>
+        <location filename="../../preferences.ui" line="989"/>
         <source>Account:</source>
         <translation>账号：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1000"/>
+        <location filename="../../preferences.ui" line="1021"/>
         <source>AI Assistant</source>
         <translation>AI助手</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1008"/>
+        <location filename="../../preferences.ui" line="1029"/>
         <source>Default Model:</source>
         <translation>默认模型：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1049"/>
+        <location filename="../../preferences.ui" line="1070"/>
         <source>Max Tokens:</source>
         <translation>最大令牌数：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1069"/>
+        <location filename="../../preferences.ui" line="1090"/>
         <source>Temperature:</source>
         <translation>温度：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1106"/>
+        <location filename="../../preferences.ui" line="1127"/>
         <source>Files to Exclude:</source>
         <translation>要排除的文件：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1113"/>
+        <location filename="../../preferences.ui" line="1134"/>
         <source>Specify the file extensions to exclude for code review or generate commit message</source>
         <translation>指定要给代码审查或生成提交消息排除的文件扩展名</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1116"/>
+        <location filename="../../preferences.ui" line="1137"/>
         <source>e.g. .ts, .ui</source>
         <translation>比如：.ts, .ui</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1186"/>
+        <location filename="../../preferences.ui" line="1207"/>
         <source>Use network time for commit datetime</source>
         <translation>commit时使用网络时间</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1189"/>
+        <location filename="../../preferences.ui" line="1210"/>
         <source>Use Network Time</source>
         <translation>使用网络时间</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1210"/>
+        <location filename="../../preferences.ui" line="1231"/>
         <source>Use &amp;Global</source>
         <translation>使用全局配置(&amp;G)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1256"/>
+        <location filename="../../preferences.ui" line="1277"/>
         <source>Cherry-&amp;Pick</source>
         <translation>Cherry-&amp;Pick</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1262"/>
+        <location filename="../../preferences.ui" line="1283"/>
         <source>General</source>
         <translation>常规</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1268"/>
+        <location filename="../../preferences.ui" line="1289"/>
         <source>Record the origin commit SHA in the cherry-picked commit message (-x option)</source>
         <translation>在拣选提交的提交信息中记录原始提交的SHA值（-x 选项）</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1271"/>
+        <location filename="../../preferences.ui" line="1292"/>
         <source>&amp;Record origin commit in message</source>
         <translation>在消息中记录原始提交(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1278"/>
+        <location filename="../../preferences.ui" line="1299"/>
         <source>Auto-resolve conflicts with Assistant</source>
         <translation>使用助手自动解决冲突</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1288"/>
+        <location filename="../../preferences.ui" line="1309"/>
         <source>Commit Filters</source>
         <translation>提交筛选</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1294"/>
+        <location filename="../../preferences.ui" line="1315"/>
         <source>Automatically filter out commits with &apos;Revert&apos; in the subject line when cherry-picking</source>
         <translation>执行cherry-pick操作时，自动过滤掉提交主题中包含‘Revert’的提交</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1297"/>
+        <location filename="../../preferences.ui" line="1318"/>
         <source>Don&apos;t pick &amp;reverted commits</source>
         <translation>不选择已回退的提交(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1304"/>
+        <location filename="../../preferences.ui" line="1325"/>
         <source>Don&apos;t pick merge commits</source>
         <translation>不选择合并提交(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1315"/>
+        <location filename="../../preferences.ui" line="1336"/>
         <source>&amp;Ignore commits matching patterns:</source>
         <translation>忽略符合以下模式的提交(&amp;I)：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1338"/>
+        <location filename="../../preferences.ui" line="1359"/>
         <source>Use regular expressions for pattern matching (applies to all patterns)</source>
         <translation>使用正则表达式进行模式匹配（适用于所有模式）</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1341"/>
+        <location filename="../../preferences.ui" line="1362"/>
         <source>Use Rege&amp;x</source>
         <translation>使用正则表达式(&amp;X)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1350"/>
+        <location filename="../../preferences.ui" line="1371"/>
         <source>List of patterns to filter commits. Matches against subject and message (case insensitive unless regex)</source>
         <translation>用于筛选提交的模式列表。会匹配提交主题和消息（除非使用正则表达式，否则不区分大小写）</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1362"/>
+        <location filename="../../preferences.ui" line="1383"/>
         <source>Enter pattern to add</source>
         <translation>输入要添加的模式</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1376"/>
+        <location filename="../../preferences.ui" line="1397"/>
         <source>&amp;Remove</source>
         <translation>删除(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1387"/>
+        <location filename="../../preferences.ui" line="1408"/>
         <source>Apply the above filters automatically when loading commits in cherry-pick window</source>
         <translation>在cherry-pick窗口中加载提交时自动应用上述筛选条件</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1390"/>
+        <location filename="../../preferences.ui" line="1411"/>
         <source>&amp;Apply filters by default</source>
         <translation>默认应用筛选条件(&amp;A)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1142"/>
+        <location filename="../../preferences.ui" line="1163"/>
         <source>&amp;Commit Message</source>
         <translation>提交信息(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1148"/>
+        <location filename="../../preferences.ui" line="1169"/>
         <source>Commit &amp;Message</source>
         <translation>提交信息(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1154"/>
+        <location filename="../../preferences.ui" line="1175"/>
         <source>Ignore comment line</source>
         <translation>忽略注释行</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1161"/>
+        <location filename="../../preferences.ui" line="1182"/>
         <source>Tab to next group</source>
         <translation>按Tab键跳转分组</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1170"/>
+        <location filename="../../preferences.ui" line="1191"/>
         <source>Group Chars:</source>
         <translation>分组字符：</translation>
     </message>
     <message>
-        <location filename="../../preferences.ui" line="1177"/>
+        <location filename="../../preferences.ui" line="1198"/>
         <source>Each pair separate by space, such as `() []`</source>
         <translation>每个对以空格分开，比如`() []`</translation>
     </message>
