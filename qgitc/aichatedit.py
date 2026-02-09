@@ -26,9 +26,12 @@ class AiChatEdit(QWidget):
         self.setFocusProxy(self.edit)
 
         self.edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.edit.document().setDocumentMargin(4)
+        doc = self.edit.document()
+        doc.setDocumentMargin(4)
 
-        self._lineHeight = self.edit.document().firstBlock().layout().boundingRect().height()
+        block = doc.firstBlock()
+        layout = block.layout()
+        self._lineHeight = layout.boundingRect().height()
 
         self.edit.textChanged.connect(self.textChanged)
         self.edit.document().documentLayout().documentSizeChanged.connect(
