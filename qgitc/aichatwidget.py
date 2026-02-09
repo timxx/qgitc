@@ -58,7 +58,7 @@ from qgitc.llm import (
     AiResponse,
     AiRole,
 )
-from qgitc.llmprovider import AiModelProvider
+from qgitc.llmprovider import AiModelDescriptor, AiModelProvider
 from qgitc.models.prompts import (
     AGENT_SYS_PROMPT,
     CODE_REVIEW_PROMPT,
@@ -617,30 +617,61 @@ class AiChatWidget(QWidget):
         return self._contextPanel.contextProvider()
 
     def _setupModels(self):
-        aiModels: List[AiModelBase] = [
-            model(parent=self) for model in AiModelProvider.models()]
-        defaultModelKey = ApplicationBase.instance().settings().defaultLlmModel()
+        descriptors: List[AiModelDescriptor] = AiModelProvider.models()
+        settings = ApplicationBase.instance().settings()
+        defaultModelKey = settings.defaultLlmModel()
         currentModelIndex = -1
 
         self._contextPanel.cbBots.blockSignals(True)
+        self._contextPanel.cbBots.clear()
 
-        for i, model in enumerate(aiModels):
-            self._contextPanel.cbBots.addItem(model.name, model)
-            model.responseAvailable.connect(self._onMessageReady)
-            model.reasoningFinished.connect(self._onReasoningFinished)
-            model.finished.connect(self._onResponseFinish)
-            model.serviceUnavailable.connect(self._onServiceUnavailable)
-            model.networkError.connect(self._onNetworkError)
-            if AiModelFactory.modelKey(model) == defaultModelKey:
+        for i, desc in enumerate(descriptors):
+            self._contextPanel.cbBots.addItem(desc.displayName, desc)
+            if desc.modelKey == defaultModelKey:
                 currentModelIndex = i
-
-            model.modelsReady.connect(self._onModelsReady)
 
         if currentModelIndex != -1:
             self._contextPanel.cbBots.setCurrentIndex(currentModelIndex)
 
         self._contextPanel.cbBots.blockSignals(False)
+
+        # Ensure the selected model is instantiated immediately so downstream
+        # code always sees a real AiModelBase instance.
+        self._ensureCurrentModelInstantiated()
         self._onModelChanged(self._contextPanel.cbBots.currentIndex())
+
+    def _ensureCurrentModelInstantiated(self) -> Optional[AiModelBase]:
+        index = self._contextPanel.cbBots.currentIndex()
+        return self._ensureModelInstantiatedAt(index)
+
+    def _ensureModelInstantiatedAt(self, index: int) -> Optional[AiModelBase]:
+        if index < 0:
+            return None
+
+        data = self._contextPanel.cbBots.itemData(index)
+        if isinstance(data, AiModelBase):
+            return data
+
+        if not isinstance(data, AiModelDescriptor):
+            return None
+
+        settings = ApplicationBase.instance().settings()
+        modelId = settings.defaultLlmModelId(data.modelKey)
+        model = AiModelProvider.createSpecificModel(
+            data.modelKey, modelId=modelId, parent=self)
+
+        # Replace descriptor with the live model instance.
+        cb = self._contextPanel.cbBots
+        cb.setItemData(index, model)
+
+        model.responseAvailable.connect(self._onMessageReady)
+        model.reasoningFinished.connect(self._onReasoningFinished)
+        model.finished.connect(self._onResponseFinish)
+        model.serviceUnavailable.connect(self._onServiceUnavailable)
+        model.networkError.connect(self._onNetworkError)
+        model.modelsReady.connect(self._onModelsReady)
+
+        return model
 
     def queryClose(self):
         if self._titleGenerator:
@@ -653,7 +684,9 @@ class AiChatWidget(QWidget):
             self._uiToolExecutor.shutdown()
 
         for i in range(self._contextPanel.cbBots.count()):
-            model: AiModelBase = self._contextPanel.cbBots.itemData(i)
+            model = self._contextPanel.cbBots.itemData(i)
+            if not isinstance(model, AiModelBase):
+                continue
             if model.isRunning():
                 model.requestInterruption()
             model.cleanup()
@@ -1293,7 +1326,9 @@ class AiChatWidget(QWidget):
         self._updateStatus()
 
     def _onModelChanged(self, index: int):
-        model = self.currentChatModel()
+        model = self._ensureModelInstantiatedAt(index)
+        if model is None:
+            return
         self._contextPanel.setFocus()
         self._contextPanel.setupModelNames(model)
 
@@ -1323,7 +1358,11 @@ class AiChatWidget(QWidget):
         return self._chatBot
 
     def currentChatModel(self) -> AiModelBase:
-        return self._contextPanel.cbBots.currentData()
+        data = self._contextPanel.cbBots.currentData()
+        if isinstance(data, AiModelBase):
+            return data
+        # Lazily instantiate if needed.
+        return self._ensureCurrentModelInstantiated()
 
     def isLocalLLM(self):
         return self.currentChatModel().isLocal()

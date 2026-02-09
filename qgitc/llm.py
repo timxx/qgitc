@@ -877,6 +877,10 @@ class AiModelFactory:
         return list(cls._registry.values())
 
     @classmethod
+    def isRegistered(cls, modelClassName: str) -> bool:
+        return bool(modelClassName) and modelClassName in cls._registry
+
+    @classmethod
     def create(cls, modelClassName: str, **kwargs) -> AiModelBase:
         modelClass = cls._registry.get(modelClassName, None)
         if modelClass:
@@ -884,5 +888,17 @@ class AiModelFactory:
         raise ValueError(f"Model {modelClassName} is not registered.")
 
     @classmethod
-    def modelKey(cls, model: AiModelBase) -> str:
+    def modelKey(cls, model) -> str:
+        """Return the stable provider key for an item.
+
+        Supports AiModelBase instances and lightweight descriptor objects that
+        expose a `modelKey` attribute.
+        """
+        if model is None:
+            return ""
+        if isinstance(model, str):
+            return model
+        key = getattr(model, "modelKey", None)
+        if isinstance(key, str) and key:
+            return key
         return model.__class__.__name__

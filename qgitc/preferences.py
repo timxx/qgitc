@@ -17,6 +17,7 @@ from qgitc.githubcopilotlogindialog import GithubCopilotLoginDialog
 from qgitc.gitutils import Git, GitProcess
 from qgitc.linkeditdialog import LinkEditDialog
 from qgitc.llm import AiModelBase, AiModelFactory
+from qgitc.llmprovider import AiModelDescriptor, AiModelProvider
 from qgitc.settings import Settings
 from qgitc.tooltablemodel import ToolTableModel
 from qgitc.ui_preferences import *
@@ -505,13 +506,20 @@ class Preferences(QDialog):
         self.ui.btnGithubCopilot.setText(text)
 
         prefer = self.settings.defaultLlmModel()
-        for i, modelClass in enumerate(AiModelFactory.models()):
-            model = modelClass(parent=self)
-            model.modelsReady.connect(self._onModelsReady)
+        self.ui.cbModels.clear()
 
-            self.ui.cbModels.addItem(model.name, model)
-            if AiModelFactory.modelKey(model) == prefer:
-                self.ui.cbModels.setCurrentIndex(i)
+        entries = AiModelProvider.models()
+        currentIndex = -1
+        for i, desc in enumerate(entries):
+            self.ui.cbModels.addItem(desc.displayName, desc)
+            if desc.modelKey == prefer:
+                currentIndex = i
+
+        if currentIndex != -1:
+            self.ui.cbModels.setCurrentIndex(currentIndex)
+
+        # Ensure selected model is instantiated for model-id list population.
+        self._ensurePreferencesModelInstantiated()
 
         self.ui.sbMaxTokens.setValue(self.settings.llmMaxTokens())
         self.ui.sbTemperature.setValue(self.settings.llmTemperature())
@@ -528,8 +536,29 @@ class Preferences(QDialog):
         if model == self.ui.cbModels.currentData():
             self._onModelChanged(self.ui.cbModels.currentIndex())
 
+    def _ensurePreferencesModelInstantiated(self) -> AiModelBase:
+        index = self.ui.cbModels.currentIndex()
+        if index < 0:
+            return None
+
+        data = self.ui.cbModels.itemData(index)
+        if isinstance(data, AiModelBase):
+            return data
+
+        if not isinstance(data, AiModelDescriptor):
+            return None
+
+        modelId = self.settings.defaultLlmModelId(data.modelKey)
+        model = AiModelProvider.createSpecificModel(
+            data.modelKey, modelId=modelId, parent=self)
+        self.ui.cbModels.setItemData(index, model)
+        model.modelsReady.connect(self._onModelsReady)
+        return model
+
     def _onModelChanged(self, index):
         model: AiModelBase = self.ui.cbModels.currentData()
+        if not isinstance(model, AiModelBase):
+            model = self._ensurePreferencesModelInstantiated()
         if not model:
             return
         self.ui.cbModelIds.clear()
@@ -548,7 +577,9 @@ class Preferences(QDialog):
         self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
         self.settings.setLocalLlmAuth(self.ui.leAuth.text().strip())
 
-        model: AiModelBase = self.ui.cbModels.currentData()
+        model = self.ui.cbModels.currentData()
+        if not isinstance(model, AiModelBase):
+            model = self._ensurePreferencesModelInstantiated()
         modelKey = AiModelFactory.modelKey(model)
         self.settings.setDefaultLlmModel(modelKey)
 

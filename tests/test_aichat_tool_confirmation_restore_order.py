@@ -22,6 +22,10 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
         self._mockChatModel.isLocal.return_value = True
         self._mockChatModel.isRunning.return_value = False
         self._mockChatModel.queryAsync = MagicMock()
+        self._mockChatModel.models.return_value = [
+            ("test-model", "Test Model")]
+        self._mockChatModel.supportsToolCalls.return_value = True
+        self._mockChatModel.modelKey = "GithubCopilot"
 
         def _clear():
             self._mockChatModel.history.clear()
@@ -33,11 +37,12 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
         self._mockChatModel.clear.side_effect = _clear
         self._mockChatModel.addHistory.side_effect = _addHistory
 
-        self._modelFactoryPatcher = patch(
-            'qgitc.llmprovider.AiModelFactory.models')
-        mock_factory_models = self._modelFactoryPatcher.start()
-        self.addCleanup(self._modelFactoryPatcher.stop)
-        mock_factory_models.return_value = [lambda parent: self._mockChatModel]
+        self._modelCreatePatcher = patch(
+            'qgitc.llmprovider.AiModelProvider.createSpecificModel',
+            return_value=self._mockChatModel,
+        )
+        self._modelCreatePatcher.start()
+        self.addCleanup(self._modelCreatePatcher.stop)
 
         self.window = self.app.getWindow(WindowType.AiAssistant)
         self.chatWidget: AiChatWidget = self.window.centralWidget()

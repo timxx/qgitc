@@ -99,6 +99,12 @@ class InlineComboBox(QWidget):
             return self._items[index][1]
         return None
 
+    def setItemData(self, index: int, userData):
+        """Replace the user data for an existing item."""
+        if 0 <= index < len(self._items):
+            text, _ = self._items[index]
+            self._items[index] = (text, userData)
+
     def setCurrentText(self, text: str):
         """Set current item by text"""
         for i, (itemText, _) in enumerate(self._items):

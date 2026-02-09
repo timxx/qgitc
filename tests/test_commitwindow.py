@@ -380,14 +380,12 @@ class TestCommitWindow(TestBase):
         mock_model.isLocal.return_value = False
         mock_model.modelId = "test-model"
 
-        # Mock the model factory to return our mock model
-        with patch('qgitc.llmprovider.AiModelFactory.models') as mock_factory_models, \
-            patch('qgitc.aichatwindow.AiChatWindow.codeReviewForStagedFiles') as mock_code_review:
+        # Mock lazy model creation to return our mock model
+        with patch('qgitc.llmprovider.AiModelProvider.createSpecificModel', return_value=mock_model), \
+                patch('qgitc.aichatwindow.AiChatWindow.codeReviewForStagedFiles') as mock_code_review:
 
             chatWindow = self.app.getWindow(WindowType.AiAssistant, False)
             self.assertIsNone(chatWindow)
-
-            mock_factory_models.return_value = [lambda parent: mock_model]
 
             # Create CodeReviewEvent and simulate event processing
             test_event = CodeReviewEvent({".": ["test.py"]})
@@ -405,8 +403,7 @@ class TestCommitWindow(TestBase):
             self.assertIn(".", called_args)
             self.assertIn("test.py", called_args["."])
 
-        with patch('qgitc.llmprovider.AiModelFactory.models') as mock_factory_models:
-            mock_factory_models.return_value = [lambda parent: mock_model]
+        with patch('qgitc.llmprovider.AiModelProvider.createSpecificModel', return_value=mock_model):
 
             chatWindow = self.app.getWindow(WindowType.AiAssistant, False)
             self.assertIsNotNone(chatWindow)
@@ -834,11 +831,23 @@ class TestCommitWindow(TestBase):
         # Select test files
         lvFiles.clearSelection()
         selectionModel = lvFiles.selectionModel()
+        selectedCount = 0
         for row in range(filesModel.rowCount()):
             index = filesModel.index(row, 0)
             fileName = filesModel.data(index)
             if fileName in testFiles:
-                selectionModel.select(index, QItemSelectionModel.Select)
+                if selectedCount == 0:
+                    selectionModel.setCurrentIndex(
+                        index,
+                        QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Current,
+                    )
+                else:
+                    selectionModel.select(index, QItemSelectionModel.Select)
+                selectedCount += 1
+
+        self.assertEqual(selectedCount, len(testFiles),
+                         "All test files should be selected")
+        self.processEvents()
 
         # Mock the confirmation dialog to simulate user canceling
         mock_msgbox = MagicMock()
