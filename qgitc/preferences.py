@@ -498,6 +498,8 @@ class Preferences(QDialog):
 
     def _initLLMTab(self):
         self.ui.leServerUrl.setText(self.settings.localLlmServer())
+        self.ui.leAuth.setText(self.settings.localLlmAuth())
+
         token = self.settings.githubCopilotAccessToken()
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
@@ -544,6 +546,7 @@ class Preferences(QDialog):
 
     def _saveLLMTab(self):
         self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
+        self.settings.setLocalLlmAuth(self.ui.leAuth.text().strip())
 
         model: AiModelBase = self.ui.cbModels.currentData()
         modelKey = AiModelFactory.modelKey(model)

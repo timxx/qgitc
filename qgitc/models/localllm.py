@@ -14,11 +14,12 @@ class LocalLLMNameFetcher(QObject):
 
     finished = Signal()
 
-    def __init__(self, url):
+    def __init__(self, url: str, authToken: str):
         super().__init__()
         self.models = []
         self.url_base = url
         self._reply: QNetworkReply = None
+        self._auth = authToken
 
     def start(self):
         url = f"{self.url_base}/models"
@@ -26,6 +27,9 @@ class LocalLLMNameFetcher(QObject):
         mgr = ApplicationBase.instance().networkManager
         request = QNetworkRequest()
         request.setUrl(url)
+
+        if self._auth:
+            request.setRawHeader(b"Authorization", self._auth.encode())
 
         self._reply = mgr.get(request)
         self._reply.finished.connect(self._onFinished)
@@ -38,11 +42,11 @@ class LocalLLMNameFetcher(QObject):
         if reply.error() != QNetworkReply.NoError:
             return
 
-        model_list = json.loads(reply.readAll().data())
-        if not model_list:
+        modelList = json.loads(reply.readAll().data())
+        if not modelList:
             return
 
-        models = model_list.get("data", [])
+        models = modelList.get("data", [])
         if not models:
             return
         for model in models:
@@ -79,7 +83,8 @@ class LocalLLM(ChatGPTModel):
 
         if url not in LocalLLM._models:
             LocalLLM._models[url] = []
-            self.nameFetcher = LocalLLMNameFetcher(self.url_base)
+            authToken = settings.localLlmAuth()
+            self.nameFetcher = LocalLLMNameFetcher(self.url_base, authToken)
             self.nameFetcher.finished.connect(self._onFetchFinished)
             self.nameFetcher.start()
         else:
@@ -106,3 +111,8 @@ class LocalLLM(ChatGPTModel):
             self.nameFetcher.disconnect(self)
             self.nameFetcher.requestInterruption()
             self.nameFetcher = None
+
+    @property
+    def authorization(self):
+        settings = ApplicationBase.instance().settings()
+        return settings.localLlmAuth()

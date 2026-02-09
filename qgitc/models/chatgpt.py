@@ -47,4 +47,12 @@ class ChatGPTModel(AiModelBase):
         headers = {
             b"Content-Type": b"application/json; charset=utf-8"
         }
+
+        if self.authorization:
+            headers[b"Authorization"] = self.authorization.encode()
+
         self.post(self.url, headers=headers, data=payload, stream=stream)
+
+    @property
+    def authorization(self):
+        return None

@@ -317,6 +317,17 @@ class Settings(QSettings):
         self.setValue("localServer", server)
         self.endGroup()
 
+    def localLlmAuth(self):
+        self.beginGroup("llm")
+        value = self.value("localAuth", "")
+        self.endGroup()
+        return value
+
+    def setLocalLlmAuth(self, auth: str):
+        self.beginGroup("llm")
+        self.setValue("localAuth", auth)
+        self.endGroup()
+
     def defaultLlmModel(self):
         self.beginGroup("llm")
         value = self.value("defaultModel", "GithubCopilot")
