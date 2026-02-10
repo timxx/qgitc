@@ -626,7 +626,7 @@ class AiChatWidget(QWidget):
         self._contextPanel.cbBots.clear()
 
         for i, desc in enumerate(descriptors):
-            self._contextPanel.cbBots.addItem(desc.displayName, desc)
+            self._contextPanel.cbBots.addItem(desc.name, desc)
             if desc.modelKey == defaultModelKey:
                 currentModelIndex = i
 

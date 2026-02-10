@@ -25,7 +25,7 @@ class AiModelDescriptor:
     # items and expect `name`/`isLocal()` to exist.
     @property
     def name(self) -> str:
-        return self.displayName
+        return ApplicationBase.instance().translate(self.modelKey, self.displayName)
 
     def isLocal(self) -> bool:
         return bool(self.localProvider)

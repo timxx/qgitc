@@ -511,7 +511,7 @@ class Preferences(QDialog):
         entries = AiModelProvider.models()
         currentIndex = -1
         for i, desc in enumerate(entries):
-            self.ui.cbModels.addItem(desc.displayName, desc)
+            self.ui.cbModels.addItem(desc.name, desc)
             if desc.modelKey == prefer:
                 currentIndex = i
 
