@@ -87,7 +87,11 @@
         </widget>
        </item>
        <item row="1" column="2">
-        <widget class="QComboBox" name="cbSubmodule"/>
+        <widget class="QComboBox" name="cbSubmodule">
+         <property name="sizeAdjustPolicy">
+          <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+         </property>
+        </widget>
        </item>
        <item row="2" column="3">
         <widget class="QCheckBox" name="cbSelfCommits">

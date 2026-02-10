@@ -36,7 +36,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="cbBranch"/>
+      <widget class="QComboBox" name="cbBranch">
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon</enum>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
