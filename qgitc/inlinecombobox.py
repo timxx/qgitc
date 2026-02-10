@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 from PySide6.QtCore import QElapsedTimer, QEvent, QPoint, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QFontMetrics, QKeyEvent, QMouseEvent, QPainter, QPen
-from PySide6.QtWidgets import QApplication, QFrame, QListWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QListWidget, QWidget
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.popupwidget import PopupWidget
