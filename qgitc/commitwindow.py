@@ -62,6 +62,7 @@ from qgitc.settings import Settings
 from qgitc.statewindow import StateWindow
 from qgitc.statusfetcher import StatusFetcher
 from qgitc.submoduleexecutor import SubmoduleExecutor
+from qgitc.templatemanager import TemplateManageDialog, loadTemplates
 from qgitc.ui_commitwindow import Ui_CommitWindow
 
 
@@ -241,6 +242,9 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
         self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
 
+        self.ui.tbTemplate.setText("📝 Template")
+        self.ui.tbTemplate.setToolTip(self.tr("Select commit template"))
+
         self._threads: List[QThread] = []
 
         self._curFile: str = None
@@ -273,7 +277,12 @@ class CommitWindow(StateWindow):
         self._infoFetcher = SubmoduleExecutor(self)
         self._repoInfo: RepoInfo = None
 
+        # Template management
+        self._currentTemplateFile: str = None
+        self._templateMenu: QMenu = None
+
         self._setupWDMenu()
+        self._setupTemplateMenu()
         self._setupStatusBar()
 
         self.ui.tbOptions.setIcon(QIcon(iconsPath + "settings.svg"))
@@ -412,6 +421,7 @@ class CommitWindow(StateWindow):
         self._branchMessage.clear()
         self._branchWidget.setVisible(False)
         self._outputBlocks.clear()
+        self._currentTemplateFile = None
 
     def clearModels(self):
         self._filesModel.clear()
@@ -996,6 +1006,12 @@ class CommitWindow(StateWindow):
 
         self.ui.tbWDChanges.setMenu(self._wdMenu)
 
+    def _setupTemplateMenu(self):
+        """Setup template management menu button"""
+        self._templateMenu = QMenu(self)
+        self._templateMenu.aboutToShow.connect(self._updateTemplateMenuItems)
+        self.ui.tbTemplate.setMenu(self._templateMenu)
+
     def _onShowUntrackedFiles(self):
         checked = self._acShowUntrackedFiles.isChecked()
         self._statusFetcher.setShowUntrackedFiles(checked)
@@ -1007,6 +1023,56 @@ class CommitWindow(StateWindow):
         self._statusFetcher.setShowIgnoredFiles(checked)
         ApplicationBase.instance().settings().setShowIgnoredFiles(checked)
         self.reloadLocalChanges()
+
+    def _updateTemplateMenuItems(self):
+        """Populate template menu with available templates and management options"""
+        self._templateMenu.clear()
+        templates = loadTemplates(self)
+
+        # Add template selection actions
+        if templates:
+            for name, path in templates:
+                action = self._templateMenu.addAction(name)
+                action.setCheckable(True)
+                if self._currentTemplateFile == path:
+                    action.setChecked(True)
+                action.triggered.connect(
+                    lambda checked, p=path, n=name: self._onSelectTemplate(p, n))
+            self._templateMenu.addSeparator()
+        else:
+            noTemplateAction = self._templateMenu.addAction(
+                self.tr("(No templates)"))
+            noTemplateAction.setEnabled(False)
+            self._templateMenu.addSeparator()
+
+        # Add management options
+        self._templateMenu.addAction(
+            self.tr("Manage Templates..."),
+            self._onManageTemplates)
+
+    def _onSelectTemplate(self, templatePath: str, templateName: str):
+        """Select a template and load its content"""
+        try:
+            self._currentTemplateFile = templatePath
+            with open(templatePath, "r", encoding="utf-8") as f:
+                template = f.read().rstrip()
+            if template:
+                # Use setPlainText to avoid undo history
+                self.ui.teMessage.setPlainText(template)
+                self.ui.teMessage.moveCursor(QTextCursor.End)
+
+            logger.info(f"Selected template: {templateName}")
+        except Exception as e:
+            logger.error(f"Error selecting template: {e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Error selecting template: {}").format(str(e)))
+
+    def _onManageTemplates(self):
+        """Open template management dialog"""
+        dialog = TemplateManageDialog(self._currentTemplateFile, self)
+        dialog.exec()
 
     def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
         templateFile = Git.getConfigValue("commit.template", False)
@@ -1020,6 +1086,9 @@ class CommitWindow(StateWindow):
                 return
             if template:
                 ApplicationBase.instance().postEvent(self, TemplateReadyEvent(template))
+            self._currentTemplateFile = os.path.realpath(templateFile)
+        else:
+            self._currentTemplateFile = None
 
         if cancelEvent.isSet():
             return

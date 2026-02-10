@@ -424,6 +424,25 @@
                 </spacer>
                </item>
                <item>
+                <widget class="MenuButton" name="tbTemplate">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="popupMode">
+                  <enum>QToolButton::ToolButtonPopupMode::InstantPopup</enum>
+                 </property>
+                 <property name="toolButtonStyle">
+                  <enum>Qt::ToolButtonStyle::ToolButtonTextOnly</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="ColoredIconToolButton" name="tbOptions">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
