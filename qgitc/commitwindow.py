@@ -49,7 +49,7 @@ from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
 from qgitc.commitcontextprovider import CommitContextProvider
-from qgitc.common import dataDirPath, fullRepoDir, logger, toSubmodulePath
+from qgitc.common import dataDirPath, fullRepoDir, logger, pathsEqual, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent, ShowCommitEvent
@@ -1041,7 +1041,7 @@ class CommitWindow(StateWindow):
             for name, path in templates:
                 action = self._templateMenu.addAction(name)
                 action.setCheckable(True)
-                if self._currentTemplateFile == path:
+                if pathsEqual(self._currentTemplateFile, path):
                     action.setChecked(True)
                 action.triggered.connect(
                     lambda checked, p=path, n=name: self._onSelectTemplate(p, n))

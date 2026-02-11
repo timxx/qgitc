@@ -1,6 +1,7 @@
+import os
 import unittest
 
-from qgitc.common import extractFilePaths, isRevisionRange
+from qgitc.common import extractFilePaths, isRevisionRange, pathsEqual
 
 
 class TestCommon(unittest.TestCase):
@@ -58,3 +59,49 @@ class TestCommon(unittest.TestCase):
         for args, expected in test_cases:
             with self.subTest(args=args):
                 self.assertEqual(extractFilePaths(args), expected)
+
+    def testPathsEqual(self):
+        """Test pathsEqual handles case-insensitivity and path separators correctly"""
+        test_cases = [
+            # Same paths
+            ("/path/to/file.txt", "/path/to/file.txt", True),
+            ("path/to/file.txt", "path/to/file.txt", True),
+
+            # Different paths
+            ("/path/to/file1.txt", "/path/to/file2.txt", False),
+            ("path/to/file.txt", "other/file.txt", False),
+
+            # Case sensitivity (should be equal on Windows, platform-dependent on Unix)
+            ("C:/Path/To/File.txt", "c:/path/to/file.txt",
+             os.name == "nt"),  # Equal on Windows
+            ("/Path/To/File.txt", "/path/to/file.txt",
+             os.name == "nt"),  # Equal on Windows, not on Unix
+
+            # Path separator normalization (Windows: both / and \ should be treated the same)
+            ("C:\\Path\\To\\File.txt", "C:/Path/To/File.txt", os.name == "nt"),
+            ("path\\to\\file.txt", "path/to/file.txt", os.name == "nt"),
+
+            # Combined: case + separator (Windows)
+            ("C:\\Users\\Test\\file.txt", "c:/users/test/file.txt",
+             os.name == "nt"),
+
+            # None and empty string handling
+            (None, None, True),
+            ("", "", True),
+            (None, "", False),
+            ("", None, False),
+            (None, "path", False),
+            ("path", None, False),
+
+            # Relative vs absolute (should be different)
+            ("file.txt", "/path/to/file.txt", False),
+
+            # Redundant separators and dots
+            ("path//to/./file.txt", "path/to/file.txt", True),
+            ("path/to/../to/file.txt", "path/to/file.txt", True),
+        ]
+
+        for path1, path2, expected in test_cases:
+            with self.subTest(path1=path1, path2=path2):
+                self.assertEqual(pathsEqual(path1, path2), expected,
+                                 f"pathsEqual({path1!r}, {path2!r}) should be {expected}")

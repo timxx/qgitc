@@ -403,6 +403,13 @@ def _pathStartsWith(path: str, prefix: str):
     return path.startswith(prefix)
 
 
+def pathsEqual(path1: str, path2: str) -> bool:
+    """Compare two paths for equality, handling case-insensitivity and path separators on Windows"""
+    if not path1 or not path2:
+        return path1 == path2
+    return os.path.normpath(os.path.normcase(path1)) == os.path.normpath(os.path.normcase(path2))
+
+
 def toSubmodulePath(submodule: str, path: str):
     if not submodule or submodule == ".":
         return path

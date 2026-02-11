@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.commitmessageedit import CommitMessageEdit
-from qgitc.common import logger
+from qgitc.common import logger, pathsEqual
 from qgitc.gitutils import Git
 
 
@@ -30,12 +30,18 @@ def templatesDir():
     return os.path.expanduser("~/.qgitc/templates")
 
 
+def gitTemplateFile(isGlobal: bool) -> str:
+    """Get the git template file path from config"""
+    file = Git.getConfigValue("commit.template", isGlobal=isGlobal)
+    if file and os.path.exists(file):
+        return os.path.realpath(file)
+    return None
+
+
 def loadTemplates(context: QObject) -> List[Tuple[str, str]]:
     # Get git global and local templates
-    gitGlobalTemplate = Git.getConfigValue(
-        "commit.template", isGlobal=True)
-    gitLocalTemplate = Git.getConfigValue(
-        "commit.template", isGlobal=False)
+    gitGlobalTemplate = gitTemplateFile(isGlobal=True)
+    gitLocalTemplate = gitTemplateFile(isGlobal=False)
 
     dir = templatesDir()
 
@@ -44,18 +50,18 @@ def loadTemplates(context: QObject) -> List[Tuple[str, str]]:
     gitTemplatePaths = set()
 
     # Add git global template if it exists
-    if gitGlobalTemplate and os.path.exists(gitGlobalTemplate):
+    if gitGlobalTemplate:
         name = context.tr("[Git Global] {}").format(
             os.path.basename(gitGlobalTemplate))
         templates.append((name, gitGlobalTemplate))
-        gitTemplatePaths.add(os.path.realpath(gitGlobalTemplate))
+        gitTemplatePaths.add(gitGlobalTemplate)
 
     # Add git local template if it exists and differs from global
-    if gitLocalTemplate != gitGlobalTemplate and os.path.exists(gitLocalTemplate):
+    if gitLocalTemplate and not pathsEqual(gitLocalTemplate, gitGlobalTemplate):
         name = context.tr("[Git Local] {}").format(
             os.path.basename(gitLocalTemplate))
         templates.append((name, gitLocalTemplate))
-        gitTemplatePaths.add(os.path.realpath(gitLocalTemplate))
+        gitTemplatePaths.add(gitLocalTemplate)
 
     if os.path.isdir(dir):
         try:
@@ -64,7 +70,8 @@ def loadTemplates(context: QObject) -> List[Tuple[str, str]]:
                     os.path.join(dir, item))
                 if os.path.isfile(itemPath):
                     # Skip if this path is already listed as a git template
-                    if itemPath not in gitTemplatePaths:
+                    # Use pathsEqual for case-insensitive comparison
+                    if not any(pathsEqual(itemPath, gitPath) for gitPath in gitTemplatePaths):
                         templates.append((item, itemPath))
         except Exception as e:
             logger.warning(f"Failed to list templates: {e}")
@@ -207,7 +214,7 @@ class TemplateManageDialog(QDialog):
             for i in range(self._templateList.count()):
                 item = self._templateList.item(i)
                 path = item.data(Qt.ToolTipRole)
-                if path == self._curTemplateFile:
+                if pathsEqual(path, self._curTemplateFile):
                     self._templateList.setCurrentItem(item)
                     return
 
@@ -247,14 +254,12 @@ class TemplateManageDialog(QDialog):
         self._contentLabel.setText(self.tr("Content (preview):"))
 
         # Check if this is the current git template (prefer local over global)
-        currentGitLocalTemplate = Git.getConfigValue(
-            "commit.template", isGlobal=False)
-        currentGitGlobalTemplate = Git.getConfigValue(
-            "commit.template", isGlobal=True)
+        currentGitLocalTemplate = gitTemplateFile(isGlobal=False)
+        currentGitGlobalTemplate = gitTemplateFile(isGlobal=True)
 
         isCurrentTemplate = (
-            (currentGitLocalTemplate and currentGitLocalTemplate == path) or
-            (not currentGitLocalTemplate and currentGitGlobalTemplate == path)
+            (currentGitLocalTemplate and pathsEqual(currentGitLocalTemplate, path)) or
+            (not currentGitLocalTemplate and pathsEqual(currentGitGlobalTemplate, path))
         )
         self._chkSetDefault.setChecked(isCurrentTemplate)
 
@@ -393,7 +398,7 @@ class TemplateManageDialog(QDialog):
                 newPath = os.path.join(self._templatesDir, newName)
 
                 # Check if renaming to existing file
-                if oldPath != newPath and os.path.exists(newPath):
+                if not pathsEqual(oldPath, newPath) and os.path.exists(newPath):
                     QMessageBox.warning(
                         self,
                         self.tr("Template Exists"),
@@ -405,7 +410,7 @@ class TemplateManageDialog(QDialog):
                     f.write(newContent)
 
                 # Remove old file if renamed
-                if oldPath != newPath and os.path.exists(oldPath):
+                if not pathsEqual(oldPath, newPath) and os.path.exists(oldPath):
                     os.remove(oldPath)
                     logger.info(
                         f"Renamed template from {self._originalName} to {newName}")
@@ -416,16 +421,14 @@ class TemplateManageDialog(QDialog):
                 logger.info(f"Set template as git local default: {newName}")
             else:
                 # Unset if it was previously set and now unchecked
-                currentGitLocal = Git.getConfigValue(
-                    "commit.template", isGlobal=False)
-                currentGitGlobal = Git.getConfigValue(
-                    "commit.template", isGlobal=True)
+                currentGitLocal = gitTemplateFile(isGlobal=False)
+                currentGitGlobal = gitTemplateFile(isGlobal=True)
 
                 # Unset local if it matches
-                if currentGitLocal and (currentGitLocal == oldPath or currentGitLocal == newPath):
+                if currentGitLocal and (pathsEqual(currentGitLocal, oldPath) or pathsEqual(currentGitLocal, newPath)):
                     Git.setConfigValue("commit.template", "", isGlobal=False)
                 # Also unset global if it matches (for consistency)
-                elif currentGitGlobal and (currentGitGlobal == oldPath or currentGitGlobal == newPath):
+                elif currentGitGlobal and (pathsEqual(currentGitGlobal, oldPath) or pathsEqual(currentGitGlobal, newPath)):
                     Git.setConfigValue("commit.template", "", isGlobal=True)
 
             logger.info(f"Saved template: {newName}")
@@ -535,6 +538,6 @@ class TemplateManageDialog(QDialog):
         for i in range(self._templateList.count()):
             item = self._templateList.item(i)
             itemPath = item.data(Qt.ToolTipRole)
-            if itemPath == path:
+            if pathsEqual(itemPath, path):
                 return item
         return None
