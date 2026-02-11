@@ -81,23 +81,29 @@ class DataFetcher(QObject):
         if self._dataChunk:
             self.parse(self._dataChunk)
 
+        if self._process:
+            self._cleanup()
+            self._process.deleteLater()
         self._process = None
         self._exitCode = exitCode
         self.fetchFinished.emit(exitCode)
+
+    def _cleanup(self):
+        QObject.disconnect(self._process,
+                            SIGNAL("readyReadStandardOutput()"),
+                            self.onDataAvailable)
+        QObject.disconnect(self._process,
+                            SIGNAL("finished(int, QProcess::ExitStatus)"),
+                            self.onDataFinished)
+        QObject.disconnect(self._process, SIGNAL("readyReadStandardError()"),
+                            self.onProcessError)
+        self._process.close()
 
     def cancel(self):
         if self._process:
             logger.info("Cancel git process")
             # self._process.disconnect(self)
-            QObject.disconnect(self._process,
-                               SIGNAL("readyReadStandardOutput()"),
-                               self.onDataAvailable)
-            QObject.disconnect(self._process,
-                               SIGNAL("finished(int, QProcess::ExitStatus)"),
-                               self.onDataFinished)
-            QObject.disconnect(self._process, SIGNAL("readyReadStandardError()"),
-                               self.onProcessError)
-            self._process.close()
+            self._cleanup()
             self._process.waitForFinished(100)
             if self._process.state() == QProcess.Running:
                 logger.warning("Kill git process")

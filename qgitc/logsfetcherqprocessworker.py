@@ -4,7 +4,7 @@ import os
 import time
 from typing import List
 
-from PySide6.QtCore import SIGNAL, QEventLoop, QObject, QProcess, Signal
+from PySide6.QtCore import QEventLoop, QObject, QProcess, Signal
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import (
@@ -69,22 +69,30 @@ class LocalChangesFetcher(QObject):
         if not process:
             return
 
-        QObject.disconnect(process, SIGNAL(
-            "finished(int, QProcess::ExitStatus)"), self._onFinished)
-        process.close()
+        LocalChangesFetcher._cleanupProcess(process, delete=False)
         process.waitForFinished(50)
         if process.state() == QProcess.Running:
             logger.warning("Kill git process")
             process.kill()
 
+    @staticmethod
+    def _cleanupProcess(process: QProcess, delete=True):
+        process.finished.disconnect()
+        process.errorOccurred.disconnect()
+        process.close()
+        if delete:
+            process.deleteLater()
+
     def _onFinished(self, exitCode, exitStatus):
-        process = self.sender()
+        process: QProcess = self.sender()
         if process == self._lccProcess:
             self.hasLCC = exitCode == 1
             self._lccProcess = None
         else:
             self.hasLUC = exitCode == 1
             self._lucProcess = None
+
+        LocalChangesFetcher._cleanupProcess(process)
 
         if not self._lccProcess and not self._lucProcess:
             self.finished.emit()
