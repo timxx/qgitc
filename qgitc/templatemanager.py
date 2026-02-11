@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import os
-from typing import List, Tuple
+from dataclasses import dataclass
+from enum import IntEnum
+from typing import List
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -25,6 +27,20 @@ from qgitc.common import logger, pathsEqual
 from qgitc.gitutils import Git
 
 
+class TemplateScope(IntEnum):
+    User = 0
+    Local = 1
+    Global = 2
+
+
+@dataclass
+class TemplateInfo:
+
+    name: str
+    path: str
+    scope: TemplateScope
+
+
 def templatesDir():
     """Get the directory for storing qgitc templates"""
     return os.path.expanduser("~/.qgitc/templates")
@@ -38,7 +54,7 @@ def gitTemplateFile(isGlobal: bool) -> str:
     return None
 
 
-def loadTemplates(context: QObject) -> List[Tuple[str, str]]:
+def loadTemplates() -> List[TemplateInfo]:
     # Get git global and local templates
     gitGlobalTemplate = gitTemplateFile(isGlobal=True)
     gitLocalTemplate = gitTemplateFile(isGlobal=False)
@@ -51,16 +67,16 @@ def loadTemplates(context: QObject) -> List[Tuple[str, str]]:
 
     # Add git global template if it exists
     if gitGlobalTemplate:
-        name = context.tr("[Git Global] {}").format(
-            os.path.basename(gitGlobalTemplate))
-        templates.append((name, gitGlobalTemplate))
+        name = os.path.basename(gitGlobalTemplate)
+        templates.append(TemplateInfo(
+            name, gitGlobalTemplate, TemplateScope.Global))
         gitTemplatePaths.add(gitGlobalTemplate)
 
     # Add git local template if it exists and differs from global
     if gitLocalTemplate and not pathsEqual(gitLocalTemplate, gitGlobalTemplate):
-        name = context.tr("[Git Local] {}").format(
-            os.path.basename(gitLocalTemplate))
-        templates.append((name, gitLocalTemplate))
+        name = os.path.basename(gitLocalTemplate)
+        templates.append(TemplateInfo(
+            name, gitLocalTemplate, TemplateScope.Local))
         gitTemplatePaths.add(gitLocalTemplate)
 
     if os.path.isdir(dir):
@@ -72,11 +88,12 @@ def loadTemplates(context: QObject) -> List[Tuple[str, str]]:
                     # Skip if this path is already listed as a git template
                     # Use pathsEqual for case-insensitive comparison
                     if not any(pathsEqual(itemPath, gitPath) for gitPath in gitTemplatePaths):
-                        templates.append((item, itemPath))
+                        templates.append(TemplateInfo(
+                            item, itemPath, TemplateScope.User))
         except Exception as e:
             logger.warning(f"Failed to list templates: {e}")
 
-    templates.sort(key=lambda x: x[0])
+    templates.sort(key=lambda x: x.name)
 
     return templates
 
@@ -89,7 +106,7 @@ class TemplateManageDialog(QDialog):
         self._curTemplateFile = currentTemplateFile
         self._templatesDir = templatesDir()
         self._editMode = False
-        self._curTemplate = None
+        self._curTemplate: TemplateInfo = None
         self._originalContent = ""
         self._originalName = ""
 
@@ -198,11 +215,19 @@ class TemplateManageDialog(QDialog):
         """Load templates from directory"""
         self._templateList.clear()
 
-        templates = loadTemplates(self)
-        for name, path in templates:
+        templates = loadTemplates()
+        for template in templates:
             row = self._templateList.count()
-            self._templateList.addItem(name)
-            self._templateList.item(row).setData(Qt.ToolTipRole, path)
+            if template.scope == TemplateScope.Global:
+                displayName = self.tr("{} (Global)").format(template.name)
+            elif template.scope == TemplateScope.Local:
+                displayName = self.tr("{} (Local)").format(template.name)
+            else:
+                displayName = template.name
+            self._templateList.addItem(displayName)
+            item = self._templateList.item(row)
+            item.setData(Qt.ToolTipRole, template.path)
+            item.setData(Qt.UserRole, template)
 
     def _previewDefaultTemplate(self):
         """Auto-preview the default git template or first template in list"""
@@ -213,7 +238,7 @@ class TemplateManageDialog(QDialog):
             # Try to find and select the current template file
             for i in range(self._templateList.count()):
                 item = self._templateList.item(i)
-                path = item.data(Qt.ToolTipRole)
+                path = item.data(Qt.UserRole).path
                 if pathsEqual(path, self._curTemplateFile):
                     self._templateList.setCurrentItem(item)
                     return
@@ -233,55 +258,39 @@ class TemplateManageDialog(QDialog):
             return
 
         item = items[0]
-        path = item.data(Qt.ToolTipRole)
-        self._loadTemplatePreview(item.text(), path)
+        self._loadTemplatePreview(item)
 
-    def _loadTemplatePreview(self, displayName: str, path: str):
+    def _loadTemplatePreview(self, item):
         """Load and display template in preview mode"""
+        # Get data from item
+        template: TemplateInfo = item.data(Qt.UserRole)
+
         # Load content
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(template.path, "r", encoding="utf-8") as f:
                 content = f.read()
         except Exception as e:
             logger.error(f"Error loading template: {e}")
             self._clearPreview()
             return
 
-        if displayName.startswith(self.tr("[Git Global] ")):
-            name = displayName[len(self.tr("[Git Global] ")):].strip()
-            isGitTemplate = True
-        elif displayName.startswith(self.tr("[Git Local] ")):
-            name = displayName[len(self.tr("[Git Local] ")):].strip()
-            isGitTemplate = True
-        else:
-            name = displayName
-            isGitTemplate = False
-
         # Update UI
-        self._nameEdit.setText(name)
-        self._pathLabel.setText(path)
+        self._nameEdit.setText(template.name)
+        self._pathLabel.setText(template.path)
         self._editor.setPlainText(content)
         self._contentLabel.setText(self.tr("Content (preview):"))
 
-        # Check if this is the current git template (prefer local over global)
-        currentGitLocalTemplate = gitTemplateFile(isGlobal=False)
-        currentGitGlobalTemplate = gitTemplateFile(isGlobal=True)
-
-        isCurrentTemplate = (
-            (currentGitLocalTemplate and pathsEqual(currentGitLocalTemplate, path)) or
-            (not currentGitLocalTemplate and pathsEqual(currentGitGlobalTemplate, path))
-        )
-        self._chkSetDefault.setChecked(isCurrentTemplate)
+        # Check if this is the current git template by scope
+        isGitDefault = template.scope in (
+            TemplateScope.Local, TemplateScope.Global)
+        self._chkSetDefault.setChecked(isGitDefault)
 
         # Store current state
-        self._curTemplate = {
-            'name': name,
-            'path': path,
-            'isGit': isGitTemplate
-        }
+        self._curTemplate = TemplateInfo(
+            template.name, template.path, template.scope)
 
         self._btnEdit.setEnabled(True)
-        self._btnDelete.setEnabled(not isGitTemplate)
+        self._btnDelete.setEnabled(template.scope == TemplateScope.User)
 
     def _clearPreview(self):
         """Clear preview area"""
@@ -353,14 +362,14 @@ class TemplateManageDialog(QDialog):
 
         # Store original state
         self._originalContent = self._editor.toPlainText()
-        self._originalName = self._curTemplate['name']
+        self._originalName = self._curTemplate.name
 
         # Update UI for edit mode
         self._editor.setReadOnly(False)
         self._contentLabel.setText(self.tr("Content (editing):"))
 
         # Enable name editing for qgitc templates
-        if not self._curTemplate['isGit']:
+        if self._curTemplate.scope == TemplateScope.User:
             self._nameEdit.setReadOnly(False)
 
         self._chkSetDefault.setEnabled(True)
@@ -391,11 +400,11 @@ class TemplateManageDialog(QDialog):
             return
 
         newContent = self._editor.toPlainText()
-        isGitTemplate = self._curTemplate['isGit']
-        oldPath = self._curTemplate['path']
+        scope = self._curTemplate.scope
+        oldPath = self._curTemplate.path
 
         try:
-            if isGitTemplate:
+            if scope != TemplateScope.User:
                 # Just save content for git template
                 newPath = oldPath
                 with open(newPath, "w", encoding="utf-8") as f:
@@ -424,18 +433,22 @@ class TemplateManageDialog(QDialog):
 
             # Set as default if requested
             if self._chkSetDefault.isChecked():
-                Git.setConfigValue("commit.template", newPath, isGlobal=False)
-                logger.info(f"Set template as git local default: {newName}")
+                # Preserve the original scope if it was a git template, otherwise default to local
+                if scope == TemplateScope.Global:
+                    isGlobal = True
+                    scopeLabel = "global"
+                else:
+                    isGlobal = False
+                    scopeLabel = "local"
+                Git.setConfigValue("commit.template",
+                                   newPath, isGlobal=isGlobal)
+                logger.info(
+                    f"Set template as git {scopeLabel} default: {newName}")
             else:
-                # Unset if it was previously set and now unchecked
-                currentGitLocal = gitTemplateFile(isGlobal=False)
-                currentGitGlobal = gitTemplateFile(isGlobal=True)
-
-                # Unset local if it matches
-                if currentGitLocal and (pathsEqual(currentGitLocal, oldPath) or pathsEqual(currentGitLocal, newPath)):
+                # Unset only in the scope where it was previously configured
+                if scope == TemplateScope.Local:
                     Git.setConfigValue("commit.template", "", isGlobal=False)
-                # Also unset global if it matches (for consistency)
-                elif currentGitGlobal and (pathsEqual(currentGitGlobal, oldPath) or pathsEqual(currentGitGlobal, newPath)):
+                elif scope == TemplateScope.Global:
                     Git.setConfigValue("commit.template", "", isGlobal=True)
 
             logger.info(f"Saved template: {newName}")
@@ -496,7 +509,7 @@ class TemplateManageDialog(QDialog):
         self._btnCancel.setVisible(False)
         self._btnNew.setEnabled(True)
         self._btnEdit.setEnabled(True)
-        if self._curTemplate and not self._curTemplate['isGit']:
+        if self._curTemplate and self._curTemplate.scope == TemplateScope.User:
             self._btnDelete.setEnabled(True)
 
         # Enable list selection
@@ -544,7 +557,7 @@ class TemplateManageDialog(QDialog):
         """Find list item by template path"""
         for i in range(self._templateList.count()):
             item = self._templateList.item(i)
-            itemPath = item.data(Qt.ToolTipRole)
+            itemPath = item.data(Qt.UserRole).path
             if pathsEqual(itemPath, path):
                 return item
         return None

@@ -62,7 +62,7 @@ from qgitc.settings import Settings
 from qgitc.statewindow import StateWindow
 from qgitc.statusfetcher import StatusFetcher
 from qgitc.submoduleexecutor import SubmoduleExecutor
-from qgitc.templatemanager import TemplateManageDialog, loadTemplates
+from qgitc.templatemanager import TemplateManageDialog, TemplateScope, loadTemplates
 from qgitc.ui_commitwindow import Ui_CommitWindow
 
 
@@ -1034,17 +1034,22 @@ class CommitWindow(StateWindow):
         useTemplateAction.setChecked(settings.useTemplateForAi())
         useTemplateAction.toggled.connect(self._onUseTemplateForAiToggled)
         self._templateMenu.addSeparator()
-        templates = loadTemplates(self)
+        templates = loadTemplates()
 
         # Add template selection actions
         if templates:
-            for name, path in templates:
-                action = self._templateMenu.addAction(name)
+            for template in templates:
+                displayName = template.name
+                if template.scope == TemplateScope.Global:
+                    displayName = self.tr("{} (Global)").format(template.name)
+                elif template.scope == TemplateScope.Local:
+                    displayName = self.tr("{} (Local)").format(template.name)
+                action = self._templateMenu.addAction(displayName)
                 action.setCheckable(True)
-                if pathsEqual(self._currentTemplateFile, path):
+                if pathsEqual(self._currentTemplateFile, template.path):
                     action.setChecked(True)
                 action.triggered.connect(
-                    lambda checked, p=path, n=name: self._onSelectTemplate(p, n))
+                    lambda checked, p=template.path, n=template.name: self._onSelectTemplate(p, n))
             self._templateMenu.addSeparator()
         else:
             noTemplateAction = self._templateMenu.addAction(
