@@ -566,6 +566,17 @@ class Settings(QSettings):
         self.setValue("useTemplateForAi", use)
         self.endGroup()
 
+    def defaultTemplateFile(self):
+        self.beginGroup("commit")
+        path = self.value("defaultTemplateFile", "", type=str)
+        self.endGroup()
+        return path if path else None
+
+    def setDefaultTemplateFile(self, path):
+        self.beginGroup("commit")
+        self.setValue("defaultTemplateFile", path if path else "")
+        self.endGroup()
+
     def githubCopilotAccessToken(self):
         self.beginGroup("GithubCopilot")
         token = self.value("accessToken", None)

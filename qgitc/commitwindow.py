@@ -101,10 +101,11 @@ class RepoInfoEvent(QEvent):
 class TemplateReadyEvent(QEvent):
     Type = QEvent.User + 4
 
-    def __init__(self, template: str, updateMessage: bool = False):
+    def __init__(self, template: str, updateMessage: bool = False, templateFile: str = None):
         super().__init__(QEvent.Type(TemplateReadyEvent.Type))
         self.template = template
         self.updateMessage = updateMessage
+        self.templateFile = templateFile
 
 
 class UpdateCommitProgressEvent(QEvent):
@@ -882,10 +883,13 @@ class CommitWindow(StateWindow):
 
         if evt.type() == TemplateReadyEvent.Type:
             doc = self.ui.teMessage.document()
+            if evt.templateFile is not None:
+                self._currentTemplateFile = evt.templateFile
+
             if evt.updateMessage:
                 if self._canUpdateMessage():
                     self.replaceMessage(evt.template)
-            elif not doc.isUndoAvailable() and not doc.isRedoAvailable():
+            elif evt.template and not doc.isUndoAvailable() and not doc.isRedoAvailable():
                 # only set template if user has not modified the message
                 self.ui.teMessage.setPlainText(evt.template)
 
@@ -1065,6 +1069,8 @@ class CommitWindow(StateWindow):
     def _onSelectTemplate(self, templatePath: str, templateName: str):
         """Select a template and load its content"""
         try:
+            settings = ApplicationBase.instance().settings()
+            settings.setDefaultTemplateFile(templatePath)
             self._currentTemplateFile = templatePath
             with open(templatePath, "r", encoding="utf-8") as f:
                 template = f.read().rstrip()
@@ -1090,23 +1096,31 @@ class CommitWindow(StateWindow):
         dialog.exec()
 
     def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
-        templateFile = Git.getConfigValue("commit.template", False)
+        templateFile = userData
         if cancelEvent.isSet():
             return
 
-        if templateFile and os.path.exists(templateFile):
-            with open(templateFile, "r", encoding="utf-8") as f:
-                template = f.read().rstrip()
+        if not templateFile or not os.path.exists(templateFile):
+            templateFile = Git.getConfigValue("commit.template", False)
             if cancelEvent.isSet():
                 return
-            if template:
-                ApplicationBase.instance().postEvent(self, TemplateReadyEvent(template))
-            self._currentTemplateFile = os.path.realpath(templateFile)
-        else:
-            self._currentTemplateFile = None
+            if not templateFile or not os.path.exists(templateFile):
+                templateFile = None
 
-        if cancelEvent.isSet():
-            return
+        resolvedTemplateFile = ""
+        template = None
+        if templateFile:
+            try:
+                with open(templateFile, "r", encoding="utf-8") as f:
+                    template = f.read().rstrip()
+                if cancelEvent.isSet():
+                    return
+                resolvedTemplateFile = os.path.realpath(templateFile)
+            except (OSError, IOError):
+                pass
+
+        ApplicationBase.instance().postEvent(self, TemplateReadyEvent(
+            template, templateFile=resolvedTemplateFile))
 
         info = RepoInfo()
         info.userName = Git.userName()
@@ -1391,7 +1405,8 @@ class CommitWindow(StateWindow):
                 QMessageBox.Ok)
 
     def _onGenMessageClicked(self):
-        exts = ApplicationBase.instance().settings().aiExcludedFileExtensions()
+        settings = ApplicationBase.instance().settings()
+        exts = settings.aiExcludedFileExtensions()
         submoduleFiles = self._collectModelFiles(self._stagedModel, exts)
         if not submoduleFiles:
             return
@@ -1401,7 +1416,6 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self.ui.btnRefineMsg.setEnabled(False)
-        settings = ApplicationBase.instance().settings()
         if settings.useTemplateForAi():
             template = self._loadSelectedTemplateForAi()
             if template is None:
@@ -1924,7 +1938,9 @@ class CommitWindow(StateWindow):
         if not Git.REPO_DIR:
             return
 
-        self._infoFetcher.submit(None, self._fetchRepoInfo)
+        settings = ApplicationBase.instance().settings()
+        templateFile = settings.defaultTemplateFile()
+        self._infoFetcher.submit({None: templateFile}, self._fetchRepoInfo)
         self._loadLocalChanges()
 
     def _onMessageChanged(self):
