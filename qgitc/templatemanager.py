@@ -328,7 +328,7 @@ class TemplateManageDialog(QDialog):
             QMessageBox.warning(
                 self,
                 self.tr("Template Exists"),
-                self.tr(f"A template named '{name}' already exists."))
+                self.tr('A template named "{}" already exists.').format(name))
             return
 
         try:
@@ -351,7 +351,7 @@ class TemplateManageDialog(QDialog):
             QMessageBox.critical(
                 self,
                 self.tr("Error"),
-                self.tr(f"Error creating template: {str(e)}"))
+                self.tr("Error creating template: {}").format(str(e)))
 
     def _onEditMode(self):
         """Enter edit mode"""
@@ -418,7 +418,7 @@ class TemplateManageDialog(QDialog):
                     QMessageBox.warning(
                         self,
                         self.tr("Template Exists"),
-                        self.tr(f"A template named '{newName}' already exists."))
+                        self.tr('A template named "{}" already exists.').format(newName))
                     return
 
                 # Save content
@@ -468,7 +468,7 @@ class TemplateManageDialog(QDialog):
             QMessageBox.critical(
                 self,
                 self.tr("Error"),
-                self.tr(f"Error saving template: {str(e)}"))
+                self.tr("Error saving template: {}").format(str(e)))
 
     def _onCancelEdit(self):
         """Cancel editing and restore original state"""
@@ -530,7 +530,8 @@ class TemplateManageDialog(QDialog):
         reply = QMessageBox.question(
             self,
             self.tr("Delete Template"),
-            self.tr("Delete template '{}'?".format(name)),
+            self.tr('Are you sure you want to delete the template "{}"?').format(
+                name),
             QMessageBox.Yes | QMessageBox.No)
 
         if reply != QMessageBox.Yes:
@@ -551,7 +552,7 @@ class TemplateManageDialog(QDialog):
             QMessageBox.critical(
                 self,
                 self.tr("Error"),
-                self.tr(f"Error deleting template: {str(e)}"))
+                self.tr("Error deleting template: {}").format(str(e)))
 
     def _findItemByPath(self, path: str):
         """Find list item by template path"""

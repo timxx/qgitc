@@ -243,7 +243,7 @@ class CommitWindow(StateWindow):
         self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
         self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
 
-        self.ui.tbTemplate.setText("📝 Template")
+        self.ui.tbTemplate.setText(self.tr("📝 Template"))
         self.ui.tbTemplate.setToolTip(self.tr("Select commit template"))
 
         self._threads: List[QThread] = []
