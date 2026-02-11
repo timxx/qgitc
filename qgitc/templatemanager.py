@@ -247,8 +247,18 @@ class TemplateManageDialog(QDialog):
             self._clearPreview()
             return
 
+        if displayName.startswith(self.tr("[Git Global] ")):
+            name = displayName[len(self.tr("[Git Global] ")):].strip()
+            isGitTemplate = True
+        elif displayName.startswith(self.tr("[Git Local] ")):
+            name = displayName[len(self.tr("[Git Local] ")):].strip()
+            isGitTemplate = True
+        else:
+            name = displayName
+            isGitTemplate = False
+
         # Update UI
-        self._nameEdit.setText(displayName)
+        self._nameEdit.setText(name)
         self._pathLabel.setText(path)
         self._editor.setPlainText(content)
         self._contentLabel.setText(self.tr("Content (preview):"))
@@ -263,12 +273,9 @@ class TemplateManageDialog(QDialog):
         )
         self._chkSetDefault.setChecked(isCurrentTemplate)
 
-        isGitTemplate = displayName.startswith(
-            self.tr("[Git Global] ")) or displayName.startswith(self.tr("[Git Local] "))
-
         # Store current state
         self._curTemplate = {
-            'name': displayName,
+            'name': name,
             'path': path,
             'isGit': isGitTemplate
         }
