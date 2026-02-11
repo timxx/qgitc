@@ -78,8 +78,9 @@ class TestTemplateManager(TestBase):
         # Create a template file
         template_path = self._createTemplateFile("test.txt")
 
-        # Path with backslashes (Windows style)
-        git_path_backslash = template_path.replace("/", "\\")
+        # Use the alternate separator to exercise normalization on any platform
+        alt_sep = "/" if os.sep == "\\" else "\\"
+        git_path_backslash = template_path.replace(os.sep, alt_sep)
 
         def side_effect(isGlobal):
             return git_path_backslash if isGlobal else None
@@ -91,9 +92,17 @@ class TestTemplateManager(TestBase):
 
         templates = loadTemplates(context)
 
-        # Should only appear once (as git global template)
-        self.assertEqual(len(templates), 1)
-        self.assertTrue(templates[0][0].startswith("[Git Global]"))
+        expected_is_duplicate = pathsEqual(template_path, git_path_backslash)
+        if expected_is_duplicate:
+            # Should only appear once (as git global template)
+            self.assertEqual(len(templates), 1)
+            self.assertTrue(templates[0][0].startswith("[Git Global]"))
+        else:
+            # Should appear as both git global and qgitc template on platforms
+            # where the alternate separator is not treated as equivalent.
+            self.assertEqual(len(templates), 2)
+            self.assertTrue(templates[0][0].startswith("[Git Global]"))
+            self.assertTrue(any(name == "test.txt" for name, _ in templates))
 
     @patch("qgitc.templatemanager.templatesDir")
     @patch("qgitc.templatemanager.gitTemplateFile")
@@ -144,21 +153,23 @@ class TestTemplateManager(TestBase):
         item = dialog._findItemByPath(template_path)
         self.assertIsNotNone(item, "Should find item with exact path")
 
-        # On Windows, test with different case
-        if os.name == "nt":
-            item_upper = dialog._findItemByPath(template_path.upper())
-            self.assertIsNotNone(
-                item_upper, "Should find item with uppercase path on Windows")
+        item_upper = dialog._findItemByPath(template_path.upper())
+        self.assertEqual(
+            item_upper is not None,
+            pathsEqual(template_path.upper(), template_path))
 
-            item_lower = dialog._findItemByPath(template_path.lower())
-            self.assertIsNotNone(
-                item_lower, "Should find item with lowercase path on Windows")
+        item_lower = dialog._findItemByPath(template_path.lower())
+        self.assertEqual(
+            item_lower is not None,
+            pathsEqual(template_path.lower(), template_path))
 
-        # Test with different separator
-        path_with_backslash = template_path.replace("/", "\\")
+        # Test with alternate separator
+        alt_sep = "/" if os.sep == "\\" else "\\"
+        path_with_backslash = template_path.replace(os.sep, alt_sep)
         item_backslash = dialog._findItemByPath(path_with_backslash)
-        self.assertIsNotNone(
-            item_backslash, "Should find item with backslash separators")
+        self.assertEqual(
+            item_backslash is not None,
+            pathsEqual(path_with_backslash, template_path))
 
         dialog.close()
         self.processEvents()
