@@ -1344,7 +1344,14 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.tr("Cannot change author for uncommitted changes."))
             return
 
-        dialog = ChangeAuthorDialog(self)
+        authorName = commit.author
+        authorEmail = ""
+        authorMatch = re.match(r"^(.+?)\s*<(.+)>$", commit.author)
+        if authorMatch:
+            authorName = authorMatch.group(1).strip()
+            authorEmail = authorMatch.group(2).strip()
+
+        dialog = ChangeAuthorDialog(self, authorName, authorEmail)
         if dialog.exec() != ChangeAuthorDialog.Accepted:
             return
 

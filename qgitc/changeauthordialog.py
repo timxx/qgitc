@@ -16,7 +16,7 @@ __all__ = ["ChangeAuthorDialog"]
 
 class ChangeAuthorDialog(QDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, defaultName=None, defaultEmail=None):
         super().__init__(parent)
 
         self.setWindowTitle(self.tr("Change Commit Author"))
@@ -48,9 +48,10 @@ class ChangeAuthorDialog(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-        # Pre-fill with current user info
-        self._leName.setText(Git.userName())
-        self._leEmail.setText(Git.userEmail())
+        authorName = defaultName or Git.userName()
+        authorEmail = defaultEmail or Git.userEmail()
+        self._leName.setText(authorName)
+        self._leEmail.setText(authorEmail)
         self._leName.selectAll()
         self._leName.setFocus()
 
