@@ -57,7 +57,6 @@ from qgitc.settings import Settings
 from qgitc.textline import Link
 from qgitc.version import __version__
 from qgitc.versionchecker import VersionChecker
-from qgitc.watchdog import Watchdog
 from qgitc.windowtype import WindowType
 
 try:
@@ -115,9 +114,6 @@ class Application(ApplicationBase):
 
         self._settings.colorSchemaModeChanged.connect(
             self.overrideColorSchema)
-
-        self._watchDog = Watchdog(self)
-        self._watchDog.start()
 
         self.aboutToQuit.connect(self._onAboutToQuit)
         self._aiChatHistoryStore = AiChatHistoryStore(self._settings, self)
@@ -630,7 +626,6 @@ class Application(ApplicationBase):
         return self._submodules
 
     def _onAboutToQuit(self):
-        self._watchDog.stop()
         self._cancelFindSubmodules(True)
 
         for thread in self._threads[:]:
