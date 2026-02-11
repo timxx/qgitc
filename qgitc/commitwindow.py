@@ -1027,6 +1027,13 @@ class CommitWindow(StateWindow):
     def _updateTemplateMenuItems(self):
         """Populate template menu with available templates and management options"""
         self._templateMenu.clear()
+        useTemplateAction = self._templateMenu.addAction(
+            self.tr("Generate using Template"))
+        useTemplateAction.setCheckable(True)
+        settings = ApplicationBase.instance().settings()
+        useTemplateAction.setChecked(settings.useTemplateForAi())
+        useTemplateAction.toggled.connect(self._onUseTemplateForAiToggled)
+        self._templateMenu.addSeparator()
         templates = loadTemplates(self)
 
         # Add template selection actions
@@ -1068,6 +1075,9 @@ class CommitWindow(StateWindow):
                 self,
                 self.tr("Error"),
                 self.tr("Error selecting template: {}").format(str(e)))
+
+    def _onUseTemplateForAiToggled(self, checked: bool):
+        ApplicationBase.instance().settings().setUseTemplateForAi(checked)
 
     def _onManageTemplates(self):
         """Open template management dialog"""
@@ -1386,8 +1396,44 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self.ui.btnRefineMsg.setEnabled(False)
-        self._aiMessage.generate(submoduleFiles)
+        settings = ApplicationBase.instance().settings()
+        if settings.useTemplateForAi():
+            template = self._loadSelectedTemplateForAi()
+            if template is None:
+                self._restoreAiMessageButtons()
+                return
+            self._aiMessage.generate(submoduleFiles, template, True)
+        else:
+            self._aiMessage.generate(submoduleFiles)
         logger.debug("Begin generate commit message")
+
+    def _loadSelectedTemplateForAi(self):
+        if not self._currentTemplateFile:
+            QMessageBox.information(
+                self,
+                self.tr("Commit Template"),
+                self.tr("Please select a commit template first."))
+            return None
+
+        try:
+            with open(self._currentTemplateFile, "r", encoding="utf-8") as f:
+                template = f.read().rstrip()
+        except Exception as e:
+            logger.error(f"Error reading template: {e}")
+            QMessageBox.critical(
+                self,
+                self.tr("Error"),
+                self.tr("Error reading template: {}").format(str(e)))
+            return None
+
+        if not template:
+            QMessageBox.information(
+                self,
+                self.tr("Commit Template"),
+                self.tr("The selected template is empty."))
+            return None
+
+        return template
 
     def _onRefineMessageClicked(self):
         self.ui.btnRefineMsg.hide()

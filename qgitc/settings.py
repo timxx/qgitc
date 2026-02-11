@@ -555,6 +555,17 @@ class Settings(QSettings):
         self.setValue("showIgnoredFiles", show)
         self.endGroup()
 
+    def useTemplateForAi(self):
+        self.beginGroup("commit")
+        use = self.value("useTemplateForAi", False, type=bool)
+        self.endGroup()
+        return use
+
+    def setUseTemplateForAi(self, use):
+        self.beginGroup("commit")
+        self.setValue("useTemplateForAi", use)
+        self.endGroup()
+
     def githubCopilotAccessToken(self):
         self.beginGroup("GithubCopilot")
         token = self.value("accessToken", None)

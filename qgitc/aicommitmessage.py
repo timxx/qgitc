@@ -26,6 +26,22 @@ You excel in interpreting the purpose behind code changes to craft succinct, cle
 """
 
 
+SYSTEM_PROMPT_TEMPLATE = \
+    """You are an AI programming assistant, helping a software developer write a git commit message based on a provided commit TEMPLATE.
+You must preserve the TEMPLATE structure while filling in relevant details from the CODE CHANGES.
+
+# First, think step-by-step:
+1. Analyze the CODE CHANGES to understand what was modified and why.
+2. Review TEMPLATE comment lines (starting with #) - they are EXAMPLES showing the exact format and structure to use.
+3. For each section in the template:
+   - If there's a comment line, use it as a FORMAT EXAMPLE
+   - Preserve the exact structure/format shown in the comment (including any brackets, tags, or special characters)
+   - Replace only the placeholder/descriptive text with actual content based on CODE CHANGES
+   - Example: if comment shows `#【reason: describe the reason】`, output should be `【reason: actual reason text based on changes】`
+4. Now only show your message, wrapped with a single markdown ```text codeblock! Do not provide any explanations or details.
+"""
+
+
 COMMIT_PROMPT = \
     """<user-commits>
 # RECENT USER COMMITS (For reference only, do not copy!):
@@ -46,6 +62,32 @@ COMMIT_PROMPT = \
 Now generate a commit messages that describe the CODE CHANGES.
 Please follow the style of the RECENT USER/REPOSITORY COMMITS, and use SAME LANGUAGE.
 DO NOT COPY commits from RECENT COMMITS, but it as reference for the commit style.
+ONLY return a single markdown code block, NO OTHER PROSE!
+```text
+commit message goes here
+```
+</reminder>
+<custom-instructions>
+
+</custom-instructions>"""
+
+
+COMMIT_PROMPT_TEMPLATE = \
+    """<template>
+# COMMIT TEMPLATE (Use this as structure):
+```
+{template}
+```
+</template>
+<changes>
+# CODE CHANGES:
+```
+{code_changes}
+```
+
+</changes>
+<reminder>
+Generate a commit message by following the TEMPLATE structure EXACTLY.
 ONLY return a single markdown code block, NO OTHER PROSE!
 ```text
 commit message goes here
@@ -94,10 +136,12 @@ class AiCommitMessage(QObject):
         self._repoLogs: List[str] = []
         self._diffs: List[str] = []
         self._message = ""
+        self._useTemplateOnly = False
+        self._templateContent = ""
 
         self._aiModel: AiModelBase = None
 
-    def generate(self, submoduleFiles: Dict[str, str]):
+    def generate(self, submoduleFiles: Dict[str, str], template: str = None, useTemplateOnly: bool = False):
         if len(submoduleFiles) <= 1:
             commitCount = 5
         elif len(submoduleFiles) < 3:
@@ -113,6 +157,9 @@ class AiCommitMessage(QObject):
             repoData[None] = (files, commitCount)
 
         self.cancel()
+
+        self._useTemplateOnly = bool(useTemplateOnly and template)
+        self._templateContent = AiCommitMessage._sanitizeTemplate(template)
 
         self._userLogs.clear()
         self._repoLogs.clear()
@@ -171,15 +218,20 @@ class AiCommitMessage(QObject):
         else:
             diff = ""
 
-        repoLogs = AiCommitMessage._fetchLogs(repoDir, commitCount)
-        if cancelEvent.isSet():
-            return
-
-        author = Git.userName()
-        if author:
-            userLogs = AiCommitMessage._fetchLogs(repoDir, commitCount, author)
-        else:
+        if self._useTemplateOnly:
+            repoLogs = []
             userLogs = []
+        else:
+            repoLogs = AiCommitMessage._fetchLogs(repoDir, commitCount)
+            if cancelEvent.isSet():
+                return
+
+            author = Git.userName()
+            if author:
+                userLogs = AiCommitMessage._fetchLogs(
+                    repoDir, commitCount, author)
+            else:
+                userLogs = []
 
         if cancelEvent.isSet():
             return
@@ -210,16 +262,25 @@ class AiCommitMessage(QObject):
             return
 
         params = AiParameters()
-        params.sys_prompt = SYSTEM_PROMPT
+        if self._useTemplateOnly and self._templateContent:
+            params.sys_prompt = SYSTEM_PROMPT_TEMPLATE
+        else:
+            params.sys_prompt = SYSTEM_PROMPT
         params.temperature = 0.1
         params.max_tokens = 4096
         params.reasoning = False
 
-        params.prompt = COMMIT_PROMPT.format(
-            user_commits=AiCommitMessage._makeLogs(self._userLogs),
-            recent_commits=AiCommitMessage._makeLogs(self._repoLogs),
-            code_changes="\n".join(self._diffs)
-        )
+        if self._useTemplateOnly and self._templateContent:
+            params.prompt = COMMIT_PROMPT_TEMPLATE.format(
+                template=self._templateContent,
+                code_changes="\n".join(self._diffs)
+            )
+        else:
+            params.prompt = COMMIT_PROMPT.format(
+                user_commits=AiCommitMessage._makeLogs(self._userLogs),
+                recent_commits=AiCommitMessage._makeLogs(self._repoLogs),
+                code_changes="\n".join(self._diffs)
+            )
 
         logger.debug("AI commit message prompt: %s", params.prompt)
 
@@ -239,6 +300,12 @@ class AiCommitMessage(QObject):
                 message += "  \n  " + line
             message += "\n"
         return message
+
+    @staticmethod
+    def _sanitizeTemplate(template: str):
+        if not template:
+            return ""
+        return template.rstrip()
 
     def event(self, evt):
         if evt.type() == CommitInfoEvent.Type:
