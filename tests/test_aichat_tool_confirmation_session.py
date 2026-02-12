@@ -6,6 +6,7 @@ from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.agentmachine import ToolRequest
 from qgitc.agenttools import AgentToolRegistry, ToolType
+from qgitc.aichatwidget import SKIP_TOOL
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.aitoolconfirmation import ConfirmationStatus
 from qgitc.llm import AiChatMessage, AiModelBase, AiResponse, AiRole
@@ -185,7 +186,8 @@ class TestAiChatToolConfirmationSession(TestBase):
             },
         ]
 
-        spyConfirmation = QSignalSpy(self.chatWidget._toolMachine.userConfirmationNeeded)
+        spyConfirmation = QSignalSpy(
+            self.chatWidget._toolMachine.userConfirmationNeeded)
         spyFinished = QSignalSpy(self.chatWidget._agentExecutor.toolFinished)
 
         response = AiResponse(
@@ -204,7 +206,7 @@ class TestAiChatToolConfirmationSession(TestBase):
         self.assertEqual(self.chatWidget._toolMachine.getAwaitingCount(), 1)
 
         self.assertEqual(len(self.chatWidget._toolMachine._inProgress) +
-                           len(self.chatWidget._toolMachine._toolQueue), 0)
+                         len(self.chatWidget._toolMachine._toolQueue), 0)
 
         # Register a signal spy to ensure no cancellation signals are emitted during reset
         cancelled_signals = []
@@ -226,3 +228,188 @@ class TestAiChatToolConfirmationSession(TestBase):
 
         # No false cancellation signals should be emitted during reset
         self.assertEqual(len(cancelled_signals), 0)
+
+    def test_onToolRejected_adds_tool_response_to_model_history(self):
+        """
+        Test that _onToolRejected adds a tool response message to the chat model.
+
+        When a user rejects a tool execution:
+        1. A Tool role message with SKIP_TOOL content is added to model history
+        2. A corresponding AiResponse is processed via _doMessageReady
+        3. The tool machine is told to reject the tool execution
+
+        This ensures the model state includes the rejection decision,
+        which is required by OpenAI-style chat APIs.
+        """
+        from qgitc.aichatwidget import SKIP_TOOL
+
+        toolName = "git_status"
+        toolCallId = "call_123"
+
+        # Get the current chat model
+        model = self.chatWidget.currentChatModel()
+        self.assertIsNotNone(model)
+
+        # Initial state: no tool rejection in history
+        self.assertEqual(len(model.history), 0)
+
+        # Mock the tool machine to track rejection calls
+        mockToolMachine = MagicMock()
+        self.chatWidget._toolMachine = mockToolMachine
+
+        # Mock _doMessageReady to track calls
+        originalDoMessageReady = self.chatWidget._doMessageReady
+        mockDoMessageReady = MagicMock(side_effect=originalDoMessageReady)
+        self.chatWidget._doMessageReady = mockDoMessageReady
+
+        # Call the method under test
+        self.chatWidget._onToolRejected(toolName, toolCallId)
+
+        # Verify: addHistory was called with the skipped tool message
+        self.assertEqual(len(model.history), 1)
+        historyEntry = model.history[0]
+        self.assertEqual(historyEntry.role, AiRole.Tool)
+        self.assertEqual(historyEntry.message, SKIP_TOOL)
+        self.assertIn("✗ `git_status` skipped", historyEntry.description)
+        self.assertEqual(historyEntry.toolCalls.get(
+            "tool_call_id"), toolCallId)
+
+    def test_onToolRejected_calls_doMessageReady_with_response(self):
+        """
+        Test that _onToolRejected calls _doMessageReady with appropriate AiResponse.
+
+        The response should have:
+        - Role: AiRole.Tool
+        - Message: SKIP_TOOL constant
+        - Description: formatted with tool name and "skipped" indicator
+        """
+        toolName = "git_checkout"
+        toolCallId = "call_456"
+
+        model = self.chatWidget.currentChatModel()
+        self.assertIsNotNone(model)
+
+        # Mock _doMessageReady to capture the call
+        mockDoMessageReady = MagicMock()
+        self.chatWidget._doMessageReady = mockDoMessageReady
+
+        # Call the method under test
+        self.chatWidget._onToolRejected(toolName, toolCallId)
+
+        # Verify: _doMessageReady was called once
+        mockDoMessageReady.assert_called_once()
+
+        # Extract the arguments
+        callArgs = mockDoMessageReady.call_args
+        callModel = callArgs[0][0]  # First positional arg: model
+        callResponse = callArgs[0][1]  # Second positional arg: response
+
+        # Verify the model passed
+        self.assertEqual(callModel, model)
+
+        # Verify the response
+        self.assertIsInstance(callResponse, AiResponse)
+        self.assertEqual(callResponse.role, AiRole.Tool)
+        self.assertEqual(callResponse.message, SKIP_TOOL)
+        self.assertIn("✗ `git_checkout` skipped", callResponse.description)
+
+    def test_onToolRejected_calls_tool_machine_reject(self):
+        """
+        Test that _onToolRejected delegates to tool machine for rejection.
+
+        After ensuring the model state is updated, the tool machine
+        must be notified to handle cleanup and state transitions.
+        """
+        toolName = "git_commit"
+        toolCallId = "call_789"
+
+        model = self.chatWidget.currentChatModel()
+
+        # Mock the tool machine
+        mockToolMachine = MagicMock()
+        self.chatWidget._toolMachine = mockToolMachine
+
+        # Call the method under test
+        self.chatWidget._onToolRejected(toolName, toolCallId)
+
+        # Verify: rejectToolExecution was called with correct arguments
+        mockToolMachine.rejectToolExecution.assert_called_once_with(
+            toolName, toolCallId)
+
+    def test_onToolRejected_description_format(self):
+        """
+        Test that the skipped tool description follows the expected format.
+
+        The description should be translatable and include:
+        - A checkmark (✗) to indicate rejection
+        - The tool name in backticks
+        - The word "skipped"
+        """
+        toolName = "test_tool_name"
+        toolCallId = "call_test"
+
+        model = self.chatWidget.currentChatModel()
+
+        # Call the method under test
+        self.chatWidget._onToolRejected(toolName, toolCallId)
+
+        # Verify: check the description format
+        self.assertEqual(len(model.history), 1)
+        description = model.history[0].description
+
+        # Should contain the tool name
+        self.assertIn(toolName, description)
+        # Should indicate it was skipped
+        self.assertIn("skipped", description.lower())
+        # Should have the rejection marker
+        self.assertIn("✗", description)
+
+    def test_onToolRejected_preserves_tool_call_id(self):
+        """
+        Test that the tool_call_id is properly preserved in the message.
+
+        This is required for OpenAI-style APIs where each tool_call_id
+        must have a corresponding tool response message.
+        """
+        toolName = "some_tool"
+        toolCallId = "call_specific_id_12345"
+
+        model = self.chatWidget.currentChatModel()
+
+        # Call the method under test
+        self.chatWidget._onToolRejected(toolName, toolCallId)
+
+        # Verify: tool_call_id is in the message metadata
+        self.assertEqual(len(model.history), 1)
+        toolCalls = model.history[0].toolCalls
+        self.assertIsNotNone(toolCalls)
+        self.assertEqual(toolCalls.get("tool_call_id"), toolCallId)
+
+    def test_onToolRejected_multiple_rejections(self):
+        """
+        Test that multiple tool rejections are handled correctly.
+
+        Sequential rejections should each add their own message to the history.
+        """
+        toolName_a = "tool_a"
+        toolCallId_a = "call_a"
+        toolName_b = "tool_b"
+        toolCallId_b = "call_b"
+
+        model = self.chatWidget.currentChatModel()
+
+        # First rejection
+        self.chatWidget._onToolRejected(toolName_a, toolCallId_a)
+        self.assertEqual(len(model.history), 1)
+        self.assertIn("tool_a", model.history[0].description)
+
+        # Second rejection
+        self.chatWidget._onToolRejected(toolName_b, toolCallId_b)
+        self.assertEqual(len(model.history), 2)
+        self.assertIn("tool_b", model.history[1].description)
+
+        # Verify each has the correct tool_call_id
+        self.assertEqual(model.history[0].toolCalls.get(
+            "tool_call_id"), toolCallId_a)
+        self.assertEqual(model.history[1].toolCalls.get(
+            "tool_call_id"), toolCallId_b)
