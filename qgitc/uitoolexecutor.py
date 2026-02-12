@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, Dict, Optional, Tuple
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -16,48 +17,60 @@ class UiToolExecutor(QObject):
     This executor is asynchronous (non-blocking) but does not use background
     threads. It schedules work onto the UI event loop and emits a toolFinished
     signal with an AgentToolResult.
+    
+    Supports tracking multiple pending calls via toolCallId.
     """
 
     toolFinished = Signal(object)  # AgentToolResult
 
     def __init__(self, parent: QObject = None):
         super().__init__(parent)
-        self._inflight: bool = False
-        self._pending: Optional[Tuple[str,
-                                      Dict[str, Any], AiChatContextProvider]] = None
+        self._inflight: Dict[str, Tuple[str,
+                                        Dict[str, Any], AiChatContextProvider]] = {}
 
-    def executeAsync(self, toolName: str, params: Dict[str, Any], provider: AiChatContextProvider) -> bool:
-        if self._inflight:
-            return False
+    def executeAsync(self, toolName: str, params: Dict[str, Any], provider: AiChatContextProvider, toolCallId: Optional[str] = None) -> bool:
+        """Execute a UI tool asynchronously on the Qt event loop.
+        
+        Args:
+            toolName: Name of the UI tool to execute
+            params: Tool parameters
+            provider: Context provider that can execute UI tools
+            toolCallId: Optional unique identifier for tracking
+            
+        Returns:
+            True if the tool was queued for execution
+        """
+        # Generate a unique ID if not provided
+        if not toolCallId:
+            toolCallId = str(uuid.uuid4())
+
         if not provider:
             self.toolFinished.emit(AgentToolResult(
-                toolName, False, "No context provider."))
+                toolName, False, "No context provider.", toolCallId=toolCallId))
             return True
 
-        self._inflight = True
-        self._pending = (toolName, params or {}, provider)
-        QTimer.singleShot(0, self._executePending)
+        self._inflight[toolCallId] = (toolName, params or {}, provider)
+        QTimer.singleShot(0, lambda: self._executePending(toolCallId))
         return True
 
     def shutdown(self):
-        self._pending = None
-        self._inflight = False
+        """Shutdown the executor and clear all pending tasks."""
+        self._inflight.clear()
 
-    def _executePending(self):
-        pending = self._pending
-        self._pending = None
+    def _executePending(self, toolCallId: str):
+        """Execute a pending UI tool task."""
+        pending = self._inflight.pop(toolCallId, None)
 
         if not pending:
-            self._inflight = False
             return
 
         toolName, params, provider = pending
         try:
             ok, output = provider.executeUiTool(toolName, params or {})
-            result = AgentToolResult(toolName, bool(ok), str(output or ""))
+            result = AgentToolResult(toolName, bool(ok), str(
+                output or ""), toolCallId=toolCallId)
         except Exception as e:
             result = AgentToolResult(
-                toolName, False, f"UI tool execution failed: {e}")
+                toolName, False, f"UI tool execution failed: {e}", toolCallId=toolCallId)
 
-        self._inflight = False
         self.toolFinished.emit(result)

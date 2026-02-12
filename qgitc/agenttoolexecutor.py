@@ -5,7 +5,10 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import threading
+import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
@@ -108,22 +111,27 @@ def _runGit(repoDir: Optional[str], args: List[str]) -> Tuple[bool, str]:
     return ok, output
 
 
+@dataclass
 class AgentToolResult:
-    def __init__(self, toolName: str, ok: bool, output: str):
-        self.toolName = toolName
-        self.ok = ok
-        self.output = output
+    toolName: str
+    ok: bool = False
+    output: Optional[str] = None
+    toolCallId: Optional[str] = None
 
 
 class AgentToolExecutor(QObject):
-    """Executes agent tools in a background thread (non-blocking UI)."""
+    """Executes agent tools in a background thread (non-blocking UI).
+    
+    Supports parallel execution of multiple tools concurrently.
+    """
 
     toolFinished = Signal(object)  # AgentToolResult
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, maxWorkers: int = 4):
         super().__init__(parent)
-        self._executor = ThreadPoolExecutor(max_workers=1)
-        self._inflight: Optional[Future] = None
+        self._executor = ThreadPoolExecutor(max_workers=maxWorkers)
+        self._inflight: Dict[str, Future] = {}  # toolCallId -> Future
+        self._inflightLock = threading.Lock()
         self._tool_handlers: Dict[str, Callable[[str, Dict], AgentToolResult]] = {
             "git_status": self._handle_git_status,
             "git_log": self._handle_git_log,
@@ -181,39 +189,71 @@ class AgentToolExecutor(QObject):
 
         return True, absPath
 
-    def executeAsync(self, tool_name: str, params: Dict) -> bool:
-        if self._inflight and not self._inflight.done():
-            return False
+    def executeAsync(self, tool_name: str, params: Dict, toolCallId: Optional[str] = None) -> bool:
+        """Execute a tool asynchronously.
+        
+        Args:
+            tool_name: Name of the tool to execute
+            params: Tool parameters
+            toolCallId: Optional unique identifier for tracking this tool call
+            
+        Returns:
+            True if the tool was queued for execution, False otherwise
+        """
+        # Generate a unique ID if not provided
+        if not toolCallId:
+            toolCallId = str(uuid.uuid4())
 
-        self._inflight = self._executor.submit(
-            self._execute, tool_name, params)
-        self._inflight.add_done_callback(self._onDone)
+        with self._inflightLock:
+            # Check if this specific toolCallId is already running
+            if toolCallId in self._inflight and not self._inflight[toolCallId].done():
+                return False
+
+            future = self._executor.submit(
+                self._execute, tool_name, params, toolCallId)
+            self._inflight[toolCallId] = future
+            future.add_done_callback(lambda f: self._onDone(f, toolCallId))
+
         return True
 
     def shutdown(self):
+        """Shutdown the executor and cancel all pending futures."""
+        with self._inflightLock:
+            self._inflight.clear()
+
         if sys.version_info >= (3, 9):
             self._executor.shutdown(wait=False, cancel_futures=True)
         else:
             self._executor.shutdown(wait=False)
 
-    def _onDone(self, fut: Future):
+    def _onDone(self, fut: Future, toolCallId: str):
+        """Callback when a tool execution completes."""
+        # Remove from inflight tracking
+        with self._inflightLock:
+            self._inflight.pop(toolCallId, None)
+
         try:
             result: AgentToolResult = fut.result()
         except Exception as e:
             result = AgentToolResult(
-                "unknown", False, f"Tool execution failed: {e}")
+                "unknown", False, f"Tool execution failed: {e}", toolCallId=toolCallId)
+
         self.toolFinished.emit(result)
 
-    def _execute(self, tool_name: str, params: Dict) -> AgentToolResult:
+    def _execute(self, tool_name: str, params: Dict, toolCallId: str) -> AgentToolResult:
         tool = AgentToolRegistry.tool_by_name(tool_name)
         if not tool:
-            return AgentToolResult(tool_name, False, f"Unknown tool: {tool_name}")
+            return AgentToolResult(tool_name, False, f"Unknown tool: {tool_name}", toolCallId=toolCallId)
 
         handler = self._tool_handlers.get(tool_name)
         if handler:
-            return handler(tool_name, params)
+            result = handler(tool_name, params)
+            # Ensure the result has the toolCallId
+            if not result.toolCallId:
+                result.toolCallId = toolCallId
+            return result
 
-        return AgentToolResult(tool_name, False, f"Tool not implemented: {tool_name}")
+        return AgentToolResult(tool_name, False, f"Tool not implemented: {tool_name}", toolCallId=toolCallId)
 
     def _handle_git_status(self, tool_name: str, params: Dict) -> AgentToolResult:
         try:
