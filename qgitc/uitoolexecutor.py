@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from qgitc.agenttoolexecutor import AgentToolResult
+from qgitc.agenttools import AgentToolResult
 from qgitc.aichatcontextprovider import AiChatContextProvider
 
 

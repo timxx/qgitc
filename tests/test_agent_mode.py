@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtTest import QTest
 
-from qgitc.agenttoolexecutor import AgentToolResult
-from qgitc.agenttools import AgentToolRegistry
+from qgitc.agenttools import AgentToolRegistry, AgentToolResult
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.llm import AiChatMode, AiModelBase, AiResponse, AiRole
 from qgitc.windowtype import WindowType
@@ -82,12 +81,12 @@ class TestAgentMode(TestBase):
         # Tool should auto-run without showing confirmation.
         self.chatWidget._agentExecutor.executeAsync.assert_called_once()
         self.chatWidget.messages.insertToolConfirmation.assert_not_called()
-        self.assertEqual(self.chatWidget._pendingAgentTool, "git_status")
 
         # Simulate tool finished.
         self.chatWidget._onAgentToolFinished(
             AgentToolResult("git_status", True,
-                            "## main\nworking tree clean (no changes).")
+                            "## main\nworking tree clean (no changes).",
+                            toolCallId="call_1")
         )
 
         # Auto-run batch should continue automatically via a continuation request.
@@ -162,12 +161,12 @@ class TestAgentMode(TestBase):
 
         # READ_ONLY tool should auto-run; WRITE tool should require confirmation.
         self.chatWidget._agentExecutor.executeAsync.assert_called_once_with(
-            "git_status", {})
+            "git_status", {}, "call_auto")
         self.chatWidget.messages.insertToolConfirmation.assert_called_once()
 
         # Finish the READ_ONLY tool first: must NOT continue yet.
         self.chatWidget._onAgentToolFinished(
-            AgentToolResult("git_status", True, "clean")
+            AgentToolResult("git_status", True, "clean", toolCallId="call_auto")
         )
         self.chatWidget._continueAgentConversation.assert_not_called()
 
@@ -175,7 +174,7 @@ class TestAgentMode(TestBase):
         self.chatWidget._onToolApproved(
             "git_checkout", {"branch": "main"}, "call_confirm")
         self.chatWidget._onAgentToolFinished(
-            AgentToolResult("git_checkout", True, "ok")
+            AgentToolResult("git_checkout", True, "ok", toolCallId="call_confirm")
         )
         self.assertTrue(self.chatWidget._continueAgentConversation.called)
 

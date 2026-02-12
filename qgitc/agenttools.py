@@ -15,6 +15,14 @@ class ToolType:
     DANGEROUS = 2   # Potentially destructive: reset, force push
 
 
+@dataclass
+class AgentToolResult:
+    toolName: str
+    ok: bool = False
+    output: Optional[str] = None
+    toolCallId: Optional[str] = None
+
+
 @dataclass(frozen=True)
 class AgentTool:
     name: str

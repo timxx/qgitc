@@ -8,13 +8,13 @@ import sys
 import threading
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor
-from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 from PySide6.QtCore import QObject, Signal
 
 from qgitc.agenttools import (
     AgentToolRegistry,
+    AgentToolResult,
     ApplyPatchParams,
     CreateFileParams,
     GitAddParams,
@@ -109,14 +109,6 @@ def _runGit(repoDir: Optional[str], args: List[str]) -> Tuple[bool, str]:
             output += errText
 
     return ok, output
-
-
-@dataclass
-class AgentToolResult:
-    toolName: str
-    ok: bool = False
-    output: Optional[str] = None
-    toolCallId: Optional[str] = None
 
 
 class AgentToolExecutor(QObject):

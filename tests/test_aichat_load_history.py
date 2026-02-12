@@ -109,11 +109,12 @@ class TestAiChatLoadHistory(TestBase):
         self.chatWidget._agentExecutor.executeAsync.assert_not_called()
 
         # Verify auto-run queue is empty
-        self.assertEqual(0, len(self.chatWidget._autoToolQueue))
-        self.assertEqual(0, len(self.chatWidget._autoToolGroups))
+        self.assertEqual(0, len(self.chatWidget._toolMachine._toolQueue))
+        self.assertEqual(0, len(self.chatWidget._toolMachine._autoToolGroups))
 
         # Verify no pending confirmations
-        self.assertEqual(0, len(self.chatWidget._awaitingToolResults))
+        self.assertEqual(
+            0, len(self.chatWidget._toolMachine._awaitingToolResults))
 
         # Find the cancelled tool result in calls
         cancelled_calls = [
@@ -177,8 +178,7 @@ class TestAiChatLoadHistory(TestBase):
         self.assertEqual("tc2", confirm_calls[0]["id"])
 
         # Verify awaiting tool results
-        self.assertIn("tc2", self.chatWidget._awaitingToolResults)
-        self.assertIn("tc2", self.chatWidget._toolCallMeta)
+        self.assertIn("tc2", self.chatWidget._toolMachine._awaitingToolResults)
 
         # Verify NO cancelled entry was added
         tool_history = [
@@ -247,8 +247,9 @@ class TestAiChatLoadHistory(TestBase):
         self.assertEqual("w1", confirm_calls[0]["id"])
 
         # Verify only the WRITE tool is awaiting confirmation
-        self.assertEqual(1, len(self.chatWidget._awaitingToolResults))
-        self.assertIn("w1", self.chatWidget._awaitingToolResults)
+        self.assertEqual(
+            1, len(self.chatWidget._toolMachine._awaitingToolResults))
+        self.assertIn("w1", self.chatWidget._toolMachine._awaitingToolResults)
 
     def test_unknown_tool_in_history_uses_fallback_name(self):
         """Unknown tools should not crash and should show fallback tool name."""
@@ -596,7 +597,7 @@ class TestAiChatLoadHistory(TestBase):
         self.assertIn("git_commit", cancelled_calls[0]["description"])
 
         # Verify no pending confirmations
-        self.assertEqual(0, len(self.chatWidget._awaitingToolResults))
+        self.assertEqual(0, len(self.chatWidget._toolMachine._awaitingToolResults))
 
         # Verify model history includes cancelled entry
         tool_history = [
@@ -665,9 +666,9 @@ class TestAiChatLoadHistory(TestBase):
         self.assertEqual(1, len(cancelled_calls))
 
         # Only tc2 should be awaiting confirmation
-        self.assertEqual(1, len(self.chatWidget._awaitingToolResults))
-        self.assertIn("tc2", self.chatWidget._awaitingToolResults)
-        self.assertNotIn("tc1", self.chatWidget._awaitingToolResults)
+        self.assertEqual(1, len(self.chatWidget._toolMachine._awaitingToolResults))
+        self.assertIn("tc2", self.chatWidget._toolMachine._awaitingToolResults)
+        self.assertNotIn("tc1", self.chatWidget._toolMachine._awaitingToolResults)
 
     def test_multiple_write_tools_at_end_all_confirmed(self):
         """Multiple WRITE tools at the end of history should all show confirmations."""
@@ -724,6 +725,6 @@ class TestAiChatLoadHistory(TestBase):
         self.assertEqual(0, len(cancelled_calls))
 
         # Both should be awaiting confirmation
-        self.assertEqual(2, len(self.chatWidget._awaitingToolResults))
-        self.assertIn("tc1", self.chatWidget._awaitingToolResults)
-        self.assertIn("tc2", self.chatWidget._awaitingToolResults)
+        self.assertEqual(2, len(self.chatWidget._toolMachine._awaitingToolResults))
+        self.assertIn("tc1", self.chatWidget._toolMachine._awaitingToolResults)
+        self.assertIn("tc2", self.chatWidget._toolMachine._awaitingToolResults)

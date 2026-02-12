@@ -15,11 +15,11 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from qgitc.agenttools import AgentTool, AgentToolRegistry, ToolType
+from qgitc.agenttools import AgentTool, AgentToolRegistry, AgentToolResult, ToolType
 from qgitc.common import logger
 
 # ============================================================================
@@ -176,12 +176,15 @@ class AgentToolMachine(QObject):
     """
 
     # Signal: Request tool execution (connect to actual executor)
-    # Args: toolName, params, toolCallId
-    toolExecutionRequested = Signal(str, dict, str)
+    # Args: toolCallId, toolName, params
+    toolExecutionRequested = Signal(str, str, dict)
 
     # Signal: Tool requires user confirmation
-    # Args: toolName, params, toolDesc, toolType, toolCallId
-    userConfirmationNeeded = Signal(str, dict, str, int, str)
+    # Args: toolCallId, toolName, params, toolDesc, toolType
+    userConfirmationNeeded = Signal(str, str, dict, str, int)
+
+    # toolCallId, toolName, toolType
+    toolExecutionCancelled = Signal(str, str, int)
 
     # Signal: All tools complete, agent can continue
     agentContinuationReady = Signal()
@@ -219,8 +222,9 @@ class AgentToolMachine(QObject):
         self._autoToolGroups: Dict[int, Dict[str, object]] = {}
 
         # Metadata and state
-        self._awaitingToolResults: set = set()  # toolCallIds we're waiting for
-        self._ignoredToolCallIds: set = set()  # toolCallIds user rejected
+        # toolCallId -> tool
+        self._awaitingToolResults: Dict[str, AgentTool] = {}
+        self._ignoredToolCallIds: Set[str] = set()  # toolCallIds user rejected
 
         # Sequencing
         self._nextAutoGroupId: int = 1
@@ -295,7 +299,7 @@ class AgentToolMachine(QObject):
 
             # Cache metadata
             if toolCallId:
-                self._awaitingToolResults.add(toolCallId)
+                self._awaitingToolResults[toolCallId] = tool
 
             # Check strategy
             if self._strategy.shouldAutoRun(toolName, toolType, args):
@@ -322,12 +326,11 @@ class AgentToolMachine(QObject):
                 # Requires user confirmation
                 hasConfirmations = True
                 self.userConfirmationNeeded.emit(
+                    toolCallId or "",
                     toolName,
                     args,
                     toolDesc,
-                    toolType,
-                    toolCallId or "",
-                )
+                    toolType)
                 logger.debug(
                     f"Tool requires confirmation: {toolName} (callId={toolCallId})")
 
@@ -360,7 +363,7 @@ class AgentToolMachine(QObject):
         tool = self._toolByName(toolName)
         toolType = tool.toolType if tool else ToolType.WRITE
         toolDesc = tool.description if tool else f"Tool: {toolName}"
-        self._awaitingToolResults.add(toolCallId)
+        self._awaitingToolResults[toolCallId] = tool
 
         # Create a new single-tool group for approved tool
         groupId = self._nextAutoGroupId
@@ -396,7 +399,7 @@ class AgentToolMachine(QObject):
         """
         if toolCallId:
             self._ignoredToolCallIds.add(toolCallId)
-            self._awaitingToolResults.discard(toolCallId)
+            self._awaitingToolResults.pop(toolCallId, None)
             logger.info(f"Tool rejected: {toolName} (callId={toolCallId})")
 
         # Check if we can continue now
@@ -405,7 +408,7 @@ class AgentToolMachine(QObject):
                 "All tools complete after rejection, emitting agentContinuationReady")
             self.agentContinuationReady.emit()
 
-    def onToolFinished(self, result) -> None:
+    def onToolFinished(self, result: AgentToolResult) -> None:
         """Handle tool execution completion.
         
         Called when a tool executor finishes executing a tool.
@@ -423,13 +426,13 @@ class AgentToolMachine(QObject):
         # Ignore if cancelled/rejected
         if toolCallId in self._ignoredToolCallIds:
             self._ignoredToolCallIds.discard(toolCallId)
-            self._awaitingToolResults.discard(toolCallId)
+            self._awaitingToolResults.pop(toolCallId, None)
             logger.debug(f"Ignoring cancelled tool result: {toolCallId}")
             return
 
         # Record result
         request = self._inProgress.pop(toolCallId, None)
-        self._awaitingToolResults.discard(toolCallId)
+        self._awaitingToolResults.pop(toolCallId, None)
 
         logger.debug(
             f"Tool finished: {result.toolName} (callId={toolCallId}, ok={result.ok})")
@@ -467,18 +470,6 @@ class AgentToolMachine(QObject):
     # ========================================================================
     # Public API: State Management
     # ========================================================================
-
-    def cancelPendingConfirmations(self) -> None:
-        """Cancel all pending tool confirmations and in-progress executions.
-        
-        This stops all tool execution and clears all state.
-        """
-        self._toolQueue.clear()
-        self._inProgress.clear()
-        self._awaitingToolResults.clear()
-        self._autoToolGroups.clear()
-        self._ignoredToolCallIds.clear()
-        logger.info("Cancelled all pending tool confirmations")
 
     def hasPendingResults(self) -> bool:
         """Check if waiting for tool results.
@@ -537,6 +528,29 @@ class AgentToolMachine(QObject):
         """
         return len(self._awaitingToolResults)
 
+    def taskInProgress(self):
+        return len(self._inProgress) > 0
+
+    def rejectPendingResults(self):
+        """ Cancel all in-progress tasks and clear state. """
+        ignoredCallIds = self._ignoredToolCallIds.copy()
+        for toolCallId, tool in self._awaitingToolResults.items():
+            logger.info(f"Cancelling awaiting tool result: {toolCallId}")
+            if tool:
+                toolName = tool.name
+                toolType = tool.toolType
+            else:
+                toolName = "Unknown"
+                toolType = ToolType.WRITE
+            ignoredCallIds.add(toolCallId)
+            self.toolExecutionCancelled.emit(toolCallId, toolName, toolType)
+
+        self.reset()
+        self._ignoredToolCallIds = ignoredCallIds
+
+    def addAwaitingToolResult(self, toolCallId: str, tool: AgentTool) -> None:
+        self._awaitingToolResults[toolCallId] = tool
+
     # ========================================================================
     # Private Methods
     # ========================================================================
@@ -564,9 +578,9 @@ class AgentToolMachine(QObject):
                 f"Executing tool: {request.toolName} (callId={request.toolCallId}, concurrent={len(self._inProgress)})")
 
             self.toolExecutionRequested.emit(
+                request.toolCallId,
                 request.toolName,
                 request.params,
-                request.toolCallId,
             )
 
     def _toolByName(self, toolName: str) -> Optional[AgentTool]:

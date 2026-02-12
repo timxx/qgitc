@@ -25,8 +25,7 @@ from qgitc.agentmachine import (
     ToolRequest,
     parseToolArguments,
 )
-from qgitc.agenttoolexecutor import AgentToolResult
-from qgitc.agenttools import AgentTool, ToolType
+from qgitc.agenttools import AgentTool, AgentToolResult, ToolType
 from tests.base import TestBase
 
 # ============================================================================
@@ -241,7 +240,7 @@ class TestAgentToolMachineBasics(unittest.TestCase):
 
     def test_reset(self):
         """Reset clears all state."""
-        self.machine._awaitingToolResults.add("call_1")
+        self.machine._awaitingToolResults["call_1"] = None
         self.machine._toolQueue.append(Mock())
 
         self.machine.reset()
@@ -304,7 +303,7 @@ class TestAgentToolMachineProcessing(unittest.TestCase):
         self.machine.processToolCalls([toolCall])
 
         self.assertEqual(len(signal_emitted), 1)
-        self.assertEqual(signal_emitted[0][0], "git_commit")  # toolName
+        self.assertEqual(signal_emitted[0][1], "git_commit")  # toolName
 
 
 class TestAgentToolMachineApproval(unittest.TestCase):
@@ -329,7 +328,7 @@ class TestAgentToolMachineApproval(unittest.TestCase):
 
     def test_reject_ignores_tool(self):
         """rejectToolExecution ignores the tool."""
-        self.machine._awaitingToolResults.add("call_1")
+        self.machine._awaitingToolResults["call_1"] = None
 
         self.machine.rejectToolExecution("git_commit", "call_1")
 
@@ -369,8 +368,8 @@ class TestAgentToolMachineExecution(TestBase):
         self.processEvents()
 
         self.assertEqual(len(signal_emitted), 1)
-        self.assertEqual(signal_emitted[0][0], "git_status")
-        self.assertEqual(signal_emitted[0][2], "call_1")
+        self.assertEqual(signal_emitted[0][1], "git_status")
+        self.assertEqual(signal_emitted[0][0], "call_1")
 
     def test_parallel_execution(self):
         """Multiple tools execute up to maxConcurrent limit."""
@@ -384,7 +383,7 @@ class TestAgentToolMachineExecution(TestBase):
 
         signal_emitted = []
         self.machine.toolExecutionRequested.connect(
-            lambda *args: signal_emitted.append(args[2])  # toolCallId
+            lambda *args: signal_emitted.append(args[0])  # toolCallId
         )
 
         self.machine.processToolCalls(toolCalls)
