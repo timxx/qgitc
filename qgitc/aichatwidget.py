@@ -1052,6 +1052,17 @@ class AiChatWidget(QWidget):
         self._toolMachine.approveToolExecution(toolName, params, toolCallId)
 
     def _onToolRejected(self, toolName: str, toolCallId: str):
+        model = self.currentChatModel()
+
+        # If the assistant previously requested a tool via tool_calls, OpenAI-style
+        # chat requires that each tool_call_id gets a corresponding tool message.
+        description = self.tr("✗ `{}` skipped").format(toolName)
+        model.addHistory(AiRole.Tool, SKIP_TOOL,
+                            description=description,
+                            toolCalls={"tool_call_id": toolCallId})
+        self._doMessageReady(model, AiResponse(
+            AiRole.Tool, SKIP_TOOL, description=description))
+
         self._toolMachine.rejectToolExecution(toolName, toolCallId)
 
     def _onAgentToolFinished(self, result: AgentToolResult):
