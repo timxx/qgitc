@@ -213,16 +213,12 @@ class AgentToolMachine(QObject):
         self._toolQueue: List[ToolRequest] = []
         # toolCallId -> ToolRequest
         self._inProgress: Dict[str, ToolRequest] = {}
-        self._toolResults: Dict[str, str] = {}  # toolCallId -> output
 
         # Grouping: tools in the same group wait for each other
-        # groupId -> {remaining, outputs, auto_continue}
+        # groupId -> {remaining, auto_continue}
         self._autoToolGroups: Dict[int, Dict[str, object]] = {}
-        self._toolCallIdToGroup: Dict[str, int] = {}  # toolCallId -> groupId
 
         # Metadata and state
-        # toolCallId -> {tool_name, params, tool_type, tool_desc}
-        self._toolCallMeta: Dict[str, Dict[str, object]] = {}
         self._awaitingToolResults: set = set()  # toolCallIds we're waiting for
         self._ignoredToolCallIds: set = set()  # toolCallIds user rejected
 
@@ -299,12 +295,6 @@ class AgentToolMachine(QObject):
 
             # Cache metadata
             if toolCallId:
-                self._toolCallMeta[toolCallId] = {
-                    "tool_name": toolName,
-                    "params": args,
-                    "tool_type": toolType,
-                    "tool_desc": toolDesc,
-                }
                 self._awaitingToolResults.add(toolCallId)
 
             # Check strategy
@@ -324,8 +314,6 @@ class AgentToolMachine(QObject):
                     description=toolDesc,
                 )
                 self._toolQueue.append(request)
-                if toolCallId:
-                    self._toolCallIdToGroup[toolCallId] = autoGroupId
                 autoToolsCount += 1
 
                 logger.debug(
@@ -347,7 +335,6 @@ class AgentToolMachine(QObject):
         if autoGroupId is not None and autoToolsCount > 0:
             self._autoToolGroups[autoGroupId] = {
                 "remaining": autoToolsCount,
-                "outputs": [],
                 # Only auto-continue if no confirmations needed
                 "auto_continue": not hasConfirmations,
             }
@@ -373,14 +360,6 @@ class AgentToolMachine(QObject):
         tool = self._toolByName(toolName)
         toolType = tool.toolType if tool else ToolType.WRITE
         toolDesc = tool.description if tool else f"Tool: {toolName}"
-
-        # Update metadata
-        self._toolCallMeta[toolCallId] = {
-            "tool_name": toolName,
-            "params": params,
-            "tool_type": toolType,
-            "tool_desc": toolDesc,
-        }
         self._awaitingToolResults.add(toolCallId)
 
         # Create a new single-tool group for approved tool
@@ -388,10 +367,8 @@ class AgentToolMachine(QObject):
         self._nextAutoGroupId += 1
         self._autoToolGroups[groupId] = {
             "remaining": 1,
-            "outputs": [],
             "auto_continue": False,  # Don't auto-continue after manual approval
         }
-        self._toolCallIdToGroup[toolCallId] = groupId
 
         request = ToolRequest(
             toolName=toolName,
@@ -451,27 +428,16 @@ class AgentToolMachine(QObject):
             return
 
         # Record result
-        self._toolResults[toolCallId] = result.output or ""
-        self._inProgress.pop(toolCallId, None)
+        request = self._inProgress.pop(toolCallId, None)
         self._awaitingToolResults.discard(toolCallId)
 
         logger.debug(
             f"Tool finished: {result.toolName} (callId={toolCallId}, ok={result.ok})")
 
         # Update group tracking if applicable
-        groupId = self._toolCallIdToGroup.get(toolCallId)
-        if groupId and groupId in self._autoToolGroups:
+        if request and request.source == "auto" and request.groupId in self._autoToolGroups:
+            groupId = request.groupId
             group = self._autoToolGroups[groupId]
-            outputs: List[str] = group.get("outputs", [])
-            tool_name = (self._toolCallMeta.get(toolCallId)
-                         or {}).get("tool_name") or "unknown"
-
-            # Append output
-            if result.output:
-                outputs.append(f"[{tool_name}]\n{result.output}")
-            else:
-                outputs.append(f"[{tool_name}]")
-            group["outputs"] = outputs
 
             # Decrement remaining
             remaining = int(group.get("remaining", 0)) - 1
@@ -486,15 +452,12 @@ class AgentToolMachine(QObject):
 
                 logger.info(
                     f"Tool batch {groupId} complete (auto_continue={auto_continue})")
-
-                # Auto-continue if ready
-                if auto_continue and not self._awaitingToolResults:
-                    logger.info(
-                        "Batch complete and auto_continue=True, emitting agentContinuationReady")
-                    self.agentContinuationReady.emit()
-
-        # Continue processing queue
-        self._drainQueue()
+                if not auto_continue:
+                    return
+            else:
+                # Continue processing queue
+                self._drainQueue()
+                return
 
         # If everything done, signal ready
         if not self._awaitingToolResults and not self._inProgress:
@@ -540,10 +503,7 @@ class AgentToolMachine(QObject):
         """
         self._toolQueue.clear()
         self._inProgress.clear()
-        self._toolResults.clear()
         self._autoToolGroups.clear()
-        self._toolCallIdToGroup.clear()
-        self._toolCallMeta.clear()
         self._awaitingToolResults.clear()
         self._ignoredToolCallIds.clear()
         self._nextAutoGroupId = 1
