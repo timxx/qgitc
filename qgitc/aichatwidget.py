@@ -1563,6 +1563,7 @@ class AiChatWidget(QWidget):
         model = self.currentChatModel()
         if model:
             model.clear()
+        self._toolMachine.reset()
         self._codeReviewDiffs.clear()
         self._injectedContext = None
         self.messages.clear()

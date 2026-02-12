@@ -2,13 +2,13 @@
 
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.agentmachine import ToolRequest
 from qgitc.agenttools import AgentToolRegistry, ToolType
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.aitoolconfirmation import ConfirmationStatus
-from qgitc.llm import AiChatMessage, AiModelBase, AiRole
+from qgitc.llm import AiChatMessage, AiModelBase, AiResponse, AiRole
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
 
@@ -140,11 +140,14 @@ class TestAiChatToolConfirmationSession(TestBase):
         self.assertFalse(self.chatWidget._toolMachine._autoToolGroups)
 
         # READ_ONLY gets cancelled/ignored.
-        self.assertIn("call_ro", self.chatWidget._toolMachine._ignoredToolCallIds)
+        self.assertIn(
+            "call_ro", self.chatWidget._toolMachine._ignoredToolCallIds)
 
         # Tool meta cleared as results are synthesized.
-        self.assertNotIn("call_ro", self.chatWidget._toolMachine._awaitingToolResults)
-        self.assertNotIn("call_w", self.chatWidget._toolMachine._awaitingToolResults)
+        self.assertNotIn(
+            "call_ro", self.chatWidget._toolMachine._awaitingToolResults)
+        self.assertNotIn(
+            "call_w", self.chatWidget._toolMachine._awaitingToolResults)
 
         # Confirmation card status is flipped for the WRITE tool.
         self.chatWidget.messages.setToolConfirmationStatus.assert_called_with(
@@ -160,3 +163,66 @@ class TestAiChatToolConfirmationSession(TestBase):
 
         self.assertIn("call_ro", tcids)
         self.assertIn("call_w", tcids)
+
+    def test_clear_model_resets_tool_machine_pending_results(self):
+        """Switching chat session clears pending tool results to prevent false cancellations.
+        
+        Regression test: When current chat session has pending tool confirmations
+        and user switches to a new chat, clearModel() calls reset() on the tool
+        machine to prevent false toolExecutionCancelled signals.
+        """
+        # Setup: Process tool calls with one requiring confirmation
+        toolCalls = [
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "git_status", "arguments": "{}"},
+            },
+            {
+                "id": "call_2",
+                "type": "function",
+                "function": {"name": "git_checkout", "arguments": '{"branch": "main"}'},
+            },
+        ]
+
+        spyConfirmation = QSignalSpy(self.chatWidget._toolMachine.userConfirmationNeeded)
+        spyFinished = QSignalSpy(self.chatWidget._agentExecutor.toolFinished)
+
+        response = AiResponse(
+            role=AiRole.Assistant,
+            tool_calls=toolCalls,
+        )
+        model = self.chatWidget.currentChatModel()
+        self.chatWidget._doMessageReady(model, response)
+        self.wait(1000, lambda: spyFinished.count() == 0)
+        self.processEvents()
+
+        self.assertEqual(spyConfirmation.count(), 1)
+
+        # Verify we have pending tool confirmations
+        self.assertTrue(self.chatWidget._toolMachine.hasPendingResults())
+        self.assertEqual(self.chatWidget._toolMachine.getAwaitingCount(), 1)
+
+        self.assertEqual(len(self.chatWidget._toolMachine._inProgress) +
+                           len(self.chatWidget._toolMachine._toolQueue), 0)
+
+        # Register a signal spy to ensure no cancellation signals are emitted during reset
+        cancelled_signals = []
+        self.chatWidget._toolMachine.toolExecutionCancelled.connect(
+            lambda *args: cancelled_signals.append(args)
+        )
+
+        # User creates a new chat session - this calls clearModel()
+        self.chatWidget.onNewChatRequested()
+        self.processEvents()
+
+        # Verify tool machine is completely cleared
+        self.assertFalse(self.chatWidget._toolMachine.hasPendingResults())
+        self.assertEqual(self.chatWidget._toolMachine.getAwaitingCount(), 0)
+        self.assertTrue(self.chatWidget._toolMachine.readyToContinue())
+        self.assertEqual(len(self.chatWidget._toolMachine._toolQueue), 0)
+        self.assertEqual(len(self.chatWidget._toolMachine._inProgress), 0)
+        self.assertEqual(len(self.chatWidget._toolMachine._autoToolGroups), 0)
+
+        # No false cancellation signals should be emitted during reset
+        self.assertEqual(len(cancelled_signals), 0)
