@@ -512,14 +512,6 @@ class AgentToolMachine(QObject):
         """
         return [req.toolName for req in self._inProgress.values()]
 
-    def getQueuedTools(self) -> List[str]:
-        """Get list of queued tool names.
-        
-        Returns:
-            List of tool names waiting to execute
-        """
-        return [req.toolName for req in self._toolQueue]
-
     def getAwaitingCount(self) -> int:
         """Get count of tools awaiting results.
         

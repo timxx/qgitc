@@ -969,36 +969,21 @@ class AiChatWidget(QWidget):
             sb.setValue(sb.maximum())
             self._adjustingSccrollbar = False
 
-    @typing.overload
-    def _makeUiToolCallResponse(
-        self, tool: AgentTool, args: Union[str, dict]): ...
-
-    @typing.overload
-    def _makeUiToolCallResponse(
-        self, toolName: str, args: Union[str, dict]): ...
-
-    def _makeUiToolCallResponse(self, *args):
-        if isinstance(args[0], str):
-            tool = self._toolByName(args[0])
-            fallbackName = args[0]
-        else:
-            tool = args[0]
-            fallbackName = "unknown"
-
+    def _makeUiToolCallResponse(self, toolName: str, args: Union[str, dict]):
+        tool = self._toolByName(toolName)
         if tool:
             toolType = tool.toolType
-            toolName = tool.name
         else:
             toolType = ToolType.DANGEROUS
-            toolName = fallbackName
 
         icon = self._getToolIcon(toolType)
-        title = self.tr("{} run `{}`").format(icon, toolName)
+        title = self.tr("{} run `{}`").format(
+            icon, toolName or "unknown")
 
-        if isinstance(args[1], str):
-            body = args[1]
+        if isinstance(args, str):
+            body = args
         else:
-            body = json.dumps(args[1], ensure_ascii=False)
+            body = json.dumps(args, ensure_ascii=False)
         return AiResponse(AiRole.Tool, body, title)
 
     def _providerUiTools(self) -> List[AgentTool]:
