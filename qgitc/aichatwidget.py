@@ -914,10 +914,11 @@ class AiChatWidget(QWidget):
         uiResponse = self._makeUiToolCallResponse(toolName, params)
         self._chatBot.appendResponse(uiResponse)
 
+        expl = params.get("explanation", "").strip()
         self._chatBot.insertToolConfirmation(
             toolName=toolName,
             params=params,
-            toolDesc=toolDesc or self.tr("Unknown tool requested by model"),
+            toolDesc=expl if expl else toolDesc,
             toolType=toolType,
             toolCallId=toolCallId,
         )
