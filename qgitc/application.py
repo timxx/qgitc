@@ -59,11 +59,6 @@ from qgitc.version import __version__
 from qgitc.versionchecker import VersionChecker
 from qgitc.windowtype import WindowType
 
-try:
-    from qgitc.otelenv import OTEL_AUTH, OTEL_ENDPOINT
-except ImportError:
-    OTEL_ENDPOINT = None
-
 
 class Application(ApplicationBase):
 
@@ -82,6 +77,8 @@ class Application(ApplicationBase):
         self.setupTranslator()
 
         self._manager = QNetworkAccessManager(self)
+        self._otelEndpoint = None
+        self._otelAuth = None
         self._initTelemetry()
 
         self._logWindow = None
@@ -494,19 +491,21 @@ class Application(ApplicationBase):
         self._telemetry = OTelService()
         if not self._settings.isTelemetryEnabled():
             return
-        if not OTEL_ENDPOINT or self.testing:
+
+        self._loadOtelSecrets()
+        if not self._otelEndpoint or self.testing:
             return
 
         # trust the cache first
         connectable = self._settings.isTelemetryServerConnectable(
-            OTEL_ENDPOINT)
+            self._otelEndpoint)
         if connectable:
             self._telemetry.setupService(
                 self.applicationName(),
                 __version__,
                 qVersion(),
-                OTEL_ENDPOINT,
-                OTEL_AUTH
+                self._otelEndpoint,
+                self._otelAuth
             )
 
         # check the endpoint every 3 days
@@ -518,9 +517,10 @@ class Application(ApplicationBase):
                 return
 
         request = QNetworkRequest()
-        request.setUrl(OTEL_ENDPOINT)
-        if OTEL_AUTH:
-            request.setRawHeader(b"Authorization", OTEL_AUTH.encode('utf-8'))
+        request.setUrl(self._otelEndpoint)
+        if self._otelAuth:
+            request.setRawHeader(
+                b"Authorization", self._otelAuth.encode('utf-8'))
         reply = self._manager.head(request)
 
         reply.finished.connect(
@@ -538,15 +538,15 @@ class Application(ApplicationBase):
             QNetworkReply.ContentNotFoundError,
         ]
         self._settings.setTelemetryServerConnectable(
-            OTEL_ENDPOINT, ok)
+            self._otelEndpoint, ok)
 
         if ok and self._settings.isTelemetryEnabled() and not self._telemetry.inited:
             self._telemetry.setupService(
                 self.applicationName(),
                 __version__,
                 qVersion(),
-                OTEL_ENDPOINT,
-                OTEL_AUTH
+                self._otelEndpoint,
+                self._otelAuth
             )
 
     @property
@@ -630,3 +630,14 @@ class Application(ApplicationBase):
 
         for thread in self._threads[:]:
             self.terminateThread(thread)
+
+    def _loadOtelSecrets(self):
+        try:
+            from qgitc.otelenv import _a, _b
+            from qgitc.secretsmanager import SecretsManager
+            self._otelEndpoint = SecretsManager.decode(_a)
+            self._otelAuth = SecretsManager.decode(_b)
+        except ImportError:
+            pass
+        except RuntimeError as e:
+            logger.warning(str(e))

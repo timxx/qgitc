@@ -35,7 +35,7 @@ jobs:
 
       - name: Make Telemetry Env
         run: |
-          echo -e "OTEL_ENDPOINT=\"${{ secrets.OTEL_ENDPOINT }}\"\nOTEL_AUTH=\"${{ secrets.OTEL_AUTH }}\"" > qgitc/otelenv.py
+          echo -e "_a=\"${{ secrets.OTEL_ENDPOINT }}\"\n_b=\"${{ secrets.OTEL_AUTH }}\"" > qgitc/otelenv.py
 
       - name: Package
         run: |
