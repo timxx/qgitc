@@ -351,6 +351,10 @@ class AiChatWidget(QWidget):
         self._codeReviewDiffs: List[str] = []
         self._injectedContext: str = None
 
+        # Task models (for subagents and isolated task sessions)
+        # taskId -> AiModelBase
+        self._taskModels: Dict[str, AiModelBase] = {}
+
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
 
@@ -1058,8 +1062,8 @@ class AiChatWidget(QWidget):
         # chat requires that each tool_call_id gets a corresponding tool message.
         description = self.tr("✗ `{}` skipped").format(toolName)
         model.addHistory(AiRole.Tool, SKIP_TOOL,
-                            description=description,
-                            toolCalls={"tool_call_id": toolCallId})
+                         description=description,
+                         toolCalls={"tool_call_id": toolCallId})
         self._doMessageReady(model, AiResponse(
             AiRole.Tool, SKIP_TOOL, description=description))
 
@@ -1130,6 +1134,53 @@ class AiChatWidget(QWidget):
             return data
         # Lazily instantiate if needed.
         return self._ensureCurrentModelInstantiated()
+
+    def createModelForTask(self, taskId: str) -> AiModelBase:
+        """Create a dedicated model instance for a task (e.g., subagent).
+        
+        This creates a new, independent model instance that won't interfere
+        with the main chat model. Useful for isolated task execution.
+        
+        Args:
+            taskId: Unique ID for this task
+            
+        Returns:
+            A new AiModelBase instance configured similarly to the main model
+        """
+        # Create a new model instance with same settings as current
+        model = self.currentChatModel().__class__(parent=self)
+        self._taskModels[taskId] = model
+        logger.debug(f"Created task model for {taskId}")
+        return model
+
+    def getTaskModel(self, taskId: str) -> Optional[AiModelBase]:
+        """Retrieve a task-specific model instance.
+        
+        Args:
+            taskId: Task ID
+            
+        Returns:
+            Model instance if exists, None otherwise
+        """
+        return self._taskModels.get(taskId)
+
+    def releaseTaskModel(self, taskId: str) -> bool:
+        """Release and clean up a task-specific model.
+        
+        Args:
+            taskId: Task ID
+            
+        Returns:
+            True if model was released
+        """
+        if taskId in self._taskModels:
+            model = self._taskModels.pop(taskId)
+            # Clean up model resources
+            if hasattr(model, 'shutdown'):
+                model.shutdown()
+            logger.debug(f"Released task model for {taskId}")
+            return True
+        return False
 
     def isLocalLLM(self):
         return self.currentChatModel().isLocal()

@@ -1,11 +1,37 @@
 # -*- coding: utf-8 -*-
 
 import importlib
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiModelBase, AiModelFactory
+
+
+class AgentProvider(ABC):
+    """Interface for agent-specific LLM capabilities.
+    
+    Models implementing this interface can provide agent-mode features
+    like planning, custom tool lists, and agent-specific system prompts.
+    """
+
+    @abstractmethod
+    def canPlan(self) -> bool:
+        """Does this model/provider support explicit plan generation?
+        
+        If True, the AI can emit structured PLAN_DECISION: yes/no blocks
+        and plan steps.
+        """
+        pass
+
+    @abstractmethod
+    def agentSystemPrompt(self) -> str:
+        """Return agent-specific system prompt for this provider.
+        
+        Overrides the default AGENT_SYS_PROMPT if provided.
+        """
+        pass
 
 
 @dataclass(frozen=True)

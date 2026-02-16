@@ -195,6 +195,7 @@ class AgentToolMachine(QObject):
         maxConcurrent: int = 4,
         # Optional callable: (toolName: str) -> Optional[AgentTool]
         toolLookupFn=None,
+        context: Optional[str] = None,
         parent: Optional[QObject] = None
     ):
         """Initialize the tool machine.
@@ -205,12 +206,14 @@ class AgentToolMachine(QObject):
             toolLookupFn: Optional callable to resolve tools by name.
                          If provided, called first; falls back to AgentToolRegistry if returns None.
                          This allows UI tools and custom tool resolution.
+            context: Optional context identifier (e.g. "main" or taskId) for debugging/tracking.
             parent: Qt parent object
         """
         super().__init__(parent)
         self._strategy = strategy or DefaultStrategy()
         self._maxConcurrent = maxConcurrent
         self._toolLookupFn = toolLookupFn
+        self._context = context or "main"
 
         # Tool tracking
         self._toolQueue: List[ToolRequest] = []
