@@ -2,7 +2,6 @@
 
 import json
 import os
-import typing
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import (
@@ -28,7 +27,13 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
-from qgitc.agentmachine import AgentToolMachine, AggressiveStrategy, DefaultStrategy
+from qgitc.agentmachine import (
+    AgentToolMachine,
+    AggressiveStrategy,
+    AllAutoStrategy,
+    DefaultStrategy,
+    SafeStrategy,
+)
 from qgitc.agenttoolexecutor import AgentToolExecutor
 from qgitc.agenttools import (
     AgentTool,
@@ -334,8 +339,9 @@ class AiChatWidget(QWidget):
         self._uiToolExecutor.toolFinished.connect(self._onAgentToolFinished)
 
         # Create tool orchestration machine
+        strategy = self._getToolExecutionStrategy()
         self._toolMachine = AgentToolMachine(
-            strategy=DefaultStrategy(),
+            strategy=strategy,
             toolLookupFn=self._toolByName,
             maxConcurrent=4,
             parent=self)
@@ -993,6 +999,28 @@ class AiChatWidget(QWidget):
 
         return provider.uiTools() or []
 
+    def _getToolExecutionStrategy(self):
+        """Get the tool execution strategy from settings.
+        
+        Returns the appropriate ToolExecutionStrategy based on the setting:
+        - 0: DefaultStrategy (auto-run READ_ONLY only)
+        - 1: AggressiveStrategy (auto-run READ_ONLY + WRITE)
+        - 2: SafeStrategy (confirm all tools)
+        - 3: AllAutoStrategy (auto-run all tools without confirmation)
+        
+        Defaults to DefaultStrategy if setting is invalid or not found.
+        """
+        settings = ApplicationBase.instance().settings()
+        strategyValue = settings.toolExecutionStrategy()
+
+        if strategyValue == 1:
+            return AggressiveStrategy()
+        if strategyValue == 2:
+            return SafeStrategy()
+        if strategyValue == 3:
+            return AllAutoStrategy()
+        return DefaultStrategy()
+
     def _toolByName(self, toolName: str) -> Optional[AgentTool]:
         if not toolName:
             return None
@@ -1058,8 +1086,8 @@ class AiChatWidget(QWidget):
         # chat requires that each tool_call_id gets a corresponding tool message.
         description = self.tr("✗ `{}` skipped").format(toolName)
         model.addHistory(AiRole.Tool, SKIP_TOOL,
-                            description=description,
-                            toolCalls={"tool_call_id": toolCallId})
+                         description=description,
+                         toolCalls={"tool_call_id": toolCallId})
         self._doMessageReady(model, AiResponse(
             AiRole.Tool, SKIP_TOOL, description=description))
 

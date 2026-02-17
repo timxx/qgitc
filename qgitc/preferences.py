@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QStyleFactory
+from PySide6.QtWidgets import QComboBox, QFileDialog, QLabel, QMessageBox, QStyleFactory
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchemaMode
@@ -531,6 +531,20 @@ class Preferences(QDialog):
         if exts:
             self.ui.leExcludedFiles.setText(", ".join(exts))
 
+        # Initialize tool execution strategy combobox
+        self.ui.cbToolExecutionStrategy.addItem(
+            self.tr("Read-only"), 0)
+        self.ui.cbToolExecutionStrategy.addItem(
+            self.tr("Read & write"), 1)
+        self.ui.cbToolExecutionStrategy.addItem(
+            self.tr("Confirm all"), 2)
+        self.ui.cbToolExecutionStrategy.addItem(
+            self.tr("Full auto"), 3)
+
+        strategy = self.settings.toolExecutionStrategy()
+        self.ui.cbToolExecutionStrategy.setCurrentIndex(
+            self.ui.cbToolExecutionStrategy.findData(strategy))
+
     def _onModelsReady(self):
         model: AiModelBase = self.sender()
         if model == self.ui.cbModels.currentData():
@@ -596,6 +610,10 @@ class Preferences(QDialog):
                 exts.add(ext)
 
         self.settings.setAiExcludedFileExtensions(list(exts))
+
+        # Save tool execution strategy
+        strategy = self.ui.cbToolExecutionStrategy.currentData()
+        self.settings.setToolExecutionStrategy(strategy)
 
     def _initCommitMessageTab(self):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())

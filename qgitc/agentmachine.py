@@ -102,6 +102,20 @@ class SafeStrategy(ToolExecutionStrategy):
         return False
 
 
+class AllAutoStrategy(ToolExecutionStrategy):
+    """All-Auto strategy: Run all tools without confirmation.
+    
+    This strategy auto-runs all tools including DANGEROUS operations.
+    Useful for fully automated workflows where you completely trust the AI.
+    
+    WARNING: This is the least safe strategy and should only be used
+    in low-risk scenarios with trusted AI models.
+    """
+
+    def shouldAutoRun(self, toolName: str, toolType: int, params: Dict) -> bool:
+        return True
+
+
 class CustomStrategy(ToolExecutionStrategy):
     """Custom strategy with configurable tool whitelists.
     

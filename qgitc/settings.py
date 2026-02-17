@@ -896,3 +896,30 @@ class Settings(QSettings):
         self.beginGroup("commit")
         self.setValue("confirmDeleteFiles", confirm)
         self.endGroup()
+    # Tool Execution Strategy Settings
+
+    def toolExecutionStrategy(self) -> int:
+        """Get the tool execution strategy for AI operations.
+        
+        Returns:
+            0: DefaultStrategy (auto-run READ_ONLY only)
+            1: AggressiveStrategy (auto-run READ_ONLY + WRITE, confirm DANGEROUS)
+            2: SafeStrategy (confirm all tools)
+            3: AllAutoStrategy (auto-run all tools without confirmation)
+        
+        Default: 0 (DefaultStrategy)
+        """
+        self.beginGroup("llm")
+        value = self.value("toolExecutionStrategy", 0, type=int)
+        self.endGroup()
+        return value
+
+    def setToolExecutionStrategy(self, strategy: int):
+        """Set the tool execution strategy for AI operations.
+        
+        Args:
+            strategy: 0=DefaultStrategy, 1=AggressiveStrategy, 2=SafeStrategy, 3=AllAutoStrategy
+        """
+        self.beginGroup("llm")
+        self.setValue("toolExecutionStrategy", strategy)
+        self.endGroup()

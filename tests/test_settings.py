@@ -31,3 +31,23 @@ class TestSettings(TestBase):
 
         self.settings.setDefaultLlmModel("TestModel")
         self.assertEqual(self.settings.defaultLlmModel(), "TestModel")
+
+    def testToolExecutionStrategy(self):
+        # Test default strategy
+        self.assertEqual(self.settings.toolExecutionStrategy(), 0)
+
+        # Test setting to aggressive strategy (1)
+        self.settings.setToolExecutionStrategy(1)
+        self.assertEqual(self.settings.toolExecutionStrategy(), 1)
+
+        # Test setting to safe strategy (2)
+        self.settings.setToolExecutionStrategy(2)
+        self.assertEqual(self.settings.toolExecutionStrategy(), 2)
+
+        # Test setting to all auto strategy (3)
+        self.settings.setToolExecutionStrategy(3)
+        self.assertEqual(self.settings.toolExecutionStrategy(), 3)
+
+        # Test setting back to default
+        self.settings.setToolExecutionStrategy(0)
+        self.assertEqual(self.settings.toolExecutionStrategy(), 0)
