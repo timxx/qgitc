@@ -555,6 +555,15 @@ class Settings(QSettings):
         self.setValue("showIgnoredFiles", show)
         self.endGroup()
 
+    def ignoredUntrackedFiles(self, repoName: str):
+        files = self.getLinkValue(repoName, "ignoredUntrackedFiles", [])
+        if isinstance(files, str):
+            return [files]
+        return files or []
+
+    def setIgnoredUntrackedFiles(self, repoName: str, files: List[str]):
+        self.setLinkValue(repoName, "ignoredUntrackedFiles", files or [])
+
     def useTemplateForAi(self):
         self.beginGroup("commit")
         use = self.value("useTemplateForAi", False, type=bool)

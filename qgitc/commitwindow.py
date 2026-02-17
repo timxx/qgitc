@@ -448,7 +448,10 @@ class CommitWindow(StateWindow):
 
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str, str]]):
         logger.debug("Status available %s -> %s", repoDir, fileList)
+        ignoredUntrackedFiles = self._ignoredUntrackedFilesSet()
         for status, file, oldFile in fileList:
+            if status[1] == "?" and file in ignoredUntrackedFiles:
+                continue
             if status[0] != " " and status[0] not in ["?", "!"]:
                 self._stagedModel.addFile(file, repoDir, status[0], oldFile)
             if status[1] != " ":
@@ -1008,6 +1011,13 @@ class CommitWindow(StateWindow):
         self._acShowIgnoredFiles.setChecked(checked)
         self._statusFetcher.setShowIgnoredFiles(checked)
 
+        self._wdMenu.addSeparator()
+        self._hiddenUntrackedMenu = QMenu(self)
+        self._hiddenUntrackedMenu.setTitle(self.tr("Hidden untracked files"))
+        self._hiddenUntrackedMenu.aboutToShow.connect(
+            self._updateHiddenUntrackedMenu)
+        self._wdMenu.addMenu(self._hiddenUntrackedMenu)
+
         self.ui.tbWDChanges.setMenu(self._wdMenu)
 
     def _setupTemplateMenu(self):
@@ -1026,6 +1036,45 @@ class CommitWindow(StateWindow):
         checked = self._acShowIgnoredFiles.isChecked()
         self._statusFetcher.setShowIgnoredFiles(checked)
         ApplicationBase.instance().settings().setShowIgnoredFiles(checked)
+        self.reloadLocalChanges()
+
+    def _updateHiddenUntrackedMenu(self):
+        self._hiddenUntrackedMenu.clear()
+        entries = self._getHiddenUntrackedEntries()
+        if not entries:
+            action = self._hiddenUntrackedMenu.addAction(
+                self.tr("(No hidden files)"))
+            action.setEnabled(False)
+            return
+
+        maxItems = 20
+        visibleEntries = entries[:maxItems]
+        for file in visibleEntries:
+            action = self._hiddenUntrackedMenu.addAction(file)
+            action.triggered.connect(
+                lambda checked, f=file: self._onShowHiddenUntrackedFile(f))
+
+        if len(entries) > maxItems:
+            remaining = len(entries) - maxItems
+            moreAction = self._hiddenUntrackedMenu.addAction(
+                self.tr("... and {} more").format(remaining))
+            moreAction.setEnabled(False)
+
+        self._hiddenUntrackedMenu.addSeparator()
+        self._hiddenUntrackedMenu.addAction(
+            self.tr("Show all hidden untracked files"),
+            self._onShowAllHiddenUntrackedFiles)
+
+    def _onShowHiddenUntrackedFile(self, file: str):
+        files = self._ignoredUntrackedFilesSet()
+        normalizedFile = os.path.normpath(file)
+        if normalizedFile in files:
+            files.remove(normalizedFile)
+            self._saveIgnoredUntrackedFiles(files)
+            self.reloadLocalChanges()
+
+    def _onShowAllHiddenUntrackedFiles(self):
+        self._saveIgnoredUntrackedFiles(set())
         self.reloadLocalChanges()
 
     def _updateTemplateMenuItems(self):
@@ -1607,6 +1656,16 @@ class CommitWindow(StateWindow):
         self._acDeleteFiles.setText(deleteText)
         self._acDeleteFiles.setData(listView)
 
+        untrackedFiles = self._collectSectionFiles(
+            listView, CommitWindow._filterNonUntrackedFiles)
+        untrackedCount = sum(len(files) for files in untrackedFiles.values())
+        hideUntrackedText = self.tr("&Hide these untracked files") if untrackedCount > 1 \
+            else self.tr("&Hide this untracked file")
+        self._acHideUntrackedFiles.setText(hideUntrackedText)
+        self._acHideUntrackedFiles.setData(listView)
+        self._acHideUntrackedFiles.setVisible(
+            isUnstagedList and untrackedCount > 0)
+
         self._contextMenu.exec(listView.mapToGlobal(pos))
 
     def _setupContextMenu(self):
@@ -1620,6 +1679,9 @@ class CommitWindow(StateWindow):
         self._acDeleteFiles = self._contextMenu.addAction(
             self.tr("&Delete this file"),
             self._onDeleteFiles)
+        self._acHideUntrackedFiles = self._contextMenu.addAction(
+            self.tr("&Hide this untracked file"),
+            self._onHideUntrackedFiles)
         self._contextMenu.addSeparator()
         self._contextMenu.addAction(self.tr("External &diff"),
                                     self._onExternalDiff)
@@ -1633,6 +1695,33 @@ class CommitWindow(StateWindow):
     def _filterUntrackedFiles(model: QAbstractListModel, index: QModelIndex):
         statusCode = model.data(index, StatusFileListModel.StatusCodeRole)
         return statusCode in ["?", "!"]
+
+    @staticmethod
+    def _filterNonUntrackedFiles(model: QAbstractListModel, index: QModelIndex):
+        statusCode = model.data(index, StatusFileListModel.StatusCodeRole)
+        return statusCode != "?"
+
+    def _ignoredUntrackedFilesSet(self):
+        """Get the set of hidden untracked files for the top repo."""
+        files = self._getIgnoredUntrackedFiles()
+        return set(files)
+
+    def _getIgnoredUntrackedFiles(self):
+        """Get list of hidden untracked files for the top repo."""
+        settings = ApplicationBase.instance().settings()
+        files = settings.ignoredUntrackedFiles(self._repoName())
+        return [os.path.normpath(file) for file in files if file]
+
+    def _saveIgnoredUntrackedFiles(self, files: set):
+        """Save hidden untracked files for the top repo."""
+        settings = ApplicationBase.instance().settings()
+        sortedFiles = sorted(files, key=lambda path: path.lower())
+        settings.setIgnoredUntrackedFiles(self._repoName(), sortedFiles)
+
+    def _getHiddenUntrackedEntries(self):
+        """Get list of hidden untracked files sorted for display in menu."""
+        files = self._getIgnoredUntrackedFiles()
+        return sorted(files, key=lambda f: f.lower())
 
     def _onRestoreFiles(self):
         ApplicationBase.instance().trackFeatureUsage("commit.restore_files")
@@ -1675,6 +1764,23 @@ class CommitWindow(StateWindow):
         self.clearModels()
         self._curFile = None
         self._curFileStatus = None
+
+    def _onHideUntrackedFiles(self):
+        ApplicationBase.instance().trackFeatureUsage("commit.hide_untracked")
+        listView: QListView = self._acHideUntrackedFiles.data()
+        repoFiles = self._collectSectionFiles(
+            listView, CommitWindow._filterNonUntrackedFiles)
+        if not repoFiles:
+            return
+
+        # Collect all untracked files from all repos into a single set
+        files = self._ignoredUntrackedFilesSet()
+        for repoDir, fileList in repoFiles.items():
+            for file in fileList:
+                # Store paths relative to top repo
+                files.add(os.path.normpath(file))
+        self._saveIgnoredUntrackedFiles(files)
+        self.reloadLocalChanges()
 
     def _onCheckoutFiles(self):
         ApplicationBase.instance().trackFeatureUsage("commit.checkout_files")
