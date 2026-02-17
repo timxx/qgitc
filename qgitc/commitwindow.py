@@ -24,6 +24,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import (
     QDesktopServices,
     QIcon,
+    QKeySequence,
     QTextBlockFormat,
     QTextCharFormat,
     QTextCursor,
@@ -240,8 +241,11 @@ class CommitWindow(StateWindow):
             self._onStageAllClicked)
 
         self.ui.tbRefresh.setIcon(QIcon(iconsPath + "refresh.svg"))
-        self.ui.tbRefresh.setToolTip(self.tr("Refresh"))
+        refreshShortcut = QKeySequence(QKeySequence.Refresh)
+        self.ui.tbRefresh.setToolTip(
+            self.tr("Refresh ({0})").format(refreshShortcut.toString()))
         self.ui.tbRefresh.clicked.connect(self.reloadLocalChanges)
+        self.ui.tbRefresh.setShortcut(refreshShortcut)
 
         self.ui.tbTemplate.setText(self.tr("📝 Template"))
         self.ui.tbTemplate.setToolTip(self.tr("Select commit template"))
@@ -1681,6 +1685,10 @@ class CommitWindow(StateWindow):
         self._acDeleteFiles = self._contextMenu.addAction(
             self.tr("&Delete this file"),
             self._onDeleteFiles)
+        self._acDeleteFiles.setShortcut(QKeySequence(QKeySequence.Delete))
+        self._acDeleteFiles.setShortcutContext(Qt.WidgetShortcut)
+        self.ui.lvFiles.addAction(self._acDeleteFiles)
+        self.ui.lvStaged.addAction(self._acDeleteFiles)
         self._acHideUntrackedFiles = self._contextMenu.addAction(
             self.tr("&Hide this untracked file"),
             self._onHideUntrackedFiles)
@@ -1874,7 +1882,17 @@ class CommitWindow(StateWindow):
 
     def _onDeleteFiles(self):
         ApplicationBase.instance().trackFeatureUsage("commit.delete_files")
-        listView: QListView = self._acDeleteFiles.data()
+        listView = None
+        if self.ui.lvFiles.hasFocus():
+            listView = self.ui.lvFiles
+        elif self.ui.lvStaged.hasFocus():
+            listView = self.ui.lvStaged
+
+        # Fallback to stored data only if called from context menu
+        if not listView:
+            listView = self._acDeleteFiles.data()
+        if not listView:
+            return
         repoFiles = self._collectSectionFiles(listView)
         if not repoFiles:
             return
