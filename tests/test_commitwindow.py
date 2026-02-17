@@ -1304,3 +1304,358 @@ class TestCommitWindow(TestBase):
         # Verify the viewer was properly cleared and reloaded
         self.assertGreater(viewer.textLineCount(), 0)
         self.assertEqual(len(viewer._highlightFind), 3)
+
+
+class TestHideUntrackedFiles(TestBase):
+    """Test suite for hide untracked files feature"""
+
+    def setUp(self):
+        super().setUp()
+        self.window = self.app.getWindow(WindowType.CommitWindow)
+        self.window.show()
+        self.processEvents()
+
+    def tearDown(self):
+        self.window.close()
+        self.processEvents()
+        super().tearDown()
+
+    def createSubRepo(self):
+        return True
+
+    def waitForLoaded(self):
+        self.wait(10000, self.window._statusFetcher.isRunning)
+        self.wait(10000, self.window._infoFetcher.isRunning)
+        self.wait(10000, self.window._submoduleExecutor.isRunning)
+        self.wait(50)
+
+    def testIgnoredUntrackedFilesSet(self):
+        """Test _ignoredUntrackedFilesSet returns proper set of hidden files"""
+        self.waitForLoaded()
+
+        # Initially should be empty
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertIsInstance(hidden, set)
+        self.assertEqual(len(hidden), 0)
+
+        # Save some files
+        settings = self.app.settings()
+        testFiles = ["file1.txt", "file2.py", "subdir/file3.txt"]
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), testFiles)
+
+        # Now should contain them
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertEqual(len(hidden), 3)
+        for f in testFiles:
+            self.assertIn(os.path.normpath(f), hidden)
+
+    def testGetIgnoredUntrackedFiles(self):
+        """Test _getIgnoredUntrackedFiles returns list of hidden files"""
+        self.waitForLoaded()
+
+        # Initially should be empty
+        files = self.window._getIgnoredUntrackedFiles()
+        self.assertIsInstance(files, list)
+        self.assertEqual(len(files), 0)
+
+        # Save some files
+        settings = self.app.settings()
+        testFiles = ["alpha.txt", "beta.py", "subdir/gamma.txt"]
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), testFiles)
+
+        # Now should contain them
+        files = self.window._getIgnoredUntrackedFiles()
+        self.assertEqual(len(files), 3)
+        # Files should be sorted
+        normalized = [os.path.normpath(f) for f in testFiles]
+        self.assertEqual(files, sorted(normalized, key=lambda f: f.lower()))
+
+    def testSaveIgnoredUntrackedFiles(self):
+        """Test _saveIgnoredUntrackedFiles persists files correctly"""
+        self.waitForLoaded()
+
+        # Save files with set
+        files = {"file1.txt", "file2.py", "subdir/file3.txt"}
+        self.window._saveIgnoredUntrackedFiles(files)
+
+        # Verify they're saved in settings
+        settings = self.app.settings()
+        saved = settings.ignoredUntrackedFiles(self.window._repoName())
+        self.assertEqual(len(saved), 3)
+
+        # Create the set of normalized paths that we expect to be saved
+        expectedSet = {os.path.normpath(f) for f in files}
+        # The saved list should contain normalized paths
+        savedSet = {os.path.normpath(f) for f in saved}
+        self.assertEqual(savedSet, expectedSet)
+
+        # Verify they're sorted regardless of the path separator
+        expectedSorted = sorted(expectedSet, key=lambda f: f.lower())
+        # Normalize the saved list for comparison
+        savedNormalized = [os.path.normpath(f) for f in saved]
+        self.assertEqual(savedNormalized, expectedSorted)
+
+    def testGetHiddenUntrackedEntries(self):
+        """Test _getHiddenUntrackedEntries returns sorted list for display"""
+        self.waitForLoaded()
+
+        # Initially should be empty
+        entries = self.window._getHiddenUntrackedEntries()
+        self.assertEqual(len(entries), 0)
+
+        # Save some files
+        settings = self.app.settings()
+        testFiles = ["zebra.txt", "alpha.txt", "middle.py"]
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), testFiles)
+
+        # Get entries - should be sorted case-insensitively
+        entries = self.window._getHiddenUntrackedEntries()
+        self.assertEqual(len(entries), 3)
+        self.assertEqual(entries[0], "alpha.txt")
+        self.assertEqual(entries[1], "middle.py")
+        self.assertEqual(entries[2], "zebra.txt")
+
+    def testHideUntrackedFiles(self):
+        """Test hiding untracked files via _onHideUntrackedFiles"""
+        self.waitForLoaded()
+
+        # Create untracked files
+        file1 = os.path.join(self.gitDir.name, "untracked1.txt")
+        file2 = os.path.join(self.gitDir.name, "untracked2.txt")
+        with open(file1, "w") as f:
+            f.write("test")
+        with open(file2, "w") as f:
+            f.write("test")
+
+        # Refresh to show files
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        # Select the files we want to hide
+        count = filesModel.rowCount()
+        self.assertGreater(count, 0)
+
+        # Find and select untracked files
+        for row in range(count):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            if fileName in ["untracked1.txt", "untracked2.txt"]:
+                lvFiles.selectionModel().select(
+                    index, QItemSelectionModel.Select)
+
+        # Hide the selected files
+        self.window._acHideUntrackedFiles.setData(lvFiles)
+        self.window._onHideUntrackedFiles()
+        self.processEvents()
+
+        # Verify files are in hidden list
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertIn(os.path.normpath("untracked1.txt"), hidden)
+        self.assertIn(os.path.normpath("untracked2.txt"), hidden)
+
+    def testShowHiddenUntrackedFile(self):
+        """Test showing a specific hidden file"""
+        self.waitForLoaded()
+
+        # First save a hidden file
+        settings = self.app.settings()
+        testFile = "hidden_file.txt"
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), [testFile])
+
+        # Verify it's hidden
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertIn(os.path.normpath(testFile), hidden)
+
+        # Show the file
+        self.window._onShowHiddenUntrackedFile(testFile)
+
+        # Verify it's no longer hidden
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertEqual(len(hidden), 0)
+
+    def testShowAllHiddenUntrackedFiles(self):
+        """Test showing all hidden files at once"""
+        self.waitForLoaded()
+
+        # Save multiple hidden files
+        settings = self.app.settings()
+        testFiles = ["file1.txt", "file2.txt", "file3.txt"]
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), testFiles)
+
+        # Verify they're hidden
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertEqual(len(hidden), 3)
+
+        # Show all
+        self.window._onShowAllHiddenUntrackedFiles()
+
+        # Verify none are hidden
+        hidden = self.window._ignoredUntrackedFilesSet()
+        self.assertEqual(len(hidden), 0)
+
+    def testUpdateHiddenUntrackedMenu(self):
+        """Test _updateHiddenUntrackedMenu properly displays hidden files"""
+        self.waitForLoaded()
+
+        # Save several hidden files
+        settings = self.app.settings()
+        testFiles = [f"file{i}.txt" for i in range(5)]
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), testFiles)
+
+        # Update menu
+        self.window._updateHiddenUntrackedMenu()
+
+        # Verify menu has actions
+        actions = self.window._hiddenUntrackedMenu.actions()
+        self.assertGreater(len(actions), 0)
+
+        # Should have: 5 files + separator + "Show all" action
+        # Filter out separators and disabled items for file entries
+        fileActions = [a for a in actions if a.isEnabled() and not a.isSeparator()
+                       and "more" not in a.text()]
+        self.assertEqual(len(fileActions), 6)  # 5 files + "Show all"
+
+    def testUpdateHiddenUntrackedMenuCapped(self):
+        """Test _updateHiddenUntrackedMenu caps at 20 items"""
+        self.waitForLoaded()
+
+        # Save more than 20 hidden files
+        settings = self.app.settings()
+        testFiles = [f"file{i:03d}.txt" for i in range(25)]
+        settings.setIgnoredUntrackedFiles(self.window._repoName(), testFiles)
+
+        # Update menu
+        self.window._updateHiddenUntrackedMenu()
+
+        # Verify menu shows capped message
+        actions = self.window._hiddenUntrackedMenu.actions()
+        moreActions = [a for a in actions if "more" in a.text()]
+        self.assertEqual(len(moreActions), 1)
+        self.assertIn("5", moreActions[0].text())  # 25 - 20 = 5
+
+    def testStatusFiltering(self):
+        """Test that hidden untracked files are filtered in _onStatusAvailable"""
+        self.waitForLoaded()
+
+        # Create and hide an untracked file before refresh
+        file1 = os.path.join(self.gitDir.name, "will_hide.txt")
+        with open(file1, "w") as f:
+            f.write("test")
+
+        # Mark it as hidden before refresh
+        settings = self.app.settings()
+        settings.setIgnoredUntrackedFiles(
+            self.window._repoName(), ["will_hide.txt"])
+
+        # Refresh
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        # The hidden file should NOT appear in the files list
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            fileName = filesModel.data(index)
+            self.assertNotEqual(fileName, "will_hide.txt",
+                                "Hidden file should not appear in files list")
+
+    def testHideAndRehideOnReload(self):
+        """Test that hidden files remain hidden after reload"""
+        self.waitForLoaded()
+
+        # Create untracked files
+        file1 = os.path.join(self.gitDir.name, "temp1.txt")
+        file2 = os.path.join(self.gitDir.name, "temp2.txt")
+        with open(file1, "w") as f:
+            f.write("test")
+        with open(file2, "w") as f:
+            f.write("test")
+
+        # First refresh to see them
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        lvFiles = self.window.ui.lvFiles
+        filesModel = lvFiles.model()
+
+        # Get the initial set of files
+        initialFiles = set()
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            initialFiles.add(filesModel.data(index))
+
+        self.assertGreater(len(initialFiles), 0)
+        self.assertIn("temp1.txt", initialFiles)
+        self.assertIn("temp2.txt", initialFiles)
+
+        # Hide first file
+        settings = self.app.settings()
+        settings.setIgnoredUntrackedFiles(
+            self.window._repoName(), ["temp1.txt"])
+
+        # Refresh again
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        # Collect files after hiding temp1.txt
+        newFiles = set()
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            newFiles.add(filesModel.data(index))
+
+        # temp1.txt should not be in the list anymore
+        self.assertNotIn("temp1.txt", newFiles)
+        self.assertIn("temp2.txt", newFiles)
+
+        # Create another file and hide it too
+        file3 = os.path.join(self.gitDir.name, "temp3.txt")
+        with open(file3, "w") as f:
+            f.write("test")
+
+        settings.setIgnoredUntrackedFiles(
+            self.window._repoName(), ["temp1.txt", "temp3.txt"])
+
+        # Refresh
+        QTest.mouseClick(self.window.ui.tbRefresh, Qt.LeftButton)
+        self.waitForLoaded()
+
+        # Collect files after hiding both temp1.txt and temp3.txt
+        finalFiles = set()
+        for row in range(filesModel.rowCount()):
+            index = filesModel.index(row, 0)
+            finalFiles.add(filesModel.data(index))
+
+        # Both temp1.txt and temp3.txt should not be in the list
+        self.assertNotIn("temp1.txt", finalFiles)
+        self.assertNotIn("temp3.txt", finalFiles)
+        self.assertIn("temp2.txt", finalFiles)
+
+    def testNormalizationAcrossOS(self):
+        """Test that file paths are normalized for cross-OS consistency"""
+        self.waitForLoaded()
+
+        # Test with various path formats
+        testPaths = [
+            "file.txt",
+            "subdir/file.txt",
+            "./subdir/file.txt",
+        ]
+
+        for path in testPaths:
+            settings = self.app.settings()
+            settings.setIgnoredUntrackedFiles(self.window._repoName(), [path])
+
+            hidden = self.window._ignoredUntrackedFilesSet()
+            self.assertEqual(len(hidden), 1)
+
+            # Should have exactly one normalized version
+            stored = list(hidden)[0]
+            self.assertEqual(stored, os.path.normpath(path.lstrip("./")))
+
+            # Clear for next iteration
+            settings.setIgnoredUntrackedFiles(self.window._repoName(), [])
