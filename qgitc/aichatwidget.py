@@ -338,8 +338,9 @@ class AiChatWidget(QWidget):
         self._uiToolExecutor = UiToolExecutor(self)
         self._uiToolExecutor.toolFinished.connect(self._onAgentToolFinished)
 
+        settings = ApplicationBase.instance().settings()
         # Create tool orchestration machine
-        strategy = self._getToolExecutionStrategy()
+        strategy = self._createStrategy(settings.toolExecutionStrategy())
         self._toolMachine = AgentToolMachine(
             strategy=strategy,
             toolLookupFn=self._toolByName,
@@ -351,6 +352,11 @@ class AiChatWidget(QWidget):
         self._toolMachine.toolExecutionCancelled.connect(
             self._onToolExecutionCancelled)
         self._toolMachine.agentContinuationReady.connect(self._onContinueAgent)
+
+        # Listen for strategy changes from preferences
+
+        settings.toolExecutionStrategyChanged.connect(
+            self._onToolExecutionStrategyChanged)
 
         # Code review diff collection (staged/local changes)
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
@@ -999,20 +1005,8 @@ class AiChatWidget(QWidget):
 
         return provider.uiTools() or []
 
-    def _getToolExecutionStrategy(self):
-        """Get the tool execution strategy from settings.
-        
-        Returns the appropriate ToolExecutionStrategy based on the setting:
-        - 0: DefaultStrategy (auto-run READ_ONLY only)
-        - 1: AggressiveStrategy (auto-run READ_ONLY + WRITE)
-        - 2: SafeStrategy (confirm all tools)
-        - 3: AllAutoStrategy (auto-run all tools without confirmation)
-        
-        Defaults to DefaultStrategy if setting is invalid or not found.
-        """
-        settings = ApplicationBase.instance().settings()
-        strategyValue = settings.toolExecutionStrategy()
-
+    def _createStrategy(self, strategyValue: int):
+        """Create the appropriate strategy instance from value."""
         if strategyValue == 1:
             return AggressiveStrategy()
         if strategyValue == 2:
@@ -1020,6 +1014,11 @@ class AiChatWidget(QWidget):
         if strategyValue == 3:
             return AllAutoStrategy()
         return DefaultStrategy()
+
+    def _onToolExecutionStrategyChanged(self, strategyValue: int):
+        """Handle tool execution strategy change and update the machine."""
+        strategy = self._createStrategy(strategyValue)
+        self._toolMachine.setStrategy(strategy)
 
     def _toolByName(self, toolName: str) -> Optional[AgentTool]:
         if not toolName:

@@ -66,6 +66,7 @@ class Settings(QSettings):
     colorSchemaModeChanged = Signal(int)
     ignoreCommentLineChanged = Signal(bool)
     useNtpTimeChanged = Signal(bool)
+    toolExecutionStrategyChanged = Signal(int)
 
     def __init__(self, parent=None, testing=False):
         super().__init__(
@@ -921,5 +922,9 @@ class Settings(QSettings):
             strategy: 0=DefaultStrategy, 1=AggressiveStrategy, 2=SafeStrategy, 3=AllAutoStrategy
         """
         self.beginGroup("llm")
-        self.setValue("toolExecutionStrategy", strategy)
+        oldStrategy = self.value("toolExecutionStrategy", 0, type=int)
+        if oldStrategy != strategy:
+            self.setValue("toolExecutionStrategy", strategy)
         self.endGroup()
+        if oldStrategy != strategy:
+            self.toolExecutionStrategyChanged.emit(strategy)
