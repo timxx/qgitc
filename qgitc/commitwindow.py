@@ -1289,6 +1289,8 @@ class CommitWindow(StateWindow):
             return
 
         self._outputBlocks.clear()
+        if self.ui.cbAmend.isChecked():
+            self.ui.cbAmend.setChecked(False)
         self.reloadLocalChanges()
         self._updateCommitStatus(False)
         ApplicationBase.instance().postEvent(

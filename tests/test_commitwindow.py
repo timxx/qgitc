@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.cancelevent import CancelEvent
-from qgitc.events import CodeReviewEvent
+from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent
 from qgitc.gitutils import Git
 from qgitc.llm import AiModelBase
 from qgitc.windowtype import WindowType
@@ -289,6 +289,24 @@ class TestCommitWindow(TestBase):
         with patch.object(self.window.ui.stackedWidget, "setCurrentWidget") as mock_set_widget:
             self.window._onCommitActionClicked()
             mock_set_widget.assert_called_once_with(self.window.ui.pageMessage)
+
+    def testCommitFinishedClearsAmend(self):
+        self.waitForLoaded()
+
+        self.window.ui.cbAmend.setChecked(True)
+        self.assertTrue(self.window.ui.cbAmend.isChecked())
+
+        with patch.object(self.window, "reloadLocalChanges") as mock_reload, \
+                patch.object(self.window, "_updateCommitStatus") as mock_update_status, \
+                patch.object(self.app, "postEvent") as mock_post_event:
+            self.window._onCommitFinished()
+
+            self.assertFalse(self.window.ui.cbAmend.isChecked())
+            mock_reload.assert_called_once()
+            mock_update_status.assert_called_once_with(False)
+            self.assertEqual(mock_post_event.call_count, 1)
+            posted_event = mock_post_event.call_args[0][1]
+            self.assertIsInstance(posted_event, LocalChangesCommittedEvent)
 
     def testCodeReview(self):
         self.waitForLoaded()
