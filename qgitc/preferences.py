@@ -523,6 +523,8 @@ class Preferences(QDialog):
 
         self.ui.sbMaxTokens.setValue(self.settings.llmMaxTokens())
         self.ui.sbTemperature.setValue(self.settings.llmTemperature())
+        self.ui.cbEnableReasoning.setChecked(
+            self.settings.llmReasoningEnabled())
 
         self.ui.cbModels.currentIndexChanged.connect(self._onModelChanged)
         self._onModelChanged(self.ui.cbModels.currentIndex())
@@ -602,6 +604,8 @@ class Preferences(QDialog):
 
         self.settings.setLlmMaxTokens(self.ui.sbMaxTokens.value())
         self.settings.setLlmTemperature(self.ui.sbTemperature.value())
+        self.settings.setLlmReasoningEnabled(
+            self.ui.cbEnableReasoning.isChecked())
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):

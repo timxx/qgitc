@@ -1120,23 +1120,26 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_16">
+           <layout class="QHBoxLayout" name="horizontalLayout_reasoning">
             <item>
-             <widget class="QLabel" name="label_22">
+             <widget class="QCheckBox" name="cbEnableReasoning">
               <property name="text">
-               <string>Files to Exclude:</string>
+               <string>Enable reasoning</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="leExcludedFiles">
-              <property name="toolTip">
-               <string>Specify the file extensions to exclude for code review or generate commit message</string>
+             <spacer name="horizontalSpacer_reasoning">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
               </property>
-              <property name="placeholderText">
-               <string>e.g. .ts, .ui</string>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
               </property>
-             </widget>
+             </spacer>
             </item>
            </layout>
           </item>
@@ -1171,6 +1174,27 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
                </size>
               </property>
              </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_16">
+            <item>
+             <widget class="QLabel" name="label_22">
+              <property name="text">
+               <string>Files to Exclude:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="leExcludedFiles">
+              <property name="toolTip">
+               <string>Specify the file extensions to exclude for code review or generate commit message</string>
+              </property>
+              <property name="placeholderText">
+               <string>e.g. .ts, .ui</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>

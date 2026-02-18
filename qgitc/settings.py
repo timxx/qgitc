@@ -377,6 +377,17 @@ class Settings(QSettings):
         self.setValue("temperature", temperature)
         self.endGroup()
 
+    def llmReasoningEnabled(self):
+        self.beginGroup("llm")
+        value = self.value("reasoningEnabled", True, type=bool)
+        self.endGroup()
+        return value
+
+    def setLlmReasoningEnabled(self, enabled: bool):
+        self.beginGroup("llm")
+        self.setValue("reasoningEnabled", enabled)
+        self.endGroup()
+
     def isCompositeMode(self):
         return self.value("compositeMode", False, type=bool)
 

@@ -756,6 +756,7 @@ class AiChatWidget(QWidget):
         params = AiParameters()
         params.prompt = ""
         params.temperature = 0.1
+        params.reasoning = ApplicationBase.instance().settings().llmReasoningEnabled()
         params.chat_mode = AiChatMode.Agent
         params.model = self._contextPanel.currentModelId()
         params.tools = self._availableOpenAiTools()
@@ -781,6 +782,7 @@ class AiChatWidget(QWidget):
         params.temperature = settings.llmTemperature()
         params.chat_mode = chatMode
         params.model = self._contextPanel.currentModelId()
+        params.reasoning = settings.llmReasoningEnabled()
 
         self._disableAutoScroll = False
 
