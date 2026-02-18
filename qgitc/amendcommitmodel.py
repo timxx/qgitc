@@ -29,6 +29,7 @@ class AmendCommitListModel(QAbstractListModel):
         super().__init__(parent)
         self._commits = []
         self._showRepoName = True
+        self._allowUncheck = False
 
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
@@ -94,8 +95,10 @@ class AmendCommitListModel(QAbstractListModel):
     def flags(self, index: QModelIndex):
         if not index.isValid():
             return Qt.NoItemFlags
-        return (Qt.ItemIsEnabled | Qt.ItemIsSelectable |
-                Qt.ItemIsUserCheckable)
+        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if self._allowUncheck:
+            flags |= Qt.ItemIsUserCheckable
+        return flags
 
     def clear(self):
         if not self._commits:
