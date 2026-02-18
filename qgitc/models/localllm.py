@@ -92,7 +92,7 @@ class LocalLLM(ChatGPTModel):
 
     @property
     def name(self):
-        return self.tr("Local LLM")
+        return self.tr("OpenAI Compatible")
 
     def isLocal(self):
         return True

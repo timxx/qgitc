@@ -934,7 +934,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
        <item>
         <widget class="QGroupBox" name="groupBox_13">
          <property name="title">
-          <string>Local LLM</string>
+          <string>OpenAI Compatible Server</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_12">
           <item>

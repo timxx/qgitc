@@ -309,7 +309,7 @@ class Settings(QSettings):
 
     def localLlmServer(self):
         self.beginGroup("llm")
-        value = self.value("localServer", "http://127.0.0.1:23719/v1")
+        value = self.value("localServer", "http://127.0.0.1:11434/v1")
         self.endGroup()
         return value
 
