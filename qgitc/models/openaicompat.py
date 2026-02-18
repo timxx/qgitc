@@ -6,8 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.llm import AiModelFactory
-from qgitc.models.chatgpt import ChatGPTModel
+from qgitc.llm import AiModelBase, AiModelFactory, AiParameters, AiRole
 
 
 class OpenAICompatModelsFetcher(QObject):
@@ -70,7 +69,7 @@ class OpenAICompatModelsFetcher(QObject):
 
 
 @AiModelFactory.register()
-class LocalLLM(ChatGPTModel):
+class LocalLLM(AiModelBase):
 
     _models = {}
 
@@ -84,7 +83,8 @@ class LocalLLM(ChatGPTModel):
         if url not in LocalLLM._models:
             LocalLLM._models[url] = []
             authToken = settings.localLlmAuth()
-            self.nameFetcher = OpenAICompatModelsFetcher(self.url_base, authToken)
+            self.nameFetcher = OpenAICompatModelsFetcher(
+                self.url_base, authToken)
             self.nameFetcher.finished.connect(self._onFetchFinished)
             self.nameFetcher.start()
         else:
@@ -116,3 +116,47 @@ class LocalLLM(ChatGPTModel):
     def authorization(self):
         settings = ApplicationBase.instance().settings()
         return settings.localLlmAuth()
+
+    def queryAsync(self, params: AiParameters):
+        payload = {
+            "frequency_penalty": 0,
+            "max_tokens": params.max_tokens or 4096,
+            "model": params.model or self.modelId or "gpt-4.1",
+            "presence_penalty": 0,
+            "temperature": params.temperature,
+            "stream": params.stream
+        }
+
+        if params.tools:
+            payload["tools"] = params.tools
+            payload["tool_choice"] = params.tool_choice or "auto"
+
+        if params.continue_only:
+            payload["messages"] = self.toOpenAiMessages()
+        elif params.fill_point is not None:
+            payload["prefix"] = params.prompt[:params.fill_point]
+            payload["suffix"] = params.prompt[params.fill_point:]
+            if params.language is not None and params.language != "None":
+                payload["language"] = params.language
+            self.addHistory(AiRole.User, params.prompt)
+        else:
+            if params.sys_prompt:
+                self.addHistory(AiRole.System, params.sys_prompt)
+            self.addHistory(AiRole.User, params.prompt)
+
+            payload["messages"] = self.toOpenAiMessages()
+
+        if params.top_p is not None:
+            payload["top_p"] = params.top_p
+
+        self._doQuery(payload, params.stream)
+
+    def _doQuery(self, payload, stream=True):
+        headers = {
+            b"Content-Type": b"application/json; charset=utf-8"
+        }
+
+        if self.authorization:
+            headers[b"Authorization"] = self.authorization.encode()
+
+        self.post(self.url, headers=headers, data=payload, stream=stream)
