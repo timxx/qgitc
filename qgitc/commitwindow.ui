@@ -477,6 +477,29 @@
               </widget>
              </item>
              <item>
+              <widget class="QLabel" name="lbAmendHint">
+               <property name="visible">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string>Amending these commits (uncheck to skip):</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QListView" name="lvAmendCommits">
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>120</height>
+                </size>
+               </property>
+               <property name="visible">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
               <layout class="QHBoxLayout" name="horizontalLayout">
                <item>
                 <widget class="QCheckBox" name="cbAmend">

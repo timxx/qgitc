@@ -44,6 +44,7 @@ from PySide6.QtWidgets import (
 from qgitc.actionrunner import ActionRunner
 from qgitc.aichatdockwidget import AiChatDockWidget
 from qgitc.aicommitmessage import AiCommitMessage
+from qgitc.amendcommitmodel import AmendCommitInfo, AmendCommitListModel
 from qgitc.applicationbase import ApplicationBase
 from qgitc.cancelevent import CancelEvent
 from qgitc.colorediconlabel import ColoredIconLabel
@@ -218,6 +219,13 @@ class CommitWindow(StateWindow):
         self._stagedModel.rowsInserted.connect(self._onStagedFilesChanged)
         self._stagedModel.rowsRemoved.connect(self._onStagedFilesChanged)
 
+        # Setup amend commits list
+        self._amendCommitsModel = AmendCommitListModel(self)
+        self.ui.lvAmendCommits.setModel(self._amendCommitsModel)
+        self.ui.lvAmendCommits.setEditTriggers(
+            QAbstractItemView.NoEditTriggers)
+        self._updateAmendRepoLabelSetting()
+
         self.ui.btnCommit.setEnabled(False)
         self.ui.btnGenMessage.setEnabled(False)
 
@@ -261,6 +269,10 @@ class CommitWindow(StateWindow):
         self._diffSpinnerDelayTimer = QTimer(self)
         self._diffSpinnerDelayTimer.setSingleShot(True)
         self._diffSpinnerDelayTimer.timeout.connect(self.ui.spinnerDiff.start)
+
+        self._amendUpdateTimer = QTimer(self)
+        self._amendUpdateTimer.setSingleShot(True)
+        self._amendUpdateTimer.timeout.connect(self._detectAmendCommits)
 
         self.ui.teMessage.setPlaceholderText(
             self.tr("Enter commit message here..."))
@@ -445,6 +457,8 @@ class CommitWindow(StateWindow):
         if not submodules:
             return
 
+        self._updateAmendRepoLabelSetting()
+
         if self._statusFetcher.isRunning():
             self._statusFetcher.addTask(submodules)
         else:
@@ -460,6 +474,8 @@ class CommitWindow(StateWindow):
                 self._stagedModel.addFile(file, repoDir, status[0], oldFile)
             if status[1] != " ":
                 self._filesModel.addFile(file, repoDir, status[1])
+
+        self._updateAmendCommitsIfNeeded()
 
     def _onBranchInfoAvailable(self, repoDir: str, branch: str):
         self._repoBranch.setdefault(repoDir, branch)
@@ -484,6 +500,8 @@ class CommitWindow(StateWindow):
                     repoDir = "<main>"
                 tooltip += "\n  {}: {}".format(repoDir, branch)
             self._branchMessage.setToolTip(tooltip)
+
+        self._updateAmendCommitsIfNeeded()
 
     def _onSelectFileChanged(self, current: QModelIndex, previous: QModelIndex):
         self.ui.viewer.clear()
@@ -641,9 +659,15 @@ class CommitWindow(StateWindow):
                 index, StatusFileListModel.RepoDirRole)
             submodules.setdefault(repoDir, (message, amend, actions, date))
 
-        # amend to main repo
-        if not submodules:
-            assert (amend)
+        # If amending and no staged files, use selected amend commits
+        if amend and self._stagedModel.rowCount() == 0:
+            amendCommits = self._amendCommitsModel.getAmendCommits()
+            for commitInfo in amendCommits:
+                submodules[commitInfo.repoDir] = (
+                    message, amend, actions, date)
+
+        # Fallback: amend to main repo if nothing else
+        if amend and not submodules:
             submodules[None] = (message, amend, actions, date)
 
         self.ui.progressBar.setRange(
@@ -862,6 +886,7 @@ class CommitWindow(StateWindow):
     def _onNonUITaskFinished(self):
         self._blockUI(False)
         self.ui.spinnerUnstaged.stop()
+        self._updateAmendCommitsIfNeeded()
 
     def _blockUI(self, blocked=True):
         self.ui.tbUnstage.setEnabled(not blocked)
@@ -993,6 +1018,7 @@ class CommitWindow(StateWindow):
         self._statusFetcher.cancel()
         self.clear()
         self._loadLocalChanges()
+        self._updateAmendCommitsIfNeeded()
 
     def _setupWDMenu(self):
         self._wdMenu = QMenu(self)
@@ -1977,26 +2003,91 @@ class CommitWindow(StateWindow):
 
     def _onAmendToggled(self, checked: bool):
         self._updateCommitButtonState()
+        self._updateAmendCommitsIfNeeded()
+
+        # Show/hide the amend commits list
+        self.ui.lvAmendCommits.setVisible(checked)
+        self.ui.lbAmendHint.setVisible(checked)
+
         if not checked:
+            self._amendCommitsModel.clear()
             return
 
-        if not self._canUpdateMessage():
-            return
+        # Detect commits to amend
+        self._updateAmendCommitsIfNeeded()
 
+    def _detectAmendCommits(self):
+        """Detect which commits will be amended based on staged files or HEAD"""
+        commits = []
+
+        # Collect repos that have staged files
         submoduleFiles = self._collectModelFiles(self._stagedModel)
-        if not submoduleFiles:
-            return
+        hasStagedFiles = bool(submoduleFiles)
 
-        if self._submoduleExecutor.isRunning():
-            logger.info(
-                "Submodule executor is running, ignore get last commit message")
-            return
+        if submoduleFiles:
+            # If there are staged files, detect commits from those repos
+            for repoDir in submoduleFiles.keys():
+                fullPath = fullRepoDir(repoDir)
+                commitInfo = self._getCommitInfo("HEAD", fullPath, repoDir)
+                if commitInfo:
+                    commits.append(commitInfo)
+        else:
+            # No staged files - detect from HEAD of main repo
+            mainCommitInfo = self._getCommitInfo("HEAD", Git.REPO_DIR, None)
+            if not mainCommitInfo:
+                return
 
-        # get the last commit message
-        self._blockUI()
-        self.ui.spinnerUnstaged.start()
-        self._submoduleExecutor.submit(
-            list(submoduleFiles.keys()), self._doGetMessage)
+            commits.append(mainCommitInfo)
+            repoDirs = {mainCommitInfo.repoDir}
+
+            # Check submodules for commits with the same message
+            app = ApplicationBase.instance()
+            if app.submodules:
+                for submodule in app.submodules:
+                    if not submodule or submodule == ".":
+                        continue
+                    if submodule in repoDirs:
+                        continue
+                    subRepoDir = fullRepoDir(submodule)
+                    subCommitInfo = self._getCommitInfo(
+                        "HEAD", subRepoDir, submodule)
+
+                    # Include if commit message matches
+                    if subCommitInfo and subCommitInfo.subject == mainCommitInfo.subject:
+                        repoDirs.add(subCommitInfo.repoDir)
+                        commits.append(subCommitInfo)
+
+        allowUncheck = not hasStagedFiles and len(commits) > 1
+        self._amendCommitsModel.setAllowUncheck(allowUncheck)
+        self._amendCommitsModel.setCommits(commits)
+
+        # Get the last commit message (from the first repo) when allowed
+        if (commits and self._canUpdateMessage() and self._submoduleExecutor
+                and not self._submoduleExecutor.isRunning()):
+            self._blockUI()
+            self.ui.spinnerUnstaged.start()
+            self._submoduleExecutor.submit(
+                [commits[0].repoDir], self._doGetMessage)
+
+    def _normalizeRepoDirDisplay(self, repoDir: str):
+        if not repoDir or repoDir == ".":
+            return None
+        return repoDir
+
+    def _getCommitInfo(self, sha1: str, repoDir: str, repoDirDisplay: str) -> AmendCommitInfo:
+        """Get commit information for a specific commit"""
+        summary = Git.commitSummary(sha1, repoDir)
+        if not summary:
+            return None
+
+        return AmendCommitInfo(
+            repoDir=self._normalizeRepoDirDisplay(repoDirDisplay),
+            sha1=summary["sha1"],
+            subject=summary["subject"],
+            author=summary["author"],
+            date=summary["date"],
+            willAmend=True
+        )
 
     def _canUpdateMessage(self):
         doc = self.ui.teMessage.document()
@@ -2069,6 +2160,24 @@ class CommitWindow(StateWindow):
         templateFile = settings.defaultTemplateFile()
         self._infoFetcher.submit({None: templateFile}, self._fetchRepoInfo)
         self._loadLocalChanges()
+        self._updateAmendRepoLabelSetting()
+        self._updateAmendCommitsIfNeeded()
+
+    def _updateAmendCommitsIfNeeded(self):
+        if not self.ui.cbAmend.isChecked():
+            if self._amendUpdateTimer.isActive():
+                self._amendUpdateTimer.stop()
+            return
+
+        # debounce frequent updates during status changes
+        self._amendUpdateTimer.start(150)
+
+    def _updateAmendRepoLabelSetting(self):
+        self._amendCommitsModel.setShowRepoName(self._hasSubmodules())
+
+    def _hasSubmodules(self):
+        app = ApplicationBase.instance()
+        return len(app.submodules) > 1
 
     def _onMessageChanged(self):
         if self.ui.btnCancelGen.isVisible():
