@@ -48,7 +48,7 @@ class AiModelProvider():
         AiModelDescriptor(
             modelKey="LocalLLM",
             displayName="OpenAI Compatible",
-            modulePath="qgitc.models.localllm",
+            modulePath="qgitc.models.openaicompat",
             localProvider=True,
         ),
     ]

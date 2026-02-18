@@ -10,7 +10,7 @@ from qgitc.llm import AiModelFactory
 from qgitc.models.chatgpt import ChatGPTModel
 
 
-class LocalLLMNameFetcher(QObject):
+class OpenAICompatModelsFetcher(QObject):
 
     finished = Signal()
 
@@ -84,7 +84,7 @@ class LocalLLM(ChatGPTModel):
         if url not in LocalLLM._models:
             LocalLLM._models[url] = []
             authToken = settings.localLlmAuth()
-            self.nameFetcher = LocalLLMNameFetcher(self.url_base, authToken)
+            self.nameFetcher = OpenAICompatModelsFetcher(self.url_base, authToken)
             self.nameFetcher.finished.connect(self._onFetchFinished)
             self.nameFetcher.start()
         else:
