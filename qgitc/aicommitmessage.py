@@ -166,6 +166,7 @@ class AiCommitMessage(QObject):
         self._diffs.clear()
         self._message = ""
         self._executor.submit(repoData, self._fetchCommitInfo)
+        logger.debug("Begin fetching commit info for AI commit message generation")
 
     def refine(self, message: str):
         if not message:
@@ -282,7 +283,7 @@ class AiCommitMessage(QObject):
                 code_changes="\n".join(self._diffs)
             )
 
-        logger.debug("AI commit message prompt: %s", params.prompt)
+        logger.debug("Begin AI commit message generation")
 
         self._aiModel = AiModelProvider.createModel(self)
         self._aiModel.responseAvailable.connect(self._onAiResponseAvailable)

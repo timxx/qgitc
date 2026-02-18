@@ -1542,8 +1542,8 @@ class CommitWindow(StateWindow):
 
     def _onAiMessageAvailable(self, message: str):
         self._restoreAiMessageButtons()
-        logger.debug("AI message: %s", message)
         if not message:
+            logger.debug("No message generated")
             return
 
         oldMessage = self.ui.teMessage.toPlainText().strip()
@@ -1554,6 +1554,7 @@ class CommitWindow(StateWindow):
 
     def _onAiMessageError(self, message: str):
         self._restoreAiMessageButtons()
+        logger.debug("AI message error: %s", message)
         QMessageBox.critical(
             self,
             self.tr("AI Message Generation Error"),
