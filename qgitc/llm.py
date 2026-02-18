@@ -285,6 +285,8 @@ class AiModelBase(QObject):
         pass
 
     def post(self, url: str, headers: Dict[bytes, bytes] = None, data: Dict[str, any] = None, stream=True):
+        logger.debug("post: url=%s, stream=%s, has_data=%s",
+                     url, stream, bool(data))
         self.requestInterruption()
         self._isStreaming = stream
         if stream:
@@ -295,11 +297,14 @@ class AiModelBase(QObject):
         self._initReply(reply)
 
     def get(self, url: str, headers: Dict[bytes, bytes] = None):
+        logger.debug("get: url=%s", url)
         self.requestInterruption()
         _reply = AiModelBase.request(url, headers=headers, post=False)
         self._initReply(_reply)
 
     def _initReply(self, reply: QNetworkReply):
+        logger.debug("_initReply: initializing reply, streaming=%s, responses_api=%s",
+                     self._isStreaming, self._isResponsesApiEnabled)
         self._data = b""
         self._firstDelta = True
 
@@ -315,6 +320,7 @@ class AiModelBase(QObject):
         self._responsesToolCalls = []
 
         if not reply:
+            logger.debug("_initReply: reply is None")
             return
 
         self._reply = reply
@@ -350,13 +356,16 @@ class AiModelBase(QObject):
         self._handleData(data.data())
 
     def _onError(self, code: QNetworkReply.NetworkError):
+        logger.debug("_onError: network error code=%s", code)
         self._handleError(code)
 
     def _onSslErrors(self, errors):
         reply: QNetworkReply = self.sender()
         reply.ignoreSslErrors()
+        logger.debug("_onSslErrors: SSL errors ignored: %s", errors)
 
     def _onFinished(self):
+        logger.debug("_onFinished: request completed")
         self._handleFinished()
         self._reply.deleteLater()
         self._reply = None
@@ -432,6 +441,7 @@ class AiModelBase(QObject):
         if not self._reply:
             return
 
+        logger.debug("requestInterruption: aborting current request")
         self._reply.abort()
 
     def handleStreamResponse(self, line: bytes):
@@ -450,11 +460,13 @@ class AiModelBase(QObject):
             return
 
         if line == b"data: [DONE]":
+            logger.debug("_handleStreamResponseChat: received [DONE]")
             return
 
         data: dict = json.loads(line[5:].decode("utf-8"))
         choices: list = data.get("choices")
         if not choices:
+            logger.debug("_handleStreamResponseChat: no choices in response")
             return
 
         # OpenAI can stream multiple choices concurrently.
@@ -517,6 +529,10 @@ class AiModelBase(QObject):
             if content or reasoning:
                 role = self._choiceRoles.get(choiceIndex, AiRole.Assistant)
                 self._emitResponse(content, reasoning, role=role)
+
+            if finishReason:
+                logger.debug(
+                    "_handleStreamResponseChat: choice=%d signaled finish, reason=%s", choiceIndex, finishReason)
 
             # If model signaled completion for this choice, commit immediately.
             if finishReason in ("stop", "tool_calls", "content_filter"):
