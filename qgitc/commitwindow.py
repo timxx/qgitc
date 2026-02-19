@@ -151,6 +151,14 @@ class FileDeleteEvent(QEvent):
         self.error = error
 
 
+class AmendCommitDetectedEvent(QEvent):
+    Type = QEvent.User + 9
+
+    def __init__(self, commitInfo: AmendCommitInfo):
+        super().__init__(QEvent.Type(AmendCommitDetectedEvent.Type))
+        self.commitInfo = commitInfo
+
+
 class CommitWindow(StateWindow):
 
     def __init__(self, parent=None):
@@ -280,6 +288,10 @@ class CommitWindow(StateWindow):
             self._onMessageChanged)
 
         self.ui.btnCommit.clicked.connect(self._onCommitClicked)
+
+        self._amendDetectExecutor = SubmoduleExecutor(self)
+        self._amendDetectExecutor.finished.connect(self._onAmendDetectFinished)
+        self._amendDetectionResults: List[AmendCommitInfo] = []
 
         # no UI tasks
         self._submoduleExecutor = SubmoduleExecutor(self)
@@ -888,6 +900,32 @@ class CommitWindow(StateWindow):
         self.ui.spinnerUnstaged.stop()
         self._updateAmendCommitsIfNeeded()
 
+    def _onAmendDetectFinished(self):
+        """Called when amend commit detection completes"""
+        commits = self._amendDetectionResults
+        mainCommit = None
+        if commits:
+            for commit in commits:
+                if not commit.repoDir or commit.repoDir == ".":
+                    mainCommit = commit
+                    break
+            if not mainCommit:
+                mainCommit = commits[0]
+
+            ApplicationBase.instance().postEvent(
+                self, TemplateReadyEvent(mainCommit.body, True))
+
+        hasStagedFiles = self._stagedModel.rowCount() > 0
+        if not hasStagedFiles and commits:
+            commits = [c for c in commits if c.subject == mainCommit.subject]
+
+        # Determine if unchecking is allowed
+        allowUncheck = not hasStagedFiles and len(commits) > 1
+
+        # Update model with commits
+        self._amendCommitsModel.setAllowUncheck(allowUncheck)
+        self._amendCommitsModel.setCommits(commits)
+
     def _blockUI(self, blocked=True):
         self.ui.tbUnstage.setEnabled(not blocked)
         self.ui.tbUnstageAll.setEnabled(not blocked)
@@ -943,6 +981,10 @@ class CommitWindow(StateWindow):
         if evt.type() == NtpDateTimeReadyEvent.Type:
             self._handleNtpDateTimeReadyEvent(
                 evt.ntpDateTime, evt.localDateTime)
+            return True
+
+        if evt.type() == AmendCommitDetectedEvent.Type:
+            self._handleAmendCommitDetectedEvent(evt.commitInfo)
             return True
 
         return super().event(evt)
@@ -1013,6 +1055,11 @@ class CommitWindow(StateWindow):
         if not out and not error:
             # add title only
             self._updateBlockOutput(repoName, "", False, action)
+
+    def _handleAmendCommitDetectedEvent(self, commitInfo: AmendCommitInfo):
+        """Handle single commit detected from worker thread"""
+        if commitInfo:
+            self._amendDetectionResults.append(commitInfo)
 
     def reloadLocalChanges(self):
         self._statusFetcher.cancel()
@@ -1639,6 +1686,7 @@ class CommitWindow(StateWindow):
 
     def cancel(self, force=False):
         self._aiMessage.cancel(force)
+        self._amendDetectExecutor.cancel(force)
         self._submoduleExecutor.cancel(force)
         self._commitExecutor.cancel(force)
         self._statusFetcher.cancel(force)
@@ -2018,56 +2066,35 @@ class CommitWindow(StateWindow):
 
     def _detectAmendCommits(self):
         """Detect which commits will be amended based on staged files or HEAD"""
-        commits = []
+        # Cancel any running detection
+        if self._amendDetectExecutor.isRunning():
+            self._amendDetectExecutor.cancel()
 
         # Collect repos that have staged files
         submoduleFiles = self._collectModelFiles(self._stagedModel)
-        hasStagedFiles = bool(submoduleFiles)
+
+        # Clear previous results
+        self._amendDetectionResults.clear()
 
         if submoduleFiles:
             # If there are staged files, detect commits from those repos
-            for repoDir in submoduleFiles.keys():
-                fullPath = fullRepoDir(repoDir)
-                commitInfo = self._getCommitInfo("HEAD", fullPath, repoDir)
-                if commitInfo:
-                    commits.append(commitInfo)
+            repoDirs = list(submoduleFiles.keys())
         else:
-            # No staged files - detect from HEAD of main repo
-            mainCommitInfo = self._getCommitInfo("HEAD", Git.REPO_DIR, None)
-            if not mainCommitInfo:
-                return
-
-            commits.append(mainCommitInfo)
-            repoDirs = {mainCommitInfo.repoDir}
-
-            # Check submodules for commits with the same message
+            # No staged files - detect from HEAD of main repo + matching submodules
             app = ApplicationBase.instance()
-            if app.submodules:
-                for submodule in app.submodules:
-                    if not submodule or submodule == ".":
-                        continue
-                    if submodule in repoDirs:
-                        continue
-                    subRepoDir = fullRepoDir(submodule)
-                    subCommitInfo = self._getCommitInfo(
-                        "HEAD", subRepoDir, submodule)
+            repoDirs = app.submodules
 
-                    # Include if commit message matches
-                    if subCommitInfo and subCommitInfo.subject == mainCommitInfo.subject:
-                        repoDirs.add(subCommitInfo.repoDir)
-                        commits.append(subCommitInfo)
+        self._amendDetectExecutor.submit(repoDirs, self._doDetectAmendCommits)
 
-        allowUncheck = not hasStagedFiles and len(commits) > 1
-        self._amendCommitsModel.setAllowUncheck(allowUncheck)
-        self._amendCommitsModel.setCommits(commits)
+    def _doDetectAmendCommits(self, submodule: str, userData: any, cancelEvent: CancelEvent):
+        if cancelEvent.isSet():
+            return
 
-        # Get the last commit message (from the first repo) when allowed
-        if (commits and self._canUpdateMessage() and self._submoduleExecutor
-                and not self._submoduleExecutor.isRunning()):
-            self._blockUI()
-            self.ui.spinnerUnstaged.start()
-            self._submoduleExecutor.submit(
-                [commits[0].repoDir], self._doGetMessage)
+        fullPath = fullRepoDir(submodule)
+        commitInfo = self._getCommitInfo("HEAD", fullPath, submodule)
+        if commitInfo and not cancelEvent.isSet():
+            ApplicationBase.instance().postEvent(
+                self, AmendCommitDetectedEvent(commitInfo))
 
     def _normalizeRepoDirDisplay(self, repoDir: str):
         if not repoDir or repoDir == ".":
@@ -2076,7 +2103,7 @@ class CommitWindow(StateWindow):
 
     def _getCommitInfo(self, sha1: str, repoDir: str, repoDirDisplay: str) -> AmendCommitInfo:
         """Get commit information for a specific commit"""
-        summary = Git.commitSummary(sha1, repoDir)
+        summary = Git.commitSummary(sha1, repoDir, includeFullMessage=True)
         if not summary:
             return None
 
@@ -2084,6 +2111,7 @@ class CommitWindow(StateWindow):
             repoDir=self._normalizeRepoDirDisplay(repoDirDisplay),
             sha1=summary["sha1"],
             subject=summary["subject"],
+            body=summary["body"],
             author=summary["author"],
             date=summary["date"],
             willAmend=True
@@ -2101,16 +2129,6 @@ class CommitWindow(StateWindow):
             return True
 
         return False
-
-    def _doGetMessage(self, submodule: str, userData, cancelEvent: CancelEvent):
-        if cancelEvent.isSet():
-            return
-
-        repoDir = fullRepoDir(submodule)
-        message = Git.commitMessage("HEAD", repoDir)
-        if cancelEvent.isSet():
-            return
-        ApplicationBase.instance().postEvent(self, TemplateReadyEvent(message, True))
 
     def _onExternalDiff(self):
         ApplicationBase.instance().trackFeatureUsage("commit.external_diff")

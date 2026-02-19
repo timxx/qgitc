@@ -284,8 +284,10 @@ class Git():
         return data.decode("utf-8").split('\n')
 
     @staticmethod
-    def commitSummary(sha1, repoDir=None):
+    def commitSummary(sha1, repoDir=None, includeFullMessage=False):
         fmt = "%h%x01%s%x01%ad%x01%an%x01%ae"
+        if includeFullMessage:
+            fmt += "%x01%B"
         args = ["show", "-s",
                 "--pretty=format:{0}".format(fmt),
                 "--date=short", sha1]
@@ -296,11 +298,15 @@ class Git():
 
         parts = data.decode("utf-8").split("\x01")
 
-        return {"sha1": parts[0],
-                "subject": parts[1],
-                "date": parts[2],
-                "author": parts[3],
-                "email": parts[4]}
+        summary = {"sha1": parts[0],
+                   "subject": parts[1],
+                   "date": parts[2],
+                   "author": parts[3],
+                   "email": parts[4]}
+        if includeFullMessage:
+            summary["body"] = parts[5].rstrip()
+
+        return summary
 
     @staticmethod
     def abbrevCommit(sha1):

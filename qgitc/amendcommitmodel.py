@@ -15,6 +15,7 @@ class AmendCommitInfo:
     author: str
     date: str
     willAmend: bool = True  # Whether this commit will be amended
+    body: Optional[str] = None
 
 
 class AmendCommitListModel(QAbstractListModel):
