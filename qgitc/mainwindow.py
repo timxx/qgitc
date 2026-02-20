@@ -24,8 +24,6 @@ from qgitc.events import (
 from qgitc.findwidget import FindWidget
 from qgitc.gitutils import Git
 from qgitc.gitview import GitView
-from qgitc.llm import AiModelBase, AiParameters, AiResponse
-from qgitc.llmprovider import AiModelProvider
 from qgitc.logview import LogView
 from qgitc.mainwindowcontextprovider import MainWindowContextProvider
 from qgitc.preferences import Preferences
@@ -35,17 +33,16 @@ from qgitc.ui_mainwindow import Ui_MainWindow
 GIT_LOG_SYSTEM_PROMPT = """You are a Git expert assistant. Convert natural language requests into git log command-line options.
 
 Rules:
-1. Return ONLY the git log options (flags and arguments), no explanations
-2. Use standard git log options like --since, --until, --author, --grep, -n, --oneline, etc.
-3. For date/time queries, use --since and --until with formats like '1 week ago', '2022-01-01', etc.
-4. For limiting results, use -n <number> or --max-count=<number>
-5. For author searches, use --author=<name>
-6. For commit message searches, use --grep=<pattern>
-7. For file filtering, use -- <filepath> at the end
-8. If the request is unclear, return the most reasonable interpretation
-9. If the option contains a space, wrap it in quotes
+1. Use standard git log options like --since, --until, --author, --grep, -n, --oneline, etc.
+2. For date/time queries, use --since and --until with formats like '1 week ago', '2022-01-01', etc.
+3. For limiting results, use -n <number> or --max-count=<number>
+4. For author searches, use --author=<name>
+5. For commit message searches, use --grep=<pattern>
+6. For file filtering, use -- <filepath> at the end
+7. If the request is unclear, return the most reasonable interpretation
+8. If the option contains a space, wrap it in quotes
+9. After generating the options, use the ui_apply_log_filter tool to apply them
 
-Current date: {current_date}
 Current author: {current_author}
 
 Examples:
@@ -56,10 +53,7 @@ Examples:
 - "commits since January" → "--since='2025-09-13'"
 - "last 5 commits with changes to main.py" → "-n 5 -- main.py"
 - "my commits" → "--author='{current_author}'"
-
-User query: {query}
-
-Git log options:"""
+"""
 
 
 class MainWindow(StateWindow):
@@ -86,8 +80,6 @@ class MainWindow(StateWindow):
 
         self._repoTopDir = None
         self._reloadingRepo = False
-
-        self._aiModel: AiModelBase = None
 
         # AI Chat Dock Widget
         self._aiChat: AiChatDockWidget = None
@@ -423,11 +415,30 @@ class MainWindow(StateWindow):
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
 
-        self._cancelAiFilter()
-
         # Check if this is an AI query
         if opts.lower().startswith("@ai "):
-            self._handleAiFilterQuery(opts)
+            # Open AI chat dock if not visible
+            if not self._aiChat.isVisible():
+                self._aiChat.setVisible(True)
+
+            # Extract the query (remove @ai prefix)
+            aiQuery = opts[3:].strip()
+            if not aiQuery:
+                self.showMessage(self.tr("Please provide a query after @ai"))
+                return
+
+            # Build system prompt with current context
+            sysPrompt = GIT_LOG_SYSTEM_PROMPT.format(
+                current_author=Git.userName())
+
+            # Send query to AI chat in Agent mode with only the log filter tool
+            chatWidget = self._aiChat.chatWidget()
+            prompt = aiQuery
+            chatWidget.queryAgent(prompt, sysPrompt=sysPrompt, toolNames=[
+                                  "ui_apply_log_filter"])
+
+            # Track usage
+            ApplicationBase.instance().trackFeatureUsage("ai_log_filter")
             return
 
         # Regular git log filter processing
@@ -634,7 +645,9 @@ class MainWindow(StateWindow):
         self.__onOptsReturnPressed()
 
     def setFilterOptions(self, options: str):
-        self.ui.leOpts.setText(options)
+        leOpts = self.ui.leOpts
+        leOpts.selectAll()
+        leOpts.insert(options)
         self.__onOptsReturnPressed()
 
     def getFilterArgs(self):
@@ -748,89 +761,6 @@ class MainWindow(StateWindow):
 
     def cancel(self, force=False):
         self._delayTimer.stop()
-
-        # Cancel AI processing if active
-        if self._aiModel and self._aiModel.isRunning():
-            self._aiModel.responseAvailable.disconnect(
-                self._onAiFilterResponse)
-            self._aiModel.serviceUnavailable.disconnect(
-                self._onAiServiceUnavailable)
-            self._aiModel.finished.disconnect(self._onAiFilterFinished)
-            self._aiModel.requestInterruption()
-            self._aiModel = None
-
-    def _handleAiFilterQuery(self, query: str):
-        """Handle AI query for git log filtering"""
-        self.showMessage(self.tr("Processing AI query..."))
-
-        # remove @ai prefix
-        aiQuery = query[3:].strip()
-
-        self._aiModel = AiModelProvider.createModel(self)
-        self._aiModel.responseAvailable.connect(self._onAiFilterResponse)
-        self._aiModel.serviceUnavailable.connect(self._onAiServiceUnavailable)
-        self._aiModel.finished.connect(self._onAiFilterFinished)
-
-        params = AiParameters()
-        params.sys_prompt = GIT_LOG_SYSTEM_PROMPT.format(
-            current_date=datetime.now().strftime("%Y-%m-%d"),
-            current_author=Git.userName(),
-            query=aiQuery)
-        params.prompt = aiQuery
-        params.temperature = 0.1
-        params.max_tokens = 512
-        params.stream = False
-        params.reasoning = False
-
-        self._aiModel.queryAsync(params)
-
-        ApplicationBase.instance().trackFeatureUsage("ai_log_filter")
-
-    def _onAiFilterResponse(self, response: AiResponse):
-        """Handle AI response for filter options"""
-        if response.message:
-            # Clean up the response
-            filterOptions = response.message.strip()
-
-            # Remove any markdown formatting
-            if filterOptions.startswith("```"):
-                lines = filterOptions.split('\n')
-                filterOptions = '\n'.join(
-                    lines[1:-1] if len(lines) > 2 else lines[1:])
-
-            filterOptions = filterOptions.strip()
-
-            # Apply the AI-generated filter options
-            if filterOptions:
-                leOpts = self.ui.leOpts
-                leOpts.selectAll()
-                leOpts.insert(filterOptions)
-                self.filterOpts(filterOptions, self.ui.gitViewA)
-                self.filterOpts(filterOptions, self.gitViewB)
-                self.showMessage(
-                    self.tr("Applied AI-generated filter: {0}").format(filterOptions))
-            else:
-                self.showMessage(
-                    self.tr("AI could not generate valid filter options"))
-
-    def _onAiServiceUnavailable(self):
-        QMessageBox.warning(
-            self, self.windowTitle(),
-            self.tr("AI service is currently unavailable. Please check your settings or try again later."))
-
-    def _onAiFilterFinished(self):
-        self._aiModel = None
-
-    def _cancelAiFilter(self):
-        """Cancel any ongoing AI filter processing"""
-        if self._aiModel:
-            self._aiModel.responseAvailable.disconnect(
-                self._onAiFilterResponse)
-            self._aiModel.serviceUnavailable.disconnect(
-                self._onAiServiceUnavailable)
-            self._aiModel.finished.disconnect(self._onAiFilterFinished)
-            self._aiModel.requestInterruption()
-            self._aiModel = None
 
     def _setupRepoPathInput(self):
         # Load recent repositories from settings

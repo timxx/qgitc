@@ -27,6 +27,19 @@ class UiSwitchToCommitParams(BaseModel):
     )
 
 
+class UiApplyLogFilterParams(BaseModel):
+    """Parameters for ui_apply_log_filter."""
+
+    options: str = Field(
+        ...,
+        description=(
+            "Git log filter options to apply (e.g., '-n 10', '--since=\"1 week ago\"', '--author=John', '--grep=bug'). "
+            "Multiple options can be combined with spaces. "
+            "For file filtering, use '-- <filepath>' at the end."
+        ),
+    )
+
+
 class MainWindowContextProvider(AiChatContextProvider):
     """Context provider for the embedded AI chat inside MainWindow."""
 
@@ -60,6 +73,16 @@ class MainWindowContextProvider(AiChatContextProvider):
                     ),
                     toolType=ToolType.READ_ONLY,
                     modeClass=UiSwitchToCommitParams,
+                ),
+                createToolFromModel(
+                    name="ui_apply_log_filter",
+                    description=(
+                        "Apply git log filter options to the main window's log view. "
+                        "Use standard git log options like --since, --until, --author, --grep, -n, etc. "
+                        "This updates the visible commits in the log view based on the filter."
+                    ),
+                    toolType=ToolType.READ_ONLY,
+                    modeClass=UiApplyLogFilterParams,
                 ),
             ]
         return self._uiToolsCache
@@ -95,6 +118,21 @@ class MainWindowContextProvider(AiChatContextProvider):
                 return True, f"Jump scheduled for {sha1} (logs are loading)."
 
             return True, f"Jumped to {sha1}."
+
+        elif toolName == "ui_apply_log_filter":
+            try:
+                validated = UiApplyLogFilterParams(**(params or {}))
+            except ValidationError as e:
+                return False, f"Invalid parameters: {e}"
+
+            options = validated.options.strip()
+            if not options:
+                return False, "Missing filter options."
+
+            # Apply filter to main window
+            self._mainWindow.setFilterOptions(options)
+
+            return True, f"Applied git log filter: {options}"
 
         return super().executeUiTool(toolName, params)
 

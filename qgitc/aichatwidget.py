@@ -364,6 +364,7 @@ class AiChatWidget(QWidget):
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
         self._codeReviewDiffs: List[str] = []
         self._injectedContext: str = None
+        self._restrictedToolNames: Optional[List[str]] = None
 
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
@@ -400,6 +401,35 @@ class AiChatWidget(QWidget):
         if self.isGenerating():
             return True
         return self._toolMachine.taskInProgress()
+
+    def queryAgent(self, prompt: str, contextText: str = None, sysPrompt: str = None, toolNames: List[str] = None):
+        """Send a query to the AI chat in Agent mode.
+
+        This creates a new conversation if the current one is not empty,
+        and sends the prompt in Agent mode which enables tool calls.
+
+        Args:
+            prompt: The user prompt to send
+            contextText: Optional context text to inject into the conversation
+            sysPrompt: Optional system prompt to use for this request
+            toolNames: Optional list of tool names to restrict to (if None, all tools are available)
+        """
+        self._waitForInitialization()
+
+        # Create a new conversation if current one is not empty
+        curHistory = self._historyPanel.currentHistory()
+        if not curHistory or curHistory.messages:
+            self._createNewConversation()
+
+        # Set context if provided
+        if contextText:
+            self._injectedContext = contextText
+
+        # Set tool restrictions if provided
+        self._restrictedToolNames = toolNames
+
+        # Send the request in Agent mode
+        self._doRequest(prompt, AiChatMode.Agent, sysPrompt=sysPrompt)
 
     def _setupHistoryPanel(self):
         store = ApplicationBase.instance().aiChatHistoryStore()
@@ -854,6 +884,9 @@ class AiChatWidget(QWidget):
         model.queryAsync(params)
         self._setGenerating(True)
 
+        # Clear tool restrictions after the request is sent
+        self._restrictedToolNames = None
+
         if isNewConversation and not ApplicationBase.instance().testing and titleSeed:
             self._generateChatTitle(
                 self._historyPanel.currentHistory().historyId, titleSeed)
@@ -1036,6 +1069,12 @@ class AiChatWidget(QWidget):
         tools = list(AgentToolRegistry.openai_tools())
         for t in self._providerUiTools():
             tools.append(t.to_openai_tool())
+
+        # Filter tools if restrictions are set
+        if self._restrictedToolNames is not None:
+            tools = [t for t in tools if t.get("function", {}).get(
+                "name") in self._restrictedToolNames]
+
         return tools
 
     def _executeToolAsync(self, toolName: str, params: dict, toolCallId: Optional[str] = None) -> bool:
