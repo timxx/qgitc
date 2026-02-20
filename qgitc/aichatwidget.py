@@ -18,7 +18,9 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
+    QLineEdit,
     QMenu,
+    QPlainTextEdit,
     QScrollBar,
     QSizePolicy,
     QSplitter,
@@ -1074,7 +1076,9 @@ class AiChatWidget(QWidget):
         self._contextPanel.btnStop.setVisible(False)
         self._historyPanel.setEnabled(True)
         self._contextPanel.cbBots.setEnabled(True)
-        self._contextPanel.setFocus()
+        focus = ApplicationBase.instance().focusWidget()
+        if not (isinstance(focus, QLineEdit) or isinstance(focus, QPlainTextEdit)):
+            self._contextPanel.setFocus()
         self._setGenerating(False)
 
     def _onToolApproved(self, toolName: str, params: dict, toolCallId: str):
