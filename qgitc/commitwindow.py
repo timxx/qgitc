@@ -925,6 +925,17 @@ class CommitWindow(StateWindow):
         # Update model with commits
         self._amendCommitsModel.setAllowUncheck(allowUncheck)
         self._amendCommitsModel.setCommits(commits)
+        self._updateAmendHintText(len(commits), allowUncheck)
+
+    def _updateAmendHintText(self, commitCount: int, allowUncheck: bool):
+        baseText = self.tr("Amending commits")
+
+        if allowUncheck:
+            hintText = self.tr("{0} (uncheck to skip):").format(baseText)
+        else:
+            hintText = self.tr("{0}:").format(baseText)
+
+        self.ui.lbAmendHint.setText(hintText)
 
     def _blockUI(self, blocked=True):
         self.ui.tbUnstage.setEnabled(not blocked)
@@ -2060,6 +2071,8 @@ class CommitWindow(StateWindow):
         if not checked:
             self._amendCommitsModel.clear()
             return
+
+        self._updateAmendHintText(0, False)
 
         # Detect commits to amend
         self._updateAmendCommitsIfNeeded()

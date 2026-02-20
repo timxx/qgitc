@@ -482,7 +482,7 @@
                 <bool>false</bool>
                </property>
                <property name="text">
-                <string>Amending these commits (uncheck to skip):</string>
+                <string>Amending commits:</string>
                </property>
               </widget>
              </item>
