@@ -443,3 +443,9 @@ class GithubCopilot(AiModelBase):
             self._eventLoop.quit()
             self._eventLoop = None
         return super().requestInterruption()
+
+    def trySwitchModel(self, modelId: str) -> bool:
+        if not self._hasModelId(modelId):
+            return False
+        self.modelId = modelId
+        return True

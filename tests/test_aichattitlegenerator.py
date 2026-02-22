@@ -37,6 +37,10 @@ class MockAiModel(QObject):
         """Mock method for cancellation"""
         pass
 
+    def trySwitchModel(self, modelId: str):
+        """Mock method for switching model"""
+        return False
+
 
 class TestAiChatTitleGenerator(TestBase):
 

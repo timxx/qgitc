@@ -20,6 +20,7 @@ class AiChatTitleGenerator(QObject):
 
         self._historyId = historyId
         self._model = AiModelProvider.createModel(self)
+        self._model.trySwitchModel("gpt-5-mini")
 
         prompt = f"{GEN_TITLE_PROMPT}{firstMessage[:512]}"
 

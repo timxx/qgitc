@@ -129,6 +129,10 @@ class AiModelBase(QObject):
     def queryAsync(self, params: AiParameters):
         pass
 
+    def trySwitchModel(self, modelId: str) -> bool:
+        """Attempt to switch to the given model ID. Returns True on success."""
+        return False
+
     def addHistory(self, role: Union[AiRole, AiChatMessage], message: str = None, **kwargs):
         """Append a message to the internal history.
 
