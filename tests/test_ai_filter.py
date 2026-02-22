@@ -24,24 +24,37 @@ class TestAiFilter(TestBase):
         """Test that AI queries are detected correctly"""
         self.window.ui.leOpts.setText("@ai show commits from last week")
 
-        # Mock the AI handling to just check if it gets called
-        original_handle = self.window._handleAiFilterQuery
+        # Mock the AI chat widget's queryAgent method
+        chatWidget = self.window._aiChat.chatWidget()
+        original_query = chatWidget.queryAgent
         handled = False
+        captured_args = {}
 
-        def mock_handle(query):
-            nonlocal handled
+        def mock_query(prompt, contextText=None, sysPrompt=None, toolNames=None):
+            nonlocal handled, captured_args
             handled = True
-            self.assertEqual(query, "@ai show commits from last week")
+            captured_args = {
+                'prompt': prompt,
+                'contextText': contextText,
+                'sysPrompt': sysPrompt,
+                'toolNames': toolNames
+            }
 
-        self.window._handleAiFilterQuery = mock_handle
+        chatWidget.queryAgent = mock_query
 
         # Simulate return press
         self.window._MainWindow__onOptsReturnPressed()
 
         self.assertTrue(handled, "AI query should have been handled")
+        self.assertEqual(captured_args['prompt'], "show commits from last week",
+                         f"Expected 'show commits from last week', got {captured_args['prompt']}")
+        self.assertIsNotNone(
+            captured_args['sysPrompt'], "System prompt should be provided")
+        self.assertEqual(captured_args['toolNames'], ["ui_apply_log_filter"],
+                         f"Expected ['ui_apply_log_filter'], got {captured_args['toolNames']}")
 
         # Restore original method
-        self.window._handleAiFilterQuery = original_handle
+        chatWidget.queryAgent = original_query
 
     def test_regular_filter_still_works(self):
         """Test that regular git log filters still work"""
