@@ -47,12 +47,13 @@ A cross-platform Git GUI tool designed to simplify commit history exploration, b
 - [x] Builtin image diff tool for easy finding the difference.
 - [ ] Auto finding which commit cause conflicts.
 - [x] File blame support
-- [x] AI intergrated
-- [x] Composite mode
-- [x] AI-based commit
-- [x] AI-based code review
+- [x] AI integrated, can ask or use AI to apply changes
+- [x] Composite mode: browse all repo logs in one view
+- [x] AI-based commit: generate commit message based on changes
+- [x] AI-based code review and apply fixes
 - [x] Branch compare, to show full changes for two branches
 - [x] Cherry-Pick, support drag & drop and pick full branch
+- [x] Auto-resolve conflicts by AI
 
 
 ## Requirements
