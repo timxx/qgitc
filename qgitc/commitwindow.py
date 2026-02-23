@@ -1165,10 +1165,14 @@ class CommitWindow(StateWindow):
             files.remove(normalizedFile)
             self._saveIgnoredUntrackedFiles(files)
             self.reloadLocalChanges()
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.show_untracked_file")
 
     def _onShowAllHiddenUntrackedFiles(self):
         self._saveIgnoredUntrackedFiles(set())
         self.reloadLocalChanges()
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.show_all_untracked_files")
 
     def _updateTemplateMenuItems(self):
         """Populate template menu with available templates and management options"""
