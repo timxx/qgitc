@@ -1236,7 +1236,6 @@ class CommitWindow(StateWindow):
     def _onUseTemplateForAiToggled(self, checked: bool):
         app = ApplicationBase.instance()
         app.settings().setUseTemplateForAi(checked)
-        app.trackFeatureUsage("commit.use_template_for_ai", {"enabled": checked})
 
     def _onManageTemplates(self):
         """Open template management dialog"""
@@ -1563,7 +1562,10 @@ class CommitWindow(StateWindow):
         if not submoduleFiles:
             return
 
-        ApplicationBase.instance().trackFeatureUsage("commit.ai_gen")
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.ai_gen", {
+                "useTemplate": settings.useTemplateForAi()
+            })
 
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
