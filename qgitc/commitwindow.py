@@ -435,6 +435,11 @@ class CommitWindow(StateWindow):
         self._aiChat.setVisible(not self._aiChat.isVisible())
         if self._aiChat.isVisible():
             self._aiChat.chatWidget().contextPanel.setFocus()
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.toggle_chat", {
+                "visible": self._aiChat.isVisible()
+            }
+        )
 
     def _loadLocalChanges(self):
         submodules = ApplicationBase.instance().settings().submodulesCache(Git.REPO_DIR)
@@ -1225,12 +1230,16 @@ class CommitWindow(StateWindow):
                 self.tr("Error selecting template: {}").format(str(e)))
 
     def _onUseTemplateForAiToggled(self, checked: bool):
-        ApplicationBase.instance().settings().setUseTemplateForAi(checked)
+        app = ApplicationBase.instance()
+        app.settings().setUseTemplateForAi(checked)
+        app.trackFeatureUsage("commit.use_template_for_ai", {"enabled": checked})
 
     def _onManageTemplates(self):
         """Open template management dialog"""
         dialog = TemplateManageDialog(self._currentTemplateFile, self)
         dialog.exec()
+        app = ApplicationBase.instance()
+        app.trackFeatureUsage("commit.manage_templates")
 
     def _fetchRepoInfo(self, submodule: str, userData: any, cancelEvent: CancelEvent):
         templateFile = userData
@@ -2076,6 +2085,9 @@ class CommitWindow(StateWindow):
 
         # Detect commits to amend
         self._updateAmendCommitsIfNeeded()
+        ApplicationBase.instance().trackFeatureUsage("commit.amend", {
+            "hasStagedFiles": self._stagedModel.rowCount() > 0
+        })
 
     def _detectAmendCommits(self):
         """Detect which commits will be amended based on staged files or HEAD"""

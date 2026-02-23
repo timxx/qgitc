@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QMenu, QVBoxLay
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
 from qgitc.aichatedit import AiChatEdit
 from qgitc.aicontexttoolbutton import AiContextToolButton
+from qgitc.applicationbase import ApplicationBase
 from qgitc.coloredicontoolbutton import ColoredIconToolButton
 from qgitc.common import dataDirPath
 from qgitc.flowlayout import FlowLayout
@@ -179,6 +180,9 @@ class AiChatContextPanel(QFrame):
         self._refreshContextChips()
         self.contextSelectionChanged.emit(self.selectedContextIds())
         self._restoreFocus()
+        ApplicationBase.instance().trackFeatureUsage("aicontext.toggle", {
+            "contextId": contextId,
+        })
 
     def _rebuildAttachMenu(self):
         self._attachMenu.clear()

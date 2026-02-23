@@ -268,6 +268,10 @@ class MergeWidget(QWidget):
         if checked:
             self.__ensureChatDockVisible()
 
+        ApplicationBase.instance().trackFeatureUsage("merge.auto_resolve", {
+            "enabled": checked
+        })
+
     def __makeTextIcon(self, text, color):
         img = QPixmap(QSize(32, 32))
         img.fill(Qt.transparent)

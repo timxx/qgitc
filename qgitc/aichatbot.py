@@ -246,6 +246,9 @@ class AiChatbot(QPlainTextEdit):
             self._findPanel.setText(text)
 
         self._findPanel.showAnimate()
+        ApplicationBase.instance().trackFeatureUsage("find_in_ai_chat", {
+            "hasSelection": bool(text)
+        })
 
     def _onFindHidden(self):
         self._clearFindState()

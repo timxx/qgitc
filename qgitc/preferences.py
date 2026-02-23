@@ -606,6 +606,11 @@ class Preferences(QDialog):
         self.settings.setLlmTemperature(self.ui.sbTemperature.value())
         self.settings.setLlmReasoningEnabled(
             self.ui.cbEnableReasoning.isChecked())
+        ApplicationBase.instance().trackFeatureUsage("llm_preferences_saved", {
+            "modelKey": modelKey,
+            "defaultModelId": self.ui.cbModelIds.currentData(),
+            "reasoningEnabled": self.ui.cbEnableReasoning.isChecked(),
+        })
 
         exts = set()
         for ext in self.ui.leExcludedFiles.text().strip().split(","):

@@ -222,6 +222,9 @@ class MainWindow(StateWindow):
         self._aiChat.setVisible(not self._aiChat.isVisible())
         if self._aiChat.isVisible():
             self._aiChat.chatWidget().contextPanel.setFocus()
+        ApplicationBase.instance().trackFeatureUsage("toggle_ai_chat_dock", {
+            "visible": self._aiChat.isVisible()
+        })
 
     def __setupMenus(self):
         acGroup = QActionGroup(self)

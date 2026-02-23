@@ -558,3 +558,7 @@ class PickBranchWindow(StateWindow):
     def _onAutoResolveAiToggled(self, checked: bool):
         settings = ApplicationBase.instance().settings()
         settings.setAutoResolveConflictsWithAssistant(checked)
+
+        ApplicationBase.instance().trackFeatureUsage("cherry_pick.auto_resolve", {
+            "enabled": checked
+        })
