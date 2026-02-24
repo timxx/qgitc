@@ -151,6 +151,21 @@ class SequentialAgentRunner(AgentRunner):
         # Update context agent
         self._ctx.agent = self._currentAgent
 
+        # If agent is SequentialAgent, start with first sub-agent
+        if isinstance(self._currentAgent, SequentialAgent):
+            if self._currentAgent.sub_agents:
+                logger.info(
+                    f"SequentialAgentRunner: Auto-starting first sub-agent of {self._currentAgent.name}")
+                self._currentAgent = self._currentAgent.sub_agents[0]
+                self._ctx.agent = self._currentAgent
+                # Recurse to run the actual agent
+                self._runCurrentAgent(userPrompt, sysPrompt)
+            else:
+                logger.warning(
+                    f"SequentialAgent {self._currentAgent.name} has no sub-agents")
+                self._onFlowFinished()
+            return
+
         # If agent is LlmAgent, run via LlmFlow
         if isinstance(self._currentAgent, LlmAgent):
             self._flow.run(self._ctx, userPrompt, sysPrompt)
@@ -163,6 +178,18 @@ class SequentialAgentRunner(AgentRunner):
         """Handle event from flow."""
         if not event or not self._ctx:
             return
+
+        # Check for end-of-agent signal
+        if event.actions.end_of_agent and self._currentAgent:
+            logger.info(
+                f"SequentialAgentRunner: Agent {self._currentAgent.name} marked as finished")
+            self._ctx.markAgentFinished(self._currentAgent.name)
+
+        # Apply state delta if present
+        if event.actions.state_delta and self._currentAgent:
+            current_state = self._ctx.getAgentState(self._currentAgent.name)
+            current_state.update(event.actions.state_delta)
+            self._ctx.setAgentState(self._currentAgent.name, current_state)
 
         # Check if event signals a transfer
         if event.actions.transfer_to_agent:
@@ -188,20 +215,37 @@ class SequentialAgentRunner(AgentRunner):
         # First emit the transfer event
         self.eventEmitted.emit(event)
 
-        # If current agent is SequentialAgent, try to resolve from it
-        if isinstance(self._currentAgent, SequentialAgent):
-            target = self._currentAgent.resolveSubAgent(targetName)
-            if target:
-                logger.info(
-                    f"SequentialAgentRunner: Transferring to sub-agent: {targetName}")
-                self._currentAgent = target
-                # Continue with the new agent (no user prompt)
-                self._runCurrentAgent(
-                    "", event.actions.state_delta.get("sys_prompt"))
-                return
+        # Mark current agent as finished if end_of_agent is set
+        if event.actions.end_of_agent and self._currentAgent:
+            self._ctx.markAgentFinished(self._currentAgent.name)
 
-        logger.warning(
-            f"SequentialAgentRunner: Transfer target not found: {targetName}")
+        # Try to resolve target from root agent first
+        target = None
+        if isinstance(self._rootAgent, SequentialAgent):
+            target = self._rootAgent.resolveSubAgent(targetName)
+
+        # If not found in root, try current agent
+        if not target and isinstance(self._currentAgent, SequentialAgent):
+            target = self._currentAgent.resolveSubAgent(targetName)
+
+        if target:
+            logger.info(
+                f"SequentialAgentRunner: Transferring to sub-agent: {targetName}")
+            self._currentAgent = target
+            self._ctx.agent = target
+
+            # Extract system prompt from state delta if present
+            sysPrompt = None
+            if event.actions.state_delta:
+                sysPrompt = event.actions.state_delta.get("sys_prompt")
+
+            # Continue with the new agent (no user prompt)
+            self._runCurrentAgent("", sysPrompt)
+        else:
+            logger.warning(
+                f"SequentialAgentRunner: Transfer target not found: {targetName}")
+            # Still finish the run even if transfer fails
+            self._onFlowFinished()
 
     def _onFlowFinished(self) -> None:
         """Handle flow completion."""

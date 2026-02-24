@@ -22,6 +22,7 @@ from qgitc.agents.agentruntime import (
     EventActions,
     InvocationContext,
     LlmAgent,
+    SequentialAgent,
 )
 
 
@@ -240,10 +241,266 @@ class TestSequentialAgentRunner(unittest.TestCase):
         self.assertEqual(len(self.emitted_events), 2)
         self.assertTrue(self.run_finished)
 
+    def test_sequential_agent_auto_starts_first_subagent(self):
+        """SequentialAgent should automatically start with its first sub-agent."""
+        first = LlmAgent(name="FirstAgent", modelId="gpt-3.5")
+        second = LlmAgent(name="SecondAgent", modelId="gpt-3.5")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first, second],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx, userPrompt="Start")
+
+        # Should have auto-started with first sub-agent
+        self.assertEqual(self.runner._currentAgent.name, "FirstAgent")
+        self.assertEqual(ctx.agent.name, "FirstAgent")
+        # Flow should have been called once
+        self.assertEqual(len(self.mock_flow.run_calls), 1)
+
     def test_agent_switched_on_transfer(self):
-        """Agent should switch on transfer (with SequentialAgent parent)."""
-        # This would be more complex - test is prepared for Step 4
-        pass
+        """Agent should switch on transfer with SequentialAgent parent."""
+        # Create sub-agents
+        sub_agent = LlmAgent(name="SubAgent", modelId="gpt-3.5")
+        # Use SequentialAgent as root - it will auto-start first sub-agent
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[
+                LlmAgent(name="FirstAgent", modelId="gpt-3.5"), sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx, userPrompt="Start")
+
+        # Should auto-start with first sub-agent (FirstAgent)
+        self.assertEqual(self.runner._currentAgent.name, "FirstAgent")
+
+        # Emit transfer event to SubAgent
+        actions = EventActions()
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={"message": "Transferring"},
+            actions=actions,
+        )
+
+        self.mock_flow.eventEmitted.emit(event)
+
+        # Current agent should switch to SubAgent
+        self.assertEqual(self.runner._currentAgent.name, "SubAgent")
+        # Context should be updated
+        self.assertEqual(ctx.agent.name, "SubAgent")
+        # Flow should be called twice (FirstAgent + SubAgent)
+        self.assertEqual(len(self.mock_flow.run_calls), 2)
+
+    def test_transfer_to_invalid_subagent(self):
+        """Transfer to non-existent sub-agent should log warning and finish."""
+        sub_agent = LlmAgent(name="ValidAgent", modelId="gpt-3.5")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # Should auto-start with ValidAgent
+        self.assertEqual(self.runner._currentAgent.name, "ValidAgent")
+
+        # Emit transfer to invalid agent
+        actions = EventActions()
+        actions.setTransfer("InvalidAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+
+        self.mock_flow.eventEmitted.emit(event)
+
+        # Should emit the transfer event anyway
+        self.assertEqual(len(self.emitted_events), 1)
+        # Runner should finish (failed transfer)
+        self.assertTrue(self.run_finished)
+        # Current agent should not change from ValidAgent
+        self.assertEqual(self.runner._currentAgent.name, "ValidAgent")
+
+    def test_multiple_transfers_in_sequence(self):
+        """Test multiple transfers between sub-agents."""
+        sub1 = LlmAgent(name="Agent1", modelId="gpt-3.5")
+        sub2 = LlmAgent(name="Agent2", modelId="gpt-3.5")
+        sub3 = LlmAgent(name="Agent3", modelId="gpt-3.5")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[sub1, sub2, sub3],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # Should start with Agent1
+        self.assertEqual(self.runner._currentAgent.name, "Agent1")
+
+        # Transfer to Agent2
+        actions1 = EventActions()
+        actions1.setTransfer("Agent2")
+        event1 = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={"step": 1},
+            actions=actions1,
+        )
+        self.mock_flow.eventEmitted.emit(event1)
+
+        self.assertEqual(self.runner._currentAgent.name, "Agent2")
+
+        # Transfer to Agent3
+        actions2 = EventActions()
+        actions2.setTransfer("Agent3")
+        event2 = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={"step": 2},
+            actions=actions2,
+        )
+        self.mock_flow.eventEmitted.emit(event2)
+
+        self.assertEqual(self.runner._currentAgent.name, "Agent3")
+        # Should have 2 transfer events
+        self.assertEqual(len(self.emitted_events), 2)
+        # Flow should be called 3 times (Agent1 + 2 transfers)
+        self.assertEqual(len(self.mock_flow.run_calls), 3)
+
+    def test_context_state_preserved_across_transfer(self):
+        """Context state should be preserved and updated across transfers."""
+        sub_agent = LlmAgent(name="SubAgent", modelId="gpt-3.5")
+        first_agent = LlmAgent(name="FirstAgent", modelId="gpt-3.5")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first_agent, sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # Should start with FirstAgent
+        self.assertEqual(self.runner._currentAgent.name, "FirstAgent")
+
+        # Emit event with state_delta before transfer
+        actions = EventActions()
+        actions.state_delta = {"key": "value", "count": 42}
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+
+        self.mock_flow.eventEmitted.emit(event)
+
+        # FirstAgent state should have been updated
+        first_state = ctx.getAgentState("FirstAgent")
+        self.assertEqual(first_state.get("key"), "value")
+        self.assertEqual(first_state.get("count"), 42)
+
+    def test_end_of_agent_marks_agent_finished(self):
+        """end_of_agent flag should mark agent as finished in context."""
+        agent = LlmAgent(name="MainAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+
+        self.runner.run(agent, ctx)
+
+        # Emit event with end_of_agent
+        actions = EventActions()
+        actions.end_of_agent = True
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={"final": "message"},
+            actions=actions,
+        )
+
+        self.mock_flow.eventEmitted.emit(event)
+
+        # Agent should be marked as finished
+        self.assertTrue(ctx.isAgentFinished("MainAgent"))
+
+    def test_end_of_agent_with_transfer(self):
+        """end_of_agent + transfer should mark current agent finished and switch."""
+        sub_agent = LlmAgent(name="SubAgent", modelId="gpt-3.5")
+        first_agent = LlmAgent(name="FirstAgent", modelId="gpt-3.5")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first_agent, sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # Should start with FirstAgent
+        self.assertEqual(self.runner._currentAgent.name, "FirstAgent")
+
+        # Emit transfer with end_of_agent
+        actions = EventActions()
+        actions.end_of_agent = True
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+
+        self.mock_flow.eventEmitted.emit(event)
+
+        # FirstAgent should be finished
+        self.assertTrue(ctx.isAgentFinished("FirstAgent"))
+        # Should transfer to SubAgent
+        self.assertEqual(self.runner._currentAgent.name, "SubAgent")
+
+    def test_transfer_with_system_prompt_override(self):
+        """Transfer with sys_prompt in state_delta should pass it to next agent."""
+        sub_agent = LlmAgent(name="SubAgent", modelId="gpt-3.5")
+        first_agent = LlmAgent(name="FirstAgent", modelId="gpt-3.5")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first_agent, sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # Should start with FirstAgent
+        self.assertEqual(self.runner._currentAgent.name, "FirstAgent")
+
+        # Transfer with system prompt override
+        actions = EventActions()
+        actions.state_delta = {"sys_prompt": "You are a code reviewer"}
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+
+        self.mock_flow.eventEmitted.emit(event)
+
+        # SubAgent should be called with the system prompt
+        self.assertEqual(len(self.mock_flow.run_calls), 2)
+        sub_agent_call = self.mock_flow.run_calls[1]
+        self.assertEqual(
+            sub_agent_call["sysPrompt"], "You are a code reviewer")
+        # No user prompt on transfer
+        self.assertEqual(sub_agent_call["userPrompt"], "")
+        self.assertEqual(
+            sub_agent_call["sysPrompt"], "You are a code reviewer")
+        # No user prompt on transfer
+        self.assertEqual(sub_agent_call["userPrompt"], "")
 
 
 if __name__ == "__main__":
