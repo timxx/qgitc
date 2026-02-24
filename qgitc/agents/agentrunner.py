@@ -77,6 +77,7 @@ class SequentialAgentRunner(AgentRunner):
         self,
         toolMachine: AgentToolMachine,
         modelLookupFn=None,
+        toolExecutor=None,
         flowFactory=None,
         parent: Optional[QObject] = None,
     ):
@@ -85,6 +86,7 @@ class SequentialAgentRunner(AgentRunner):
         Args:
             toolMachine: AgentToolMachine for tool execution.
             modelLookupFn: Optional callable(modelId) -> AiModelBase for model lookup.
+            toolExecutor: Optional tool executor for executing tool calls.
             flowFactory: Optional callable() -> LlmFlow. If provided, used for testing.
                         Otherwise, LlmFlow is instantiated normally.
             parent: Qt parent object.
@@ -92,6 +94,7 @@ class SequentialAgentRunner(AgentRunner):
         super().__init__(parent)
         self._toolMachine = toolMachine
         self._modelLookupFn = modelLookupFn
+        self._toolExecutor = toolExecutor
         self._flowFactory = flowFactory
 
         # Current execution state
@@ -128,6 +131,7 @@ class SequentialAgentRunner(AgentRunner):
             self._flow = LlmFlow(
                 toolMachine=self._toolMachine,
                 modelLookupFn=self._modelLookupFn,
+                toolExecutor=self._toolExecutor,
                 parent=self,
             )
         self._flow.eventEmitted.connect(self._onEventEmitted)

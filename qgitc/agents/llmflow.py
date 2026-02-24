@@ -55,6 +55,7 @@ class LlmFlow(QObject):
         self,
         toolMachine: AgentToolMachine,
         modelLookupFn: Optional[Callable[[str], Optional[AiModelBase]]] = None,
+        toolExecutor: Optional[QObject] = None,
         parent: Optional[QObject] = None,
     ):
         """Initialize the LLM flow.
@@ -64,11 +65,14 @@ class LlmFlow(QObject):
             modelLookupFn: Optional callable(modelId: str) -> Optional[AiModelBase].
                           If provided, used to resolve models by ID. Required to support
                           model overrides in sub-agents.
+            toolExecutor: Optional tool executor with execute(toolCallId, toolName, params) method
+                         and toolFinished signal. If None, tools won't be executed (test mode).
             parent: Qt parent object.
         """
         super().__init__(parent)
         self._toolMachine = toolMachine
         self._modelLookupFn = modelLookupFn
+        self._toolExecutor = toolExecutor
 
         # Current model being used
         self._currentModel: Optional[AiModelBase] = None
@@ -81,6 +85,12 @@ class LlmFlow(QObject):
 
         # Model response handlers
         self._connectModelSignals(None)
+
+        # Tool machine signal handlers
+        self._connectToolMachineSignals()
+
+        # Tool executor signal handlers
+        self._connectToolExecutorSignals()
 
     def run(self, ctx: InvocationContext, userPrompt: str = "", sysPrompt: Optional[str] = None) -> None:
         """Start the LLM flow.
@@ -257,15 +267,6 @@ class LlmFlow(QObject):
             # Delegate to tool machine
             self._toolMachine.processToolCalls(response.tool_calls)
 
-            # Connect tool machine signals
-            try:
-                self._toolMachine.agentContinuationReady.disconnect(
-                    self.continueAfterTools)
-            except:
-                pass
-            self._toolMachine.agentContinuationReady.connect(
-                self.continueAfterTools)
-
     def _onModelFinished(self) -> None:
         """Handle model request completion."""
         if not self._inToolLoop:
@@ -274,6 +275,88 @@ class LlmFlow(QObject):
         else:
             logger.debug(
                 "LlmFlow: Model finished while in tool loop (waiting for tool machine)")
+
+    # ========================================================================
+    # Private: Tool Execution Handlers
+    # ========================================================================
+
+    def _connectToolMachineSignals(self) -> None:
+        """Connect to tool machine signals."""
+        self._toolMachine.toolExecutionRequested.connect(
+            self._onToolExecutionRequested)
+        self._toolMachine.agentContinuationReady.connect(
+            self.continueAfterTools)
+
+    def _connectToolExecutorSignals(self) -> None:
+        """Connect to tool executor signals if available."""
+        if self._toolExecutor and hasattr(self._toolExecutor, 'toolFinished'):
+            self._toolExecutor.toolFinished.connect(self._onToolFinished)
+
+    def _onToolExecutionRequested(self, toolCallId: str, toolName: str, params: Dict) -> None:
+        """Handle tool execution request from tool machine.
+        
+        Args:
+            toolCallId: Unique identifier for this tool call.
+            toolName: Name of the tool to execute.
+            params: Tool parameters dictionary.
+        """
+        logger.debug(
+            f"LlmFlow: Tool execution requested: {toolName} (callId={toolCallId})")
+
+        if not self._toolExecutor:
+            logger.warning(
+                "LlmFlow: No tool executor configured, cannot execute tools")
+            # Create a failure result
+            from qgitc.agenttools import AgentToolResult
+            result = AgentToolResult(
+                toolCallId=toolCallId,
+                toolName=toolName,
+                ok=False,
+                output="Tool executor not configured",
+            )
+            self._onToolFinished(result)
+            return
+
+        # Execute the tool via executor
+        if hasattr(self._toolExecutor, 'execute'):
+            self._toolExecutor.execute(toolCallId, toolName, params)
+        else:
+            logger.error(f"LlmFlow: Tool executor missing execute() method")
+
+    def _onToolFinished(self, result) -> None:
+        """Handle tool execution completion.
+        
+        Args:
+            result: AgentToolResult with toolCallId, ok, output, toolName.
+        """
+        if not self._ctx:
+            return
+
+        toolName = result.toolName
+        toolCallId = result.toolCallId
+        ok = result.ok
+        output = result.output or ""
+
+        logger.debug(
+            f"LlmFlow: Tool finished: {toolName} (callId={toolCallId}, ok={ok})")
+
+        # Emit tool result event
+        prefix = "✓" if ok else "✗"
+        event = AgentEvent(
+            invocationId=self._ctx.invocationId,
+            author="tool",
+            content={
+                "tool_name": toolName,
+                "tool_call_id": toolCallId,
+                "output": output,
+                "ok": ok,
+                "description": f"{prefix} `{toolName}` output",
+            },
+        )
+        self.eventEmitted.emit(event)
+
+        # Notify tool machine of completion
+        self._toolMachine.onToolFinished(result)
 
     # ========================================================================
     # Private: Utilities

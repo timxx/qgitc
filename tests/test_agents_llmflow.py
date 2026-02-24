@@ -46,9 +46,11 @@ class TestLlmFlow(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.tool_machine = Mock(spec=AgentToolMachine)
+        # Create real AgentToolMachine for signals (but mock methods)
+        self.tool_machine = AgentToolMachine()
+        # Mock out the process methods
         self.tool_machine.processToolCalls = Mock()
-        self.tool_machine.agentContinuationReady = Signal()
+        self.tool_machine.onToolFinished = Mock()
 
         # Create a default mock model that will be returned by lookup
         self.mock_model = MockModel()
@@ -304,6 +306,248 @@ class TestLlmFlow(unittest.TestCase):
         self.assertEqual(params.prompt, "")
         self.assertTrue(params.continue_only)
         self.assertEqual(params.temperature, 0.1)  # Lower for continuation
+
+
+class MockToolExecutor(QObject):
+    """Mock tool executor for testing."""
+    
+    toolFinished = Signal(object)  # AgentToolResult
+    
+    def __init__(self):
+        super().__init__()
+        self.execute_calls = []
+    
+    def execute(self, toolCallId: str, toolName: str, params: Dict):
+        """Record execute calls."""
+        self.execute_calls.append({
+            "toolCallId": toolCallId,
+            "toolName": toolName,
+            "params": params,
+        })
+
+
+class TestLlmFlowToolExecution(unittest.TestCase):
+    """Tests for tool execution handling in LlmFlow."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        # Create real AgentToolMachine for signals
+        self.tool_machine = AgentToolMachine()
+        self.tool_machine.processToolCalls = Mock()
+        self.tool_machine.onToolFinished = Mock()
+        
+        self.model_lookup_fn = Mock()
+        self.mock_model = MockModel()
+        self.model_lookup_fn.return_value = self.mock_model
+        
+        self.tool_executor = MockToolExecutor()
+        
+        self.flow = LlmFlow(
+            toolMachine=self.tool_machine,
+            modelLookupFn=self.model_lookup_fn,
+            toolExecutor=self.tool_executor,
+        )
+        
+        self.emitted_events = []
+        self.flow.eventEmitted.connect(self._onEventEmitted)
+        self.flow_finished = False
+        self.flow.flowFinished.connect(self._onFlowFinished)
+    
+    def _onEventEmitted(self, event):
+        self.emitted_events.append(event)
+    
+    def _onFlowFinished(self):
+        self.flow_finished = True
+
+    def test_tool_execution_requested_signal(self):
+        """Tool machine toolExecutionRequested signal triggers tool execution."""
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        self.flow.run(ctx, userPrompt="Test")
+        
+        # Simulate tool execution request from tool machine
+        self.flow._onToolExecutionRequested("tc_123", "git_log", {"limit": 10})
+        
+        # Verify executor was called
+        self.assertEqual(len(self.tool_executor.execute_calls), 1)
+        self.assertEqual(self.tool_executor.execute_calls[0]["toolCallId"], "tc_123")
+        self.assertEqual(self.tool_executor.execute_calls[0]["toolName"], "git_log")
+        self.assertEqual(self.tool_executor.execute_calls[0]["params"], {"limit": 10})
+
+    def test_tool_result_event_emission(self):
+        """Tool result triggers event emission."""
+        from qgitc.agenttools import AgentToolResult
+        
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        self.flow.run(ctx, userPrompt="Test")
+        
+        # Simulate tool result
+        result = AgentToolResult(
+            toolCallId="tc_123",
+            toolName="git_log",
+            ok=True,
+            output="commit abc123\\ncommit def456",
+        )
+        
+        self.flow._onToolFinished(result)
+        
+        # Verify event was emitted
+        tool_events = [e for e in self.emitted_events if e.author == "tool"]
+        self.assertEqual(len(tool_events), 1)
+        self.assertEqual(tool_events[0].content["tool_name"], "git_log")
+        self.assertEqual(tool_events[0].content["tool_call_id"], "tc_123")
+        self.assertEqual(tool_events[0].content["ok"], True)
+        self.assertIn("commit abc123", tool_events[0].content["output"])
+
+    def test_tool_machine_notified_of_completion(self):
+        """Tool machine onToolFinished is called after tool completes."""
+        from qgitc.agenttools import AgentToolResult
+        
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        self.flow.run(ctx, userPrompt="Test")
+        
+        result = AgentToolResult(
+            toolCallId="tc_123",
+            toolName="git_log",
+            ok=True,
+            output="commit abc123",
+        )
+        
+        self.flow._onToolFinished(result)
+        
+        # Verify tool machine was notified
+        self.tool_machine.onToolFinished.assert_called_once_with(result)
+
+    def test_tool_result_with_error(self):
+        """Failed tool execution emits error event."""
+        from qgitc.agenttools import AgentToolResult
+        
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        self.flow.run(ctx, userPrompt="Test")
+        
+        result = AgentToolResult(
+            toolCallId="tc_456",
+            toolName="git_commit",
+            ok=False,
+            output="Error: No changes to commit",
+        )
+        
+        self.flow._onToolFinished(result)
+        
+        # Verify error event was emitted
+        tool_events = [e for e in self.emitted_events if e.author == "tool"]
+        self.assertEqual(len(tool_events), 1)
+        self.assertEqual(tool_events[0].content["ok"], False)
+        self.assertIn("Error", tool_events[0].content["output"])
+
+    def test_multiple_tools_in_sequence(self):
+        """Multiple tools are executed and emit events in sequence."""
+        from qgitc.agenttools import AgentToolResult
+        
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        self.flow.run(ctx, userPrompt="Test")
+        
+        # Request multiple tools
+        self.flow._onToolExecutionRequested("tc_1", "git_status", {})
+        self.flow._onToolExecutionRequested("tc_2", "git_log", {"limit": 5})
+        self.flow._onToolExecutionRequested("tc_3", "git_diff", {})
+        
+        # Verify all were submitted to executor
+        self.assertEqual(len(self.tool_executor.execute_calls), 3)
+        
+        # Simulate results arriving out of order
+        result2 = AgentToolResult(toolCallId="tc_2", toolName="git_log", ok=True, output="log")
+        result1 = AgentToolResult(toolCallId="tc_1", toolName="git_status", ok=True, output="status")
+        result3 = AgentToolResult(toolCallId="tc_3", toolName="git_diff", ok=True, output="diff")
+        
+        self.flow._onToolFinished(result2)
+        self.flow._onToolFinished(result1)
+        self.flow._onToolFinished(result3)
+        
+        # Verify all tool events were emitted
+        tool_events = [e for e in self.emitted_events if e.author == "tool"]
+        self.assertEqual(len(tool_events), 3)
+        
+        # Verify tool machine was notified for each
+        self.assertEqual(self.tool_machine.onToolFinished.call_count, 3)
+
+    def test_tool_execution_without_executor(self):
+        """Tool execution without executor emits error event."""
+        from qgitc.agenttools import AgentToolResult
+
+        # Create flow without executor
+        flow = LlmFlow(
+            toolMachine=self.tool_machine,
+            modelLookupFn=self.model_lookup_fn,
+            toolExecutor=None,
+        )
+        
+        emitted_events = []
+        flow.eventEmitted.connect(lambda e: emitted_events.append(e))
+        
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        flow.run(ctx, userPrompt="Test")
+        
+        # Simulate tool request (should fail gracefully)
+        flow._onToolExecutionRequested("tc_123", "git_log", {})
+        
+        # Verify error result event was emitted
+        tool_events = [e for e in emitted_events if e.author == "tool"]
+        self.assertEqual(len(tool_events), 1)
+        self.assertEqual(tool_events[0].content["ok"], False)
+        self.assertIn("not configured", tool_events[0].content["output"])
+        
+        # Verify tool machine was still notified (with failure)
+        self.tool_machine.onToolFinished.assert_called_once()
+        called_result = self.tool_machine.onToolFinished.call_args[0][0]
+        self.assertEqual(called_result.ok, False)
+
+    def test_tool_call_description_formatting(self):
+        """Tool result event includes formatted description."""
+        from qgitc.agenttools import AgentToolResult
+        
+        agent = LlmAgent(name="TestAgent", modelId="gpt-3.5")
+        ctx = InvocationContext(agent=agent)
+        
+        self.flow.run(ctx, userPrompt="Test")
+        
+        # Success result
+        result_ok = AgentToolResult(
+            toolCallId="tc_1",
+            toolName="git_status",
+            ok=True,
+            output="clean",
+        )
+        self.flow._onToolFinished(result_ok)
+        
+        tool_event = [e for e in self.emitted_events if e.author == "tool"][0]
+        self.assertIn("✓", tool_event.content["description"])
+        self.assertIn("git_status", tool_event.content["description"])
+        
+        # Failure result
+        result_fail = AgentToolResult(
+            toolCallId="tc_2",
+            toolName="git_commit",
+            ok=False,
+            output="error",
+        )
+        self.flow._onToolFinished(result_fail)
+        
+        tool_events = [e for e in self.emitted_events if e.author == "tool"]
+        self.assertEqual(len(tool_events), 2)
+        self.assertIn("✗", tool_events[1].content["description"])
+        self.assertIn("git_commit", tool_events[1].content["description"])
 
 
 if __name__ == "__main__":
