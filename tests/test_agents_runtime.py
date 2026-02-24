@@ -273,6 +273,48 @@ class TestResolveModelId(unittest.TestCase):
         resolved = resolveModelId(None, None)
         self.assertIsNone(resolved)
 
+    def test_sequential_agent_inherits_parent_model(self):
+        """SequentialAgent (non-LLM agent) also uses parent context model."""
+        sub1 = LlmAgent(name="Sub1", modelId="gpt-4")
+        seq_agent = SequentialAgent(name="SeqAgent", sub_agents=[sub1])
+        ctx = InvocationContext(agent=seq_agent, parentModelId="claude-3")
+
+        # SequentialAgent itself doesn't have modelId
+        resolved = resolveModelId(seq_agent, ctx)
+        self.assertEqual(resolved, "claude-3")
+
+    def test_nested_model_resolution(self):
+        """Model resolution in nested agent hierarchies."""
+        # Scenario: sub-agent in a sequential agent hierarchy
+        sub_no_model = LlmAgent(name="SubNoModel")
+        ctx_with_parent = InvocationContext(
+            agent=sub_no_model, parentModelId="gpt-3.5")
+
+        resolved = resolveModelId(sub_no_model, ctx_with_parent)
+        self.assertEqual(resolved, "gpt-3.5")
+
+        # Now same sub-agent with explicit model overrides parent
+        sub_with_model = LlmAgent(name="SubWithModel", modelId="gpt-4")
+        resolved2 = resolveModelId(sub_with_model, ctx_with_parent)
+        self.assertEqual(resolved2, "gpt-4")
+
+    def test_model_id_priority_explicit_always_wins(self):
+        """Explicit agent modelId always takes priority over context."""
+        agent = LlmAgent(name="Test", modelId="local-llm")
+        ctx = InvocationContext(parentModelId="gpt-4o")
+
+        resolved = resolveModelId(agent, ctx)
+        self.assertEqual(resolved, "local-llm")
+
+    def test_empty_string_model_id_treated_as_none(self):
+        """Empty string modelId should fall back to parent context."""
+        agent = LlmAgent(name="Test", modelId="")
+        ctx = InvocationContext(parentModelId="gpt-3.5")
+
+        # Empty string is falsy, so it falls back to parent context
+        resolved = resolveModelId(agent, ctx)
+        self.assertEqual(resolved, "gpt-3.5")
+
 
 class TestAgentHierarchy(unittest.TestCase):
     """Tests for agent nesting and parent relationships."""

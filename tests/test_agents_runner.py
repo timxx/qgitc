@@ -497,10 +497,186 @@ class TestSequentialAgentRunner(unittest.TestCase):
             sub_agent_call["sysPrompt"], "You are a code reviewer")
         # No user prompt on transfer
         self.assertEqual(sub_agent_call["userPrompt"], "")
+
+    # ========================================================================
+    # Model Override Tests
+    # ========================================================================
+
+    def test_subagent_with_different_model(self):
+        """Sub-agent can specify different model than parent."""
+        first_agent = LlmAgent(name="FirstAgent", modelId="gpt-3.5-turbo")
+        sub_agent = LlmAgent(name="SubAgent", modelId="gpt-4-turbo")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first_agent, sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # FirstAgent should use gpt-3.5-turbo
+        first_call = self.mock_flow.run_calls[0]
+        self.assertEqual(first_call["ctx"].agent.modelId, "gpt-3.5-turbo")
+
+        # Transfer to SubAgent
+        actions = EventActions()
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+        self.mock_flow.eventEmitted.emit(event)
+
+        # SubAgent should use gpt-4-turbo
+        second_call = self.mock_flow.run_calls[1]
+        self.assertEqual(second_call["ctx"].agent.modelId, "gpt-4-turbo")
+
+    def test_model_inheritance_through_parent_context(self):
+        """Sub-agent without explicit modelId inherits from parent context."""
+        first_agent = LlmAgent(name="FirstAgent", modelId="claude-3")
+        sub_agent = LlmAgent(name="SubAgent")  # No explicit modelId
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first_agent, sub_agent],
+        )
+        # Set parent model in context
+        ctx = InvocationContext(agent=main_agent, parentModelId="gpt-3.5")
+
+        self.runner.run(main_agent, ctx)
+
+        # FirstAgent should use explicit model
+        first_call = self.mock_flow.run_calls[0]
+        self.assertEqual(first_call["ctx"].agent.modelId, "claude-3")
+
+        # Transfer to SubAgent (no explicit model)
+        actions = EventActions()
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+        self.mock_flow.eventEmitted.emit(event)
+
+        # SubAgent has no explicit model, context still has parentModelId
+        second_call = self.mock_flow.run_calls[1]
+        self.assertIsNone(second_call["ctx"].agent.modelId)
+        self.assertEqual(second_call["ctx"].parentModelId, "gpt-3.5")
+
+    def test_model_override_chain_with_transfer(self):
+        """Model overrides work correctly through multiple transfers."""
+        agent1 = LlmAgent(name="Agent1", modelId="gpt-3.5")
+        agent2 = LlmAgent(name="Agent2", modelId="gpt-4")
+        agent3 = LlmAgent(name="Agent3")  # Inherits from parent
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[agent1, agent2, agent3],
+        )
+        ctx = InvocationContext(agent=main_agent, parentModelId="claude-3")
+
+        self.runner.run(main_agent, ctx)
+
+        # Agent1 uses gpt-3.5
         self.assertEqual(
-            sub_agent_call["sysPrompt"], "You are a code reviewer")
-        # No user prompt on transfer
-        self.assertEqual(sub_agent_call["userPrompt"], "")
+            self.mock_flow.run_calls[0]["ctx"].agent.modelId, "gpt-3.5")
+
+        # Transfer to Agent2
+        actions1 = EventActions()
+        actions1.setTransfer("Agent2")
+        self.mock_flow.eventEmitted.emit(AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions1,
+        ))
+
+        # Agent2 uses gpt-4
+        self.assertEqual(
+            self.mock_flow.run_calls[1]["ctx"].agent.modelId, "gpt-4")
+
+        # Transfer to Agent3
+        actions2 = EventActions()
+        actions2.setTransfer("Agent3")
+        self.mock_flow.eventEmitted.emit(AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions2,
+        ))
+
+        # Agent3 has no explicit model, inherits from parent context (claude-3)
+        self.assertIsNone(self.mock_flow.run_calls[2]["ctx"].agent.modelId)
+        self.assertEqual(
+            self.mock_flow.run_calls[2]["ctx"].parentModelId, "claude-3")
+
+    def test_all_agents_inherit_parent_model(self):
+        """Multiple agents without explicit modelId all inherit from parent."""
+        agent1 = LlmAgent(name="Agent1")
+        agent2 = LlmAgent(name="Agent2")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[agent1, agent2],
+        )
+        ctx = InvocationContext(agent=main_agent, parentModelId="gpt-4o")
+
+        self.runner.run(main_agent, ctx)
+
+        # Agent1 inherits
+        self.assertIsNone(self.mock_flow.run_calls[0]["ctx"].agent.modelId)
+        self.assertEqual(
+            self.mock_flow.run_calls[0]["ctx"].parentModelId, "gpt-4o")
+
+        # Transfer to Agent2
+        actions = EventActions()
+        actions.setTransfer("Agent2")
+        self.mock_flow.eventEmitted.emit(AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        ))
+
+        # Agent2 also inherits
+        self.assertIsNone(self.mock_flow.run_calls[1]["ctx"].agent.modelId)
+        self.assertEqual(
+            self.mock_flow.run_calls[1]["ctx"].parentModelId, "gpt-4o")
+
+    def test_model_override_independent_of_other_state(self):
+        """Model override works independently of other state changes."""
+        first_agent = LlmAgent(name="FirstAgent", modelId="gpt-3.5")
+        sub_agent = LlmAgent(name="SubAgent", modelId="claude-3")
+        main_agent = SequentialAgent(
+            name="MainAgent",
+            sub_agents=[first_agent, sub_agent],
+        )
+        ctx = InvocationContext(agent=main_agent)
+
+        self.runner.run(main_agent, ctx)
+
+        # Transfer with state_delta and system prompt
+        actions = EventActions()
+        actions.state_delta = {
+            "custom_key": "custom_value",
+            "sys_prompt": "Special instructions"
+        }
+        actions.setTransfer("SubAgent")
+        event = AgentEvent(
+            invocationId=ctx.invocationId,
+            author="assistant",
+            content={},
+            actions=actions,
+        )
+        self.mock_flow.eventEmitted.emit(event)
+
+        # SubAgent should still use its own model despite state changes
+        second_call = self.mock_flow.run_calls[1]
+        self.assertEqual(second_call["ctx"].agent.modelId, "claude-3")
+        # State should be preserved
+        first_state = ctx.getAgentState("FirstAgent")
+        self.assertEqual(first_state.get("custom_key"), "custom_value")
 
 
 if __name__ == "__main__":
