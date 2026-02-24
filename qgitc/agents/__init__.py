@@ -6,6 +6,7 @@ This package provides the core runtime for sequential agent execution,
 supporting optional model overrides and sub-agent transfers.
 """
 
+from qgitc.agents.agentrunner import AgentRunner, SequentialAgentRunner
 from qgitc.agents.agentruntime import (
     AgentEvent,
     BaseAgent,
@@ -24,4 +25,6 @@ __all__ = [
     "LlmAgent",
     "SequentialAgent",
     "resolveModelId",
+    "AgentRunner",
+    "SequentialAgentRunner",
 ]
