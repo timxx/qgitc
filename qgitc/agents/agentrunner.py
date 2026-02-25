@@ -9,7 +9,7 @@ Provides implementations for running agents:
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from PySide6.QtCore import QObject, Signal
 

@@ -14,7 +14,6 @@ import unittest
 
 from qgitc.agents.agentruntime import (
     AgentEvent,
-    BaseAgent,
     EventActions,
     InvocationContext,
     LlmAgent,
@@ -337,7 +336,3 @@ class TestAgentHierarchy(unittest.TestCase):
         repr_str = repr(agent)
         self.assertIn("LlmAgent", repr_str)
         self.assertIn("TestAgent", repr_str)
-
-
-if __name__ == "__main__":
-    unittest.main()

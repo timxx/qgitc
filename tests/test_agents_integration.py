@@ -186,7 +186,3 @@ class TestAgentFrameworkIntegration(unittest.TestCase):
         )
 
         self.assertIsNotNone(runner)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -14,12 +14,10 @@ Provides the foundational data structures for the sequential agent framework:
 from __future__ import annotations
 
 import uuid
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-
-from qgitc.common import logger
 
 # ============================================================================
 # Event and Action Models

@@ -13,21 +13,19 @@ The flow handles:
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Signal
 
 from qgitc.agentmachine import AgentToolMachine
 from qgitc.agents.agentruntime import (
     AgentEvent,
-    EventActions,
     InvocationContext,
     LlmAgent,
     resolveModelId,
 )
-from qgitc.agenttools import ToolType
 from qgitc.common import logger
-from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
+from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse
 
 
 class LlmFlow(QObject):

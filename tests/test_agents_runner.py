@@ -11,12 +11,12 @@ Tests cover:
 """
 
 import unittest
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 from PySide6.QtCore import QObject, Signal
 
 from qgitc.agentmachine import AgentToolMachine
-from qgitc.agents.agentrunner import AgentRunner, SequentialAgentRunner
+from qgitc.agents.agentrunner import SequentialAgentRunner
 from qgitc.agents.agentruntime import (
     AgentEvent,
     EventActions,
@@ -677,7 +677,3 @@ class TestSequentialAgentRunner(unittest.TestCase):
         # State should be preserved
         first_state = ctx.getAgentState("FirstAgent")
         self.assertEqual(first_state.get("custom_key"), "custom_value")
-
-
-if __name__ == "__main__":
-    unittest.main()
