@@ -198,37 +198,9 @@ def _init_gui(cmd: str):
     return app
 
 
-def _destroyQApp():
-    """Explicitly destroy the QApplication C++ object while the Python
-    interpreter is still fully alive.
-
-    When installed via pip, the setuptools-generated entry-point wrapper
-    calls ``sys.exit(main())``.  On some platforms (notably Ubuntu 20.04
-    with Python 3.8) this triggers ``Py_Exit`` → ``exit()`` where the C
-    ``atexit`` handlers run *after* ``Py_FinalizeEx`` has already torn
-    down Shiboken's binding manager.  Qt's platform plugin (xcb-glx)
-    then tries to destroy objects through the invalidated binding manager,
-    resulting in a SIGSEGV.
-
-    Destroying the QApplication here – before ``main()`` returns –
-    ensures Qt resources are cleaned up while everything is still valid.
-    """
-    app = QCoreApplication.instance()
-    if app is None:
-        return
-
-    try:
-        import shiboken6
-        if shiboken6.isValid(app):
-            shiboken6.delete(app)
-    except Exception:
-        pass
-
-
 def _do_exec(app: ApplicationBase):
     ret = app.exec()
     app.telemetry().shutdown()
-    _destroyQApp()
     return ret
 
 
@@ -440,7 +412,6 @@ def _do_commit(args):
         # _onAboutToQuit will not be called as event loop may not be started
         app._onAboutToQuit()
         app.telemetry().shutdown()
-        _destroyQApp()
         return ret
 
     window = app.getWindow(WindowType.CommitWindow)
@@ -501,9 +472,42 @@ def _do_pick_branch(args):
 
 
 def main():
+    """Entry point for both ``python -m qgitc.main`` and the
+    setuptools-generated console script.
+
+    When pip-installed, the wrapper script calls ``sys.exit(main())``.
+    ``sys.exit`` raises ``SystemExit`` which CPython translates into
+    ``Py_Exit`` → C ``exit()``.  The C ``exit()`` runs ``atexit``
+    handlers registered by Qt's platform plugins (e.g. xcb-glx).  On
+    some platforms (notably Ubuntu 20.04 / Python 3.8 / PySide 6.2)
+    those handlers call into ``Shiboken::BindingManager`` *after*
+    ``Py_FinalizeEx`` has already torn it down, causing a SIGSEGV.
+
+    Using ``os._exit()`` after all application-level clean-up has
+    completed is the standard workaround: it calls C ``_exit()`` which
+    does **not** run C ``atexit`` handlers, avoiding the crash.
+
+    Python ``atexit`` handlers are also skipped, but this project does
+    not register any.  All necessary cleanup (telemetry shutdown,
+    thread termination, chat history flushing via ``aboutToQuit``) is
+    performed explicitly before ``os._exit()`` is reached.
+    """
     attachConsole()
     args = _setup_argument(os.path.basename(sys.argv[0]))
-    return args.func(args)
+    ret = args.func(args)
+
+    if QCoreApplication.instance() is not None:
+        try:
+            # Flush Python stdio buffers before hard exit.
+            sys.stdout.flush()
+            sys.stderr.flush()
+            logging.shutdown()
+        except Exception:
+            pass
+        finally:
+            os._exit(ret or 0)
+
+    return ret
 
 
 if __name__ == "__main__":
