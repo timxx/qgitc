@@ -4,7 +4,7 @@ import json
 import time
 from dataclasses import dataclass
 
-from PySide6.QtCore import QEventLoop, QObject, Signal
+from PySide6.QtCore import QEventLoop, QObject, QTimer, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
@@ -134,7 +134,7 @@ class GithubCopilot(AiModelBase):
         self._modelFetcher: ModelsFetcher = None
 
         self._ensureDefaultModel()
-        self._updateModels()
+        QTimer.singleShot(0, self._updateModels)
 
     def _defaultModelId(self):
         modelKey = AiModelFactory.modelKey(self)
@@ -278,7 +278,7 @@ class GithubCopilot(AiModelBase):
                 b"editor-plugin-version": b"copilot-chat/0.24.1",
                 b"editor-version": b"vscode/1.97.2",
                 b"user-agent": b"GithubCopilotChat/0.24.1",
-            }, post=False, timeout=1500)
+            }, post=False)
 
         self._eventLoop = QEventLoop()
         reply.finished.connect(self._eventLoop.quit)
@@ -292,14 +292,17 @@ class GithubCopilot(AiModelBase):
         if reply.error() == QNetworkReply.AuthenticationRequiredError and not retry:
             # clear the token and retry
             settings.setGithubCopilotAccessToken("")
+            logger.info("GitHub Copilot access token is invalid, requesting new token...")
             return self.updateToken(retry=True)
 
         if reply.error() != QNetworkReply.NoError:
+            logger.info(f"Failed to update GitHub Copilot token, error code: {reply.error()}")
             return False
 
         data: dict = json.loads(reply.readAll().data())
         self._token = data.get("token")
         if not self._token:
+            logger.info("Failed to update GitHub Copilot token, no token in response")
             return False
         self._updateUrlPrefix()
         settings.setGithubCopilotToken(self._token)
