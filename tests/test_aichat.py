@@ -7,6 +7,7 @@ from PySide6.QtTest import QSignalSpy, QTest
 from qgitc.aichathistory import AiChatHistory
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.llm import AiChatMode, AiModelBase
+from qgitc.models.githubcopilot import GithubCopilot
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
 from tests.mocklocalllm import MockLocalLLM
@@ -152,3 +153,11 @@ class TestAiChatFetchModels(TestBase):
         self.wait(50)
         self.assertFalse(mock_update_token.called)
         window.close()
+
+    @patch("qgitc.models.githubcopilot.GithubCopilot._updateModels")
+    def testGitHubCopilotUpdateModelsDeferred(self, mock_update_models):
+        GithubCopilot()
+        self.assertEqual(0, mock_update_models.call_count)
+
+        self.wait(200, lambda: mock_update_models.call_count == 0)
+        self.assertEqual(1, mock_update_models.call_count)
