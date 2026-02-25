@@ -240,6 +240,14 @@ class RunCommandParams(BaseModel):
         ..., description="A short explanation of why this command is being run.")
 
 
+class TransferToAgentParams(BaseModel):
+    """Parameters for transfer_to_agent tool."""
+    agentName: str = Field(
+        ...,
+        description="Name of the specialized sub-agent to transfer control to"
+    )
+
+
 class ReadFileParams(BaseModel):
     """Parameters for read_file tool."""
     filePath: str = Field(..., description="Path to the file to read.")
@@ -534,6 +542,15 @@ class AgentToolRegistry:
                 description=APPLY_PATCH_TOOL_DESC,
                 toolType=ToolType.WRITE,
                 modeClass=ApplyPatchParams,
+            ),
+            createToolFromModel(
+                name="transfer_to_agent",
+                description=(
+                    "Transfer control to a specialized sub-agent. "
+                    "Use this when the user's request matches a sub-agent's specialization."
+                ),
+                toolType=ToolType.READ_ONLY,
+                modeClass=TransferToAgentParams,
             ),
         ]
 

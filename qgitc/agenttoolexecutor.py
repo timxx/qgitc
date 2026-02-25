@@ -37,6 +37,7 @@ from qgitc.agenttools import (
     ReadExternalFileParams,
     ReadFileParams,
     RunCommandParams,
+    TransferToAgentParams,
 )
 from qgitc.basemodel import ValidationError
 from qgitc.common import decodeFileData
@@ -147,6 +148,7 @@ class AgentToolExecutor(QObject):
             "grep_search": self._handle_grep_search,
             "create_file": self._handle_create_file,
             "apply_patch": self._handle_apply_patch,
+            "transfer_to_agent": self._handle_transfer_to_agent,
         }
 
     @staticmethod
@@ -807,3 +809,27 @@ class AgentToolExecutor(QObject):
             return AgentToolResult(tool_name, False, str(e))
         except Exception as e:
             return AgentToolResult(tool_name, False, f"Failed to apply patch: {e}")
+
+    def _handle_transfer_to_agent(self, tool_name: str, params: Dict) -> AgentToolResult:
+        """Handle transfer_to_agent tool call.
+        
+        This tool signals the agent runner to transfer control to a specialized sub-agent.
+        The actual transfer is handled by the agent runner by detecting the special
+        tool call and using it to update execution context.
+        """
+        try:
+            validated = TransferToAgentParams(**params)
+        except ValidationError as e:
+            return AgentToolResult(tool_name, False, f"Invalid parameters: {e}")
+
+        agentName = validated.agentName
+        if not agentName or not isinstance(agentName, str):
+            return AgentToolResult(tool_name, False, "Agent name must be a non-empty string")
+
+        # Return success - the agent runner will detect this tool call and perform the transfer
+        return AgentToolResult(
+            tool_name,
+            True,
+            f"Transferring to specialized agent: {agentName}",
+        )
+

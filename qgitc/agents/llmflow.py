@@ -20,6 +20,7 @@ from PySide6.QtCore import QObject, Signal
 from qgitc.agentmachine import AgentToolMachine
 from qgitc.agents.agentruntime import (
     AgentEvent,
+    EventActions,
     InvocationContext,
     LlmAgent,
     resolveModelId,
@@ -177,7 +178,7 @@ class LlmFlow(QObject):
         params.chat_mode = AiChatMode.Agent
         params.stream = True
         params.temperature = 0.1 if continue_only else 0.7
-        params.reasoning = False  # Agent mode typically doesn't use reasoning
+        params.reasoning = bool(ctx.runConfig.get("reasoning", False))
         params.continue_only = continue_only
 
         # Add tools if Agent has specified toolNames
@@ -185,6 +186,14 @@ class LlmFlow(QObject):
         if isinstance(agent, LlmAgent) and agent.modelId:
             # If agent has a model override, pass it through
             params.model = agent.modelId
+
+        tools = ctx.runConfig.get("tools")
+        if tools:
+            if isinstance(agent, LlmAgent) and agent.toolNames:
+                tools = [t for t in tools if t.get("function", {}).get(
+                    "name") in agent.toolNames]
+            params.tools = tools
+            params.tool_choice = ctx.runConfig.get("tool_choice")
 
         return params
 
@@ -338,7 +347,30 @@ class LlmFlow(QObject):
         logger.debug(
             f"LlmFlow: Tool finished: {toolName} (callId={toolCallId}, ok={ok})")
 
-        # Emit tool result event
+        # Check if this is a transfer_to_agent tool call
+        if toolName == "transfer_to_agent" and ok:
+            # Extract agent name from output message
+            # Message format: "Transferring to specialized agent: <agent_name>"
+            import re
+            match = re.search(r"Transferring to specialized agent:\s*(\w+)", output)
+            agentName = match.group(1) if match else None
+            
+            if agentName:
+                logger.info(f"LlmFlow: Transfer requested to agent: {agentName}")
+                event = AgentEvent(
+                    invocationId=self._ctx.invocationId,
+                    author="system",
+                    content={
+                        "message": f"Transferring control to {agentName} agent",
+                    },
+                    actions=EventActions(transfer_to_agent=agentName),
+                )
+                self.eventEmitted.emit(event)
+                # Mark end of current agent
+                self._toolMachine.onToolFinished(result)
+                return
+
+        # Emit tool result event (for normal tools)
         prefix = "✓" if ok else "✗"
         event = AgentEvent(
             invocationId=self._ctx.invocationId,

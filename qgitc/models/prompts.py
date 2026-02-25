@@ -69,7 +69,8 @@ CODE_REVIEW_PROMPT = """Please provide a code review for the following unified d
 ```
 """
 
-AGENT_SYS_PROMPT = f"""You are a Git assistant inside QGitc.
+# Base prompt for root agent (dynamically extended with sub-agent info)
+ROOT_AGENT_BASE_PROMPT = f"""You are a Git assistant inside QGitc.
 If the user provides context (inside <context></context> tags), treat it as your first source of truth.
 - If the user asks for information that is already present in the provided context, answer using the context first (do not call tools).
 - If the context is missing the required details, unclear, or potentially stale/conflicting, then call the appropriate tools to verify or fetch the missing information.
@@ -83,6 +84,12 @@ After a tool result is provided, continue with the user's request.
 
 {REPO_DESC}
 """
+
+# Legacy: For backwards compatibility, use base prompt
+ROOT_AGENT_SYS_PROMPT = ROOT_AGENT_BASE_PROMPT
+
+# Legacy prompt (kept for backwards compatibility)
+AGENT_SYS_PROMPT = ROOT_AGENT_SYS_PROMPT
 
 
 GEN_TITLE_SYS_PROMPT = """You are an expert in crafting pithy titles for chatbot conversations. You are presented with a chat request, and you reply with a brief title that captures the main topic of that request.

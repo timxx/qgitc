@@ -202,6 +202,7 @@ class LlmAgent(BaseAgent):
     
     Attributes:
         name: Agent identifier.
+        description: Optional description of what this agent specializes in.
         toolNames: Optional list of tool names to restrict tool use.
                    If None, all tools are available.
         modelId: Optional model override. If None, inherits from parent context.
@@ -210,6 +211,7 @@ class LlmAgent(BaseAgent):
         parent_agent: Reference to parent agent.
     """
     name: str = ""
+    description: Optional[str] = None
     toolNames: Optional[List[str]] = None
     modelId: Optional[str] = None
     systemPrompt: Optional[str] = None

@@ -36,6 +36,13 @@ from qgitc.agentmachine import (
     DefaultStrategy,
     SafeStrategy,
 )
+from qgitc.agents.agentrunner import SequentialAgentRunner
+from qgitc.agents.agentruntime import (
+    AgentEvent,
+    InvocationContext,
+    LlmAgent,
+    SequentialAgent,
+)
 from qgitc.agenttoolexecutor import AgentToolExecutor
 from qgitc.agenttools import (
     AgentTool,
@@ -79,6 +86,7 @@ from qgitc.models.prompts import (
     CODE_REVIEW_SYS_PROMPT,
     RESOLVE_PROMPT,
     RESOLVE_SYS_PROMPT,
+    ROOT_AGENT_SYS_PROMPT,
 )
 from qgitc.preferences import Preferences
 from qgitc.resolutionreport import (
@@ -306,6 +314,28 @@ class ResolveConflictJob(QObject):
         self.finished.emit(ok, reason)
 
 
+class _AgentToolExecutorAdapter(QObject):
+    """Adapter that exposes execute() for LlmFlow and forwards toolFinished."""
+
+    toolFinished = Signal(object)  # AgentToolResult
+
+    def __init__(self, widget: "AiChatWidget"):
+        super().__init__(widget)
+        self._widget = widget
+        self._widget._agentExecutor.toolFinished.connect(self.toolFinished)
+        self._widget._uiToolExecutor.toolFinished.connect(self.toolFinished)
+
+    def execute(self, toolCallId: str, toolName: str, params: dict) -> None:
+        self._widget._showToolCall(toolName, params or {})
+        if not self._widget._executeToolAsync(toolName, params or {}, toolCallId):
+            self.toolFinished.emit(AgentToolResult(
+                toolName,
+                False,
+                self._widget.tr("Failed to start tool execution."),
+                toolCallId=toolCallId,
+            ))
+
+
 class AiChatWidget(QWidget):
 
     initialized = Signal()
@@ -336,9 +366,8 @@ class AiChatWidget(QWidget):
 
         self._titleGenerator: AiChatTitleGenerator = None
         self._agentExecutor = AgentToolExecutor(self)
-        self._agentExecutor.toolFinished.connect(self._onAgentToolFinished)
         self._uiToolExecutor = UiToolExecutor(self)
-        self._uiToolExecutor.toolFinished.connect(self._onAgentToolFinished)
+        self._agentToolAdapter = _AgentToolExecutorAdapter(self)
 
         settings = ApplicationBase.instance().settings()
         # Create tool orchestration machine
@@ -348,12 +377,14 @@ class AiChatWidget(QWidget):
             toolLookupFn=self._toolByName,
             maxConcurrent=4,
             parent=self)
-        self._toolMachine.toolExecutionRequested.connect(self._onExecuteTool)
         self._toolMachine.userConfirmationNeeded.connect(
             self._onToolConfirmationNeeded)
         self._toolMachine.toolExecutionCancelled.connect(
             self._onToolExecutionCancelled)
-        self._toolMachine.agentContinuationReady.connect(self._onContinueAgent)
+        self._agentRunner: Optional[SequentialAgentRunner] = None
+        self._agentInvocationContext: Optional[InvocationContext] = None
+        self._agentRunnerActive = False
+        self._agentActiveModel: Optional[AiModelBase] = None
 
         # Listen for strategy changes from preferences
 
@@ -830,15 +861,17 @@ class AiChatWidget(QWidget):
 
         injectedContext = self._injectedContext
 
+        # Prepare parameters based on chat mode
         if chatMode == AiChatMode.Agent:
             params.tools = self._availableOpenAiTools()
             params.tool_choice = "auto"
+            params.reasoning = settings.llmReasoningEnabled()
 
             # Don't add system prompt if there is already one
             if not sysPrompt and (len(model.history) == 0 or not collapsed):
                 provider = self.contextProvider()
                 overridePrompt = provider.agentSystemPrompt() if provider is not None else None
-                params.sys_prompt = overridePrompt or AGENT_SYS_PROMPT
+                params.sys_prompt = overridePrompt or ROOT_AGENT_SYS_PROMPT
         elif chatMode == AiChatMode.CodeReview:
             # Code review can also use tools to fetch missing context.
             # (Models that don't support tool calls will simply ignore them.)
@@ -848,6 +881,7 @@ class AiChatWidget(QWidget):
             params.prompt = CODE_REVIEW_PROMPT.format(
                 diff=params.prompt)
 
+        # Process context injection
         provider = self.contextProvider()
         if not collapsed:
             selectedIds = self._contextPanel.selectedContextIds() if provider is not None else []
@@ -866,22 +900,25 @@ class AiChatWidget(QWidget):
                 params.prompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + \
                     params.prompt
 
+        # Display system prompt if needed
         if params.sys_prompt and not self._historyHasSameSystemPrompt(model.history, params.sys_prompt):
             self._doMessageReady(model, AiResponse(
                 AiRole.System, params.sys_prompt), True)
+            storedSysPrompt = params.sys_prompt
         else:
+            storedSysPrompt = params.sys_prompt
             params.sys_prompt = None
 
+        # Display user message
         self._doMessageReady(model, AiResponse(
             AiRole.User, params.prompt), collapsed)
 
+        # Set UI state for running request
         self._contextPanel.btnSend.setVisible(False)
         self._contextPanel.btnStop.setVisible(True)
         self._historyPanel.setEnabled(False)
         self._contextPanel.cbBots.setEnabled(False)
         self._contextPanel.setFocus()
-
-        model.queryAsync(params)
         self._setGenerating(True)
 
         # Clear tool restrictions after the request is sent
@@ -893,6 +930,14 @@ class AiChatWidget(QWidget):
 
         self._updateChatHistoryModel(model)
         self._setEmbeddedRecentListVisible(False)
+
+        # Route to appropriate execution path
+        if chatMode == AiChatMode.Agent:
+            # Use the new agent runner for Agent mode
+            self._startAgentRun(params, storedSysPrompt)
+        else:
+            # Use legacy model.queryAsync for other modes
+            model.queryAsync(params)
 
     @staticmethod
     def _historyHasSameSystemPrompt(history, sp: str) -> bool:
@@ -921,9 +966,163 @@ class AiChatWidget(QWidget):
 
         return False
 
+    def _lookupModelById(self, modelId: Optional[str]) -> Optional[AiModelBase]:
+        if not modelId:
+            return None
+
+        settings = ApplicationBase.instance().settings()
+        cb = self._contextPanel.cbBots
+        for i in range(cb.count()):
+            data = cb.itemData(i)
+            if isinstance(data, AiModelBase):
+                if data.modelId == modelId or data.name == modelId:
+                    return data
+                continue
+            if isinstance(data, AiModelDescriptor):
+                defaultId = settings.defaultLlmModelId(data.modelKey)
+                if defaultId == modelId:
+                    return self._ensureModelInstantiatedAt(i)
+
+        return None
+
+    def _startAgentRun(self, params: AiParameters, sysPrompt: Optional[str]) -> None:
+        """Start Agent mode using the agent runner with multi-agent architecture.
+        
+        Creates a root agent that can handle general queries and transfer to
+        specialized sub-agents when needed.
+        """
+        model = self.currentChatModel()
+        if model is None:
+            return
+
+        self._agentRunnerActive = True
+        self._agentActiveModel = model
+
+        toolNames = self._restrictedToolNames
+        modelId = params.model or model.modelId or model.name
+
+        # Code review specialist agent
+        codeReviewAgent = LlmAgent(
+            name="code_review",
+            description="Specializes in reviewing code diffs and finding bugs. Use for code review requests.",
+            modelId=modelId,
+            systemPrompt=CODE_REVIEW_SYS_PROMPT,
+            toolNames=toolNames,
+        )
+        
+        # Build sub-agent list
+        subAgents = [codeReviewAgent]
+        
+        # Build dynamic system prompt listing sub-agents
+        from qgitc.models.prompts import ROOT_AGENT_BASE_PROMPT
+        dynamicPrompt = sysPrompt or ROOT_AGENT_BASE_PROMPT
+        
+        if subAgents:
+            agentInfo = "\n\nSpecialized Sub-Agents\n"
+            agentInfo += "You have access to specialized sub-agents. When the user's request matches a sub-agent's specialty, transfer using the transfer_to_agent tool.\n\n"
+            for agent in subAgents:
+                if isinstance(agent, LlmAgent) and agent.description:
+                    agentInfo += f"- **{agent.name}**: {agent.description}\n"
+            dynamicPrompt = dynamicPrompt.rstrip() + "\n" + agentInfo
+        
+        # Root agent: handles general queries, can transfer to specialists
+        rootAgent = LlmAgent(
+            name="root",
+            modelId=modelId,
+            systemPrompt=dynamicPrompt,
+            toolNames=toolNames,
+        )
+        
+        # Multi-agent structure: root + specialists
+        allAgents = [rootAgent] + subAgents
+        root = SequentialAgent(name="chat", sub_agents=allAgents)
+
+        ctx = InvocationContext()
+        ctx.parentModelId = modelId
+        ctx.runConfig = {
+            "tools": params.tools,
+            "tool_choice": params.tool_choice,
+            "reasoning": params.reasoning,
+        }
+        self._agentInvocationContext = ctx
+
+        self._agentRunner = SequentialAgentRunner(
+            toolMachine=self._toolMachine,
+            modelLookupFn=self._lookupModelById,
+            toolExecutor=self._agentToolAdapter,
+            parent=self,
+        )
+        self._agentRunner.eventEmitted.connect(self._onAgentEventEmitted)
+        self._agentRunner.runFinished.connect(self._onAgentRunFinished)
+
+        # userPrompt is already formatted with context in _doRequest
+        self._agentRunner.run(root, ctx, params.prompt)
+
+    def _onAgentEventEmitted(self, event: AgentEvent) -> None:
+        model = self._agentActiveModel or self.currentChatModel()
+        if model is None or event is None:
+            return
+
+        author = (event.author or "").lower()
+        content = event.content or {}
+
+        if author == "assistant":
+            reasoning = content.get("reasoning") or ""
+            message = content.get("message") or ""
+            if reasoning:
+                reasoningResponse = AiResponse(
+                    AiRole.Assistant,
+                    reasoning,
+                    description=self.tr("🧠 Reasoning"),
+                )
+                self._doMessageReady(model, reasoningResponse, collapsed=True)
+            if message:
+                response = AiResponse(AiRole.Assistant, message)
+                self._doMessageReady(model, response, collapsed=False, skipToolMachine=True)
+            return
+
+        if author == "tool":
+            output = content.get("output") or ""
+            toolName = content.get("tool_name") or ""
+            toolCallId = content.get("tool_call_id")
+            description = content.get("description") or self.tr("Tool output")
+            toolCalls = {"tool_call_id": toolCallId} if toolCallId else None
+            model.addHistory(
+                AiRole.Tool,
+                output,
+                description=description,
+                toolCalls=toolCalls,
+            )
+            response = AiResponse(
+                AiRole.Tool,
+                output,
+                description=description,
+            )
+            self._doMessageReady(model, response, collapsed=True)
+            return
+
+        if author == "system":
+            error = content.get("error") or ""
+            if error:
+                response = AiResponse(AiRole.System, error)
+                self._doMessageReady(model, response, collapsed=True)
+
+    def _onAgentRunFinished(self) -> None:
+        model = self._agentActiveModel or self.currentChatModel()
+        if model is not None:
+            self._saveChatHistory(model)
+        self._agentRunnerActive = False
+        self._agentActiveModel = None
+        self._agentRunner = None
+        self._agentInvocationContext = None
+        self._updateStatus()
+
     def _onMessageReady(self, response: AiResponse):
         # tool-only responses can have empty message.
         if not response.message and not response.reasoning and not response.tool_calls:
+            return
+
+        if self._agentRunnerActive:
             return
 
         model: AiModelBase = self.sender()
@@ -942,11 +1141,14 @@ class AiChatWidget(QWidget):
 
     # ========== Tool Machine Signal Handlers ==========
 
+    def _showToolCall(self, toolName: str, params: dict) -> None:
+        uiResponse = self._makeUiToolCallResponse(toolName, params or {})
+        self._chatBot.appendResponse(uiResponse, collapsed=True)
+
     def _onExecuteTool(self, toolCallId: str, toolName: str, params: dict):
         """Handler for when machine requests tool execution."""
         # Display the tool call
-        uiResponse = self._makeUiToolCallResponse(toolName, params or {})
-        self._chatBot.appendResponse(uiResponse, collapsed=True)
+        self._showToolCall(toolName, params)
 
         # Execute it
         started = self._executeToolAsync(toolName, params or {}, toolCallId)
@@ -1000,7 +1202,7 @@ class AiChatWidget(QWidget):
         # Machine signals when ready - continue immediately
         self._continueAgentConversation(delayMs=0)
 
-    def _doMessageReady(self, model: AiModelBase, response: AiResponse, collapsed=False):
+    def _doMessageReady(self, model: AiModelBase, response: AiResponse, collapsed=False, skipToolMachine: bool = False):
         index = self._contextPanel.cbBots.findData(model)
 
         assert (index != -1)
@@ -1009,7 +1211,7 @@ class AiChatWidget(QWidget):
             messages.appendResponse(response, collapsed)
 
         # If the assistant produced tool calls, delegate to the tool machine.
-        if response.role == AiRole.Assistant and response.tool_calls:
+        if not skipToolMachine and response.role == AiRole.Assistant and response.tool_calls:
             self._toolMachine.processToolCalls(response.tool_calls)
 
         if not self._disableAutoScroll:
@@ -1087,15 +1289,15 @@ class AiChatWidget(QWidget):
                     return self._uiToolExecutor.executeAsync(toolName, params or {}, provider, toolCallId)
 
             # If a ui_ tool is requested but isn't available, fail fast.
-            self._onAgentToolFinished(AgentToolResult(
-                toolName, False, self.tr("UI tool not available in this context."), toolCallId=toolCallId))
-            return True
+            return False
 
         # Non-UI tools run in the background executor.
         return self._agentExecutor.executeAsync(toolName, params or {}, toolCallId)
 
     def _onResponseFinish(self):
         model = self.currentChatModel()
+        if self._agentRunnerActive:
+            return
         self._saveChatHistory(model)
         self._updateStatus()
 
