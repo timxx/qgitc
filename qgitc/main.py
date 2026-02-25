@@ -198,9 +198,37 @@ def _init_gui(cmd: str):
     return app
 
 
+def _destroyQApp():
+    """Explicitly destroy the QApplication C++ object while the Python
+    interpreter is still fully alive.
+
+    When installed via pip, the setuptools-generated entry-point wrapper
+    calls ``sys.exit(main())``.  On some platforms (notably Ubuntu 20.04
+    with Python 3.8) this triggers ``Py_Exit`` → ``exit()`` where the C
+    ``atexit`` handlers run *after* ``Py_FinalizeEx`` has already torn
+    down Shiboken's binding manager.  Qt's platform plugin (xcb-glx)
+    then tries to destroy objects through the invalidated binding manager,
+    resulting in a SIGSEGV.
+
+    Destroying the QApplication here – before ``main()`` returns –
+    ensures Qt resources are cleaned up while everything is still valid.
+    """
+    app = QCoreApplication.instance()
+    if app is None:
+        return
+
+    try:
+        import shiboken6
+        if shiboken6.isValid(app):
+            shiboken6.delete(app)
+    except Exception:
+        pass
+
+
 def _do_exec(app: ApplicationBase):
     ret = app.exec()
     app.telemetry().shutdown()
+    _destroyQApp()
     return ret
 
 
@@ -412,6 +440,7 @@ def _do_commit(args):
         # _onAboutToQuit will not be called as event loop may not be started
         app._onAboutToQuit()
         app.telemetry().shutdown()
+        _destroyQApp()
         return ret
 
     window = app.getWindow(WindowType.CommitWindow)
