@@ -942,11 +942,14 @@ class AiChatWidget(QWidget):
 
     # ========== Tool Machine Signal Handlers ==========
 
-    def _onExecuteTool(self, toolCallId: str, toolName: str, params: dict):
+    def _onExecuteTool(self, toolCallId: str, toolName: str, params: dict, isAutoRun: bool):
         """Handler for when machine requests tool execution."""
-        # Display the tool call
-        uiResponse = self._makeUiToolCallResponse(toolName, params or {})
-        self._chatBot.appendResponse(uiResponse, collapsed=True)
+
+        # Confirmation is shown in `_onToolConfirmationNeeded`
+        if isAutoRun:
+            # Display the tool call
+            uiResponse = self._makeUiToolCallResponse(toolName, params or {})
+            self._chatBot.appendResponse(uiResponse, collapsed=True)
 
         # Execute it
         started = self._executeToolAsync(toolName, params or {}, toolCallId)

@@ -190,8 +190,8 @@ class AgentToolMachine(QObject):
     """
 
     # Signal: Request tool execution (connect to actual executor)
-    # Args: toolCallId, toolName, params
-    toolExecutionRequested = Signal(str, str, dict)
+    # Args: toolCallId, toolName, params, isAutoRun
+    toolExecutionRequested = Signal(str, str, dict, bool)
 
     # Signal: Tool requires user confirmation
     # Args: toolCallId, toolName, params, toolDesc, toolType
@@ -587,6 +587,8 @@ class AgentToolMachine(QObject):
                 request.toolCallId,
                 request.toolName,
                 request.params,
+                self._strategy.shouldAutoRun(
+                    request.toolName, request.toolType, request.params)
             )
 
     def _toolByName(self, toolName: str) -> Optional[AgentTool]:
