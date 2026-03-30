@@ -58,3 +58,17 @@ class TestFindSubmodule(TestBase):
             subrepo2 = os.path.join("dir1", "dir2", "dir3", "subrepo2")
             self.assertSetEqual(set(thread.submodules), {
                                 ".", "subrepo", subrepo2})
+
+    def testIgnoreFakeGitDirectory(self):
+        with TemporaryDirectory() as dir:
+            createRepo(dir)
+
+            fakeRepoDir = os.path.join(dir, "Release", "sdk_header")
+            os.makedirs(os.path.join(fakeRepoDir, ".git"), exist_ok=True)
+
+            thread = FindSubmoduleThread(dir)
+            thread.start()
+            self.wait(10000, lambda: not thread.isFinished())
+
+            self.assertTrue(thread.isFinished())
+            self.assertEqual(thread.submodules, [])

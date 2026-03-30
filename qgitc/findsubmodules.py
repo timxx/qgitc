@@ -5,7 +5,7 @@ import os
 from PySide6.QtCore import QEventLoop, QProcess, QThread
 
 from qgitc.common import logger
-from qgitc.gitutils import GitProcess
+from qgitc.gitutils import Git, GitProcess
 
 
 class FindSubmoduleThread(QThread):
@@ -66,7 +66,7 @@ class FindSubmoduleThread(QThread):
 
             if ".git" in subdirs or ".git" in files:
                 dir = root.replace(self._repoDir + os.sep, "")
-                if dir:
+                if dir and Git.isRepoRoot(root):
                     submodules.append(dir)
 
             if root.count(os.path.sep) >= max_level or root.endswith(".git"):

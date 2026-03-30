@@ -13,6 +13,9 @@ from qgitc.submoduleexecutor import SubmoduleExecutor
 
 def _fetchStatusGit(submodule, cancelEvent: CancelEvent, showUntrackedFiles=True, showIgnoredFiles=False):
     repoDir = fullRepoDir(submodule)
+    if not Git.isRepoRoot(repoDir):
+        return None, None
+
     try:
         data = Git.status(repoDir, showUntrackedFiles, showIgnoredFiles)
         if not data:

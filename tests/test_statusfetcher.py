@@ -1,6 +1,6 @@
 
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from qgitc.gitutils import Git
 from qgitc.statusfetcher import _fetchStatusGit, _fetchStatusGit2
@@ -111,6 +111,20 @@ class TestStatusFetcher(TestBase):
         self.assertEqual(flags, "R ")
         self.assertEqual(file, "new.md")
         self.assertEqual(oldFile, "README.md")
+
+    def testGitStatusInvalidSubmoduleNoFallback(self):
+        with open(os.path.join(self.gitDir.name, "README.md"), "a+") as f:
+            f.write("Test content")
+
+        fakeSubmodule = os.path.join("Release", "sdk_header")
+        os.makedirs(os.path.join(self.gitDir.name, fakeSubmodule, ".git"), exist_ok=True)
+
+        cancelEvent = MagicMock()
+        cancelEvent.isSet.return_value = False
+
+        submodule, status = _fetchStatusGit(fakeSubmodule, cancelEvent)
+        self.assertIsNone(submodule)
+        self.assertIsNone(status)
 
     def testGit2Status(self):
         submodule, status = _fetchStatusGit2(

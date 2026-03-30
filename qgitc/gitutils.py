@@ -247,6 +247,38 @@ class Git():
         return realDir.decode("utf-8").replace("\n", "")
 
     @staticmethod
+    def isRepoRoot(directory: str) -> bool:
+        """Return whether directory is a valid git repository root."""
+
+        if not directory or not os.path.isdir(directory):
+            return False
+
+        gitMarkerPath = os.path.join(directory, ".git")
+        if os.path.isdir(gitMarkerPath):
+            return os.path.isfile(os.path.join(gitMarkerPath, "HEAD"))
+
+        if not os.path.isfile(gitMarkerPath):
+            return False
+
+        try:
+            with open(gitMarkerPath, "r", encoding="utf-8") as f:
+                line = f.readline().strip()
+        except OSError:
+            return False
+
+        if not line.startswith("gitdir:"):
+            return False
+
+        gitDir = line[7:].strip()
+        if not gitDir:
+            return False
+
+        if not os.path.isabs(gitDir):
+            gitDir = os.path.normpath(os.path.join(directory, gitDir))
+
+        return os.path.isdir(gitDir) and os.path.isfile(os.path.join(gitDir, "HEAD"))
+
+    @staticmethod
     def refs():
         args = ["show-ref", "-d"]
         data = Git.checkOutput(args, useQProcess=True)
