@@ -65,6 +65,36 @@ class TestApp(TestBase):
             self.app._findSubmoduleThread.wait()
             self.processEvents()
 
+    def testRefreshSubmodulesCacheWhenSubmoduleRemoved(self):
+        """Regression: cache should refresh when latest submodules remove stale entries."""
+        class FakeThread:
+            pass
+
+        cachedSubmodules = [".", "stale-submodule"]
+        latestSubmodules = ["."]
+
+        self.app.settings().setSubmodulesCache(Git.REPO_DIR, cachedSubmodules)
+
+        thread = FakeThread()
+        thread.submodules = latestSubmodules
+
+        self.app._findSubmoduleThread = thread
+
+        spySubmoduleAvailable = QSignalSpy(self.app.submoduleAvailable)
+        spySearchCompleted = QSignalSpy(self.app.submoduleSearchCompleted)
+
+        with patch.object(self.app, "sender", return_value=thread):
+            self.app._onFindSubmoduleFinished()
+
+        self.assertIsNone(self.app._findSubmoduleThread)
+        self.assertEqual(spySubmoduleAvailable.count(), 0)
+        self.assertEqual(spySearchCompleted.count(), 1)
+
+        self.assertEqual(self.app.submodules, latestSubmodules)
+        submodules = self.app.settings().submodulesCache(Git.REPO_DIR)
+        self.assertEqual(submodules, latestSubmodules)
+
+
 class TestAppNoRepo(TestBase):
     def doCreateRepo(self):
         self.gitDir = TemporaryDirectory()
