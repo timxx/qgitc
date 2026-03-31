@@ -9,6 +9,8 @@ from qgitc.gitutils import Git, GitProcess
 
 
 class FindSubmoduleThread(QThread):
+    BUILD_DIR_NAMES = {"build", "debug", "release"}
+
     def __init__(self, repoDir, parent=None):
         super(FindSubmoduleThread, self).__init__(parent)
 
@@ -24,6 +26,42 @@ class FindSubmoduleThread(QThread):
         if self.isFinished() and not self.isInterruptionRequested():
             return self._submodules
         return []
+
+    def _isIgnoredPath(self, relPath):
+        if not relPath:
+            return False
+
+        relPath = relPath.replace("\\", "/")
+        data = Git.checkOutput(["check-ignore", "--", relPath],
+                               text=True, repoDir=self._repoDir)
+        return bool(data and data.strip())
+
+    def _isBuildDirPath(self, relPath):
+        if not relPath:
+            return False
+
+        parts = [p.lower() for p in relPath.replace("\\", "/").split("/") if p]
+        return any(
+            part.startswith(name) or part.endswith(name)
+            for part in parts
+            for name in self.BUILD_DIR_NAMES
+        )
+
+    def _filterIgnoredSubdirs(self, root, subdirs):
+        if not subdirs:
+            return []
+
+        relRoot = os.path.relpath(root, self._repoDir)
+        if relRoot == ".":
+            relRoot = ""
+
+        filteredSubdirs = []
+        for subdir in subdirs:
+            relPath = subdir if not relRoot else os.path.join(relRoot, subdir)
+            if self._isBuildDirPath(relPath) and self._isIgnoredPath(relPath):
+                continue
+            filteredSubdirs.append(subdir)
+        return filteredSubdirs
 
     def run(self):
         self._submodules.clear()
@@ -61,19 +99,19 @@ class FindSubmoduleThread(QThread):
         for root, subdirs, files in os.walk(self._repoDir, topdown=True):
             if self.isInterruptionRequested():
                 return
-            if os.path.normcase(root) == self._repoDir:
-                continue
+            isRepoRoot = os.path.normcase(root) == self._repoDir
 
-            if ".git" in subdirs or ".git" in files:
-                dir = root.replace(self._repoDir + os.sep, "")
-                if dir and Git.isRepoRoot(root):
-                    submodules.append(dir)
+            if not isRepoRoot and (".git" in subdirs or ".git" in files):
+                directory = root.replace(self._repoDir + os.sep, "")
+                if directory and Git.isRepoRoot(root):
+                    submodules.append(directory)
 
             if root.count(os.path.sep) >= max_level or root.endswith(".git"):
                 del subdirs[:]
             else:
                 # ignore all '.dir'
-                subdirs[:] = [d for d in subdirs if not d.startswith(".")]
+                visibleSubdirs = [d for d in subdirs if not d.startswith(".")]
+                subdirs[:] = self._filterIgnoredSubdirs(root, visibleSubdirs)
 
         if submodules:
             submodules.insert(0, '.')

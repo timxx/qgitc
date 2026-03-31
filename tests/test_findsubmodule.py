@@ -72,3 +72,65 @@ class TestFindSubmodule(TestBase):
 
             self.assertTrue(thread.isFinished())
             self.assertEqual(thread.submodules, [])
+
+    def testIgnoreDirectoryFromGitignoreDuringScan(self):
+        with TemporaryDirectory() as dir:
+            createRepo(dir)
+
+            with open(os.path.join(dir, ".gitignore"), "w") as f:
+                f.write("/release/\n")
+            Git.addFiles(repoDir=dir, files=[".gitignore"])
+            Git.commit("Ignore release", repoDir=dir)
+
+            createRepo(os.path.join(dir, "release", "nestedRepo"))
+            createRepo(os.path.join(dir, "visibleRepo"))
+
+            thread = FindSubmoduleThread(dir)
+            thread.start()
+            self.wait(3000, lambda: not thread.isFinished())
+
+            self.assertTrue(thread.isFinished())
+            self.assertSetEqual(set(thread.submodules), {".", "visibleRepo"})
+
+    def testKeepIgnoredNonBuildRepoDuringScan(self):
+        with TemporaryDirectory() as dir:
+            createRepo(dir)
+
+            with open(os.path.join(dir, ".gitignore"), "w") as f:
+                f.write("/vendorRepo/\n")
+            Git.addFiles(repoDir=dir, files=[".gitignore"])
+            Git.commit("Ignore vendorRepo", repoDir=dir)
+
+            createRepo(os.path.join(dir, "vendorRepo"))
+            createRepo(os.path.join(dir, "visibleRepo"))
+
+            thread = FindSubmoduleThread(dir)
+            thread.start()
+            self.wait(3000, lambda: not thread.isFinished())
+
+            self.assertTrue(thread.isFinished())
+            self.assertSetEqual(set(thread.submodules),
+                                {".", "vendorRepo", "visibleRepo"})
+
+    def testIgnoreBuildLikeDirectoryNameByPrefixOrSuffix(self):
+        with TemporaryDirectory() as dir:
+            createRepo(dir)
+
+            with open(os.path.join(dir, ".gitignore"), "w") as f:
+                f.write("/release-candidate/\n")
+                f.write("/hotfix-build/\n")
+                f.write("/debug64/\n")
+            Git.addFiles(repoDir=dir, files=[".gitignore"])
+            Git.commit("Ignore build-like dirs", repoDir=dir)
+
+            createRepo(os.path.join(dir, "release-candidate", "nestedRepo1"))
+            createRepo(os.path.join(dir, "hotfix-build", "nestedRepo2"))
+            createRepo(os.path.join(dir, "debug64", "nestedRepo3"))
+            createRepo(os.path.join(dir, "visibleRepo"))
+
+            thread = FindSubmoduleThread(dir)
+            thread.start()
+            self.wait(3000, lambda: not thread.isFinished())
+
+            self.assertTrue(thread.isFinished())
+            self.assertSetEqual(set(thread.submodules), {".", "visibleRepo"})
