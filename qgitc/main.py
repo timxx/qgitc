@@ -496,12 +496,20 @@ def main():
     args = _setup_argument(os.path.basename(sys.argv[0]))
     ret = args.func(args)
 
-    if QCoreApplication.instance() is not None:
+    app = QCoreApplication.instance()
+    if app is not None:
         try:
             # Flush Python stdio buffers before hard exit.
             sys.stdout.flush()
             sys.stderr.flush()
             logging.shutdown()
+            # Explicitly destroy the QApplication so Qt tears down its
+            # internal threads (e.g. connection-cache pool) cleanly
+            # *before* os._exit() runs the CRT/DLL-detach handlers.
+            # Without this, QThreadStorage warns about entries that
+            # belong to still-alive Qt-internal threads.
+            from shiboken6 import delete  # noqa: PLC0415
+            delete(app)
         except Exception:
             pass
         finally:
