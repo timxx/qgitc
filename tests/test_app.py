@@ -2,6 +2,7 @@
 import os
 from unittest.mock import patch
 
+from PySide6.QtCore import QThread
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.gitutils import Git, GitProcess
@@ -94,6 +95,15 @@ class TestApp(TestBase):
         submodules = self.app.settings().submodulesCache(Git.REPO_DIR)
         self.assertEqual(submodules, latestSubmodules)
 
+    def testTerminateThreadPrefersGracefulQuit(self):
+        thread = QThread(self.app)
+        thread.start()
+        self.assertTrue(thread.isRunning())
+
+        forced = self.app.terminateThread(thread, waitTime=100)
+
+        self.assertFalse(forced)
+        self.assertFalse(thread.isRunning())
 
 class TestAppNoRepo(TestBase):
     def doCreateRepo(self):

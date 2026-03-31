@@ -461,9 +461,14 @@ class Application(ApplicationBase):
         if not thread.isRunning():
             return False
 
+        # Ask worker code and event-loop based threads to exit gracefully first.
+        thread.requestInterruption()
+        thread.quit()
+
         timer = QElapsedTimer()
         timer.start()
         while thread.isRunning() and timer.elapsed() <= waitTime:
+            thread.wait(10)
             self.processEvents()
         if thread.isRunning():
             thread.terminate()
