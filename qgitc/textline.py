@@ -4,7 +4,7 @@ import bisect
 import re
 from typing import List, Tuple
 
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QRectF, Qt
 from PySide6.QtGui import (
     QFont,
     QFontMetrics,
@@ -15,7 +15,6 @@ from PySide6.QtGui import (
 )
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.common import logger
 
 __all__ = ["createFormatRange", "Link", "TextLine",
            "SourceTextLineBase", "LinkTextLine"]
@@ -26,6 +25,12 @@ email_re = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 url_re = re.compile("((https?|ftp)://[a-zA-Z0-9@:%_+-.~#?&/=()]+)")
 
 cr_char = "^M"
+
+# Lines longer than this skip link detection to avoid catastrophic regex backtracking
+_MAX_LINK_SCAN_LEN = 5000
+# Lines longer than this are truncated for QTextLayout to keep rendering fast
+_MAX_DISPLAY_CHARS = 10000
+_TRUNCATED_SUFFIX = QT_TRANSLATE_NOOP("TextLine", " (truncated)")
 
 
 def createFormatRange(start, length, fmt):
@@ -77,6 +82,8 @@ class TextLine():
 
         self._utf16Len = None
         self._indices = None
+        # Truncate display to avoid QTextLayout being slow on very long lines
+        self._displayLen = min(len(text), _MAX_DISPLAY_CHARS)
 
     def _relayout(self):
         self._layout.beginLayout()
@@ -94,6 +101,11 @@ class TextLine():
     def findLinks(text: str, patterns: List[Tuple[int, re.Pattern, str]]):
         links: List[Link] = []
         if not text or not patterns:
+            return links
+
+        # Skip link detection on very long lines: email/url regexes can catastrophically
+        # backtrack (O(n²)) on long ASCII-only strings without an @ or ://
+        if len(text) > _MAX_LINK_SCAN_LEN:
             return links
 
         for linkType, pattern, url, in patterns:
@@ -178,8 +190,10 @@ class TextLine():
         if self.utf16Length() == len(self._text) or self._indices:
             return
 
+        # Only build indices up to _displayLen; positions beyond that are capped
+        # in mapToUtf16, so we never need to look up indices beyond display range
         self._indices = [0]
-        for c in self._text:
+        for c in self._text[:self._displayLen]:
             if ord(c) > 0xFFFF:
                 self._indices.append(self._indices[-1] + 2)
             else:
@@ -190,12 +204,14 @@ class TextLine():
         if index == 0:
             return 0
 
+        # Cap to display length: layout text is at most _displayLen chars
+        index = min(index, self._displayLen)
+
         self._buildIndices()
         if not self._indices:
             return index
 
         if index >= len(self._indices):
-            logger.warning("index out of range %s > %s", index, len(self._indices))
             return self._indices[-1]
 
         return self._indices[index]
@@ -247,7 +263,11 @@ class TextLine():
 
     def ensureLayout(self):
         if not self._layout:
-            self._layout = QTextLayout(self._text, self._font)
+            # Use truncated text for layout on very long lines to keep rendering fast
+            suffix = QCoreApplication.translate("TextLine", _TRUNCATED_SUFFIX)
+            layoutText = self._text if self._displayLen >= len(self._text) \
+                else self._text[:self._displayLen] + suffix
+            self._layout = QTextLayout(layoutText, self._font)
             if self._defOption:
                 self._layout.setTextOption(self._defOption)
 
@@ -423,7 +443,11 @@ class SourceTextLineBase(TextLine):
 
         if self._defOption:
             if self._defOption.flags() & QTextOption.ShowTabsAndSpaces:
-                self._applyWhitespaces(self.text(), formats)
+                text = self.text()
+                # Limit to display range so we don't iterate 100k+ chars
+                if self._displayLen < len(text):
+                    text = text[:self._displayLen]
+                self._applyWhitespaces(text, formats)
 
         linkFmt = self.createLinksFormats()
         if linkFmt:
