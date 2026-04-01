@@ -151,6 +151,8 @@ class TestBase(unittest.TestCase):
         self.submoduleDir = None
         self.doCreateRepo()
 
+        self._oldEnv = os.environ.copy()
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         self.app = Application(sys.argv, testing=True)
         # clear settings to avoid test interference
         self.app.settings().remove("")
@@ -169,6 +171,8 @@ class TestBase(unittest.TestCase):
         # FIXME: `RuntimeError: Please destroy the Application singleton before creating a new Application instance`
         delete(self.app)
         del self.app
+        os.environ.clear()
+        os.environ.update(self._oldEnv)
 
         os.chdir(self.oldDir)
         Git.REPO_DIR = self.oldDir
