@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 import unittest
+from ctypes import c_long, py_object, pythonapi
 from datetime import datetime
 from functools import partial
 from unittest.mock import patch
@@ -29,6 +30,50 @@ knownQtWarnings = [
     "This plugin does not support propagateSizeHints()",
     "This plugin does not support raise()",
 ]
+
+_TIMEOUT_CONTEXT = {
+    "testId": None,
+    "timeout": None,
+}
+
+
+class TestTimeoutError(BaseException):
+    pass
+
+
+def _raiseAsyncException(threadId: int, exceptionType: type):
+    result = pythonapi.PyThreadState_SetAsyncExc(c_long(threadId), py_object(exceptionType))
+    if result > 1:
+        pythonapi.PyThreadState_SetAsyncExc(c_long(threadId), py_object(None))
+
+
+def _triggerTestTimeout(mainThreadId: int, testId: str, timeoutSeconds: float):
+    _TIMEOUT_CONTEXT["testId"] = testId
+    _TIMEOUT_CONTEXT["timeout"] = timeoutSeconds
+    _raiseAsyncException(mainThreadId, TestTimeoutError)
+
+
+class TimeoutTextTestResult(unittest.TextTestResult):
+    def addError(self, test, err):
+        errorType, errorValue, errorTraceback = err
+        if issubclass(errorType, TestTimeoutError):
+            testId = _TIMEOUT_CONTEXT.get("testId") or test.id()
+            timeoutSeconds = _TIMEOUT_CONTEXT.get("timeout")
+            timeoutMessage = f"Test timed out after {timeoutSeconds}s: {testId}"
+            super().addFailure(
+                test,
+                (AssertionError, AssertionError(timeoutMessage), errorTraceback)
+            )
+            self.stop()
+            return
+        super().addError(test, err)
+
+
+class TimeoutTextTestRunner(unittest.TextTestRunner):
+    resultclass = TimeoutTextTestResult
+
+
+unittest.TextTestRunner = TimeoutTextTestRunner
 
 
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
@@ -145,6 +190,25 @@ def _init_with_trace(instance, *args, **kwargs):
 
 
 class TestBase(unittest.TestCase):
+    TEST_TIMEOUT_SECONDS = 30
+
+    def run(self, result=None):
+        timeoutSeconds = self.TEST_TIMEOUT_SECONDS
+        if timeoutSeconds <= 0:
+            return super().run(result)
+
+        watchdog = threading.Timer(
+            timeoutSeconds,
+            _triggerTestTimeout,
+            args=(threading.main_thread().ident, self.id(), timeoutSeconds),
+        )
+        watchdog.daemon = True
+        watchdog.start()
+        try:
+            return super().run(result)
+        finally:
+            watchdog.cancel()
+
     def setUp(self):
         self.oldDir = Git.REPO_DIR or os.getcwd()
         self.gitDir = None
