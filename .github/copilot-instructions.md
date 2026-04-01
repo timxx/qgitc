@@ -48,7 +48,6 @@
 ## Tests (unittest + Qt)
 - Tests are `unittest`-based and use a Qt `Application(testing=True)` harness that creates temporary git repos (see `tests/base.py`).
 - Run tests headlessly:
-  - Set `QT_QPA_PLATFORM=offscreen` (CI does this on Linux).
   - `python -m unittest discover -s tests -p "test_*.py" -v`
 - CI reference: `.github/workflows/tests.yml` (also shows the coverage command used).
 
