@@ -158,6 +158,18 @@ class GithubCopilot(AiModelBase):
                 self.finished.emit()
                 return
 
+        # Ensure model capabilities are loaded before choosing the API endpoint.
+        # In CLI mode the GithubCopilot instance is created immediately before
+        # queryAsync() is called, so the QTimer.singleShot(0) that starts the
+        # model fetch may not have fired yet.  Trigger it now if needed, then
+        # wait for the fetch to complete so that _shouldUseResponsesApi()
+        # returns the correct value.
+        self._updateModels()
+        if self._modelFetcher is not None:
+            waitLoop = QEventLoop()
+            self.modelsReady.connect(waitLoop.quit)
+            waitLoop.exec()
+
         id = params.model or self.modelId or "gpt-4.1"
         self.modelId = id
         caps: AiModelCapabilities = GithubCopilot._capabilities.get(

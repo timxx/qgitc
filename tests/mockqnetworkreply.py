@@ -17,6 +17,7 @@ class MockQNetworkReply():
 
     def __init__(self, *args):
         self.deleteLater = MagicMock()
+        self.abort = MagicMock()
         self.readyRead = MagicMock()
         self.finished = MagicMock()
         self.finished.connect = lambda slot: QTimer.singleShot(100, slot)
