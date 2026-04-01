@@ -8,7 +8,6 @@ import tempfile
 import threading
 import time
 import unittest
-from ctypes import c_long, py_object, pythonapi
 from datetime import datetime
 from functools import partial
 from unittest.mock import patch
@@ -31,49 +30,13 @@ knownQtWarnings = [
     "This plugin does not support raise()",
 ]
 
-_TIMEOUT_CONTEXT = {
-    "testId": None,
-    "timeout": None,
-}
 
-
-class TestTimeoutError(BaseException):
-    pass
-
-
-def _raiseAsyncException(threadId: int, exceptionType: type):
-    result = pythonapi.PyThreadState_SetAsyncExc(c_long(threadId), py_object(exceptionType))
-    if result > 1:
-        pythonapi.PyThreadState_SetAsyncExc(c_long(threadId), py_object(None))
-
-
-def _triggerTestTimeout(mainThreadId: int, testId: str, timeoutSeconds: float):
-    _TIMEOUT_CONTEXT["testId"] = testId
-    _TIMEOUT_CONTEXT["timeout"] = timeoutSeconds
-    _raiseAsyncException(mainThreadId, TestTimeoutError)
-
-
-class TimeoutTextTestResult(unittest.TextTestResult):
-    def addError(self, test, err):
-        errorType, errorValue, errorTraceback = err
-        if issubclass(errorType, TestTimeoutError):
-            testId = _TIMEOUT_CONTEXT.get("testId") or test.id()
-            timeoutSeconds = _TIMEOUT_CONTEXT.get("timeout")
-            timeoutMessage = f"Test timed out after {timeoutSeconds}s: {testId}"
-            super().addFailure(
-                test,
-                (AssertionError, AssertionError(timeoutMessage), errorTraceback)
-            )
-            self.stop()
-            return
-        super().addError(test, err)
-
-
-class TimeoutTextTestRunner(unittest.TextTestRunner):
-    resultclass = TimeoutTextTestResult
-
-
-unittest.TextTestRunner = TimeoutTextTestRunner
+def _timeoutHandler(testId: str, timeoutSeconds: float):
+    """Force exit when test timeout fires."""
+    msg = f"\nTEST TIMEOUT: {testId} exceeded {timeoutSeconds}s\n"
+    sys.stderr.write(msg)
+    sys.stderr.flush()
+    os._exit(1)
 
 
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
@@ -199,8 +162,8 @@ class TestBase(unittest.TestCase):
 
         watchdog = threading.Timer(
             timeoutSeconds,
-            _triggerTestTimeout,
-            args=(threading.main_thread().ident, self.id(), timeoutSeconds),
+            _timeoutHandler,
+            args=(self.id(), timeoutSeconds),
         )
         watchdog.daemon = True
         watchdog.start()
