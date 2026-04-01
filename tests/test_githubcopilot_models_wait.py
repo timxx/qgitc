@@ -13,7 +13,7 @@ instead, which results in API errors.
 import json
 from unittest.mock import patch
 
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkRequest
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtTest import QSignalSpy
 
 from qgitc.llm import AiParameters
@@ -74,6 +74,18 @@ _CHAT_COMPLETIONS_REPLY = json.dumps({
         "finish_reason": "stop",
     }]
 }).encode()
+
+
+def _make_get_error_mock(error: QNetworkReply.NetworkError):
+    """Return a QNetworkAccessManager.get replacement that always errors."""
+
+    def _mock_get(mgr: QNetworkAccessManager, request: QNetworkRequest):
+        url = request.url().toString()
+        if "models" in url:
+            return MockQNetworkReply(error)
+        raise AssertionError(f"Unexpected GET URL: {url}")
+
+    return _mock_get
 
 
 def _make_get_mock(models_data: bytes):
@@ -193,6 +205,24 @@ class TestGithubCopilotModelsWait(TestBase):
 
         self._runQuery(
             "gpt-chat-model",
+            get_mock,
+            posted_urls,
+            _CHAT_COMPLETIONS_REPLY,
+        )
+
+        self.assertEqual(1, len(posted_urls),
+                         f"Expected exactly one POST, got: {posted_urls}")
+        self.assertIn("/chat/completions", posted_urls[0],
+                      f"Expected POST to /chat/completions endpoint, got: {posted_urls[0]}")
+
+    def test_queryDoesNotHangWhenModelsFetchFails(self):
+        """If /models request fails, queryAsync must not dead-wait for modelsReady."""
+        posted_urls = []
+        get_mock = _make_get_error_mock(
+            QNetworkReply.NetworkError.ConnectionRefusedError)
+
+        self._runQuery(
+            "gpt-4.1",
             get_mock,
             posted_urls,
             _CHAT_COMPLETIONS_REPLY,

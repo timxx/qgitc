@@ -60,11 +60,21 @@ class ModelsFetcher(QObject):
             request.setRawHeader(key, value)
 
         self._reply = mgr.get(request)
-        self._reply.finished.connect(self._onFinished)
+        self._reply.finished.connect(self._onReplyFinished)
         logger.debug(f"Fetching GitHub Copilot models...")
+
+    def _onReplyFinished(self):
+        try:
+            self._onFinished()
+        except Exception as e:
+            logger.exception("Error processing GitHub Copilot models reply: %s", e)
+        self.finished.emit()
 
     def _onFinished(self):
         reply = self._reply
+        if reply is None:
+            return
+
         reply.deleteLater()
         self._reply = None
         logger.debug(
@@ -107,8 +117,6 @@ class ModelsFetcher(QObject):
             endpoints = model.get("supported_endpoints", [])
             self.endPoints[id] = endpoints
 
-        self.finished.emit()
-
     def requestInterruption(self):
         if self._reply and self._reply.isRunning():
             self._reply.abort()
@@ -124,6 +132,7 @@ class GithubCopilot(AiModelBase):
     _capabilities = {}
     _defaultModel = None
     _endPoints = {}
+    _modelsReadyWaitTimeoutMs = 10000
 
     def __init__(self, model: str = None, parent=None):
         super().__init__(None, model, parent)
@@ -165,10 +174,7 @@ class GithubCopilot(AiModelBase):
         # wait for the fetch to complete so that _shouldUseResponsesApi()
         # returns the correct value.
         self._updateModels()
-        if self._modelFetcher is not None:
-            waitLoop = QEventLoop()
-            self.modelsReady.connect(waitLoop.quit)
-            waitLoop.exec()
+        self._waitForModelsReady()
 
         id = params.model or self.modelId or "gpt-4.1"
         self.modelId = id
@@ -252,6 +258,32 @@ class GithubCopilot(AiModelBase):
             payload["messages"] = self.toOpenAiMessages()
 
         self._doQuery(payload, stream)
+
+    def _waitForModelsReady(self):
+        if self._modelFetcher is None:
+            return
+
+        waitLoop = QEventLoop()
+        timeout = False
+
+        def _onTimeout():
+            nonlocal timeout
+            timeout = True
+            waitLoop.quit()
+
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(_onTimeout)
+        self.modelsReady.connect(waitLoop.quit)
+
+        timer.start(GithubCopilot._modelsReadyWaitTimeoutMs)
+        waitLoop.exec()
+
+        self.modelsReady.disconnect(waitLoop.quit)
+
+        if timeout:
+            logger.warning(
+                f"Timed out waiting for GitHub Copilot models after {GithubCopilot._modelsReadyWaitTimeoutMs} ms")
 
     @property
     def name(self):
