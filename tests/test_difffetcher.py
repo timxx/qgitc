@@ -736,9 +736,12 @@ class TestDiffFetcher(unittest.TestCase):
             b'\x00'
         ])
 
-        lineItems, fileItems = self._parse_and_get_results(diff_data)
+        _, fileItems = self._parse_and_get_results(diff_data)
 
+        self.assertNotIn('original.txt', fileItems)
         self.assertIn('copy.txt', fileItems)
+        self.assertEqual(fileItems['copy.txt'].state, FileState.Added,
+                 "Copy target should be Added")
 
     def test_no_newline_at_end_of_file(self):
         """

@@ -39,21 +39,20 @@ class DiffFetcher(DataFetcher):
         lines = data.split(self.separator)
         fullFileAStr = None
         fullFileBStr = None
+        fullDisplayFileStr = None
         fileState = FileState.Normal
 
         def _updateFileState():
-            nonlocal fullFileAStr, fullFileBStr, fileState
+            nonlocal fullFileAStr, fullFileBStr, fullDisplayFileStr, fileState
             if fileState != FileState.Normal:
-                if fullFileAStr:
-                    self._fileStates[fullFileAStr] = fileState
-                    if fullFileAStr in fileItems:
-                        fileItems[fullFileAStr].state = fileState
-                if fullFileBStr:
-                    self._fileStates[fullFileBStr] = fileState
-                    if fullFileBStr in fileItems:
-                        fileItems[fullFileBStr].state = fileState
+                fileToUpdate = fullDisplayFileStr or fullFileBStr or fullFileAStr
+                if fileToUpdate:
+                    self._fileStates[fileToUpdate] = fileState
+                    if fileToUpdate in fileItems:
+                        fileItems[fileToUpdate].state = fileState
             fullFileAStr = None
             fullFileBStr = None
+            fullDisplayFileStr = None
             fileState = FileState.Normal
 
         for line in lines:
@@ -75,13 +74,6 @@ class DiffFetcher(DataFetcher):
 
                 fullFileA = self.makeFilePath(fileA)
                 fullFileAStr = fullFileA.decode(diff_encoding)
-                fileItems[fullFileAStr] = FileInfo(self._row)
-                # Apply previously tracked state from earlier parse calls
-                if fullFileAStr in self._fileStates:
-                    fileItems[fullFileAStr].state = self._fileStates[fullFileAStr]
-
-                # Store current file for incremental parsing
-                self._currentFileA = fullFileAStr
 
                 # renames, keep new file name only
                 if fileB and fileB != fileA:
@@ -91,9 +83,17 @@ class DiffFetcher(DataFetcher):
                     fileItems[fullFileBStr] = FileInfo(self._row)
                     if fullFileBStr in self._fileStates:
                         fileItems[fullFileBStr].state = self._fileStates[fullFileBStr]
+                    fullDisplayFileStr = fullFileBStr
+                    self._currentFileA = fullFileAStr
                     self._currentFileB = fullFileBStr
                 else:
                     lineItems.append((DiffType.File, fullFileA))
+                    fileItems[fullFileAStr] = FileInfo(self._row)
+                    # Apply previously tracked state from earlier parse calls
+                    if fullFileAStr in self._fileStates:
+                        fileItems[fullFileAStr].state = self._fileStates[fullFileAStr]
+                    fullDisplayFileStr = fullFileAStr
+                    self._currentFileA = fullFileAStr
                     self._currentFileB = None
 
                 self._row += 1
@@ -146,35 +146,27 @@ class DiffFetcher(DataFetcher):
                         fileState = FileState.Renamed
                     elif fileState == FileState.Modified:
                         fileState = FileState.RenamedModified
+                elif line.startswith(b"copy to "):
+                    fileState = FileState.Added
                 elif line.startswith(b"index "):
                     if fileState == FileState.Renamed:
                         fileState = FileState.RenamedModified
                     elif fileState == FileState.Normal:
                         fileState = FileState.Modified
 
-                fileAToUpdate = fullFileAStr or self._currentFileA
-                fileBToUpdate = fullFileBStr or self._currentFileB
-
-                if fileAToUpdate:
-                    oldState = self._fileStates.get(fileAToUpdate)
-                    self._fileStates[fileAToUpdate] = fileState
-                    # If file not in fileItems yet (metadata from previous chunk)
-                    if fileAToUpdate not in fileItems:
-                        if oldState != fileState:
-                            self.fileStateChanged.emit(
-                                fileAToUpdate, fileState)
-                    else:
-                        fileItems[fileAToUpdate].state = fileState
-
-                if fileBToUpdate:
-                    oldState = self._fileStates.get(fileBToUpdate)
-                    self._fileStates[fileBToUpdate] = fileState
-                    if fileBToUpdate not in fileItems:
-                        if oldState != fileState:
-                            self.fileStateChanged.emit(
-                                fileBToUpdate, fileState)
-                    else:
-                        fileItems[fileBToUpdate].state = fileState
+                if fileState != FileState.Normal:
+                    fileToUpdate = fullDisplayFileStr or fullFileBStr or \
+                        fullFileAStr or self._currentFileB or self._currentFileA
+                    if fileToUpdate:
+                        oldState = self._fileStates.get(fileToUpdate)
+                        self._fileStates[fileToUpdate] = fileState
+                        # If file not in fileItems yet (metadata from previous chunk)
+                        if fileToUpdate not in fileItems:
+                            if oldState != fileState:
+                                self.fileStateChanged.emit(
+                                    fileToUpdate, fileState)
+                        else:
+                            fileItems[fileToUpdate].state = fileState
 
             if itemType != DiffType.Diff:
                 line = line.rstrip(b'\r')

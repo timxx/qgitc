@@ -485,3 +485,36 @@ class TestDiffFetcherBugHunting(unittest.TestCase):
         # foo.txt should NOT be in fileItems2 since it's a state-only update
         self.assertNotIn('foo.txt', fileItems2,
                          "foo.txt should not be in fileItems2 (emitted via fileStateChanged instead)")
+
+    def test_true_incremental_copy_metadata_updates_target_state(self):
+        """copy metadata in a later chunk should emit Added for copy target."""
+        chunk1 = b'\x00'.join([
+            b'diff --git a/guides/README.md b/.github/copilot-instructions.md',
+            b'\x00'
+        ])
+
+        _, fileItems1 = self._parse(chunk1)
+        self.assertIn('.github/copilot-instructions.md', fileItems1)
+        self.assertEqual(
+            fileItems1['.github/copilot-instructions.md'].state,
+            FileState.Normal
+        )
+
+        self.stateChanges.clear()
+
+        chunk2 = b'\x00'.join([
+            b'similarity index 100%',
+            b'copy from guides/README.md',
+            b'copy to .github/copilot-instructions.md',
+            b'\x00'
+        ])
+
+        _, fileItems2 = self._parse(chunk2, reset=False)
+
+        self.assertNotIn('.github/copilot-instructions.md', fileItems2)
+        self.assertEqual(len(self.stateChanges), 1)
+        self.assertEqual(
+            self.stateChanges[0][0],
+            '.github/copilot-instructions.md'
+        )
+        self.assertEqual(self.stateChanges[0][1], FileState.Added)
