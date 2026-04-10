@@ -132,31 +132,39 @@ class DiffFetcher(DataFetcher):
                 continue
             else:
                 itemType = DiffType.FileInfo
+                fileToUpdate = fullDisplayFileStr or fullFileBStr or \
+                    fullFileAStr or self._currentFileB or self._currentFileA
+                currentState = fileState
+                if currentState == FileState.Normal and fileToUpdate:
+                    currentState = self._fileStates.get(
+                        fileToUpdate, FileState.Normal)
+
                 if line.startswith(b"new file mode "):
                     fileState = FileState.Added
                 elif line.startswith(b"deleted file mode "):
                     fileState = FileState.Deleted
                 elif line.startswith(b"new mode "):
-                    if fileState == FileState.Normal:
+                    fileState = currentState
+                    if currentState == FileState.Normal:
                         fileState = FileState.Modified
-                    elif fileState == FileState.Renamed:
+                    elif currentState == FileState.Renamed:
                         fileState = FileState.RenamedModified
                 elif line.startswith(b"rename "):
-                    if fileState == FileState.Normal:
+                    fileState = currentState
+                    if currentState == FileState.Normal:
                         fileState = FileState.Renamed
-                    elif fileState == FileState.Modified:
+                    elif currentState == FileState.Modified:
                         fileState = FileState.RenamedModified
                 elif line.startswith(b"copy to "):
                     fileState = FileState.Added
                 elif line.startswith(b"index "):
-                    if fileState == FileState.Renamed:
+                    fileState = currentState
+                    if currentState == FileState.Renamed:
                         fileState = FileState.RenamedModified
-                    elif fileState == FileState.Normal:
+                    elif currentState == FileState.Normal:
                         fileState = FileState.Modified
 
                 if fileState != FileState.Normal:
-                    fileToUpdate = fullDisplayFileStr or fullFileBStr or \
-                        fullFileAStr or self._currentFileB or self._currentFileA
                     if fileToUpdate:
                         oldState = self._fileStates.get(fileToUpdate)
                         self._fileStates[fileToUpdate] = fileState

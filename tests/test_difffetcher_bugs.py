@@ -518,3 +518,82 @@ class TestDiffFetcherBugHunting(unittest.TestCase):
             '.github/copilot-instructions.md'
         )
         self.assertEqual(self.stateChanges[0][1], FileState.Added)
+
+    def test_true_incremental_rename_index_keeps_renamed_modified(self):
+        """rename metadata in one chunk and index in the next should yield RenamedModified."""
+        chunk1 = b'\x00'.join([
+            b'diff --git a/old.txt b/new.txt',
+            b'\x00'
+        ])
+
+        _, fileItems1 = self._parse(chunk1)
+        self.assertIn('new.txt', fileItems1)
+        self.assertEqual(fileItems1['new.txt'].state, FileState.Normal)
+
+        self.stateChanges.clear()
+
+        chunk2 = b'\x00'.join([
+            b'rename from old.txt',
+            b'rename to new.txt',
+            b'\x00'
+        ])
+
+        _, fileItems2 = self._parse(chunk2, reset=False)
+
+        self.assertNotIn('new.txt', fileItems2)
+        self.assertEqual(len(self.stateChanges), 1)
+        self.assertEqual(self.stateChanges[0], ('new.txt', FileState.Renamed))
+
+        self.stateChanges.clear()
+
+        chunk3 = b'\x00'.join([
+            b'index abc123..def456 100644',
+            b'\x00'
+        ])
+
+        _, fileItems3 = self._parse(chunk3, reset=False)
+
+        self.assertNotIn('new.txt', fileItems3)
+        self.assertEqual(len(self.stateChanges), 1)
+        self.assertEqual(
+            self.stateChanges[0],
+            ('new.txt', FileState.RenamedModified)
+        )
+
+    def test_true_incremental_copy_index_does_not_downgrade_added(self):
+        """copy metadata in one chunk and index in the next should remain Added."""
+        chunk1 = b'\x00'.join([
+            b'diff --git a/src.txt b/dst.txt',
+            b'\x00'
+        ])
+
+        _, fileItems1 = self._parse(chunk1)
+        self.assertIn('dst.txt', fileItems1)
+        self.assertEqual(fileItems1['dst.txt'].state, FileState.Normal)
+
+        self.stateChanges.clear()
+
+        chunk2 = b'\x00'.join([
+            b'similarity index 100%',
+            b'copy from src.txt',
+            b'copy to dst.txt',
+            b'\x00'
+        ])
+
+        _, fileItems2 = self._parse(chunk2, reset=False)
+
+        self.assertNotIn('dst.txt', fileItems2)
+        self.assertEqual(len(self.stateChanges), 1)
+        self.assertEqual(self.stateChanges[0], ('dst.txt', FileState.Added))
+
+        self.stateChanges.clear()
+
+        chunk3 = b'\x00'.join([
+            b'index abc123..def456 100644',
+            b'\x00'
+        ])
+
+        _, fileItems3 = self._parse(chunk3, reset=False)
+
+        self.assertNotIn('dst.txt', fileItems3)
+        self.assertEqual(self.stateChanges, [])
