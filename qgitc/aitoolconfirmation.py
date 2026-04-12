@@ -10,7 +10,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QApplication, QPlainTextEdit
 
-from qgitc.agenttools import ToolType
+from qgitc.agent.tool import ToolType
 from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchema
 from qgitc.drawutils import drawRoundedRect

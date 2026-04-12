@@ -22,7 +22,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPlainTextEdit, QTextEdit
 
-from qgitc.agenttools import ToolType
+from qgitc.agent.tool import ToolType
 from qgitc.aitoolconfirmation import (
     TOOL_CONFIRMATION_OBJECT_TYPE,
     ButtonType,

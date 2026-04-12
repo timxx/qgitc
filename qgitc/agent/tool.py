@@ -44,3 +44,20 @@ class Tool(ABC):
                 "parameters": self.input_schema(),
             },
         }
+
+
+class ToolType:
+    """Tool type constants for UI rendering."""
+    READ_ONLY = 0
+    WRITE = 1
+    DANGEROUS = 2
+
+
+def tool_type_from_tool(tool):
+    # type: (Tool) -> int
+    """Convert Tool boolean flags to ToolType constant for UI."""
+    if tool.is_destructive():
+        return ToolType.DANGEROUS
+    if tool.is_read_only():
+        return ToolType.READ_ONLY
+    return ToolType.WRITE

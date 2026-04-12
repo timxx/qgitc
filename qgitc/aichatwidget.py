@@ -41,8 +41,8 @@ from qgitc.agent import (
     messages_to_history_dicts,
     register_builtin_tools,
 )
+from qgitc.agent.tool import ToolType
 from qgitc.agent.types import TextBlock
-from qgitc.agenttools import ToolType, parseToolArguments
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichatcontextprovider import AiChatContextProvider

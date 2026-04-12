@@ -29,7 +29,7 @@ from qgitc.agent.provider import (
     StreamEvent,
     ToolCallDelta,
 )
-from qgitc.agent.tool import Tool, ToolContext, ToolResult
+from qgitc.agent.tool import Tool, ToolContext, ToolResult, ToolType, tool_type_from_tool
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.tool_registration import register_builtin_tools
 from qgitc.agent.types import (
@@ -75,6 +75,7 @@ __all__ = [
     "ToolRegistry",
     "ToolResult",
     "ToolResultBlock",
+    "ToolType",
     "ToolUseBlock",
     "UiTool",
     "UiToolDispatcher",
@@ -85,4 +86,5 @@ __all__ = [
     "history_dicts_to_messages",
     "messages_to_history_dicts",
     "register_builtin_tools",
+    "tool_type_from_tool",
 ]
