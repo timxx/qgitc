@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import subprocess
 from typing import Any, Dict
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
+from qgitc.agent.tools._utils import run_git
 
 
 class GitStatusTool(Tool):
@@ -14,37 +14,36 @@ class GitStatusTool(Tool):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
-        try:
-            proc = subprocess.run(
-                ["git", "status", "--porcelain", "-b"],
-                cwd=context.working_directory,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-        except FileNotFoundError:
-            return ToolResult(
-                content="git executable not found", is_error=True
-            )
-        except subprocess.TimeoutExpired:
-            return ToolResult(
-                content="git status timed out after 30 seconds",
-                is_error=True,
-            )
-        except OSError as e:
-            return ToolResult(content=str(e), is_error=True)
+        args = ["status", "--porcelain=v1", "-b"]
 
-        if proc.returncode != 0:
-            error_msg = proc.stderr.strip() if proc.stderr else (
-                "git status failed with exit code {}".format(proc.returncode)
-            )
-            return ToolResult(content=error_msg, is_error=True)
+        untracked = input_data.get("untracked", True)
+        if not untracked:
+            args.append("--untracked-files=no")
 
-        return ToolResult(content=proc.stdout)
+        ok, output = run_git(context.working_directory, args)
+        if not ok:
+            return ToolResult(content=output, is_error=True)
+
+        # Porcelain v1 with -b typically includes a branch line like:
+        #   ## main...origin/main [ahead 1]
+        # If that's the only line, the working tree is clean.
+        lines = output.splitlines()
+        if not lines:
+            output = "working tree clean (no changes)."
+        elif len(lines) == 1 and lines[0].startswith("##"):
+            output = "{}\nworking tree clean (no changes).".format(lines[0])
+
+        return ToolResult(content=output)
 
     def input_schema(self) -> Dict[str, Any]:
         return {
             "type": "object",
-            "properties": {},
+            "properties": {
+                "untracked": {
+                    "type": "boolean",
+                    "description": "Include untracked files (default true).",
+                    "default": True,
+                },
+            },
             "additionalProperties": False,
         }
