@@ -426,24 +426,27 @@ class TestCommitWindow(TestBase):
             chatWindow = self.app.getWindow(WindowType.AiAssistant, False)
             self.assertIsNotNone(chatWindow)
 
-            chatWindow.codeReviewForStagedFiles(test_event.submodules)
             chatWidget: AiChatWidget = chatWindow.centralWidget()
-            spyFinished = QSignalSpy(chatWidget._codeReviewExecutor.finished)
+            # Prevent agent loop from starting - mock model can't handle
+            # queryAsync properly, causing the thread to hang on close
+            with patch.object(chatWidget, '_doRequest'):
+                chatWindow.codeReviewForStagedFiles(test_event.submodules)
+                spyFinished = QSignalSpy(chatWidget._codeReviewExecutor.finished)
 
-            spyInitialized = QSignalSpy(chatWidget.initialized)
-            self.assertFalse(chatWidget._isInitialized)
+                spyInitialized = QSignalSpy(chatWidget.initialized)
+                self.assertFalse(chatWidget._isInitialized)
 
-            self.wait(5000, lambda: spyInitialized.count()
-                      == 0 or spyFinished.count() == 0)
-            self.processEvents()
+                self.wait(5000, lambda: spyInitialized.count()
+                          == 0 or spyFinished.count() == 0)
+                self.processEvents()
 
-            self.assertEqual(spyInitialized.count(), 1)
-            self.assertEqual(spyFinished.count(), 1)
-            self.assertTrue(chatWidget._isInitialized)
+                self.assertEqual(spyInitialized.count(), 1)
+                self.assertEqual(spyFinished.count(), 1)
+                self.assertTrue(chatWidget._isInitialized)
 
-            model = chatWidget.currentChatModel()
-            self.assertIsNotNone(model)
-            self.assertEqual(model.modelId, "test-model")
+                model = chatWidget.currentChatModel()
+                self.assertIsNotNone(model)
+                self.assertEqual(model.modelId, "test-model")
 
             chatWindow.close()
 
