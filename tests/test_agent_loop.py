@@ -18,7 +18,7 @@ from qgitc.agent.provider import (
 )
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
-from qgitc.agent.types import AssistantMessage, UserMessage
+from qgitc.agent.types import AssistantMessage, TextBlock, UserMessage
 from tests.base import TestBase
 
 
@@ -227,6 +227,42 @@ class TestAgentLoopToolExecution(TestBase):
         # UserMessage, AssistantMessage(tool_use), UserMessage(tool_result),
         # AssistantMessage(text)
         self.assertEqual(len(msgs), 4)
+
+
+class TestAgentLoopSetMessages(TestBase):
+
+    def setUp(self):
+        super().setUp()
+        self.loop = _make_loop(SimpleProvider())
+
+    def tearDown(self):
+        self.loop.abort()
+        self.loop.wait(3000)
+        super().tearDown()
+
+    def doCreateRepo(self):
+        pass
+
+    def test_set_messages(self):
+        msgs = [
+            UserMessage(content=[TextBlock(text="Hello")]),
+            AssistantMessage(content=[TextBlock(text="Hi")]),
+        ]
+        self.loop.set_messages(msgs)
+        result = self.loop.messages()
+        self.assertEqual(len(result), 2)
+        self.assertIsInstance(result[0], UserMessage)
+        self.assertIsInstance(result[1], AssistantMessage)
+
+    def test_set_messages_copies(self):
+        msgs = [UserMessage(content=[TextBlock(text="Hello")])]
+        self.loop.set_messages(msgs)
+        msgs.append(UserMessage(content=[TextBlock(text="World")]))
+        self.assertEqual(len(self.loop.messages()), 1)
+
+    def test_set_system_prompt(self):
+        self.loop.set_system_prompt("New prompt")
+        self.assertEqual(self.loop._system_prompt, "New prompt")
 
 
 if __name__ == "__main__":

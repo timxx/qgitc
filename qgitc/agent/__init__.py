@@ -7,6 +7,11 @@ from qgitc.agent.compaction import (
     ConversationCompactor,
     estimate_tokens,
 )
+from qgitc.agent.message_convert import (
+    history_dicts_to_messages,
+    messages_to_history_dicts,
+)
+from qgitc.agent.permission_presets import create_permission_engine
 from qgitc.agent.permissions import (
     PermissionAllow,
     PermissionAsk,
@@ -26,6 +31,7 @@ from qgitc.agent.provider import (
 )
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
+from qgitc.agent.tool_registration import register_builtin_tools
 from qgitc.agent.types import (
     AssistantMessage,
     ContentBlock,
@@ -38,6 +44,7 @@ from qgitc.agent.types import (
     Usage,
     UserMessage,
 )
+from qgitc.agent.ui_tool import UiTool, UiToolDispatcher
 
 __all__ = [
     "AgentLoop",
@@ -69,7 +76,13 @@ __all__ = [
     "ToolResult",
     "ToolResultBlock",
     "ToolUseBlock",
+    "UiTool",
+    "UiToolDispatcher",
     "Usage",
     "UserMessage",
+    "create_permission_engine",
     "estimate_tokens",
+    "history_dicts_to_messages",
+    "messages_to_history_dicts",
+    "register_builtin_tools",
 ]

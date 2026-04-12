@@ -119,6 +119,16 @@ class AgentLoop(QThread):
         """Return a copy of the conversation history (thread-safe)."""
         return list(self._messages)
 
+    def set_messages(self, messages):
+        # type: (List[Message]) -> None
+        """Replace conversation history (call before submit, not while running)."""
+        self._messages = list(messages)
+
+    def set_system_prompt(self, prompt):
+        # type: (str) -> None
+        """Update the system prompt."""
+        self._system_prompt = prompt
+
     def run(self):
         # type: () -> None
         """Main agent loop -- runs in a dedicated thread."""
