@@ -3,12 +3,25 @@
 import os
 from unittest import skipIf
 
-from qgitc.agenttoolexecutor import AgentToolExecutor
+from qgitc.agent.tool import ToolContext
+from qgitc.agent.tools.apply_patch import ApplyPatchTool
 from qgitc.gitutils import Git
 from tests.base import TestBase
 
 
+def _make_context(working_directory):
+    return ToolContext(
+        working_directory=working_directory,
+        abort_requested=lambda: False,
+    )
+
+
 class TestApplyPatchTool(TestBase):
+    def setUp(self):
+        super().setUp()
+        self.tool = ApplyPatchTool()
+        self.context = _make_context(Git.REPO_DIR)
+
     def _assert_only_crlf_bytes(self, data: bytes):
         # Ensure every LF byte is preceded by CR.
         for i, b in enumerate(data):
@@ -48,16 +61,15 @@ class TestApplyPatchTool(TestBase):
             "*** End Patch\n"
         )
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch(
-            "apply_patch",
+        result = self.tool.execute(
             {
                 "input": patch,
                 "explanation": "Replace old_line with new_line",
             },
+            self.context,
         )
 
-        self.assertTrue(result.ok, msg=result.output)
+        self.assertFalse(result.is_error, msg=result.content)
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("new_line\n", content)
@@ -80,16 +92,15 @@ class TestApplyPatchTool(TestBase):
             "*** End Patch\n"
         )
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch(
-            "apply_patch",
+        result = self.tool.execute(
             {
                 "input": patch,
                 "explanation": "Replace old_line with new_line (preserve CRLF)",
             },
+            self.context,
         )
 
-        self.assertTrue(result.ok, msg=result.output)
+        self.assertFalse(result.is_error, msg=result.content)
         with open(path, "rb") as f:
             data = f.read()
         self._assert_only_crlf_bytes(data)
@@ -116,16 +127,15 @@ class TestApplyPatchTool(TestBase):
             "*** End Patch\n"
         )
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch(
-            "apply_patch",
+        result = self.tool.execute(
             {
                 "input": patch,
                 "explanation": "Replace old_line with new_line (preserve UTF-16LE BOM/CRLF)",
             },
+            self.context,
         )
 
-        self.assertTrue(result.ok, msg=result.output)
+        self.assertFalse(result.is_error, msg=result.content)
         with open(path, "rb") as f:
             data = f.read()
 
@@ -166,16 +176,15 @@ class TestApplyPatchTool(TestBase):
             "*** End Patch\n"
         )
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch(
-            "apply_patch",
+        result = self.tool.execute(
             {
                 "input": patch,
                 "explanation": "Insert after LF and replace within CRLF block",
             },
+            self.context,
         )
 
-        self.assertTrue(result.ok, msg=result.output)
+        self.assertFalse(result.is_error, msg=result.content)
         with open(path, "rb") as f:
             data = f.read()
 
@@ -211,20 +220,19 @@ class TestApplyPatchTool(TestBase):
             "*** End Patch\n"
         )
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch(
-            "apply_patch",
+        result = self.tool.execute(
             {
                 "input": patch,
                 "explanation": "Attempt to modify outside repo",
             },
+            self.context,
         )
 
-        self.assertFalse(result.ok)
+        self.assertTrue(result.is_error)
         self.assertTrue(
-            "outside" in result.output.lower() or "refusing" in result.output.lower(
-            ) or "invalid" in result.output.lower(),
-            msg=result.output,
+            "outside" in result.content.lower() or "refusing" in result.content.lower(
+            ) or "invalid" in result.content.lower(),
+            msg=result.content,
         )
 
     def test_updates_real_case(self):
@@ -319,16 +327,15 @@ class TestApplyPatchTool(TestBase):
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             f.write(old_content)
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch(
-            "apply_patch",
+        result = self.tool.execute(
             {
                 "input": patch,
                 "explanation": "Fix bug",
             },
+            self.context,
         )
 
-        self.assertTrue(result.ok, msg=result.output)
+        self.assertFalse(result.is_error, msg=result.content)
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn(
@@ -360,12 +367,14 @@ class TestApplyPatchTool(TestBase):
 -hello
 *** End Patch""".format(path.replace("\\", "/").upper())
 
-        executor = AgentToolExecutor()
-        result = executor._handle_apply_patch("apply_patch", {
-            "input": patch,
-            "explanation": "Fix bug",
-        })
-        self.assertTrue(result.ok, msg=result.output)
+        result = self.tool.execute(
+            {
+                "input": patch,
+                "explanation": "Fix bug",
+            },
+            self.context,
+        )
+        self.assertFalse(result.is_error, msg=result.content)
 
     def test_anchors(self):
         path = os.path.join(Git.REPO_DIR, "test.cpp").replace("\\", "/")
@@ -386,7 +395,7 @@ class TestApplyPatchTool(TestBase):
 """)
 
         # both `@@ void foo()` and `@@void foo()` should be accepted
-        patch = """*** Begin Patch
+        patch_template = """*** Begin Patch
 *** Update File: {}
 {}
 -#ifndef Q_OS_UNIX
@@ -394,13 +403,15 @@ class TestApplyPatchTool(TestBase):
 *** End Patch"""
 
         def _test(patch: str):
-            executor = AgentToolExecutor()
             _create_file()
-            result = executor._handle_apply_patch("apply_patch", {
-                "input": patch,
-                "explanation": "Fix bug",
-            })
-            self.assertTrue(result.ok, msg=result.output)
+            result = self.tool.execute(
+                {
+                    "input": patch,
+                    "explanation": "Fix bug",
+                },
+                self.context,
+            )
+            self.assertFalse(result.is_error, msg=result.content)
 
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -408,5 +419,5 @@ class TestApplyPatchTool(TestBase):
             self.assertIn("#ifdef Q_OS_WIN", content)
             self.assertNotIn("#ifndef Q_OS_UNIX", content)
 
-        _test(patch.format(path, "@@ void foo()"))
-        _test(patch.format(path, "@@void foo()"))
+        _test(patch_template.format(path, "@@ void foo()"))
+        _test(patch_template.format(path, "@@void foo()"))

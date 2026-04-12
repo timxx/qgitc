@@ -4,12 +4,25 @@ import json
 import os
 import tempfile
 
-from qgitc.agenttoolexecutor import AgentToolExecutor
+from qgitc.agent.tool import ToolContext, ToolResult
+from qgitc.agent.tools.read_external_file import ReadExternalFileTool
 from qgitc.gitutils import Git
 from tests.base import TestBase
 
 
+def _make_context(working_directory):
+    return ToolContext(
+        working_directory=working_directory,
+        abort_requested=lambda: False,
+    )
+
+
 class TestAgentReadExternalFile(TestBase):
+    def setUp(self):
+        super().setUp()
+        self.tool = ReadExternalFileTool()
+        self.context = _make_context(Git.REPO_DIR)
+
     def _parseOutput(self, output: str):
         assert output.startswith("<<<METADATA>>>\n"), output
         rest = output[len("<<<METADATA>>>\n"):]
@@ -18,55 +31,48 @@ class TestAgentReadExternalFile(TestBase):
         return meta, content
 
     def test_requires_absolute_path(self):
-        executor = AgentToolExecutor()
-        result = executor._handle_read_external_file(
-            "read_external_file",
+        result = self.tool.execute(
             {
                 "filePath": "relative.txt",
                 "explanation": "Need to inspect an external file",
             },
+            self.context,
         )
-        assert not result.ok
-        assert "absolute" in result.output.lower()
+        assert result.is_error
+        assert "absolute" in result.content.lower()
 
     def test_allows_repo_path_even_if_absolute(self):
-        executor = AgentToolExecutor()
         absPath = os.path.join(Git.REPO_DIR, "README.md")
-        result = executor._handle_read_external_file(
-            "read_external_file",
+        result = self.tool.execute(
             {
                 "filePath": absPath,
                 "explanation": "Read a repo file by absolute path",
             },
+            self.context,
         )
-        assert result.ok, result.output
-        meta, content = self._parseOutput(result.output)
+        assert not result.is_error, result.content
+        meta, content = self._parseOutput(result.content)
         assert meta["path"] == os.path.abspath(absPath)
         assert meta["totalLines"] >= 1
         assert content
 
     def test_does_not_require_repo_to_be_open(self):
-        oldRepoDir = getattr(Git, "REPO_DIR", None)
-        try:
-            Git.REPO_DIR = ""
-            with tempfile.TemporaryDirectory() as td:
-                absPath = os.path.join(td, "outside.txt")
-                with open(absPath, "w", encoding="utf-8", newline="\n") as f:
-                    f.write("hello\nworld\n")
+        with tempfile.TemporaryDirectory() as td:
+            absPath = os.path.join(td, "outside.txt")
+            with open(absPath, "w", encoding="utf-8", newline="\n") as f:
+                f.write("hello\nworld\n")
 
-                executor = AgentToolExecutor()
-                result = executor._handle_read_external_file(
-                    "read_external_file",
-                    {
-                        "filePath": absPath,
-                        "startLine": 1,
-                        "endLine": 1,
-                        "explanation": "Read a temp file without a repo",
-                    },
-                )
-                assert result.ok, result.output
-        finally:
-            Git.REPO_DIR = oldRepoDir
+            context = _make_context("")
+            result = self.tool.execute(
+                {
+                    "filePath": absPath,
+                    "startLine": 1,
+                    "endLine": 1,
+                    "explanation": "Read a temp file without a repo",
+                },
+                context,
+            )
+            assert not result.is_error, result.content
 
     def test_reads_outside_repo_with_metadata(self):
         with tempfile.TemporaryDirectory() as td:
@@ -74,19 +80,18 @@ class TestAgentReadExternalFile(TestBase):
             with open(absPath, "w", encoding="utf-8", newline="\n") as f:
                 f.write("hello\nworld\n")
 
-            executor = AgentToolExecutor()
-            result = executor._handle_read_external_file(
-                "read_external_file",
+            result = self.tool.execute(
                 {
                     "filePath": absPath,
                     "startLine": 2,
                     "endLine": 2,
                     "explanation": "Read a temp file for debugging",
                 },
+                self.context,
             )
 
-            assert result.ok, result.output
-            meta, content = self._parseOutput(result.output)
+            assert not result.is_error, result.content
+            meta, content = self._parseOutput(result.content)
             assert content == "world\n"
             assert meta["totalLines"] == 2
             assert meta["startLine"] == 2

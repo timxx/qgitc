@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtTest import QTest
 
-from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.agenttools import ToolType
+from qgitc.agent.tool import Tool, ToolContext, ToolResult, ToolType
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.llm import AiChatMessage, AiModelBase
 from qgitc.windowtype import WindowType

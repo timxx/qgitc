@@ -3,7 +3,7 @@ from PySide6.QtCore import QPoint
 from PySide6.QtGui import QTextCursor
 from PySide6.QtTest import QTest
 
-from qgitc.agenttools import ToolType
+from qgitc.agent.tool import ToolType
 from qgitc.aichatbot import AiChatbot
 from qgitc.aitoolconfirmation import ButtonType
 from qgitc.llm import AiResponse, AiRole

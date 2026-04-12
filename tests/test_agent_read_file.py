@@ -5,13 +5,26 @@ import os
 import tempfile
 from unittest.mock import patch
 
-from qgitc.agenttoolexecutor import AgentToolExecutor
+from qgitc.agent.tool import ToolContext, ToolResult
+from qgitc.agent.tools.read_file import ReadFileTool
 from qgitc.gitutils import Git
 from qgitc.tools import readfile as readfile_tool
 from tests.base import TestBase
 
 
+def _make_context(working_directory):
+    return ToolContext(
+        working_directory=working_directory,
+        abort_requested=lambda: False,
+    )
+
+
 class TestAgentReadFile(TestBase):
+    def setUp(self):
+        super().setUp()
+        self.tool = ReadFileTool()
+        self.context = _make_context(Git.REPO_DIR)
+
     def _parseOutput(self, output: str):
         assert output.startswith("<<<METADATA>>>\n"), output
         rest = output[len("<<<METADATA>>>\n"):]
@@ -26,16 +39,13 @@ class TestAgentReadFile(TestBase):
         with open(path, "wb") as f:
             f.write(text.encode("gbk"))
 
-        executor = AgentToolExecutor()
-        result = executor._handle_read_file(
-            "read_file",
-            {
-                "filePath": "gbk_sample.txt",
-            },
+        result = self.tool.execute(
+            {"filePath": "gbk_sample.txt"},
+            self.context,
         )
 
-        assert result.ok, result.output
-        meta, content = self._parseOutput(result.output)
+        assert not result.is_error, result.content
+        meta, content = self._parseOutput(result.content)
         self.assertEqual(content, text)
         self.assertEqual(meta["totalLines"], 3)
         self.assertEqual(meta["startLine"], 1)
@@ -47,18 +57,17 @@ class TestAgentReadFile(TestBase):
         with open(path, "wb") as f:
             f.write(text.encode("gbk"))
 
-        executor = AgentToolExecutor()
-        result = executor._handle_read_file(
-            "read_file",
+        result = self.tool.execute(
             {
                 "filePath": "gbk_sample2.txt",
                 "startLine": 2,
                 "endLine": 2,
             },
+            self.context,
         )
 
-        assert result.ok, result.output
-        meta, content = self._parseOutput(result.output)
+        assert not result.is_error, result.content
+        meta, content = self._parseOutput(result.content)
         self.assertEqual(content, "第二行\n")
         self.assertEqual(meta["startLine"], 2)
         self.assertEqual(meta["endLine"], 2)
@@ -71,18 +80,17 @@ class TestAgentReadFile(TestBase):
         with open(path, "wb") as f:
             f.write(data)
 
-        executor = AgentToolExecutor()
-        result = executor._handle_read_file(
-            "read_file",
+        result = self.tool.execute(
             {
                 "filePath": "crlf_sample.txt",
                 "startLine": 1,
                 "endLine": 2,
             },
+            self.context,
         )
 
-        assert result.ok, result.output
-        _, content = self._parseOutput(result.output)
+        assert not result.is_error, result.content
+        _, content = self._parseOutput(result.content)
         self.assertEqual(content, "line1\r\nline2\r\n")
 
     def test_read_file_end_line_last_line(self):
@@ -93,18 +101,17 @@ class TestAgentReadFile(TestBase):
         with open(path, "wb") as f:
             f.write(data)
 
-        executor = AgentToolExecutor()
-        result = executor._handle_read_file(
-            "read_file",
+        result = self.tool.execute(
             {
                 "filePath": "last_line_sample.txt",
                 "startLine": 3,
                 "endLine": 3,
             },
+            self.context,
         )
 
-        assert result.ok, result.output
-        meta, content = self._parseOutput(result.output)
+        assert not result.is_error, result.content
+        meta, content = self._parseOutput(result.content)
         self.assertEqual(content, "ccc\n")
         self.assertEqual(meta["startLine"], 3)
         self.assertEqual(meta["endLine"], 3)
@@ -115,16 +122,13 @@ class TestAgentReadFile(TestBase):
             with open(absPath, "w", encoding="utf-8") as f:
                 f.write("hello\nworld\n")
 
-            executor = AgentToolExecutor()
-            result = executor._handle_read_file(
-                "read_file",
-                {
-                    "filePath": absPath,
-                },
+            result = self.tool.execute(
+                {"filePath": absPath},
+                self.context,
             )
 
-            assert not result.ok
-            assert "outside the repository" in result.output
+            assert result.is_error
+            assert "outside the repository" in result.content
 
     def test_read_file_blocks_symlink_escape(self):
         with tempfile.TemporaryDirectory() as td:
@@ -138,16 +142,13 @@ class TestAgentReadFile(TestBase):
             except (OSError, NotImplementedError) as e:
                 self.skipTest(f"symlink not supported: {e}")
 
-            executor = AgentToolExecutor()
-            result = executor._handle_read_file(
-                "read_file",
-                {
-                    "filePath": "link_outside.txt",
-                },
+            result = self.tool.execute(
+                {"filePath": "link_outside.txt"},
+                self.context,
             )
 
-            assert not result.ok
-            assert "outside the repository" in result.output
+            assert result.is_error
+            assert "outside the repository" in result.content
 
     def test_normalize_tool_file_path_windows_drive_prefix_only(self):
         # Regression test: only strip the leading slash for the specific "/C:/" pattern.
