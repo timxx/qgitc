@@ -363,43 +363,27 @@ class TestGitAddTool(unittest.TestCase):
 
 
 class TestRunGitHelper(unittest.TestCase):
-    @patch("subprocess.run")
-    def test_success(self, mock_run):
-        mock_run.return_value = type("Proc", (), {
-            "returncode": 0,
-            "stdout": "output\n",
-            "stderr": "",
-        })()
+    @patch("qgitc.agent.tools._utils.runGit")
+    def test_success(self, mock_run_git):
+        mock_run_git.return_value = (True, "output\n", "")
         from qgitc.agent.tools._utils import run_git
         ok, out = run_git("/tmp/repo", ["status"])
         self.assertTrue(ok)
         self.assertEqual(out, "output")
 
-    @patch("subprocess.run")
-    def test_failure_with_stderr(self, mock_run):
-        mock_run.return_value = type("Proc", (), {
-            "returncode": 1,
-            "stdout": "",
-            "stderr": "fatal: error\n",
-        })()
+    @patch("qgitc.agent.tools._utils.runGit")
+    def test_failure_with_stderr(self, mock_run_git):
+        mock_run_git.return_value = (False, "", "fatal: error\n")
         from qgitc.agent.tools._utils import run_git
         ok, out = run_git("/tmp/repo", ["bad"])
         self.assertFalse(ok)
         self.assertIn("fatal: error", out)
 
-    @patch("subprocess.run", side_effect=FileNotFoundError)
-    def test_git_not_found(self, mock_run):
+    @patch("qgitc.agent.tools._utils.runGit", side_effect=Exception("boom"))
+    def test_exception(self, mock_run_git):
         from qgitc.agent.tools._utils import run_git
-        ok, out = run_git("/tmp/repo", ["status"])
-        self.assertFalse(ok)
-        self.assertIn("git executable not found", out)
-
-    @patch("subprocess.run", side_effect=OSError("boom"))
-    def test_os_error(self, mock_run):
-        from qgitc.agent.tools._utils import run_git
-        ok, out = run_git("/tmp/repo", ["status"])
-        self.assertFalse(ok)
-        self.assertIn("boom", out)
+        with self.assertRaises(Exception):
+            run_git("/tmp/repo", ["status"])
 
 
 if __name__ == "__main__":
