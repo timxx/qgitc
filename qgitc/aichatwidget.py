@@ -1016,15 +1016,18 @@ class AiChatWidget(QWidget):
         chatHistory = self._historyPanel.currentHistory()
         if not chatHistory:
             return
-        messages = self._agentLoop.messages()
-        dicts = messages_to_history_dicts(messages)
-        chatHistory.messages = dicts
+        store = ApplicationBase.instance().aiChatHistoryStore()
         model = self.currentChatModel()
-        if model:
-            chatHistory.modelKey = AiModelFactory.modelKey(model)
-            chatHistory.modelId = model.modelId or model.name
-        settings = ApplicationBase.instance().settings()
-        settings.saveChatHistory(chatHistory.historyId, chatHistory.toDict())
+        modelKey = AiModelFactory.modelKey(model) if model else None
+        modelId = (model.modelId or model.name) if model else None
+        updated = store.updateFromMessages(
+            chatHistory.historyId,
+            self._agentLoop.messages(),
+            modelKey=modelKey,
+            modelId=modelId,
+        )
+        if updated:
+            self._historyPanel.setCurrentHistory(updated.historyId)
 
     def _onToolExecutionStrategyChanged(self, strategyValue: int):
         """Handle tool execution strategy change."""

@@ -184,6 +184,37 @@ class AiChatHistoryStore(QObject):
         self.historyUpdated.emit(history)
         return history
 
+    def updateFromMessages(self, historyId, messages, modelKey=None, modelId=None):
+        """Update a history item from agent Message list and persist."""
+        from qgitc.agent.message_convert import messages_to_history_dicts
+
+        self.ensureLoaded()
+        row = self._model.findHistoryRow(historyId)
+        if row < 0:
+            return None
+
+        idx = self._model.index(row, 0)
+        history = self._model.data(idx, Qt.UserRole)
+        if not history:
+            return None
+
+        history.messages = messages_to_history_dicts(messages)
+        if modelKey is not None:
+            history.modelKey = modelKey
+        if modelId is not None:
+            history.modelId = modelId
+        history.timestamp = datetime.now().isoformat()
+
+        self._model.setData(idx, history, Qt.UserRole)
+
+        newRow = self._model.moveToTop(row)
+        if newRow != row:
+            idx = self._model.index(newRow, 0)
+
+        self._scheduleSave(historyId, history.toDict())
+        self.historyUpdated.emit(history)
+        return history
+
     def remove(self, historyId: str) -> bool:
         self.ensureLoaded()
         row = self._model.findHistoryRow(historyId)
