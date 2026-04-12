@@ -33,6 +33,12 @@ class TestCommitWindow(TestBase):
         return True
 
     def waitForLoaded(self):
+        # Ensure submodule search is complete so the cache is populated
+        # before refresh, otherwise files get repoDir=None instead of "."
+        if self.app._findSubmoduleThread and self.app._findSubmoduleThread.isRunning():
+            spySubmodules = QSignalSpy(self.app.submoduleSearchCompleted)
+            self.wait(5000, lambda: spySubmodules.count() == 0)
+
         self.wait(10000, self.window._statusFetcher.isRunning)
         self.wait(10000, self.window._infoFetcher.isRunning)
         self.wait(10000, self.window._submoduleExecutor.isRunning)
