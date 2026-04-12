@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import unittest
 from typing import Any, Dict, Iterator, List, Optional
 
@@ -19,21 +18,8 @@ from qgitc.agent.provider import (
 )
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
-from qgitc.agent.types import (
-    AssistantMessage,
-    Message,
-    TextBlock,
-    Usage,
-    UserMessage,
-)
-
-
-def _make_app():
-    # type: () -> QCoreApplication
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QCoreApplication(sys.argv)
-    return app
+from qgitc.agent.types import AssistantMessage, UserMessage
+from tests.base import TestBase
 
 
 def waitFor(app, condition, timeout=5000):
@@ -144,15 +130,19 @@ def _make_loop(provider, registry=None):
 # ── Simple Tests ────────────────────────────────────────────────────
 
 
-class TestAgentLoopSimple(unittest.TestCase):
+class TestAgentLoopSimple(TestBase):
 
     def setUp(self):
-        self.app = _make_app()
+        super().setUp()
         self.loop = _make_loop(SimpleProvider())
 
     def tearDown(self):
         self.loop.abort()
         self.loop.wait(3000)
+        super().tearDown()
+
+    def doCreateRepo(self):
+        pass
 
     def test_simple_text_response(self):
         text_spy = QSignalSpy(self.loop.textDelta)
@@ -191,10 +181,10 @@ class TestAgentLoopSimple(unittest.TestCase):
 # ── Tool Execution Tests ────────────────────────────────────────────
 
 
-class TestAgentLoopToolExecution(unittest.TestCase):
+class TestAgentLoopToolExecution(TestBase):
 
     def setUp(self):
-        self.app = _make_app()
+        super().setUp()
         self.registry = ToolRegistry()
         self.registry.register(EchoTool())
         self.loop = _make_loop(ToolCallProvider(), registry=self.registry)
@@ -202,6 +192,10 @@ class TestAgentLoopToolExecution(unittest.TestCase):
     def tearDown(self):
         self.loop.abort()
         self.loop.wait(3000)
+        super().tearDown()
+
+    def doCreateRepo(self):
+        pass
 
     def test_tool_call_and_continuation(self):
         finished_spy = QSignalSpy(self.loop.agentFinished)
