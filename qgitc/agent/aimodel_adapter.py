@@ -1,0 +1,165 @@
+# -*- coding: utf-8 -*-
+
+import json
+import queue
+from typing import Any, Dict, Iterator, List, Optional
+
+from PySide6.QtCore import QCoreApplication
+
+from qgitc.agent.provider import (
+    ContentDelta,
+    MessageComplete,
+    ModelProvider,
+    ReasoningDelta,
+    StreamEvent,
+    ToolCallDelta,
+)
+from qgitc.agent.types import (
+    AssistantMessage,
+    Message,
+    TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+    UserMessage,
+)
+from qgitc.llm import (
+    AiChatMode,
+    AiModelBase,
+    AiParameters,
+    AiResponse,
+    AiRole,
+)
+
+
+class AiModelBaseAdapter(ModelProvider):
+    """Bridges the signal-driven AiModelBase to the iterator-based ModelProvider."""
+
+    def __init__(self, model):
+        # type: (AiModelBase) -> None
+        self._model = model
+
+    def stream(
+        self,
+        messages,          # type: List[Message]
+        system_prompt=None,  # type: Optional[str]
+        tools=None,        # type: Optional[List[Dict[str, Any]]]
+        model=None,        # type: Optional[str]
+        max_tokens=4096,   # type: int
+    ):
+        # type: (...) -> Iterator[StreamEvent]
+        event_queue = queue.Queue()  # type: queue.Queue[StreamEvent]
+        finished_flag = [False]
+        has_tool_calls = [False]
+
+        def _on_response(response):
+            # type: (AiResponse) -> None
+            if response.reasoning:
+                event_queue.put(ReasoningDelta(text=response.reasoning))
+            if response.message:
+                event_queue.put(ContentDelta(text=response.message))
+            if response.tool_calls:
+                has_tool_calls[0] = True
+                for tc in response.tool_calls:
+                    func = tc.get("function", {})
+                    event_queue.put(ToolCallDelta(
+                        id=tc.get("id", ""),
+                        name=func.get("name", ""),
+                        arguments_delta=func.get("arguments", ""),
+                    ))
+
+        def _on_finished():
+            # type: () -> None
+            finished_flag[0] = True
+
+        self._model.responseAvailable.connect(_on_response)
+        self._model.finished.connect(_on_finished)
+
+        try:
+            # Build history from messages
+            self._model.clear()
+            for msg in messages:
+                if isinstance(msg, UserMessage):
+                    for block in msg.content:
+                        if isinstance(block, TextBlock):
+                            self._model.addHistory(AiRole.User, block.text)
+                        elif isinstance(block, ToolResultBlock):
+                            self._model.addHistory(
+                                AiRole.Tool,
+                                block.content,
+                                toolCalls={"tool_call_id": block.tool_use_id},
+                            )
+                elif isinstance(msg, AssistantMessage):
+                    text_parts = []  # type: List[str]
+                    tool_calls = []  # type: List[Dict[str, Any]]
+                    for block in msg.content:
+                        if isinstance(block, TextBlock):
+                            text_parts.append(block.text)
+                        elif isinstance(block, ToolUseBlock):
+                            tool_calls.append({
+                                "id": block.id,
+                                "type": "function",
+                                "function": {
+                                    "name": block.name,
+                                    "arguments": json.dumps(block.input),
+                                },
+                            })
+                    text = "".join(text_parts)
+                    if tool_calls:
+                        self._model.addHistory(
+                            AiRole.Assistant, text, toolCalls=tool_calls)
+                    else:
+                        self._model.addHistory(AiRole.Assistant, text)
+
+            # Build parameters
+            params = AiParameters()
+            params.stream = True
+            params.continue_only = True
+            params.chat_mode = AiChatMode.Agent
+            params.max_tokens = max_tokens
+            if system_prompt is not None:
+                params.sys_prompt = system_prompt
+            if model is not None:
+                params.model = model
+            if tools:
+                params.tools = tools
+                params.tool_choice = "auto"
+
+            # Start async query
+            self._model.queryAsync(params)
+
+            # Pump event loop until finished
+            while not finished_flag[0]:
+                QCoreApplication.processEvents()
+                while not event_queue.empty():
+                    yield event_queue.get_nowait()
+
+            # Drain remaining events
+            while not event_queue.empty():
+                yield event_queue.get_nowait()
+
+            # Yield final completion event
+            stop_reason = "tool_use" if has_tool_calls[0] else "end_turn"
+            yield MessageComplete(stop_reason=stop_reason)
+
+        finally:
+            self._model.responseAvailable.disconnect(_on_response)
+            self._model.finished.disconnect(_on_finished)
+
+    def count_tokens(
+        self,
+        messages,          # type: List[Message]
+        system_prompt=None,  # type: Optional[str]
+        tools=None,        # type: Optional[List[Dict[str, Any]]]
+    ):
+        # type: (...) -> int
+        total_chars = 0
+        for msg in messages:
+            if isinstance(msg, (UserMessage, AssistantMessage)):
+                for block in msg.content:
+                    if isinstance(block, TextBlock):
+                        total_chars += len(block.text)
+                    elif isinstance(block, ToolResultBlock):
+                        total_chars += len(block.content)
+        if system_prompt:
+            total_chars += len(system_prompt)
+        return total_chars // 4

@@ -1,0 +1,188 @@
+# -*- coding: utf-8 -*-
+
+import sys
+import unittest
+from typing import Any, Dict, List, Optional, Tuple
+
+from PySide6.QtCore import QCoreApplication, QElapsedTimer, QTimer
+
+from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
+from qgitc.agent.provider import (
+    ContentDelta,
+    MessageComplete,
+    ReasoningDelta,
+    ToolCallDelta,
+)
+from qgitc.agent.types import TextBlock, UserMessage
+from qgitc.llm import AiModelBase, AiParameters, AiResponse, AiRole
+
+
+def _make_app():
+    # type: () -> QCoreApplication
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QCoreApplication(sys.argv)
+    return app
+
+
+class FakeAiModel(AiModelBase):
+    """A fake AiModelBase that emits pre-configured AiResponse objects."""
+
+    def __init__(self, responses, parent=None):
+        # type: (List[AiResponse], Optional[Any]) -> None
+        super().__init__("http://fake", model="fake", parent=parent)
+        self._responses = responses
+        self._index = 0
+        self.last_params = None  # type: Optional[AiParameters]
+
+    def queryAsync(self, params):
+        # type: (AiParameters) -> None
+        self.last_params = params
+        self._index = 0
+        QTimer.singleShot(10, self._emitNext)
+
+    def _emitNext(self):
+        # type: () -> None
+        if self._index < len(self._responses):
+            self.responseAvailable.emit(self._responses[self._index])
+            self._index += 1
+            if self._index < len(self._responses):
+                QTimer.singleShot(10, self._emitNext)
+            else:
+                QTimer.singleShot(10, self._emitFinished)
+        else:
+            self._emitFinished()
+
+    def _emitFinished(self):
+        # type: () -> None
+        self.finished.emit()
+
+    def models(self):
+        # type: () -> List[Tuple[str, str]]
+        return [("fake", "Fake")]
+
+    def supportsToolCalls(self, modelId="fake"):
+        # type: (str) -> bool
+        return True
+
+
+class TestStreamTextResponse(unittest.TestCase):
+
+    def setUp(self):
+        self.app = _make_app()
+
+    def test_stream_text_response(self):
+        responses = [
+            AiResponse(
+                role=AiRole.Assistant,
+                message="Hello",
+                is_delta=True,
+                first_delta=True,
+            ),
+            AiResponse(
+                role=AiRole.Assistant,
+                message=" world",
+                is_delta=True,
+                first_delta=False,
+            ),
+        ]
+        model = FakeAiModel(responses)
+        adapter = AiModelBaseAdapter(model)
+
+        messages = [UserMessage(content=[TextBlock(text="Hi")])]
+        events = list(adapter.stream(messages))
+
+        # Should have 2 ContentDelta + 1 MessageComplete
+        self.assertEqual(len(events), 3)
+        self.assertIsInstance(events[0], ContentDelta)
+        self.assertEqual(events[0].text, "Hello")
+        self.assertIsInstance(events[1], ContentDelta)
+        self.assertEqual(events[1].text, " world")
+        self.assertIsInstance(events[2], MessageComplete)
+        self.assertEqual(events[2].stop_reason, "end_turn")
+
+
+class TestStreamToolCallResponse(unittest.TestCase):
+
+    def setUp(self):
+        self.app = _make_app()
+
+    def test_stream_tool_call_response(self):
+        responses = [
+            AiResponse(
+                role=AiRole.Assistant,
+                message="Let me read that file.",
+                is_delta=True,
+                first_delta=True,
+            ),
+            AiResponse(
+                role=AiRole.Assistant,
+                is_delta=False,
+                first_delta=False,
+                tool_calls=[{
+                    "id": "call_123",
+                    "type": "function",
+                    "function": {
+                        "name": "read_file",
+                        "arguments": '{"path": "/tmp/test.txt"}',
+                    },
+                }],
+            ),
+        ]
+        model = FakeAiModel(responses)
+        adapter = AiModelBaseAdapter(model)
+
+        messages = [UserMessage(content=[TextBlock(text="Read /tmp/test.txt")])]
+        events = list(adapter.stream(messages))
+
+        # ContentDelta, ToolCallDelta, MessageComplete
+        self.assertEqual(len(events), 3)
+        self.assertIsInstance(events[0], ContentDelta)
+        self.assertEqual(events[0].text, "Let me read that file.")
+        self.assertIsInstance(events[1], ToolCallDelta)
+        self.assertEqual(events[1].id, "call_123")
+        self.assertEqual(events[1].name, "read_file")
+        self.assertEqual(events[1].arguments_delta,
+                         '{"path": "/tmp/test.txt"}')
+        self.assertIsInstance(events[2], MessageComplete)
+        self.assertEqual(events[2].stop_reason, "tool_use")
+
+
+class TestStreamReasoning(unittest.TestCase):
+
+    def setUp(self):
+        self.app = _make_app()
+
+    def test_stream_reasoning(self):
+        responses = [
+            AiResponse(
+                role=AiRole.Assistant,
+                reasoning="Let me think about this...",
+                is_delta=True,
+                first_delta=True,
+            ),
+            AiResponse(
+                role=AiRole.Assistant,
+                message="The answer is 42.",
+                is_delta=True,
+                first_delta=False,
+            ),
+        ]
+        model = FakeAiModel(responses)
+        adapter = AiModelBaseAdapter(model)
+
+        messages = [UserMessage(content=[TextBlock(text="What is the answer?")])]
+        events = list(adapter.stream(messages))
+
+        # ReasoningDelta, ContentDelta, MessageComplete
+        self.assertEqual(len(events), 3)
+        self.assertIsInstance(events[0], ReasoningDelta)
+        self.assertEqual(events[0].text, "Let me think about this...")
+        self.assertIsInstance(events[1], ContentDelta)
+        self.assertEqual(events[1].text, "The answer is 42.")
+        self.assertIsInstance(events[2], MessageComplete)
+        self.assertEqual(events[2].stop_reason, "end_turn")
+
+
+if __name__ == "__main__":
+    unittest.main()
