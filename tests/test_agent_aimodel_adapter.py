@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import unittest
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
-from PySide6.QtCore import QCoreApplication, QElapsedTimer, QTimer
+from PySide6.QtCore import QTimer
 
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.provider import (
@@ -15,14 +14,7 @@ from qgitc.agent.provider import (
 )
 from qgitc.agent.types import TextBlock, UserMessage
 from qgitc.llm import AiModelBase, AiParameters, AiResponse, AiRole
-
-
-def _make_app():
-    # type: () -> QCoreApplication
-    app = QCoreApplication.instance()
-    if app is None:
-        app = QCoreApplication(sys.argv)
-    return app
+from tests.base import TestBase
 
 
 class FakeAiModel(AiModelBase):
@@ -66,10 +58,10 @@ class FakeAiModel(AiModelBase):
         return True
 
 
-class TestStreamTextResponse(unittest.TestCase):
+class TestStreamTextResponse(TestBase):
 
-    def setUp(self):
-        self.app = _make_app()
+    def doCreateRepo(self):
+        pass
 
     def test_stream_text_response(self):
         responses = [
@@ -102,10 +94,10 @@ class TestStreamTextResponse(unittest.TestCase):
         self.assertEqual(events[2].stop_reason, "end_turn")
 
 
-class TestStreamToolCallResponse(unittest.TestCase):
+class TestStreamToolCallResponse(TestBase):
 
-    def setUp(self):
-        self.app = _make_app()
+    def doCreateRepo(self):
+        pass
 
     def test_stream_tool_call_response(self):
         responses = [
@@ -132,7 +124,8 @@ class TestStreamToolCallResponse(unittest.TestCase):
         model = FakeAiModel(responses)
         adapter = AiModelBaseAdapter(model)
 
-        messages = [UserMessage(content=[TextBlock(text="Read /tmp/test.txt")])]
+        messages = [UserMessage(
+            content=[TextBlock(text="Read /tmp/test.txt")])]
         events = list(adapter.stream(messages))
 
         # ContentDelta, ToolCallDelta, MessageComplete
@@ -148,10 +141,10 @@ class TestStreamToolCallResponse(unittest.TestCase):
         self.assertEqual(events[2].stop_reason, "tool_use")
 
 
-class TestStreamReasoning(unittest.TestCase):
+class TestStreamReasoning(TestBase):
 
-    def setUp(self):
-        self.app = _make_app()
+    def doCreateRepo(self):
+        pass
 
     def test_stream_reasoning(self):
         responses = [
@@ -171,7 +164,8 @@ class TestStreamReasoning(unittest.TestCase):
         model = FakeAiModel(responses)
         adapter = AiModelBaseAdapter(model)
 
-        messages = [UserMessage(content=[TextBlock(text="What is the answer?")])]
+        messages = [UserMessage(
+            content=[TextBlock(text="What is the answer?")])]
         events = list(adapter.stream(messages))
 
         # ReasoningDelta, ContentDelta, MessageComplete
