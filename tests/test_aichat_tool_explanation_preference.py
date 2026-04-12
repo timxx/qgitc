@@ -4,11 +4,34 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtTest import QTest
 
+from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agenttools import ToolType
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.llm import AiChatMessage, AiModelBase
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
+
+
+class _MockTool(Tool):
+    """A mock tool for testing permission confirmations."""
+
+    def __init__(self, name, description, read_only=False, destructive=False):
+        self.name = name
+        self.description = description
+        self._read_only = read_only
+        self._destructive = destructive
+
+    def is_read_only(self):
+        return self._read_only
+
+    def is_destructive(self):
+        return self._destructive
+
+    def execute(self, input_data, context):
+        return ToolResult(content="ok")
+
+    def input_schema(self):
+        return {"type": "object", "properties": {}}
 
 
 class TestAiChatToolExplanationPreference(TestBase):
@@ -65,7 +88,6 @@ class TestAiChatToolExplanationPreference(TestBase):
 
     def test_prefers_explanation_over_tool_description(self):
         """When params contain 'explanation', it should be used instead of tool description."""
-        # Mock insertToolConfirmation to capture what it's called with
         insertedParams = {}
 
         def _captureInsertToolConfirmation(**kwargs):
@@ -75,28 +97,22 @@ class TestAiChatToolExplanationPreference(TestBase):
         self.chatWidget.messages.insertToolConfirmation = MagicMock(
             side_effect=_captureInsertToolConfirmation)
 
-        # Simulate tool machine emitting userConfirmationNeeded
-        toolCallId = "call_123"
-        toolName = "apply_patch"
-        params = {
+        # Build tool registry so _makeUiToolCallResponse can find tools
+        self.chatWidget._ensureAgentLoop()
+
+        tool = _MockTool("apply_patch", "Apply a patch to a file")
+        inputData = {
             "file_path": "test.py",
             "patch": "some patch",
             "explanation": "Fix the bug in the test file"
         }
-        toolDesc = "Apply a patch to a file"
-        toolType = ToolType.WRITE
 
-        # Call the handler directly (simulating the signal connection)
-        self.chatWidget._onToolConfirmationNeeded(
-            toolCallId, toolName, params, toolDesc, toolType)
+        self.chatWidget._onAgentPermissionRequired(
+            "call_123", tool, inputData)
 
-        # Verify insertToolConfirmation was called
         self.chatWidget.messages.insertToolConfirmation.assert_called_once()
-
-        # Verify that explanation was used, not the tool description
         self.assertEqual(insertedParams.get("toolDesc"),
                          "Fix the bug in the test file")
-        self.assertNotEqual(insertedParams.get("toolDesc"), toolDesc)
 
     def test_uses_tool_description_when_no_explanation(self):
         """When params don't contain 'explanation', tool description should be used."""
@@ -109,20 +125,15 @@ class TestAiChatToolExplanationPreference(TestBase):
         self.chatWidget.messages.insertToolConfirmation = MagicMock(
             side_effect=_captureInsertToolConfirmation)
 
-        toolCallId = "call_456"
-        toolName = "git_checkout"
-        params = {
-            "branch": "main"
-        }
-        toolDesc = "Switch to a different branch"
-        toolType = ToolType.WRITE
+        self.chatWidget._ensureAgentLoop()
 
-        self.chatWidget._onToolConfirmationNeeded(
-            toolCallId, toolName, params, toolDesc, toolType)
+        tool = _MockTool("git_checkout", "Switch to a different branch")
+        inputData = {"branch": "main"}
+
+        self.chatWidget._onAgentPermissionRequired(
+            "call_456", tool, inputData)
 
         self.chatWidget.messages.insertToolConfirmation.assert_called_once()
-
-        # Verify that tool description was used since no explanation exists
         self.assertEqual(insertedParams.get("toolDesc"),
                          "Switch to a different branch")
 
@@ -137,21 +148,18 @@ class TestAiChatToolExplanationPreference(TestBase):
         self.chatWidget.messages.insertToolConfirmation = MagicMock(
             side_effect=_captureInsertToolConfirmation)
 
-        toolCallId = "call_789"
-        toolName = "run_command"
-        params = {
+        self.chatWidget._ensureAgentLoop()
+
+        tool = _MockTool("run_command", "Run a shell command", destructive=True)
+        inputData = {
             "command": "ls -la",
             "explanation": "   "  # whitespace only
         }
-        toolDesc = "Run a shell command"
-        toolType = ToolType.DANGEROUS
 
-        self.chatWidget._onToolConfirmationNeeded(
-            toolCallId, toolName, params, toolDesc, toolType)
+        self.chatWidget._onAgentPermissionRequired(
+            "call_789", tool, inputData)
 
         self.chatWidget.messages.insertToolConfirmation.assert_called_once()
-
-        # Verify that tool description was used since explanation is empty
         self.assertEqual(insertedParams.get("toolDesc"),
                          "Run a shell command")
 
@@ -166,20 +174,17 @@ class TestAiChatToolExplanationPreference(TestBase):
         self.chatWidget.messages.insertToolConfirmation = MagicMock(
             side_effect=_captureInsertToolConfirmation)
 
-        toolCallId = "call_abc"
-        toolName = "read_file"
-        params = {
+        self.chatWidget._ensureAgentLoop()
+
+        tool = _MockTool("read_file", "Read contents of a file", read_only=True)
+        inputData = {
             "file_path": "test.py",
             "explanation": "  Read the test file  \n"
         }
-        toolDesc = "Read contents of a file"
-        toolType = ToolType.READ_ONLY
 
-        self.chatWidget._onToolConfirmationNeeded(
-            toolCallId, toolName, params, toolDesc, toolType)
+        self.chatWidget._onAgentPermissionRequired(
+            "call_abc", tool, inputData)
 
         self.chatWidget.messages.insertToolConfirmation.assert_called_once()
-
-        # Verify explanation was used and whitespace was stripped
         self.assertEqual(insertedParams.get("toolDesc"),
                          "Read the test file")

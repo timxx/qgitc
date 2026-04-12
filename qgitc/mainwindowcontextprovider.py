@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
 
-from qgitc.agenttools import AgentTool, ToolType, createToolFromModel
+from qgitc.agent.ui_tool import UiTool
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
 from qgitc.applicationbase import ApplicationBase
 from qgitc.basemodel import BaseModel, Field, ValidationError
@@ -59,30 +59,22 @@ class MainWindowContextProvider(AiChatContextProvider):
         self._emitTimer.setSingleShot(True)
         self._emitTimer.timeout.connect(self.contextsChanged.emit)
 
-        self._uiToolsCache: Optional[List[AgentTool]] = None
+        self._uiToolsCache = None
 
         self._installHooks()
 
-    def uiTools(self) -> List[AgentTool]:
+    def uiTools(self):
         if self._uiToolsCache is None:
             self._uiToolsCache = [
-                createToolFromModel(
+                UiTool(
                     name="ui_switch_to_commit",
-                    description=(
-                        "Jump (select and scroll) the log view to a given commit SHA1 visible in the current log list."
-                    ),
-                    toolType=ToolType.READ_ONLY,
-                    modeClass=UiSwitchToCommitParams,
+                    description="Jump (select and scroll) the log view to a given commit SHA1 visible in the current log list.",
+                    schema=UiSwitchToCommitParams.model_json_schema(),
                 ),
-                createToolFromModel(
+                UiTool(
                     name="ui_apply_log_filter",
-                    description=(
-                        "Apply git log filter options to the main window's log view. "
-                        "Use standard git log options like --since, --until, --author, --grep, -n, etc. "
-                        "This updates the visible commits in the log view based on the filter."
-                    ),
-                    toolType=ToolType.READ_ONLY,
-                    modeClass=UiApplyLogFilterParams,
+                    description="Apply git log filter options to the main window's log view. Use standard git log options like --since, --until, --author, --grep, -n, etc. This updates the visible commits in the log view based on the filter.",
+                    schema=UiApplyLogFilterParams.model_json_schema(),
                 ),
             ]
         return self._uiToolsCache

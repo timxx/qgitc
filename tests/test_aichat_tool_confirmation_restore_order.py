@@ -53,9 +53,6 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
         self.wait(
             200, lambda: self.chatWidget._historyPanel.currentHistory() is None)
 
-        # Prevent any background auto-run from actually starting tools.
-        self.chatWidget._startNextAutoToolIfIdle = MagicMock()
-
     def tearDown(self):
         self.window.close()
         super().tearDown()
@@ -63,26 +60,17 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
     def doCreateRepo(self):
         pass
 
-    def test_restore_interleaves_run_and_confirmation_multiple_write_calls(self):
-        """Restored UI should show run(tool1)->confirm, run(tool2)->confirm, ..."""
+    def test_restore_tool_calls_renders_each_tool(self):
+        """Restored UI should show each tool call as a separate entry."""
         calls = []
 
         def _appendResponse(resp, collapsed=False):
-            # Record role and description to distinguish tool run previews.
             calls.append(
                 ("append", resp.role.name.lower(), resp.description or ""))
 
-        def _insertToolConfirmation(**kwargs):
-            calls.append(("confirm", kwargs.get(
-                "toolName"), kwargs.get("toolCallId")))
-
         self.chatWidget.messages.appendResponse = MagicMock(
             side_effect=_appendResponse)
-        self.chatWidget.messages.insertToolConfirmation = MagicMock(
-            side_effect=_insertToolConfirmation)
 
-        # Persisted history contains assistant tool_calls + tool results (with tool_call_id).
-        # UI-only tool run previews are no longer stored in model history.
         messages = [
             {"role": "user", "content": "hi"},
             {
@@ -97,47 +85,43 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
                         "name": "git_add", "arguments": "{}"}},
                 ],
             },
+            {
+                "role": "tool",
+                "content": "ok",
+                "tool_calls": {"tool_call_id": "c1"},
+            },
+            {
+                "role": "tool",
+                "content": "ok",
+                "tool_calls": {"tool_call_id": "c2"},
+            },
+            {
+                "role": "tool",
+                "content": "ok",
+                "tool_calls": {"tool_call_id": "c3"},
+            },
         ]
 
         self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=True)
 
-        # We should see an interleaving pattern: append(tool run), confirm, append, confirm, ...
-        # Filter down to only appends of tool run previews and confirm insertions.
-        simplified = []
-        for c in calls:
-            if c[0] == "append" and c[1] == "tool" and "run `" in c[2]:
-                simplified.append(("run", c[2]))
-            elif c[0] == "confirm":
-                simplified.append(("confirm", c[1], c[2]))
+        # Verify tool call UI entries are present
+        tool_run_calls = [
+            c for c in calls
+            if c[0] == "append" and c[1] == "tool" and "run `" in c[2]
+        ]
+        self.assertEqual(3, len(tool_run_calls))
 
-        self.assertGreaterEqual(len(simplified), 6)
-        self.assertEqual("run", simplified[0][0])
-        self.assertEqual("confirm", simplified[1][0])
-        self.assertEqual("run", simplified[2][0])
-        self.assertEqual("confirm", simplified[3][0])
-        self.assertEqual("run", simplified[4][0])
-        self.assertEqual("confirm", simplified[5][0])
-
-        # Confirmations should preserve tool_call_id order.
-        confirm_ids = [x[2] for x in simplified if x[0] == "confirm"]
-        self.assertEqual(["c1", "c2", "c3"], confirm_ids[:3])
-
-    def test_restore_confirmation_after_write_before_read_run(self):
-        """If history has write-run, read-run, then tool_calls, confirmation must follow write-run."""
+    def test_restore_tool_calls_with_results_renders_results(self):
+        """Restored tool calls with results should show both call and result."""
         calls = []
 
         def _appendResponse(resp, collapsed=False):
             calls.append(
-                ("append", resp.role.name.lower(), resp.description or ""))
-
-        def _insertToolConfirmation(**kwargs):
-            calls.append(("confirm", kwargs.get(
-                "toolName"), kwargs.get("toolCallId")))
+                ("append", resp.role.name.lower(), resp.message or "",
+                 resp.description or ""))
 
         self.chatWidget.messages.appendResponse = MagicMock(
             side_effect=_appendResponse)
-        self.chatWidget.messages.insertToolConfirmation = MagicMock(
-            side_effect=_insertToolConfirmation)
 
         messages = [
             {"role": "user", "content": "hi"},
@@ -151,26 +135,58 @@ class TestAiChatToolConfirmationRestoreOrder(TestBase):
                         "name": "git_status", "arguments": "{}"}},
                 ],
             },
+            {
+                "role": "tool",
+                "content": "switched to main",
+                "tool_calls": {"tool_call_id": "w1"},
+            },
+            {
+                "role": "tool",
+                "content": "clean working tree",
+                "tool_calls": {"tool_call_id": "r1"},
+            },
         ]
 
         self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=True)
 
-        # Extract indices of events.
-        run_checkout_idx = None
-        run_status_idx = None
-        confirm_checkout_idx = None
-        for idx, c in enumerate(calls):
-            if c[0] == "append" and c[1] == "tool" and "run `git_checkout`" in c[2]:
-                run_checkout_idx = idx
-            if c[0] == "append" and c[1] == "tool" and "run `git_status`" in c[2]:
-                run_status_idx = idx
-            if c[0] == "confirm" and c[2] == "w1":
-                confirm_checkout_idx = idx
+        # Verify tool run previews are shown
+        tool_run_calls = [
+            c for c in calls
+            if c[0] == "append" and c[1] == "tool" and "run `" in c[3]
+        ]
+        self.assertEqual(2, len(tool_run_calls))
 
-        self.assertIsNotNone(run_checkout_idx)
-        self.assertIsNotNone(run_status_idx)
-        self.assertIsNotNone(confirm_checkout_idx)
+        # Verify tool results are shown
+        tool_result_calls = [
+            c for c in calls
+            if c[0] == "append" and c[1] == "tool" and "run `" not in c[3]
+        ]
+        self.assertGreaterEqual(len(tool_result_calls), 2)
 
-        # Confirmation should come after the write-run and before the read-run.
-        self.assertLess(run_checkout_idx, confirm_checkout_idx)
-        self.assertLess(confirm_checkout_idx, run_status_idx)
+    def test_agent_loop_messages_set_on_restore(self):
+        """Agent loop should have messages set after restoring history."""
+        messages = [
+            {"role": "user", "content": "hi"},
+            {
+                "role": "assistant",
+                "content": "Let me check.",
+                "tool_calls": [
+                    {"id": "c1", "type": "function", "function": {
+                        "name": "git_status", "arguments": "{}"}},
+                ],
+            },
+            {
+                "role": "tool",
+                "content": "clean",
+                "tool_calls": {"tool_call_id": "c1"},
+            },
+            {"role": "assistant", "content": "All clean!"},
+        ]
+
+        self.chatWidget._loadMessagesFromHistory(messages, addToChatBot=False)
+
+        loop = self.chatWidget._agentLoop
+        self.assertIsNotNone(loop)
+        # Messages should be converted and set
+        agent_messages = loop.messages()
+        self.assertGreater(len(agent_messages), 0)

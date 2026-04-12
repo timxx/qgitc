@@ -29,21 +29,20 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
-from qgitc.agentmachine import (
-    AgentToolMachine,
-    AggressiveStrategy,
-    AllAutoStrategy,
-    DefaultStrategy,
-    SafeStrategy,
+from qgitc.agent import (
+    AgentLoop,
+    AiModelBaseAdapter,
+    ConversationCompactor,
+    ToolRegistry,
+    UiTool,
+    UiToolDispatcher,
+    create_permission_engine,
+    history_dicts_to_messages,
+    messages_to_history_dicts,
+    register_builtin_tools,
 )
-from qgitc.agenttoolexecutor import AgentToolExecutor
-from qgitc.agenttools import (
-    AgentTool,
-    AgentToolRegistry,
-    AgentToolResult,
-    ToolType,
-    parseToolArguments,
-)
+from qgitc.agent.types import TextBlock
+from qgitc.agenttools import ToolType, parseToolArguments
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichatcontextprovider import AiChatContextProvider
@@ -86,7 +85,6 @@ from qgitc.resolutionreport import (
     buildResolutionReportEntry,
 )
 from qgitc.submoduleexecutor import SubmoduleExecutor
-from qgitc.uitoolexecutor import UiToolExecutor
 
 SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
 
@@ -133,12 +131,11 @@ class ResolveConflictJob(QObject):
         self._reportFile = reportFile
 
         self._done = False
-        self._savedStrategy = None
+        self._savedPermissionEngine = None
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
 
         self._model = None
-        self._oldHistoryCount = 0
 
     def start(self):
         w = self._widget
@@ -162,11 +159,11 @@ class ResolveConflictJob(QObject):
             conflict=self._conflictText,
         )
 
-        self._savedStrategy = w._toolMachine._strategy
-        w._toolMachine.setStrategy(AggressiveStrategy())
+        # Save permission engine and switch to all-auto for conflict resolution
+        self._savedPermissionEngine = w._permissionEngine
+        w._permissionEngine = create_permission_engine(3)  # AllAuto
 
         self._model = model
-        self._oldHistoryCount = len(model.history)
 
         self._timer.timeout.connect(self._onTimeout)
         self._timer.start(5 * 60 * 1000)
@@ -175,29 +172,31 @@ class ResolveConflictJob(QObject):
         model.networkError.connect(self._onNetworkError)
         model.serviceUnavailable.connect(
             lambda: self._finish(False, "service_unavailable"))
-        # Tools can also trigger another continue-only generation.
-        w._agentExecutor.toolFinished.connect(self._checkDone)
 
         w._doRequest(prompt, AiChatMode.Agent, RESOLVE_SYS_PROMPT)
 
     def abort(self):
-        if self._model:
-            self._model.requestInterruption()
+        w = self._widget
+        if w._agentLoop is not None:
+            w._agentLoop.abort()
 
-    def _lastAssistantTextSince(self, startIndex: int) -> str:
-        model = self._model
-        if model is None:
+    def _lastAssistantText(self) -> str:
+        w = self._widget
+        if w._agentLoop is None:
             return ""
-        for i in range(len(model.history) - 1, startIndex - 1, -1):
-            h = model.history[i]
-            if h.role == AiRole.Assistant and h.message:
-                return h.message
+        from qgitc.agent.types import AssistantMessage as AMsg, TextBlock as TBlk
+        for msg in reversed(w._agentLoop.messages()):
+            if isinstance(msg, AMsg):
+                text = "".join(
+                    b.text for b in msg.content if isinstance(b, TBlk))
+                if text:
+                    return text
         return ""
 
     def _onTimeout(self):
-        model = self._model
-        if model is not None:
-            model.requestInterruption()
+        w = self._widget
+        if w._agentLoop is not None:
+            w._agentLoop.abort()
         self._finish(False, "Assistant response timed out")
 
     def _onNetworkError(self, errorMsg: str):
@@ -236,15 +235,7 @@ class ResolveConflictJob(QObject):
         if self._done:
             return
 
-        model = self._model
-        if model is None:
-            return
-
-        # No new messages yet.
-        if len(model.history) == self._oldHistoryCount:
-            return
-
-        response = self._lastAssistantTextSince(self._oldHistoryCount)
+        response = self._lastAssistantText()
 
         status, detail = self._parseFinalResolveMessage(response)
         if status == "failed":
@@ -272,9 +263,14 @@ class ResolveConflictJob(QObject):
     def _disconnect(self):
         model = self._model
         if model is not None:
-            model.finished.disconnect(self._checkDone)
-            model.networkError.disconnect(self._onNetworkError)
-        self._widget._agentExecutor.toolFinished.disconnect(self._checkDone)
+            try:
+                model.finished.disconnect(self._checkDone)
+            except RuntimeError:
+                pass
+            try:
+                model.networkError.disconnect(self._onNetworkError)
+            except RuntimeError:
+                pass
         self._timer.timeout.disconnect(self._onTimeout)
 
     def _finish(self, ok: bool, reason: object):
@@ -300,8 +296,9 @@ class ResolveConflictJob(QObject):
         self._disconnect()
         self._timer.stop()
 
-        # Restore tool permission.
-        self._widget._toolMachine.setStrategy(self._savedStrategy)
+        # Restore permission engine.
+        if self._savedPermissionEngine is not None:
+            self._widget._permissionEngine = self._savedPermissionEngine
 
         self.finished.emit(ok, reason)
 
@@ -335,30 +332,19 @@ class AiChatWidget(QWidget):
         self._setupChatPanel()
 
         self._titleGenerator: AiChatTitleGenerator = None
-        self._agentExecutor = AgentToolExecutor(self)
-        self._agentExecutor.toolFinished.connect(self._onAgentToolFinished)
-        self._uiToolExecutor = UiToolExecutor(self)
-        self._uiToolExecutor.toolFinished.connect(self._onAgentToolFinished)
+        self._uiToolDispatcher = UiToolDispatcher(self)
+        self._uiToolDispatcher.set_handler(self._executeUiToolHandler)
 
         settings = ApplicationBase.instance().settings()
-        # Create tool orchestration machine
-        strategy = self._createStrategy(settings.toolExecutionStrategy())
-        self._toolMachine = AgentToolMachine(
-            strategy=strategy,
-            toolLookupFn=self._toolByName,
-            maxConcurrent=4,
-            parent=self)
-        self._toolMachine.toolExecutionRequested.connect(self._onExecuteTool)
-        self._toolMachine.userConfirmationNeeded.connect(
-            self._onToolConfirmationNeeded)
-        self._toolMachine.toolExecutionCancelled.connect(
-            self._onToolExecutionCancelled)
-        self._toolMachine.agentContinuationReady.connect(self._onContinueAgent)
-
-        # Listen for strategy changes from preferences
-
+        self._permissionEngine = create_permission_engine(
+            settings.toolExecutionStrategy())
         settings.toolExecutionStrategyChanged.connect(
             self._onToolExecutionStrategyChanged)
+
+        self._agentLoop = None  # type: Optional[AgentLoop]
+        self._toolRegistry = None  # type: Optional[ToolRegistry]
+        self._firstTextDelta = True
+        self._firstReasoningDelta = True
 
         # Code review diff collection (staged/local changes)
         self._codeReviewExecutor: Optional[SubmoduleExecutor] = None
@@ -389,8 +375,7 @@ class AiChatWidget(QWidget):
 
     def isGenerating(self) -> bool:
         """True if the current model is actively generating a response."""
-        model = self.currentChatModel()
-        return model is not None and model.isRunning()
+        return self._agentLoop is not None and self._agentLoop.isRunning()
 
     def isHistoryReady(self) -> bool:
         """True once history has been loaded and the widget is initialized."""
@@ -398,9 +383,7 @@ class AiChatWidget(QWidget):
 
     def isBusyForCodeReview(self) -> bool:
         """True if starting a dock-based code review would be disruptive."""
-        if self.isGenerating():
-            return True
-        return self._toolMachine.taskInProgress()
+        return self.isGenerating()
 
     def queryAgent(self, prompt: str, contextText: str = None, sysPrompt: str = None, toolNames: List[str] = None):
         """Send a query to the AI chat in Agent mode.
@@ -428,7 +411,7 @@ class AiChatWidget(QWidget):
         # Set tool restrictions if provided
         self._restrictedToolNames = toolNames
 
-        # Send the request in Agent mode
+        # Send the request in Agent mode via the new architecture
         self._doRequest(prompt, AiChatMode.Agent, sysPrompt=sysPrompt)
 
     def _setupHistoryPanel(self):
@@ -601,8 +584,7 @@ class AiChatWidget(QWidget):
         if not self._conversationHeader:
             return
 
-        model = self.currentChatModel()
-        isNewConversation = (model is None) or (not model.history)
+        isNewConversation = (self._agentLoop is None) or (not self._agentLoop.messages())
 
         self._conversationHeader.setVisible(not isNewConversation)
         if isNewConversation:
@@ -687,11 +669,6 @@ class AiChatWidget(QWidget):
         cb = self._contextPanel.cbBots
         cb.setItemData(index, model)
 
-        model.responseAvailable.connect(self._onMessageReady)
-        model.reasoningFinished.connect(self._onReasoningFinished)
-        model.finished.connect(self._onResponseFinish)
-        model.serviceUnavailable.connect(self._onServiceUnavailable)
-        model.networkError.connect(self._onNetworkError)
         model.modelsReady.connect(self._onModelsReady)
 
         return model
@@ -700,11 +677,7 @@ class AiChatWidget(QWidget):
         if self._titleGenerator:
             self._titleGenerator.cancel()
 
-        if self._agentExecutor:
-            self._agentExecutor.shutdown()
-
-        if self._uiToolExecutor:
-            self._uiToolExecutor.shutdown()
+        self._resetAgentLoop()
 
         for i in range(self._contextPanel.cbBots.count()):
             model = self._contextPanel.cbBots.itemData(i)
@@ -733,13 +706,6 @@ class AiChatWidget(QWidget):
         if not prompt:
             return
 
-        # If the user types a new message while there are pending tool confirmations,
-        # treat them as rejected to keep the conversation history consistent.
-        # (Otherwise, switching chats / continuing can lose the confirmation UI and
-        # later requests may lack required tool results.)
-        if self._toolMachine.hasPendingResults():
-            self._toolMachine.rejectPendingResults()
-
         model = self.currentChatModel()
         chatMode: AiChatMode = self._contextPanel.currentMode()
         self._doRequest(prompt, chatMode)
@@ -754,102 +720,36 @@ class AiChatWidget(QWidget):
         self._contextPanel.clear()
 
     def _onButtonStop(self):
-        model = self.currentChatModel()
-        if not model.isRunning():
-            return
-
-        model.requestInterruption()
-        self._saveChatHistory(model)
-
-    def _continueAgentConversation(self, delayMs: int = 0, retries: int = 20):
-        """Continue an Agent-mode conversation after tool execution.
-
-        This sends a new LLM request that includes the assistant tool call(s) and
-        the tool result message(s) (with matching tool_call_id) without injecting
-        a synthetic user follow-up.
-        """
-        model = self.currentChatModel()
-        if model is None:
-            return
-
-        # Never continue while any tool_call_id is still awaiting results.
-        if self._toolMachine.hasPendingResults():
-            return
-
-        # Wait until the model has finished recording the assistant tool_calls
-        # message; otherwise sending tool messages with tool_call_id can 400.
-        if model.isRunning():
-            if retries <= 0:
-                return
-            QTimer.singleShot(max(10, delayMs),
-                              lambda: self._continueAgentConversation(delayMs, retries - 1))
-            return
-
-        params = AiParameters()
-        params.prompt = ""
-        params.temperature = 0.1
-        params.reasoning = ApplicationBase.instance().settings().llmReasoningEnabled()
-        params.chat_mode = AiChatMode.Agent
-        params.model = self._contextPanel.currentModelId()
-        params.tools = self._availableOpenAiTools()
-        params.tool_choice = "auto"
-        params.continue_only = True
-
-        self._contextPanel.btnSend.setVisible(False)
-        self._contextPanel.btnStop.setVisible(True)
-        self._historyPanel.setEnabled(False)
-        self._contextPanel.cbBots.setEnabled(False)
-        self._contextPanel.setFocus()
-
-        model.queryAsync(params)
-        self._setGenerating(True)
-        self._updateChatHistoryModel(model)
+        if self._agentLoop is not None:
+            self._agentLoop.abort()
 
     def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
         settings = ApplicationBase.instance().settings()
-        params = AiParameters()
-        params.prompt = prompt
-        params.sys_prompt = sysPrompt
-        params.stream = True
-        params.temperature = settings.llmTemperature()
-        params.chat_mode = chatMode
-        params.model = self._contextPanel.currentModelId()
-        params.reasoning = settings.llmReasoningEnabled()
 
         self._disableAutoScroll = False
 
         model = self.currentChatModel()
-        isNewConversation = not model.history
+        loop = self._ensureAgentLoop()
 
-        if model.isLocal():
-            params.max_tokens = settings.llmMaxTokens()
-
-        # Keep title generation based on the user's original prompt (no injected context).
-        titleSeed = (params.sys_prompt + "\n" +
-                     prompt) if params.sys_prompt else prompt
+        isNewConversation = len(loop.messages()) == 0
 
         injectedContext = self._injectedContext
 
+        # Determine system prompt
+        effectiveSysPrompt = sysPrompt
         if chatMode == AiChatMode.Agent:
-            params.tools = self._availableOpenAiTools()
-            params.tool_choice = "auto"
-
-            # Don't add system prompt if there is already one
-            if not sysPrompt and (len(model.history) == 0 or not collapsed):
+            if not sysPrompt:
                 provider = self.contextProvider()
                 overridePrompt = provider.agentSystemPrompt() if provider is not None else None
-                params.sys_prompt = overridePrompt or AGENT_SYS_PROMPT
+                effectiveSysPrompt = overridePrompt or AGENT_SYS_PROMPT
         elif chatMode == AiChatMode.CodeReview:
-            # Code review can also use tools to fetch missing context.
-            # (Models that don't support tool calls will simply ignore them.)
-            params.tools = self._availableOpenAiTools()
-            params.tool_choice = "auto"
-            params.sys_prompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
-            params.prompt = CODE_REVIEW_PROMPT.format(
-                diff=params.prompt)
+            effectiveSysPrompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
+            prompt = CODE_REVIEW_PROMPT.format(diff=prompt)
 
-        provider = self.contextProvider()
+        # Build context
+        fullPrompt = prompt
         if not collapsed:
+            provider = self.contextProvider()
             selectedIds = self._contextPanel.selectedContextIds() if provider is not None else []
             contextText = provider.buildContextText(
                 selectedIds) if provider is not None else ""
@@ -862,18 +762,24 @@ class AiChatWidget(QWidget):
                     merged = injectedContext
                 contextText = merged
 
-            if contextText and not self._historyHasSameContext(model.history, contextText):
-                params.prompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + \
-                    params.prompt
+            if contextText:
+                fullPrompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + prompt
 
-        if params.sys_prompt and not self._historyHasSameSystemPrompt(model.history, params.sys_prompt):
-            self._doMessageReady(model, AiResponse(
-                AiRole.System, params.sys_prompt), True)
-        else:
-            params.sys_prompt = None
+        # Keep title generation based on the user's original prompt (no injected context).
+        titleSeed = (effectiveSysPrompt + "\n" +
+                     prompt) if effectiveSysPrompt else prompt
 
-        self._doMessageReady(model, AiResponse(
-            AiRole.User, params.prompt), collapsed)
+        # Set system prompt on loop (only if not already present)
+        if effectiveSysPrompt and not self._historyHasSameSystemPromptInMessages(
+                loop.messages(), effectiveSysPrompt):
+            loop.set_system_prompt(effectiveSysPrompt)
+            # Show system prompt in chatbot
+            self._chatBot.appendResponse(
+                AiResponse(AiRole.System, effectiveSysPrompt), collapsed=True)
+
+        # Show user message in chatbot
+        self._chatBot.appendResponse(
+            AiResponse(AiRole.User, fullPrompt), collapsed=collapsed)
 
         self._contextPanel.btnSend.setVisible(False)
         self._contextPanel.btnStop.setVisible(True)
@@ -881,7 +787,12 @@ class AiChatWidget(QWidget):
         self._contextPanel.cbBots.setEnabled(False)
         self._contextPanel.setFocus()
 
-        model.queryAsync(params)
+        # Reset delta flags for the new response
+        self._firstTextDelta = True
+        self._firstReasoningDelta = True
+
+        # Submit to agent loop (this starts the background thread)
+        loop.submit(fullPrompt)
         self._setGenerating(True)
 
         # Clear tool restrictions after the request is sent
@@ -908,6 +819,16 @@ class AiChatWidget(QWidget):
         return False
 
     @staticmethod
+    def _historyHasSameSystemPromptInMessages(messages, sp):
+        if not sp:
+            return False
+        from qgitc.agent.types import SystemMessage as SysMsg
+        for msg in messages:
+            if isinstance(msg, SysMsg) and msg.content == sp:
+                return True
+        return False
+
+    @staticmethod
     def _historyHasSameContext(history, contextText: str) -> bool:
         if not contextText:
             return False
@@ -921,110 +842,16 @@ class AiChatWidget(QWidget):
 
         return False
 
-    def _onMessageReady(self, response: AiResponse):
-        # tool-only responses can have empty message.
-        if not response.message and not response.reasoning and not response.tool_calls:
-            return
-
-        model: AiModelBase = self.sender()
-        if response.reasoning:
-            reasoningResponse = AiResponse(
-                AiRole.Assistant, response.reasoning, description=self.tr("🧠 Reasoning"))
-            reasoningResponse.is_delta = response.is_delta
-            reasoningResponse.first_delta = response.first_delta
-            self._doMessageReady(model, reasoningResponse)
-
-        self._doMessageReady(model, response)
-
-    def _onReasoningFinished(self):
-        # Collapse the most recently displayed reasoning block (if any).
-        self._chatBot.collapseLatestReasoningBlock()
-
-    # ========== Tool Machine Signal Handlers ==========
-
-    def _onExecuteTool(self, toolCallId: str, toolName: str, params: dict, isAutoRun: bool):
-        """Handler for when machine requests tool execution."""
-
-        # Confirmation is shown in `_onToolConfirmationNeeded`
-        if isAutoRun:
-            # Display the tool call
-            uiResponse = self._makeUiToolCallResponse(toolName, params or {})
-            self._chatBot.appendResponse(uiResponse, collapsed=True)
-
-        # Execute it
-        started = self._executeToolAsync(toolName, params or {}, toolCallId)
-        if not started:
-            # Synthetic failure
-            self._onAgentToolFinished(AgentToolResult(
-                toolName, False, self.tr("Failed to start tool execution."), toolCallId=toolCallId))
-
-    def _onToolConfirmationNeeded(self, toolCallId: str, toolName: str,
-                                  params: dict, toolDesc: str, toolType: ToolType):
-        """Handler for when machine needs user confirmation for a tool."""
-
-        # Display confirmation UI
-        uiResponse = self._makeUiToolCallResponse(toolName, params)
-        self._chatBot.appendResponse(uiResponse)
-
-        expl = params.get("explanation", "").strip()
-        self._chatBot.insertToolConfirmation(
-            toolName=toolName,
-            params=params,
-            toolDesc=expl if expl else toolDesc,
-            toolType=toolType,
-            toolCallId=toolCallId,
-        )
-
-    def _onToolExecutionCancelled(self, toolCallId: str, toolName: str, toolType: ToolType):
-        """Handler for when tool execution is cancelled."""
-        model = self.currentChatModel()
-        if model is None:
-            return
-
-        if toolType != ToolType.READ_ONLY:
-            self._chatBot.setToolConfirmationStatus(
-                toolCallId, ConfirmationStatus.REJECTED)
-        description = self.tr("✗ `{}` skipped").format(toolName)
-        model.addHistory(
-            AiRole.Tool,
-            SKIP_TOOL,
-            description=description,
-            toolCalls={"tool_call_id": toolCallId},
-        )
-        self._doMessageReady(
-            model,
-            AiResponse(AiRole.Tool, SKIP_TOOL,
-                       description=description),
-            collapsed=True,
-        )
-
-    def _onContinueAgent(self):
-        """Handler for when machine is ready for agent to continue."""
-        # Machine signals when ready - continue immediately
-        self._continueAgentConversation(delayMs=0)
-
-    def _doMessageReady(self, model: AiModelBase, response: AiResponse, collapsed=False):
-        index = self._contextPanel.cbBots.findData(model)
-
-        assert (index != -1)
-        messages: AiChatbot = self._chatBot
-        if response.message or response.role == AiRole.Tool:
-            messages.appendResponse(response, collapsed)
-
-        # If the assistant produced tool calls, delegate to the tool machine.
-        if response.role == AiRole.Assistant and response.tool_calls:
-            self._toolMachine.processToolCalls(response.tool_calls)
-
-        if not self._disableAutoScroll:
-            sb = messages.verticalScrollBar()
-            self._adjustingSccrollbar = True
-            sb.setValue(sb.maximum())
-            self._adjustingSccrollbar = False
 
     def _makeUiToolCallResponse(self, toolName: str, args: Union[str, dict]):
-        tool = self._toolByName(toolName)
+        tool = self._toolRegistry.get(toolName) if self._toolRegistry else None
         if tool:
-            toolType = tool.toolType
+            if tool.is_destructive():
+                toolType = ToolType.DANGEROUS
+            elif tool.is_read_only():
+                toolType = ToolType.READ_ONLY
+            else:
+                toolType = ToolType.WRITE
         else:
             toolType = ToolType.DANGEROUS
 
@@ -1038,80 +865,170 @@ class AiChatWidget(QWidget):
             body = json.dumps(args, ensure_ascii=False)
         return AiResponse(AiRole.Tool, body, title)
 
-    def _providerUiTools(self) -> List[AgentTool]:
+    def _providerUiTools(self):
         provider = self.contextProvider()
         if provider is None:
             return []
 
         return provider.uiTools() or []
 
-    def _createStrategy(self, strategyValue: int):
-        """Create the appropriate strategy instance from value."""
-        if strategyValue == 1:
-            return AggressiveStrategy()
-        if strategyValue == 2:
-            return SafeStrategy()
-        if strategyValue == 3:
-            return AllAutoStrategy()
-        return DefaultStrategy()
+    def _buildToolRegistry(self):
+        registry = ToolRegistry()
+        register_builtin_tools(registry)
+        for tool in self._providerUiTools():
+            if isinstance(tool, UiTool):
+                tool.set_dispatcher(self._uiToolDispatcher)
+            registry.register(tool)
+        return registry
 
-    def _onToolExecutionStrategyChanged(self, strategyValue: int):
-        """Handle tool execution strategy change and update the machine."""
-        strategy = self._createStrategy(strategyValue)
-        self._toolMachine.setStrategy(strategy)
-
-    def _toolByName(self, toolName: str) -> Optional[AgentTool]:
-        if not toolName:
-            return None
-        for t in self._providerUiTools():
-            if t.name == toolName:
-                return t
-        return AgentToolRegistry.tool_by_name(toolName)
-
-    def _availableOpenAiTools(self) -> List[Dict[str, Any]]:
-        tools = list(AgentToolRegistry.openai_tools())
-        for t in self._providerUiTools():
-            tools.append(t.to_openai_tool())
-
-        # Filter tools if restrictions are set
-        if self._restrictedToolNames is not None:
-            tools = [t for t in tools if t.get("function", {}).get(
-                "name") in self._restrictedToolNames]
-
-        return tools
-
-    def _executeToolAsync(self, toolName: str, params: dict, toolCallId: Optional[str] = None) -> bool:
+    def _executeUiToolHandler(self, toolName, params):
         provider = self.contextProvider()
+        if provider is None:
+            return False, "No context provider"
+        return provider.executeUiTool(toolName, params)
 
-        # Provider-defined UI tools run on the UI thread.
-        if toolName and toolName.startswith("ui_") and provider is not None:
-            for t in self._providerUiTools():
-                if t.name == toolName:
-                    return self._uiToolExecutor.executeAsync(toolName, params or {}, provider, toolCallId)
-
-            # If a ui_ tool is requested but isn't available, fail fast.
-            self._onAgentToolFinished(AgentToolResult(
-                toolName, False, self.tr("UI tool not available in this context."), toolCallId=toolCallId))
-            return True
-
-        # Non-UI tools run in the background executor.
-        return self._agentExecutor.executeAsync(toolName, params or {}, toolCallId)
-
-    def _onResponseFinish(self):
+    def _ensureAgentLoop(self):
+        if self._agentLoop is not None:
+            return self._agentLoop
+        self._toolRegistry = self._buildToolRegistry()
         model = self.currentChatModel()
-        self._saveChatHistory(model)
-        self._updateStatus()
+        adapter = AiModelBaseAdapter(model)
+        compactor = ConversationCompactor(
+            adapter, context_window=100000, max_output_tokens=4096)
+        loop = AgentLoop(
+            provider=adapter,
+            tool_registry=self._toolRegistry,
+            permission_engine=self._permissionEngine,
+            compactor=compactor,
+            parent=self,
+        )
+        self._connectAgentLoop(loop)
+        self._agentLoop = loop
+        return loop
 
-    def _saveChatHistory(self, model: AiModelBase):
+    def _connectAgentLoop(self, loop):
+        loop.textDelta.connect(self._onAgentTextDelta)
+        loop.reasoningDelta.connect(self._onAgentReasoningDelta)
+        loop.toolCallStart.connect(self._onAgentToolCallStart)
+        loop.toolCallResult.connect(self._onAgentToolCallResult)
+        loop.turnComplete.connect(self._onAgentTurnComplete)
+        loop.agentFinished.connect(self._onAgentFinished)
+        loop.permissionRequired.connect(self._onAgentPermissionRequired)
+        loop.errorOccurred.connect(self._onAgentError)
+
+    def _disconnectAgentLoop(self):
+        if self._agentLoop is None:
+            return
+        loop = self._agentLoop
+        loop.textDelta.disconnect(self._onAgentTextDelta)
+        loop.reasoningDelta.disconnect(self._onAgentReasoningDelta)
+        loop.toolCallStart.disconnect(self._onAgentToolCallStart)
+        loop.toolCallResult.disconnect(self._onAgentToolCallResult)
+        loop.turnComplete.disconnect(self._onAgentTurnComplete)
+        loop.agentFinished.disconnect(self._onAgentFinished)
+        loop.permissionRequired.disconnect(self._onAgentPermissionRequired)
+        loop.errorOccurred.disconnect(self._onAgentError)
+
+    def _resetAgentLoop(self):
+        if self._agentLoop is not None:
+            self._agentLoop.abort()
+            self._agentLoop.wait(3000)
+            self._disconnectAgentLoop()
+            self._agentLoop = None
+            self._toolRegistry = None
+
+    def _onAgentTextDelta(self, text):
+        response = AiResponse(AiRole.Assistant, text)
+        response.is_delta = True
+        response.first_delta = self._firstTextDelta
+        self._firstTextDelta = False
+        self._chatBot.appendResponse(response)
+        if not self._disableAutoScroll:
+            sb = self._chatBot.verticalScrollBar()
+            self._adjustingSccrollbar = True
+            sb.setValue(sb.maximum())
+            self._adjustingSccrollbar = False
+
+    def _onAgentReasoningDelta(self, text):
+        response = AiResponse(
+            AiRole.Assistant, text,
+            description=self.tr("🧠 Reasoning"),
+        )
+        response.is_delta = True
+        response.first_delta = self._firstReasoningDelta
+        self._firstReasoningDelta = False
+        self._chatBot.appendResponse(response)
+
+    def _onAgentToolCallStart(self, toolCallId, toolName, params):
+        uiResponse = self._makeUiToolCallResponse(toolName, params)
+        self._chatBot.appendResponse(uiResponse, collapsed=True)
+        if not self._disableAutoScroll:
+            sb = self._chatBot.verticalScrollBar()
+            self._adjustingSccrollbar = True
+            sb.setValue(sb.maximum())
+            self._adjustingSccrollbar = False
+
+    def _onAgentToolCallResult(self, toolCallId, content, isError):
+        prefix = "✓" if not isError else "✗"
+        desc = self.tr("{} tool output").format(prefix)
+        response = AiResponse(AiRole.Tool, content, description=desc)
+        self._chatBot.appendResponse(response, collapsed=True)
+
+    def _onAgentTurnComplete(self, assistantMsg):
+        self._saveChatHistoryFromLoop()
+        # Reset delta flags for the next turn
+        self._firstTextDelta = True
+        self._firstReasoningDelta = True
+
+    def _onAgentFinished(self):
+        self._saveChatHistoryFromLoop()
+        self._updateStatus()
+        self._chatBot.collapseLatestReasoningBlock()
+
+    def _onAgentPermissionRequired(self, toolCallId, tool, inputData):
+        toolName = tool.name if hasattr(tool, 'name') else str(tool)
+        if tool.is_destructive():
+            toolType = ToolType.DANGEROUS
+        elif tool.is_read_only():
+            toolType = ToolType.READ_ONLY
+        else:
+            toolType = ToolType.WRITE
+
+        uiResponse = self._makeUiToolCallResponse(toolName, inputData)
+        self._chatBot.appendResponse(uiResponse)
+
+        expl = inputData.get("explanation", "").strip() if isinstance(inputData, dict) else ""
+        desc = expl if expl else (tool.description if hasattr(tool, 'description') else "")
+        self._chatBot.insertToolConfirmation(
+            toolName=toolName,
+            params=inputData,
+            toolDesc=desc,
+            toolType=toolType,
+            toolCallId=toolCallId,
+        )
+
+    def _onAgentError(self, errorMsg):
+        self._chatBot.appendServiceUnavailable(errorMsg)
+
+    def _saveChatHistoryFromLoop(self):
+        if self._agentLoop is None:
+            return
         chatHistory = self._historyPanel.currentHistory()
         if not chatHistory:
             return
+        messages = self._agentLoop.messages()
+        dicts = messages_to_history_dicts(messages)
+        chatHistory.messages = dicts
+        model = self.currentChatModel()
+        if model:
+            chatHistory.modelKey = AiModelFactory.modelKey(model)
+            chatHistory.modelId = model.modelId or model.name
+        settings = ApplicationBase.instance().settings()
+        settings.saveChatHistory(chatHistory.historyId, chatHistory.toDict())
 
-        store = ApplicationBase.instance().aiChatHistoryStore()
-        updated = store.updateFromModel(chatHistory.historyId, model)
-        if updated:
-            # Keep selection stable after potential row moves.
-            self._historyPanel.setCurrentHistory(updated.historyId)
+    def _onToolExecutionStrategyChanged(self, strategyValue: int):
+        """Handle tool execution strategy change."""
+        self._permissionEngine = create_permission_engine(strategyValue)
 
     def _updateStatus(self):
         self._contextPanel.btnSend.setVisible(True)
@@ -1124,48 +1041,14 @@ class AiChatWidget(QWidget):
         self._setGenerating(False)
 
     def _onToolApproved(self, toolName: str, params: dict, toolCallId: str):
-        self._toolMachine.approveToolExecution(toolName, params, toolCallId)
+        if self._agentLoop is not None:
+            self._agentLoop.approve_tool(toolCallId)
 
     def _onToolRejected(self, toolName: str, toolCallId: str):
-        model = self.currentChatModel()
-
-        # If the assistant previously requested a tool via tool_calls, OpenAI-style
-        # chat requires that each tool_call_id gets a corresponding tool message.
-        description = self.tr("✗ `{}` skipped").format(toolName)
-        model.addHistory(AiRole.Tool, SKIP_TOOL,
-                         description=description,
-                         toolCalls={"tool_call_id": toolCallId})
-        self._doMessageReady(model, AiResponse(
-            AiRole.Tool, SKIP_TOOL, description=description))
-
-        self._toolMachine.rejectToolExecution(toolName, toolCallId)
-
-    def _onAgentToolFinished(self, result: AgentToolResult):
-        model = self.currentChatModel()
-        toolName = result.toolName
-        ok = result.ok
-        output = result.output or ""
-        toolCallId = result.toolCallId
-
-        prefix = "✓" if ok else "✗"
-        toolDesc = self.tr("{} `{}` output").format(prefix, toolName)
-        toolCalls = {"tool_call_id": toolCallId} if toolCallId else None
-        model.addHistory(AiRole.Tool, output,
-                         description=toolDesc, toolCalls=toolCalls)
-        resp = AiResponse(AiRole.Tool, output, description=toolDesc)
-        self._doMessageReady(model, resp, collapsed=True)
-
-        self._toolMachine.onToolFinished(result)
-
-    def _onServiceUnavailable(self):
-        messages: AiChatbot = self._chatBot
-        messages.appendServiceUnavailable()
-        self._updateStatus()
-
-    def _onNetworkError(self, errorMsg: str):
-        messages: AiChatbot = self._chatBot
-        messages.appendServiceUnavailable(errorMsg)
-        self._updateStatus()
+        if self._agentLoop is not None:
+            self._chatBot.setToolConfirmationStatus(
+                toolCallId, ConfirmationStatus.REJECTED)
+            self._agentLoop.deny_tool(toolCallId)
 
     def _onModelChanged(self, index: int):
         model = self._ensureModelInstantiatedAt(index)
@@ -1173,6 +1056,9 @@ class AiChatWidget(QWidget):
             return
         self._contextPanel.setFocus()
         self._contextPanel.setupModelNames(model)
+
+        # Reset agent loop so it uses the new model
+        self._resetAgentLoop()
 
         chatHistory = self._historyPanel.currentHistory()
         if chatHistory:
@@ -1190,8 +1076,7 @@ class AiChatWidget(QWidget):
         if self._adjustingSccrollbar:
             return
 
-        model = self.currentChatModel()
-        if model is not None and model.isRunning():
+        if self.isGenerating():
             sb: QScrollBar = self.messages.verticalScrollBar()
             self._disableAutoScroll = sb.value() != sb.maximum()
 
@@ -1474,167 +1359,65 @@ class AiChatWidget(QWidget):
         sb = self.messages.verticalScrollBar()
         sb.setValue(sb.maximum())
 
-    def _loadMessagesFromHistory(self, messages: List[Dict], addToChatBot=True):
-        """Load messages from history into the chat"""
-        if not messages:
+    def _loadMessagesFromHistory(self, historyDicts: List[Dict], addToChatBot=True):
+        """Load messages from history dicts into the agent loop and chatbot."""
+        if not historyDicts:
             return
 
-        model = self.currentChatModel()
+        agentMessages = history_dicts_to_messages(historyDicts)
+
+        # Set messages on agent loop (will be created on next submit)
+        loop = self._ensureAgentLoop()
+        loop.set_messages(agentMessages)
+
+        if not addToChatBot:
+            return
+
         chatbot = self.messages
+        chatbot.setHighlighterEnabled(False)
 
-        # Clear model history and add messages
-        model.clear()
-
-        if addToChatBot:
-            chatbot.setHighlighterEnabled(False)
-
-        self._toolMachine.reset()
-
-        def _addReasoning(reasoning: str):
-            if reasoning:
-                reasoningResponse = AiResponse(
-                    AiRole.Assistant, reasoning, description=self.tr("🧠 Reasoning"))
-                chatbot.appendResponse(reasoningResponse, collapsed=True)
-
-        i = 0
-        while i < len(messages):
-            msg = messages[i]
+        for msg in historyDicts:
             role = AiRole.fromString(msg.get('role', 'user'))
             content = msg.get('content', '')
             reasoning = msg.get('reasoning', None)
-            description = msg.get('description', None)
             toolCalls = msg.get('tool_calls', None)
-            reasoningData = msg.get('reasoning_data', None)
+            description = msg.get('description', None)
 
-            model.addHistory(role, content, description=description,
-                             toolCalls=toolCalls, reasoning=reasoning,
-                             reasoningData=reasoningData)
-            # Don't add tool calls to UI (both for assistant and tool roles)
-            if addToChatBot and not toolCalls:
-                _addReasoning(reasoning)
-                response = AiResponse(role, content)
-                collapsed = (role == AiRole.Tool) or (role == AiRole.System) or \
-                    (role == AiRole.Assistant and toolCalls)
-                chatbot.appendResponse(response, collapsed=collapsed)
+            if reasoning:
+                reasoningResponse = AiResponse(
+                    AiRole.Assistant, reasoning,
+                    description=self.tr("🧠 Reasoning"))
+                chatbot.appendResponse(reasoningResponse, collapsed=True)
 
             if role == AiRole.Assistant and isinstance(toolCalls, list) and toolCalls:
-                toolCallResult, hasMoreMessages = self._collectToolCallResult(
-                    i + 1, messages)
-
-                if addToChatBot:
-                    _addReasoning(reasoning)
-                    if content:
-                        response = AiResponse(role, content)
-                        chatbot.appendResponse(response, collapsed=False)
-
+                # Show text content if present
+                if content:
+                    chatbot.appendResponse(
+                        AiResponse(role, content), collapsed=False)
+                # Show each tool call
                 for tc in toolCalls:
                     if not isinstance(tc, dict):
                         continue
-                    tcid = tc.get("id")
-                    if not tcid:
-                        logger.warning(
-                            "Invalid tool call entry in history: missing id")
-                        continue
-
                     func = (tc.get("function") or {})
                     toolName = func.get("name")
-                    responseMsg: Dict[str, Any] = toolCallResult.get(tcid)
-                    tool = self._toolByName(toolName)
-                    toolType = tool.toolType if tool else ToolType.WRITE
+                    uiResponse = self._makeUiToolCallResponse(
+                        toolName, func.get("arguments"))
+                    chatbot.appendResponse(uiResponse, collapsed=True)
+            elif role == AiRole.Tool:
+                # Show tool result
+                response = AiResponse(role, content, description=description)
+                chatbot.appendResponse(response, collapsed=True)
+            else:
+                # System, User, or plain Assistant
+                collapsed = (role == AiRole.Tool) or (role == AiRole.System)
+                chatbot.appendResponse(
+                    AiResponse(role, content), collapsed=collapsed)
 
-                    if addToChatBot:
-                        uiResponse = self._makeUiToolCallResponse(
-                            toolName, func.get("arguments"))
-                        collapsed = bool(
-                            responseMsg) or toolType == ToolType.READ_ONLY
-                        chatbot.appendResponse(uiResponse, collapsed)
-
-                    # Already have result
-                    if responseMsg:
-                        if addToChatBot:
-                            toolContent = responseMsg.get("content", "")
-                            toolDesc = responseMsg.get("description", "")
-                            response = AiResponse(
-                                AiRole.Tool, toolContent, toolDesc)
-                            chatbot.appendResponse(response, collapsed=True)
-                        continue
-
-                    args = parseToolArguments(func.get("arguments"))
-
-                    # No result found - decide whether to cancel or restore confirmation
-                    # If there are more messages after this tool call block, cancel it
-                    # (the conversation moved on without executing this tool)
-                    if hasMoreMessages or toolType == ToolType.READ_ONLY:
-                        cancelDesc = self.tr(
-                            "✗ `{}` cancelled").format(toolName)
-                        model.addHistory(
-                            AiRole.Tool,
-                            "Cancelled",
-                            description=cancelDesc,
-                            toolCalls={"tool_call_id": tcid},
-                        )
-                        if addToChatBot:
-                            response = AiResponse(
-                                AiRole.Tool,
-                                self.tr("Cancelled"),
-                                description=cancelDesc
-                            )
-                            chatbot.appendResponse(response, collapsed=True)
-                        continue
-
-                    # For WRITE/DANGEROUS tools at end of history: restore confirmation UI
-                    self._toolMachine.addAwaitingToolResult(tcid, tool)
-                    if addToChatBot:
-                        if isinstance(args, dict):
-                            expl = args.get("explanation", "").strip()
-                            if expl:
-                                toolDesc = expl
-                            else:
-                                toolDesc = tool.description if tool else self.tr(
-                                    "Unknown tool requested by model")
-                        chatbot.insertToolConfirmation(
-                            toolName=toolName or "",
-                            params=args or {},
-                            toolDesc=toolDesc,
-                            toolType=toolType,
-                            toolCallId=tcid,
-                        )
-
-            i += 1
-
-        if addToChatBot:
-            chatbot.setHighlighterEnabled(True)
-
-    def _collectToolCallResult(self, i: int, messages: List[Dict]) -> Tuple[Dict[str, Dict], bool]:
-        """Collect pending tool_call_id values from history starting at index i.
-        
-        Returns:
-            Tuple of (callResult dict, hasMoreMessages bool):
-            - callResult: Dict mapping tool_call_id to tool result message
-            - hasMoreMessages: True if there are non-tool messages after tool results
-        """
-        callResult = {}
-        while i < len(messages):
-            msg = messages[i]
-            role = AiRole.fromString(msg.get('role', 'user'))
-            if role != AiRole.Tool:
-                # Found a non-tool message, so there are more messages after tools
-                return callResult, True
-            toolCalls = msg.get('tool_calls', None)
-            if isinstance(toolCalls, dict):
-                tcid = toolCalls.get("tool_call_id")
-                if tcid:
-                    callResult[tcid] = msg
-            i += 1
-        # Reached end of messages - no more messages after tool results
-        return callResult, False
+        chatbot.setHighlighterEnabled(True)
 
     def _clearCurrentChat(self):
-        """Clear the current chat display and model history"""
-        model = self.currentChatModel()
-        if model:
-            model.clear()
-        self._toolMachine.reset()
+        """Clear the current chat display and reset agent loop"""
+        self._resetAgentLoop()
         self._codeReviewDiffs.clear()
         self._injectedContext = None
         self.messages.clear()

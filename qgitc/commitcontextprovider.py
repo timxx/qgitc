@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from PySide6.QtCore import QObject, QSize, QTimer
 from PySide6.QtGui import QIcon
 
-from qgitc.agenttools import AgentTool, ToolType, createToolFromModel
+from qgitc.agent.ui_tool import UiTool
 from qgitc.aichatcontextprovider import AiChatContextProvider, AiContextDescriptor
 from qgitc.basemodel import BaseModel, Field, ValidationError
 from qgitc.common import dataDirPath, toSubmodulePath
@@ -49,30 +49,22 @@ class CommitContextProvider(AiChatContextProvider):
         self._emitTimer.setSingleShot(True)
         self._emitTimer.timeout.connect(self.contextsChanged.emit)
 
-        self._uiToolsCache: Optional[List[AgentTool]] = None
+        self._uiToolsCache = None
 
         self._installHooks()
 
-    def uiTools(self) -> List[AgentTool]:
+    def uiTools(self):
         if self._uiToolsCache is None:
             self._uiToolsCache = [
-                createToolFromModel(
+                UiTool(
                     name="ui_reload_status",
-                    description=(
-                        "Reload the CommitWindow staged/unstaged status lists from Git. "
-                        "Use this after staging/unstaging or any file-changing operations."
-                    ),
-                    toolType=ToolType.READ_ONLY,
-                    modeClass=UiReloadStatusParams,
+                    description="Reload the CommitWindow staged/unstaged status lists from Git. Use this after staging/unstaging or any file-changing operations.",
+                    schema=UiReloadStatusParams.model_json_schema(),
                 ),
-                createToolFromModel(
+                UiTool(
                     name="ui_set_commit_message",
-                    description=(
-                        "Replace the commit message text in the CommitWindow editor. "
-                        "Use this after generating/refining a commit message."
-                    ),
-                    toolType=ToolType.READ_ONLY,
-                    modeClass=UiSetCommitMessageParams,
+                    description="Replace the commit message text in the CommitWindow editor. Use this after generating/refining a commit message.",
+                    schema=UiSetCommitMessageParams.model_json_schema(),
                 ),
             ]
         return self._uiToolsCache
