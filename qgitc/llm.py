@@ -86,6 +86,14 @@ class AiChatMode(Enum):
     Agent = 2
 
 
+@dataclass
+class AiModelCapabilities:
+    streaming: bool = True
+    tool_calls: bool = False
+    max_output_tokens: int = 4096
+    context_window: int = 100000
+
+
 class AiModelBase(QObject):
     responseAvailable = Signal(AiResponse)
     reasoningFinished = Signal()
@@ -284,6 +292,11 @@ class AiModelBase(QObject):
         For providers without capability metadata, we assume tool calls are supported.
         """
         return True
+
+    def getModelCapabilities(self, modelId: str = None) -> AiModelCapabilities:
+        """Return model capabilities for the given model id."""
+        _ = modelId
+        return AiModelCapabilities()
 
     def cleanup(self):
         pass

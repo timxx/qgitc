@@ -6,8 +6,7 @@ from typing import Any, Dict, Iterator, List, Optional
 from PySide6.QtCore import QCoreApplication, QElapsedTimer
 from PySide6.QtTest import QSignalSpy
 
-from qgitc.agent.agent_loop import AgentLoop
-from qgitc.agent.compaction import ConversationCompactor
+from qgitc.agent.agent_loop import AgentLoop, QueryParams
 from qgitc.agent.permissions import PermissionEngine
 from qgitc.agent.provider import (
     ContentDelta,
@@ -46,9 +45,13 @@ def _spy_texts(spy):
 class SimpleProvider(ModelProvider):
     """Yields a fixed text response then completes."""
 
+    def __init__(self):
+        self.last_system_prompt = None
+
     def stream(self, messages, system_prompt=None, tools=None,
                model=None, max_tokens=4096):
         # type: (...) -> Iterator[StreamEvent]
+        self.last_system_prompt = system_prompt
         yield ContentDelta(text="Hello from LLM")
         yield MessageComplete(stop_reason="end_turn")
 
@@ -116,14 +119,16 @@ def _make_loop(provider, registry=None):
     if registry is None:
         registry = ToolRegistry()
     engine = PermissionEngine()
-    compactor = ConversationCompactor(provider, context_window=100000,
-                                      max_output_tokens=4096)
-    return AgentLoop(
+    return AgentLoop(tool_registry=registry, permission_engine=engine)
+
+
+def _make_params(provider):
+    # type: (ModelProvider) -> QueryParams
+    return QueryParams(
         provider=provider,
-        tool_registry=registry,
-        permission_engine=engine,
-        compactor=compactor,
         system_prompt="You are a test assistant.",
+        context_window=100000,
+        max_output_tokens=4096,
     )
 
 
@@ -134,7 +139,9 @@ class TestAgentLoopSimple(TestBase):
 
     def setUp(self):
         super().setUp()
-        self.loop = _make_loop(SimpleProvider())
+        self.provider = SimpleProvider()
+        self.loop = _make_loop(self.provider)
+        self.params = _make_params(self.provider)
 
     def tearDown(self):
         self.loop.abort()
@@ -149,7 +156,7 @@ class TestAgentLoopSimple(TestBase):
         finished_spy = QSignalSpy(self.loop.agentFinished)
         turn_spy = QSignalSpy(self.loop.turnComplete)
 
-        self.loop.submit("Hello")
+        self.loop.submit("Hello", self.params)
         waitFor(self.app, lambda: finished_spy.count() > 0)
 
         # textDelta should have been emitted with "Hello from LLM"
@@ -163,7 +170,7 @@ class TestAgentLoopSimple(TestBase):
     def test_messages_accumulate(self):
         finished_spy = QSignalSpy(self.loop.agentFinished)
 
-        self.loop.submit("Hello")
+        self.loop.submit("Hello", self.params)
         waitFor(self.app, lambda: finished_spy.count() > 0)
 
         msgs = self.loop.messages()
@@ -171,8 +178,19 @@ class TestAgentLoopSimple(TestBase):
         self.assertIsInstance(msgs[0], UserMessage)
         self.assertIsInstance(msgs[1], AssistantMessage)
 
+    def test_submit_accepts_content_blocks(self):
+        finished_spy = QSignalSpy(self.loop.agentFinished)
+
+        self.loop.submit([TextBlock(text="Hello")], self.params)
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        msgs = self.loop.messages()
+        self.assertEqual(len(msgs), 2)
+        self.assertIsInstance(msgs[0], UserMessage)
+        self.assertEqual(msgs[0].content[0].text, "Hello")
+
     def test_abort(self):
-        self.loop.submit("Hello")
+        self.loop.submit("Hello", self.params)
         self.loop.abort()
         self.loop.wait(3000)
         self.assertFalse(self.loop.isRunning())
@@ -187,7 +205,9 @@ class TestAgentLoopToolExecution(TestBase):
         super().setUp()
         self.registry = ToolRegistry()
         self.registry.register(EchoTool())
-        self.loop = _make_loop(ToolCallProvider(), registry=self.registry)
+        self.provider = ToolCallProvider()
+        self.loop = _make_loop(self.provider, registry=self.registry)
+        self.params = _make_params(self.provider)
 
     def tearDown(self):
         self.loop.abort()
@@ -203,7 +223,7 @@ class TestAgentLoopToolExecution(TestBase):
         tool_result_spy = QSignalSpy(self.loop.toolCallResult)
         text_spy = QSignalSpy(self.loop.textDelta)
 
-        self.loop.submit("Please echo")
+        self.loop.submit("Please echo", self.params)
         waitFor(self.app, lambda: finished_spy.count() > 0)
 
         # Tool was called
@@ -220,7 +240,7 @@ class TestAgentLoopToolExecution(TestBase):
     def test_messages_include_tool_round(self):
         finished_spy = QSignalSpy(self.loop.agentFinished)
 
-        self.loop.submit("Please echo")
+        self.loop.submit("Please echo", self.params)
         waitFor(self.app, lambda: finished_spy.count() > 0)
 
         msgs = self.loop.messages()
@@ -233,7 +253,9 @@ class TestAgentLoopSetMessages(TestBase):
 
     def setUp(self):
         super().setUp()
-        self.loop = _make_loop(SimpleProvider())
+        self.provider = SimpleProvider()
+        self.loop = _make_loop(self.provider)
+        self.params = _make_params(self.provider)
 
     def tearDown(self):
         self.loop.abort()
@@ -260,9 +282,11 @@ class TestAgentLoopSetMessages(TestBase):
         msgs.append(UserMessage(content=[TextBlock(text="World")]))
         self.assertEqual(len(self.loop.messages()), 1)
 
-    def test_set_system_prompt(self):
-        self.loop.set_system_prompt("New prompt")
-        self.assertEqual(self.loop._system_prompt, "New prompt")
+    def test_system_prompt_is_passed_via_query_params(self):
+        self.loop.submit("Hello", self.params)
+        self.loop.wait(3000)
+        self.assertEqual(self.provider.last_system_prompt,
+                         "You are a test assistant.")
 
 
 if __name__ == "__main__":

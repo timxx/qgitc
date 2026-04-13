@@ -1,12 +1,53 @@
 # -*- coding: utf-8 -*-
 
 import json
+from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
-from qgitc.llm import AiModelBase, AiModelFactory, AiParameters, AiRole
+from qgitc.llm import (
+    AiModelBase,
+    AiModelCapabilities,
+    AiModelFactory,
+    AiParameters,
+    AiRole,
+)
+
+_knownContextWindows = {
+    "llama3": 8192,
+    "llama3.1": 131072,
+    "mistral": 32768,
+    "qwen2.5": 131072,
+    "gpt-4": 128000,
+    "gpt-5": 200000,
+    "claude-3": 200000,
+}
+
+KNOWN_CONTEXT_WINDOWS = MappingProxyType(_knownContextWindows)
+
+DEFAULT_CONTEXT_WINDOW = 8192
+DEFAULT_MAX_OUTPUT_TOKENS = 4096
+
+
+def _matches_model_prefix(modelId: str, prefix: str) -> bool:
+    if not modelId.startswith(prefix):
+        return False
+    if len(modelId) == len(prefix):
+        return True
+    return modelId[len(prefix)] in ":-/_"
+
+
+def lookup_context_window(model_id: str) -> int:
+    modelId = (model_id or "").lower()
+    for prefix, window in sorted(
+            _knownContextWindows.items(),
+            key=lambda item: len(item[0]),
+            reverse=True):
+        if _matches_model_prefix(modelId, prefix):
+            return window
+    return DEFAULT_CONTEXT_WINDOW
 
 
 class OpenAICompatModelsFetcher(QObject):
@@ -96,6 +137,13 @@ class LocalLLM(AiModelBase):
 
     def isLocal(self):
         return True
+
+    def getModelCapabilities(self, modelId: str = None) -> AiModelCapabilities:
+        targetModelId = modelId or self.modelId or ""
+        return AiModelCapabilities(
+            context_window=lookup_context_window(targetModelId),
+            max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        )
 
     def _onFetchFinished(self):
         LocalLLM._models[self.url_base] = self.nameFetcher.models

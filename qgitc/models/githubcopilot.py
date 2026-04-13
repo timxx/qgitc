@@ -2,7 +2,6 @@
 
 import json
 import time
-from dataclasses import dataclass
 
 from PySide6.QtCore import QEventLoop, QObject, QTimer, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
@@ -10,7 +9,13 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import logger
 from qgitc.events import LoginFinished, RequestLoginGithubCopilot
-from qgitc.llm import AiModelBase, AiModelFactory, AiParameters, AiRole
+from qgitc.llm import (
+    AiModelBase,
+    AiModelCapabilities,
+    AiModelFactory,
+    AiParameters,
+    AiRole,
+)
 from qgitc.settings import Settings
 
 
@@ -24,14 +29,6 @@ def _makeHeaders(token: str, intent: bytes = b"conversation-other"):
         b"user-agent": b"GithubCopilotChat/0.27.2",
         b"x-github-api-version": b"2025-05-01",
     }
-
-
-@dataclass
-class AiModelCapabilities:
-
-    streaming: bool = True
-    tool_calls: bool = False
-    max_output_tokens: int = 4096
 
 
 class ModelsFetcher(QObject):
@@ -71,6 +68,13 @@ class ModelsFetcher(QObject):
         self.finished.emit()
 
     def _onFinished(self):
+        def _parsePositiveInt(value, defaultValue: int) -> int:
+            try:
+                parsedValue = int(value)
+            except (TypeError, ValueError):
+                return defaultValue
+            return parsedValue if parsedValue > 0 else defaultValue
+
         reply = self._reply
         if reply is None:
             return
@@ -101,11 +105,13 @@ class ModelsFetcher(QObject):
             limits: dict = caps.get("limits", {})
 
             modelCaps = AiModelCapabilities(
-                supports.get("streaming", False),
-                supports.get("tool_calls", False)
+                streaming=supports.get("streaming", False),
+                tool_calls=supports.get("tool_calls", False),
+                context_window=_parsePositiveInt(
+                    limits.get("max_context_window_tokens"), 100000),
+                max_output_tokens=_parsePositiveInt(
+                    limits.get("max_output_tokens"), 4096),
             )
-            modelCaps.max_output_tokens = limits.get(
-                "max_output_tokens", 4096)
             self.capabilities[id] = modelCaps
 
             name = model.get("name")
@@ -290,9 +296,12 @@ class GithubCopilot(AiModelBase):
         return "GitHub Copilot"
 
     def supportsToolCalls(self, modelId: str) -> bool:
-        caps: AiModelCapabilities = GithubCopilot._capabilities.get(
-            modelId, AiModelCapabilities())
+        caps: AiModelCapabilities = self.getModelCapabilities(modelId)
         return bool(caps.tool_calls)
+
+    def getModelCapabilities(self, modelId: str = None) -> AiModelCapabilities:
+        targetModelId = modelId or self.modelId or self._defaultModelId()
+        return GithubCopilot._capabilities.get(targetModelId, AiModelCapabilities())
 
     def _shouldUseResponsesApi(self, modelId: str) -> bool:
         """Return True when the model supports the Responses API."""

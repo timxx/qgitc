@@ -2,17 +2,13 @@
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
 
 from PySide6.QtCore import QMutex, QThread, QWaitCondition, Signal
 
 from qgitc.agent.compaction import ConversationCompactor
-from qgitc.agent.permissions import (
-    PermissionAllow,
-    PermissionAsk,
-    PermissionDeny,
-    PermissionEngine,
-)
+from qgitc.agent.permissions import PermissionAsk, PermissionDeny, PermissionEngine
 from qgitc.agent.provider import (
     ContentDelta,
     MessageComplete,
@@ -24,6 +20,7 @@ from qgitc.agent.tool import ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import (
     AssistantMessage,
+    ContentBlock,
     Message,
     TextBlock,
     ToolResultBlock,
@@ -32,6 +29,14 @@ from qgitc.agent.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class QueryParams:
+    provider: ModelProvider
+    system_prompt: str = ""
+    context_window: int = 100000
+    max_output_tokens: int = 4096
 
 
 class AgentLoop(QThread):
@@ -52,21 +57,16 @@ class AgentLoop(QThread):
 
     def __init__(
         self,
-        provider,          # type: ModelProvider
         tool_registry,     # type: ToolRegistry
         permission_engine,  # type: PermissionEngine
-        compactor,         # type: ConversationCompactor
-        system_prompt="",  # type: str
         max_turns=25,      # type: int
         parent=None,
     ):
         super().__init__(parent)
-        self._provider = provider
         self._tool_registry = tool_registry
         self._permission_engine = permission_engine
-        self._compactor = compactor
-        self._system_prompt = system_prompt
         self._max_turns = max_turns
+        self._params = None  # type: Optional[QueryParams]
 
         self._messages = []  # type: List[Message]
         self._abort_flag = False
@@ -76,15 +76,15 @@ class AgentLoop(QThread):
         self._perm_cond = QWaitCondition()
         self._perm_decisions = {}  # type: Dict[str, bool]
 
-    def submit(self, prompt, context_blocks=None):
-        # type: (str, Optional[list]) -> None
+    def submit(self, prompt, params):
+        # type: (Union[str, List[ContentBlock]], QueryParams) -> None
         """Submit a prompt and start the agent loop."""
-        content = []
-        if context_blocks:
-            for block in context_blocks:
-                content.append(block)
-        content.append(TextBlock(text=prompt))
+        if isinstance(prompt, str):
+            content = [TextBlock(text=prompt)]
+        else:
+            content = list(prompt)
         self._messages.append(UserMessage(content=content))
+        self._params = params
         self._abort_flag = False
         self._perm_decisions.clear()
         self.start()
@@ -124,11 +124,6 @@ class AgentLoop(QThread):
         """Replace conversation history (call before submit, not while running)."""
         self._messages = list(messages)
 
-    def set_system_prompt(self, prompt):
-        # type: (str) -> None
-        """Update the system prompt."""
-        self._system_prompt = prompt
-
     def run(self):
         # type: () -> None
         """Main agent loop -- runs in a dedicated thread."""
@@ -142,13 +137,23 @@ class AgentLoop(QThread):
 
     def _run_loop(self):
         # type: () -> None
+        if self._params is None:
+            raise ValueError("submit() requires QueryParams")
+
+        params = self._params
+        compactor = ConversationCompactor(
+            params.provider,
+            params.context_window,
+            params.max_output_tokens,
+        )
+
         for _turn in range(self._max_turns):
             if self._abort_flag:
                 return
 
             # Check compaction
-            if self._compactor.should_compact(self._messages):
-                result = self._compactor.compact(self._messages)
+            if compactor.should_compact(self._messages):
+                result = compactor.compact(self._messages)
                 self._messages = [result.boundary, result.summary]
                 self.conversationCompacted.emit(
                     result.pre_token_estimate,
@@ -160,7 +165,11 @@ class AgentLoop(QThread):
 
             # Stream from provider
             tool_schemas = self._tool_registry.get_tool_schemas() or None
-            assistant_msg = self._stream_response(tool_schemas)
+            assistant_msg = self._stream_response(
+                params.provider,
+                params.system_prompt,
+                tool_schemas,
+            )
             if assistant_msg is None:
                 return
 
@@ -184,8 +193,8 @@ class AgentLoop(QThread):
                 UserMessage(content=tool_results)
             )
 
-    def _stream_response(self, tool_schemas):
-        # type: (Optional[List[Dict[str, Any]]]) -> Optional[AssistantMessage]
+    def _stream_response(self, provider, system_prompt, tool_schemas):
+        # type: (ModelProvider, str, Optional[List[Dict[str, Any]]]) -> Optional[AssistantMessage]
         """Stream from the LLM and accumulate into an AssistantMessage."""
         text_parts = []  # type: List[str]
         reasoning_parts = []  # type: List[str]
@@ -194,9 +203,9 @@ class AgentLoop(QThread):
         usage = None
 
         try:
-            for event in self._provider.stream(
+            for event in provider.stream(
                 messages=self._messages,
-                system_prompt=self._system_prompt or None,
+                system_prompt=system_prompt or None,
                 tools=tool_schemas,
             ):
                 if self._abort_flag:

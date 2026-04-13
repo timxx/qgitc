@@ -4,10 +4,15 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtTest import QTest
 
-from qgitc.agent.tool_registry import ToolRegistry
+from qgitc.agent.agent_loop import QueryParams
+from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.tool_registration import register_builtin_tools
+from qgitc.agent.tool_registry import ToolRegistry
+from qgitc.agent.types import TextBlock, UserMessage
+from qgitc.aichatwidget import ResolveConflictJob
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.llm import AiChatMode, AiModelBase, AiResponse, AiRole
+from qgitc.models.prompts import RESOLVE_SYS_PROMPT
 from qgitc.windowtype import WindowType
 from tests.base import TestBase
 
@@ -78,3 +83,176 @@ class TestAgentMode(TestBase):
         register_builtin_tools(registry)
         names = [t.name for t in registry.list_tools()]
         self.assertIn("git_current_branch", names)
+
+    def test_model_change_does_not_reset_existing_loop(self):
+        loop = MagicMock()
+        self.chatWidget._agentLoop = loop
+        self.chatWidget._ensureModelInstantiatedAt = MagicMock(
+            return_value=self.chatWidget.currentChatModel())
+        self.chatWidget._loadMessagesFromHistory = MagicMock()
+
+        self.chatWidget._onModelChanged(self.chatWidget._contextPanel.cbBots.currentIndex())
+
+        self.assertIs(self.chatWidget._agentLoop, loop)
+
+    def test_build_query_params_threads_temperature_and_chat_mode(self):
+        settings = self.app.settings()
+        settings.setLlmTemperature(0.42)
+
+        caps = MagicMock()
+        caps.context_window = 77777
+        caps.max_output_tokens = 2222
+
+        with patch.object(self.chatWidget, "_getModelCapabilities", return_value=caps):
+            params = self.chatWidget._buildQueryParams(AiChatMode.CodeReview)
+
+        self.assertEqual(params.context_window, 77777)
+        self.assertEqual(params.max_output_tokens, 2222)
+        self.assertIsInstance(params.provider, AiModelBaseAdapter)
+        self.assertAlmostEqual(params.provider._temperature, 0.42, places=2)
+        self.assertEqual(params.provider._chat_mode, AiChatMode.CodeReview)
+        self.assertEqual(params.provider._max_tokens, 2222)
+
+    def test_ensure_agent_loop_uses_new_constructor(self):
+        class _Sig(object):
+            def connect(self, _slot):
+                pass
+
+            def disconnect(self, _slot):
+                pass
+
+        class _FakeLoop(object):
+            def __init__(self):
+                self.textDelta = _Sig()
+                self.reasoningDelta = _Sig()
+                self.toolCallStart = _Sig()
+                self.toolCallResult = _Sig()
+                self.turnComplete = _Sig()
+                self.agentFinished = _Sig()
+                self.permissionRequired = _Sig()
+                self.errorOccurred = _Sig()
+
+            def abort(self):
+                pass
+
+            def wait(self, _ms):
+                return True
+
+        fakeLoop = _FakeLoop()
+        with patch("qgitc.aichatwidget.AgentLoop", return_value=fakeLoop) as cls:
+            loop = self.chatWidget._ensureAgentLoop()
+
+        self.assertIs(loop, fakeLoop)
+        self.assertIs(self.chatWidget._agentLoop, fakeLoop)
+        self.assertIn("tool_registry", cls.call_args.kwargs)
+        self.assertIn("permission_engine", cls.call_args.kwargs)
+        self.assertIn("parent", cls.call_args.kwargs)
+        self.assertNotIn("provider", cls.call_args.kwargs)
+
+    def test_get_model_capabilities_handles_none_model(self):
+        caps = self.chatWidget._getModelCapabilities(None)
+        self.assertEqual(caps.context_window, 100000)
+        self.assertEqual(caps.max_output_tokens, 4096)
+
+    def test_get_model_capabilities_delegates_to_model(self):
+        caps = MagicMock()
+        caps.context_window = 55555
+        caps.max_output_tokens = 1234
+        self._mockChatModel.getModelCapabilities = MagicMock(return_value=caps)
+
+        result = self.chatWidget._getModelCapabilities(self._mockChatModel)
+
+        self.assertIs(result, caps)
+        self._mockChatModel.getModelCapabilities.assert_called_once()
+
+    def test_do_request_renders_system_prompt_once_per_conversation(self):
+        fakeLoop = MagicMock()
+        fakeLoop.messages.side_effect = [[], [UserMessage(content=[TextBlock(text="prior")])]]
+        fakeLoop.submit = MagicMock()
+
+        self.chatWidget._ensureAgentLoop = MagicMock(return_value=fakeLoop)
+        self.chatWidget._setGenerating = MagicMock()
+        self.chatWidget._updateChatHistoryModel = MagicMock()
+        self.chatWidget._setEmbeddedRecentListVisible = MagicMock()
+        self.chatWidget._chatBot.appendResponse = MagicMock()
+
+        self.chatWidget._doRequest("first", AiChatMode.Agent, collapsed=True)
+        self.chatWidget._doRequest("second", AiChatMode.Agent, collapsed=True)
+
+        systemCount = 0
+        for call in self.chatWidget._chatBot.appendResponse.call_args_list:
+            if call.args and isinstance(call.args[0], AiResponse):
+                if call.args[0].role == AiRole.System:
+                    systemCount += 1
+
+        self.assertEqual(systemCount, 1)
+
+    def test_resolve_conflict_job_submits_query_params(self):
+        settings = self.app.settings()
+        settings.setLlmTemperature(0.37)
+
+        caps = MagicMock()
+        caps.context_window = 24680
+        caps.max_output_tokens = 1357
+
+        class _Sig(object):
+            def connect(self, _slot):
+                pass
+
+        class _FakeLoop(object):
+            def __init__(self):
+                self.textDelta = _Sig()
+                self.reasoningDelta = _Sig()
+                self.toolCallStart = _Sig()
+                self.toolCallResult = _Sig()
+                self.agentFinished = _Sig()
+                self.errorOccurred = _Sig()
+                self.submit = MagicMock()
+
+            def abort(self):
+                pass
+
+            def wait(self, _ms):
+                return True
+
+        fakeLoop = _FakeLoop()
+        with patch.object(self.chatWidget, "_getModelCapabilities", return_value=caps):
+            with patch("qgitc.aichatwidget.AgentLoop", return_value=fakeLoop):
+                job = ResolveConflictJob(
+                    widget=self.chatWidget,
+                    repoDir=self.gitDir.name,
+                    sha1=None,
+                    path="README.md",
+                    conflictText="<<<<<<< ours\nfoo\n=======\nbar\n>>>>>>> theirs",
+                )
+                job.start()
+
+        fakeLoop.submit.assert_called_once()
+        submittedPrompt, submittedParams = fakeLoop.submit.call_args.args
+        self.assertIn("<<<<<<< ours", submittedPrompt)
+        self.assertIsInstance(submittedParams, QueryParams)
+        self.assertEqual(submittedParams.system_prompt, RESOLVE_SYS_PROMPT)
+        self.assertEqual(submittedParams.context_window, 24680)
+        self.assertEqual(submittedParams.max_output_tokens, 1357)
+        self.assertIsInstance(submittedParams.provider, AiModelBaseAdapter)
+        self.assertEqual(submittedParams.provider._chat_mode, AiChatMode.Agent)
+        self.assertAlmostEqual(submittedParams.provider._temperature, 0.37, places=2)
+        self.assertEqual(submittedParams.provider._max_tokens, 1357)
+
+    def test_do_request_submits_prompt_with_query_params(self):
+        fakeLoop = MagicMock()
+        fakeLoop.messages.return_value = []
+        fakeLoop.submit = MagicMock()
+
+        params = QueryParams(provider=MagicMock())
+
+        self.chatWidget._ensureAgentLoop = MagicMock(return_value=fakeLoop)
+        self.chatWidget._buildQueryParams = MagicMock(return_value=params)
+        self.chatWidget._setGenerating = MagicMock()
+        self.chatWidget._updateChatHistoryModel = MagicMock()
+        self.chatWidget._setEmbeddedRecentListVisible = MagicMock()
+        self.chatWidget._chatBot.appendResponse = MagicMock()
+
+        self.chatWidget._doRequest("hello", AiChatMode.Agent, collapsed=True)
+
+        fakeLoop.submit.assert_called_once_with("hello", params)

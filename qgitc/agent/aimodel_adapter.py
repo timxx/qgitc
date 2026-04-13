@@ -22,29 +22,25 @@ from qgitc.agent.types import (
     ToolUseBlock,
     UserMessage,
 )
-from qgitc.llm import (
-    AiChatMode,
-    AiModelBase,
-    AiParameters,
-    AiResponse,
-    AiRole,
-)
+from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
 
 
 class AiModelBaseAdapter(ModelProvider):
     """Bridges the signal-driven AiModelBase to the iterator-based ModelProvider."""
 
-    def __init__(self, model):
-        # type: (AiModelBase) -> None
+    def __init__(self, model, modelId, max_tokens=None, temperature=0.1, chat_mode=AiChatMode.Agent):
+        # type: (AiModelBase, str, Optional[int], float, AiChatMode) -> None
         self._model = model
+        self._modelId = modelId
+        self._max_tokens = max_tokens
+        self._temperature = temperature
+        self._chat_mode = chat_mode
 
     def stream(
         self,
         messages,          # type: List[Message]
         system_prompt=None,  # type: Optional[str]
         tools=None,        # type: Optional[List[Dict[str, Any]]]
-        model=None,        # type: Optional[str]
-        max_tokens=4096,   # type: int
     ):
         # type: (...) -> Iterator[StreamEvent]
         event_queue = queue.Queue()  # type: queue.Queue[StreamEvent]
@@ -114,13 +110,14 @@ class AiModelBaseAdapter(ModelProvider):
             params = AiParameters()
             params.stream = True
             params.continue_only = True
-            params.chat_mode = AiChatMode.Agent
-            params.max_tokens = max_tokens
+            params.chat_mode = self._chat_mode
+            params.temperature = self._temperature
+            params.model = self._modelId
+            if self._max_tokens is not None:
+                params.max_tokens = self._max_tokens
             if system_prompt is not None:
                 params.sys_prompt = system_prompt
-            if model is not None:
-                params.model = model
-            if tools:
+            if self._chat_mode == AiChatMode.Agent and tools:
                 params.tools = tools
                 params.tool_choice = "auto"
 

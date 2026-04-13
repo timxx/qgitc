@@ -232,3 +232,89 @@ class TestGithubCopilotModelsWait(TestBase):
                          f"Expected exactly one POST, got: {posted_urls}")
         self.assertIn("/chat/completions", posted_urls[0],
                       f"Expected POST to /chat/completions endpoint, got: {posted_urls[0]}")
+
+    def test_models_fetch_parses_context_window_limit(self):
+        posted_urls = []
+        models_data = json.dumps({
+            "data": [{
+                "id": "gpt-context-model",
+                "name": "GPT Context Model",
+                "model_picker_enabled": True,
+                "is_chat_default": True,
+                "capabilities": {
+                    "type": "chat",
+                    "supports": {"streaming": True, "tool_calls": False},
+                    "limits": {
+                        "max_output_tokens": 8192,
+                        "max_context_window_tokens": 200000,
+                    },
+                },
+                "supported_endpoints": ["/responses"],
+            }]
+        }).encode()
+
+        get_mock = _make_get_mock(models_data)
+        self._runQuery(
+            "gpt-context-model",
+            get_mock,
+            posted_urls,
+            _RESPONSES_API_REPLY,
+        )
+
+        caps = GithubCopilot._capabilities.get("gpt-context-model")
+        self.assertIsNotNone(caps)
+        self.assertEqual(200000, caps.context_window)
+        self.assertEqual(8192, caps.max_output_tokens)
+
+    def test_models_fetch_fallbacks_for_malformed_limits(self):
+        posted_urls = []
+        models_data = json.dumps({
+            "data": [{
+                "id": "gpt-bad-limits-model",
+                "name": "GPT Bad Limits Model",
+                "model_picker_enabled": True,
+                "is_chat_default": True,
+                "capabilities": {
+                    "type": "chat",
+                    "supports": {"streaming": True, "tool_calls": False},
+                    "limits": {
+                        "max_output_tokens": None,
+                        "max_context_window_tokens": "not-a-number",
+                    },
+                },
+                "supported_endpoints": ["/responses"],
+            }, {
+                "id": "gpt-non-positive-limits-model",
+                "name": "GPT Non Positive Limits Model",
+                "model_picker_enabled": True,
+                "is_chat_default": False,
+                "capabilities": {
+                    "type": "chat",
+                    "supports": {"streaming": True, "tool_calls": False},
+                    "limits": {
+                        "max_output_tokens": "0",
+                        "max_context_window_tokens": -1,
+                    },
+                },
+                "supported_endpoints": ["/responses"],
+            }]
+        }).encode()
+
+        get_mock = _make_get_mock(models_data)
+        self._runQuery(
+            "gpt-bad-limits-model",
+            get_mock,
+            posted_urls,
+            _RESPONSES_API_REPLY,
+        )
+
+        bad_caps = GithubCopilot._capabilities.get("gpt-bad-limits-model")
+        self.assertIsNotNone(bad_caps)
+        self.assertEqual(100000, bad_caps.context_window)
+        self.assertEqual(4096, bad_caps.max_output_tokens)
+
+        non_positive_caps = GithubCopilot._capabilities.get(
+            "gpt-non-positive-limits-model")
+        self.assertIsNotNone(non_positive_caps)
+        self.assertEqual(100000, non_positive_caps.context_window)
+        self.assertEqual(4096, non_positive_caps.max_output_tokens)

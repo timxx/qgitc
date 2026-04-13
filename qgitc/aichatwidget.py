@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 from qgitc.agent import (
     AgentLoop,
     AiModelBaseAdapter,
-    ConversationCompactor,
+    QueryParams,
     ToolRegistry,
     UiTool,
     UiToolDispatcher,
@@ -66,6 +66,7 @@ from qgitc.gitutils import Git
 from qgitc.llm import (
     AiChatMode,
     AiModelBase,
+    AiModelCapabilities,
     AiModelFactory,
     AiParameters,
     AiResponse,
@@ -161,19 +162,28 @@ class ResolveConflictJob(QObject):
             fullPrompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + prompt
 
         # Create own AgentLoop with all-auto permissions
-        adapter = AiModelBaseAdapter(model)
+        caps = w._getModelCapabilities(model)
+        settings = ApplicationBase.instance().settings()
+        adapter = AiModelBaseAdapter(
+            model,
+            w._contextPanel.currentModelId(),
+            max_tokens=(caps.max_output_tokens if model.isLocal() else None),
+            temperature=settings.llmTemperature(),
+            chat_mode=AiChatMode.Agent,
+        )
         toolRegistry = ToolRegistry()
         register_builtin_tools(toolRegistry)
         allAutoEngine = create_permission_engine(3)  # AllAuto
-        compactor = ConversationCompactor(
-            adapter, context_window=100000, max_output_tokens=4096)
         self._agentLoop = AgentLoop(
-            provider=adapter,
             tool_registry=toolRegistry,
             permission_engine=allAutoEngine,
-            compactor=compactor,
-            system_prompt=RESOLVE_SYS_PROMPT,
             parent=self,
+        )
+        params = QueryParams(
+            provider=adapter,
+            system_prompt=RESOLVE_SYS_PROMPT,
+            context_window=caps.context_window,
+            max_output_tokens=caps.max_output_tokens,
         )
 
         # Connect rendering signals to widget
@@ -197,7 +207,7 @@ class ResolveConflictJob(QObject):
         w._contextPanel.btnStop.setVisible(True)
         w._setGenerating(True)
 
-        self._agentLoop.submit(fullPrompt)
+        self._agentLoop.submit(fullPrompt, params)
 
     def abort(self):
         if self._agentLoop:
@@ -251,7 +261,8 @@ class ResolveConflictJob(QObject):
     def _lastAssistantText(self):
         if self._agentLoop is None:
             return ""
-        from qgitc.agent.types import AssistantMessage as AMsg, TextBlock as TBlk
+        from qgitc.agent.types import AssistantMessage as AMsg
+        from qgitc.agent.types import TextBlock as TBlk
         for msg in reversed(self._agentLoop.messages()):
             if isinstance(msg, AMsg):
                 parts = [b.text for b in msg.content if isinstance(b, TBlk)]
@@ -722,26 +733,20 @@ class AiChatWidget(QWidget):
             self._agentLoop.abort()
 
     def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
-        settings = ApplicationBase.instance().settings()
-
         self._disableAutoScroll = False
 
         model = self.currentChatModel()
+        if model is None:
+            return
         loop = self._ensureAgentLoop()
+        params = self._buildQueryParams(chatMode, sysPrompt)
+        effectiveSysPrompt = params.system_prompt
 
         isNewConversation = len(loop.messages()) == 0
 
         injectedContext = self._injectedContext
 
-        # Determine system prompt
-        effectiveSysPrompt = sysPrompt
-        if chatMode == AiChatMode.Agent:
-            if not sysPrompt:
-                provider = self.contextProvider()
-                overridePrompt = provider.agentSystemPrompt() if provider is not None else None
-                effectiveSysPrompt = overridePrompt or AGENT_SYS_PROMPT
-        elif chatMode == AiChatMode.CodeReview:
-            effectiveSysPrompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
+        if chatMode == AiChatMode.CodeReview:
             prompt = CODE_REVIEW_PROMPT.format(diff=prompt)
 
         # Build context
@@ -767,11 +772,9 @@ class AiChatWidget(QWidget):
         titleSeed = (effectiveSysPrompt + "\n" +
                      prompt) if effectiveSysPrompt else prompt
 
-        # Set system prompt on loop (only if not already present)
-        if effectiveSysPrompt and not self._historyHasSameSystemPromptInMessages(
-                loop.messages(), effectiveSysPrompt):
-            loop.set_system_prompt(effectiveSysPrompt)
-            # Show system prompt in chatbot
+        # System prompts are not persisted as messages in the loop, so render
+        # once per conversation to avoid repeating the same prompt every turn.
+        if effectiveSysPrompt and isNewConversation:
             self._chatBot.appendResponse(
                 AiResponse(AiRole.System, effectiveSysPrompt), collapsed=True)
 
@@ -790,7 +793,7 @@ class AiChatWidget(QWidget):
         self._firstReasoningDelta = True
 
         # Submit to agent loop (this starts the background thread)
-        loop.submit(fullPrompt)
+        loop.submit(fullPrompt, params)
         self._setGenerating(True)
 
         # Clear tool restrictions after the request is sent
@@ -889,20 +892,52 @@ class AiChatWidget(QWidget):
         if self._agentLoop is not None:
             return self._agentLoop
         self._toolRegistry = self._buildToolRegistry()
-        model = self.currentChatModel()
-        adapter = AiModelBaseAdapter(model)
-        compactor = ConversationCompactor(
-            adapter, context_window=100000, max_output_tokens=4096)
         loop = AgentLoop(
-            provider=adapter,
             tool_registry=self._toolRegistry,
             permission_engine=self._permissionEngine,
-            compactor=compactor,
             parent=self,
         )
         self._connectAgentLoop(loop)
         self._agentLoop = loop
         return loop
+
+    def _getModelCapabilities(self, model):
+        if model is None:
+            return AiModelCapabilities()
+
+        modelId = model.modelId or model.name
+        return model.getModelCapabilities(modelId)
+
+    def _buildSystemPrompt(self, chatMode: AiChatMode, sysPrompt: str = None):
+        effectiveSysPrompt = sysPrompt
+        if chatMode == AiChatMode.Agent and not sysPrompt:
+            provider = self.contextProvider()
+            overridePrompt = provider.agentSystemPrompt() if provider is not None else None
+            effectiveSysPrompt = overridePrompt or AGENT_SYS_PROMPT
+        elif chatMode == AiChatMode.CodeReview:
+            effectiveSysPrompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
+        return effectiveSysPrompt
+
+    def _buildQueryParams(self, chatMode: AiChatMode, sysPrompt: str = None):
+        settings = ApplicationBase.instance().settings()
+        model = self.currentChatModel()
+        if model is None:
+            raise ValueError("No chat model selected")
+        caps = self._getModelCapabilities(model)
+        temperature = settings.llmTemperature()
+        adapter = AiModelBaseAdapter(
+            model,
+            self._contextPanel.currentModelId(),
+            max_tokens=(caps.max_output_tokens if model.isLocal() else None),
+            temperature=temperature,
+            chat_mode=chatMode,
+        )
+        return QueryParams(
+            provider=adapter,
+            system_prompt=self._buildSystemPrompt(chatMode, sysPrompt),
+            context_window=caps.context_window,
+            max_output_tokens=caps.max_output_tokens,
+        )
 
     def _connectAgentLoop(self, loop):
         loop.textDelta.connect(self._onAgentTextDelta)
@@ -1057,9 +1092,6 @@ class AiChatWidget(QWidget):
             return
         self._contextPanel.setFocus()
         self._contextPanel.setupModelNames(model)
-
-        # Reset agent loop so it uses the new model
-        self._resetAgentLoop()
 
         chatHistory = self._historyPanel.currentHistory()
         if chatHistory:

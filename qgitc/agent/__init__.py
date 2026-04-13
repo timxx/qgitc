@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from qgitc.agent.agent_loop import AgentLoop
+from qgitc.agent.agent_loop import AgentLoop, QueryParams
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.compaction import (
     CompactionResult,
@@ -29,9 +29,15 @@ from qgitc.agent.provider import (
     StreamEvent,
     ToolCallDelta,
 )
-from qgitc.agent.tool import Tool, ToolContext, ToolResult, ToolType, tool_type_from_tool
-from qgitc.agent.tool_registry import ToolRegistry
+from qgitc.agent.tool import (
+    Tool,
+    ToolContext,
+    ToolResult,
+    ToolType,
+    tool_type_from_tool,
+)
 from qgitc.agent.tool_registration import register_builtin_tools
+from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import (
     AssistantMessage,
     ContentBlock,
@@ -57,6 +63,7 @@ __all__ = [
     "Message",
     "MessageComplete",
     "ModelProvider",
+    "QueryParams",
     "PermissionAllow",
     "PermissionAsk",
     "PermissionBehavior",
