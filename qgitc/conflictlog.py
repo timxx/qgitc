@@ -23,12 +23,11 @@ elif sys.platform == "linux":
         pass
 
 
-if not HAVE_EXCEL_API:
-    try:
-        import openpyxl
-        HAVE_XLSX_WRITER = True
-    except ImportError:
-        pass
+try:
+    import openpyxl
+    HAVE_XLSX_WRITER = True
+except ImportError:
+    pass
 
 
 class MergeInfo:

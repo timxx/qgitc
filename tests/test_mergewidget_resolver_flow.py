@@ -41,6 +41,8 @@ class TestMergeWidgetResolverFlow(TestBase):
 
     def test_resolve_sets_operation_cherrypick_when_cherrypicking(self):
         w = MergeWidget()
+        w.cbAutoLog.setChecked(False)
+
         item = QStandardItem("a.txt")
         item.setData(STATE_CONFLICT, StateRole)
         w.model.appendRow(item)
@@ -67,6 +69,8 @@ class TestMergeWidgetResolverFlow(TestBase):
 
     def test_resolve_warns_when_no_tool_and_no_ai(self):
         w = MergeWidget()
+        w.cbAutoLog.setChecked(False)
+
         item = QStandardItem("a.txt")
         item.setData(STATE_CONFLICT, StateRole)
         w.model.appendRow(item)
@@ -89,6 +93,7 @@ class TestMergeWidgetResolverFlow(TestBase):
 
     def test_ensure_log_writer_creates_parent_directory(self):
         w = MergeWidget()
+        w.cbAutoLog.setChecked(False)
 
         with TemporaryDirectory() as tmp:
             log_file = os.path.join(tmp, "nested", "dir", "conflicts.xlsx")
@@ -99,10 +104,14 @@ class TestMergeWidgetResolverFlow(TestBase):
             w.leLogFile.setText(log_file)
 
             # Private method (name-mangled): should create folder then copy template.
-            w._MergeWidget__ensureLogWriter()
+            # Patch out Excel/Xlsx writers to avoid launching Excel COM on Windows.
+            with patch("qgitc.mergewidget.HAVE_EXCEL_API", False), \
+                    patch("qgitc.mergewidget.HAVE_XLSX_WRITER", False):
+                w._MergeWidget__ensureLogWriter()
 
             self.assertTrue(os.path.isdir(parent_dir))
             self.assertTrue(os.path.isfile(log_file))
+            self.assertIsNone(w.log)
 
             # Ensure we release resources and flush the workbook.
             self.assertTrue(w.queryClose())
