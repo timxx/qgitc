@@ -524,7 +524,6 @@ class Preferences(QDialog):
 
     def _initLLMTab(self):
         self.ui.leServerUrl.setText(self.settings.localLlmServer())
-        self.ui.leAuth.setText(self.settings.localLlmAuth())
 
         token = self.settings.githubCopilotAccessToken()
         text = self.tr("Logout") if token else self.tr("Login")
@@ -572,9 +571,18 @@ class Preferences(QDialog):
         self.ui.cbToolExecutionStrategy.setCurrentIndex(
             self.ui.cbToolExecutionStrategy.findData(strategy))
 
-        headers = self.settings.customLlmHeaders()
         table = self.ui.twCustomHeaders
         table.setRowCount(0)
+
+        # Migrate legacy localLlmAuth to custom headers if needed
+        legacyAuth = self.settings.localLlmAuth()
+        headers = self.settings.customLlmHeaders()
+        if legacyAuth:
+            if "Authorization" not in headers:
+                headers["Authorization"] = legacyAuth
+                self.settings.setCustomLlmHeaders(headers)
+            self.settings.setLocalLlmAuth("")
+
         for key, value in headers.items():
             row = table.rowCount()
             table.insertRow(row)
@@ -629,7 +637,6 @@ class Preferences(QDialog):
 
     def _saveLLMTab(self):
         self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
-        self.settings.setLocalLlmAuth(self.ui.leAuth.text().strip())
 
         model = self.ui.cbModels.currentData()
         if not isinstance(model, AiModelBase):

@@ -163,6 +163,11 @@ class LocalLLM(AiModelBase):
     @property
     def authorization(self):
         settings = ApplicationBase.instance().settings()
+        # Check custom headers first for Authorization
+        headers = settings.customLlmHeaders()
+        if "Authorization" in headers:
+            return headers["Authorization"]
+        # Fallback to legacy localLlmAuth for backward compatibility
         return settings.localLlmAuth()
 
     def queryAsync(self, params: AiParameters):
