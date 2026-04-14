@@ -180,6 +180,17 @@ class TestAiChatLoadHistory(TestBase):
         ]
         self.assertEqual(1, len(reasoning_msgs))
 
+    def test_setup_model_names_fallback_to_default_id_for_empty_local_models(self):
+        self._mockChatModel.models.return_value = []
+        self._mockChatModel.modelId = "fallback-local-model"
+        self._mockChatModel.isLocal.return_value = True
+
+        panel = self.chatWidget._contextPanel
+        panel.setupModelNames(self._mockChatModel)
+
+        self.assertEqual(1, panel.cbModelNames.count())
+        self.assertEqual("fallback-local-model", panel.cbModelNames.itemData(0))
+
     def test_load_history_addToChatBot_false(self):
         """With addToChatBot=False, no UI updates should occur."""
         self.chatWidget.messages.appendResponse = MagicMock()

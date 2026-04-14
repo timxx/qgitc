@@ -382,6 +382,10 @@ class AiChatContextPanel(QFrame):
             if defaultidIndex == -1 and id == defaultId:
                 defaultidIndex = self.cbModelNames.count() - 1
 
+        if self.cbModelNames.count() == 0 and model.isLocal() and defaultId:
+            self.cbModelNames.addItem(defaultId, defaultId)
+            defaultidIndex = 0
+
         index = 0
         # Prefer restoring the previous selection if it still exists.
         if newIndex != -1:

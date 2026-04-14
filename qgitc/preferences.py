@@ -628,10 +628,16 @@ class Preferences(QDialog):
             AiModelFactory.modelKey(model))
         if not defaultId:
             defaultId = model.modelId
+        matched = False
         for id, name in model.models():
             self.ui.cbModelIds.addItem(name, id)
             if id == defaultId:
                 self.ui.cbModelIds.setCurrentText(name)
+                matched = True
+
+        self.ui.cbModelIds.setEditable(model.isLocal())
+        if not matched and model.isLocal() and defaultId:
+            self.ui.cbModelIds.setCurrentText(defaultId)
 
         self.ui.sbMaxTokens.setEnabled(model.isLocal())
 
@@ -644,8 +650,10 @@ class Preferences(QDialog):
         modelKey = AiModelFactory.modelKey(model)
         self.settings.setDefaultLlmModel(modelKey)
 
-        self.settings.setDefaultLlmModelId(
-            modelKey, self.ui.cbModelIds.currentData())
+        modelId = self.ui.cbModelIds.currentData()
+        if not modelId:
+            modelId = self.ui.cbModelIds.currentText().strip()
+        self.settings.setDefaultLlmModelId(modelKey, modelId)
 
         self.settings.setLlmMaxTokens(self.ui.sbMaxTokens.value())
         self.settings.setLlmTemperature(self.ui.sbTemperature.value())
