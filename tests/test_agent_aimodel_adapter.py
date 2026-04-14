@@ -107,6 +107,29 @@ class NetworkRequestAiModel(AiModelBase):
         return True
 
 
+class NetworkErrorAiModel(AiModelBase):
+    """Emits a networkError signal during query execution."""
+
+    def __init__(self, errorMsg, parent=None):
+        # type: (str, Optional[Any]) -> None
+        super().__init__("http://fake", model="fake", parent=parent)
+        self._errorMsg = errorMsg
+
+    def queryAsync(self, params):
+        # type: (AiParameters) -> None
+        _ = params
+        self.networkError.emit(self._errorMsg)
+        self.finished.emit()
+
+    def models(self):
+        # type: () -> List[Tuple[str, str]]
+        return [("fake", "Fake")]
+
+    def supportsToolCalls(self, modelId="fake"):
+        # type: (str) -> bool
+        return True
+
+
 class AdapterStreamRunner(QThread):
     def __init__(self, adapter, messages, parent=None):
         # type: (AiModelBaseAdapter, List[Any], Optional[Any]) -> None
@@ -452,6 +475,20 @@ class TestStreamParameters(TestBase):
             ))
         finally:
             qInstallMessageHandler(previousHandler)
+
+    def test_stream_raises_on_model_network_error(self):
+        model = NetworkErrorAiModel("connection dropped")
+        adapter = AiModelBaseAdapter(
+            model=model,
+            modelId="fake",
+            max_tokens=100,
+            temperature=0.0,
+            chat_mode=AiChatMode.Chat,
+        )
+
+        messages = [UserMessage(content=[TextBlock(text="Hi")])]
+        with self.assertRaisesRegex(RuntimeError, "connection dropped"):
+            list(adapter.stream(messages))
 
 
 if __name__ == "__main__":

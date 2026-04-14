@@ -63,6 +63,7 @@ class AiModelBaseAdapter(ModelProvider):
         event_queue = queue.Queue()  # type: queue.Queue[StreamEvent]
         finished_flag = [False]
         has_tool_calls = [False]
+        network_error = [None]  # type: List[Optional[str]]
 
         def _on_response(response):
             # type: (AiResponse) -> None
@@ -84,8 +85,14 @@ class AiModelBaseAdapter(ModelProvider):
             # type: () -> None
             finished_flag[0] = True
 
+        def _on_network_error(errorMsg):
+            # type: (str) -> None
+            network_error[0] = errorMsg
+            finished_flag[0] = True
+
         self._model.responseAvailable.connect(_on_response)
         self._model.finished.connect(_on_finished)
+        self._model.networkError.connect(_on_network_error)
 
         try:
             # Build history from messages
@@ -144,12 +151,17 @@ class AiModelBaseAdapter(ModelProvider):
             # Pump event loop until finished
             while not finished_flag[0]:
                 QCoreApplication.processEvents()
+                if network_error[0]:
+                    raise RuntimeError(network_error[0])
                 while not event_queue.empty():
                     yield event_queue.get_nowait()
 
             # Drain remaining events
             while not event_queue.empty():
                 yield event_queue.get_nowait()
+
+            if network_error[0]:
+                raise RuntimeError(network_error[0])
 
             # Yield final completion event
             stop_reason = "tool_use" if has_tool_calls[0] else "end_turn"
@@ -158,6 +170,7 @@ class AiModelBaseAdapter(ModelProvider):
         finally:
             self._model.responseAvailable.disconnect(_on_response)
             self._model.finished.disconnect(_on_finished)
+            self._model.networkError.disconnect(_on_network_error)
 
     def count_tokens(
         self,

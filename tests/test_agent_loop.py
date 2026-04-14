@@ -86,6 +86,21 @@ class ToolCallProvider(ModelProvider):
         return 10
 
 
+class ErrorProvider(ModelProvider):
+    """Raises an exception from stream()."""
+
+    def stream(self, messages, system_prompt=None, tools=None,
+               model=None, max_tokens=4096):
+        # type: (...) -> Iterator[StreamEvent]
+        _ = (messages, system_prompt, tools, model, max_tokens)
+        raise RuntimeError("connection dropped")
+        yield MessageComplete(stop_reason="end_turn")
+
+    def count_tokens(self, messages, system_prompt=None, tools=None):
+        # type: (...) -> int
+        return 10
+
+
 # ── Test Tool ───────────────────────────────────────────────────────
 
 
@@ -287,6 +302,33 @@ class TestAgentLoopSetMessages(TestBase):
         self.loop.wait(3000)
         self.assertEqual(self.provider.last_system_prompt,
                          "You are a test assistant.")
+
+
+class TestAgentLoopErrors(TestBase):
+
+    def setUp(self):
+        super().setUp()
+        self.provider = ErrorProvider()
+        self.loop = _make_loop(self.provider)
+        self.params = _make_params(self.provider)
+
+    def tearDown(self):
+        self.loop.abort()
+        self.loop.wait(3000)
+        super().tearDown()
+
+    def doCreateRepo(self):
+        pass
+
+    def test_provider_exception_emits_errorOccurred(self):
+        error_spy = QSignalSpy(self.loop.errorOccurred)
+        finished_spy = QSignalSpy(self.loop.agentFinished)
+
+        self.loop.submit("Hello", self.params)
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        self.assertEqual(error_spy.count(), 1)
+        self.assertIn("connection dropped", error_spy.at(0)[0])
 
 
 if __name__ == "__main__":
