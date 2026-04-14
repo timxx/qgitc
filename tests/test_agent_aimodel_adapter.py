@@ -3,7 +3,7 @@
 import unittest
 from typing import Any, List, Optional, Tuple
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QThread, QTimer, QtMsgType, qInstallMessageHandler
 
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.provider import (
@@ -13,6 +13,7 @@ from qgitc.agent.provider import (
     ToolCallDelta,
 )
 from qgitc.agent.types import TextBlock, UserMessage
+from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
 from tests.base import TestBase
 
@@ -56,6 +57,71 @@ class FakeAiModel(AiModelBase):
     def supportsToolCalls(self, modelId="fake"):
         # type: (str) -> bool
         return True
+
+
+class ThreadCheckingAiModel(AiModelBase):
+    """Captures the thread used to invoke queryAsync()."""
+
+    def __init__(self, parent=None):
+        # type: (Optional[Any]) -> None
+        super().__init__("http://fake", model="fake", parent=parent)
+        self.queryThread = None
+        self.ownerThread = None
+
+    def queryAsync(self, params):
+        # type: (AiParameters) -> None
+        _ = params
+        self.queryThread = QThread.currentThread()
+        self.ownerThread = self.thread()
+        self.finished.emit()
+
+    def models(self):
+        # type: () -> List[Tuple[str, str]]
+        return [("fake", "Fake")]
+
+    def supportsToolCalls(self, modelId="fake"):
+        # type: (str) -> bool
+        return True
+
+
+class NetworkRequestAiModel(AiModelBase):
+    """Creates a child object on QNetworkAccessManager parent."""
+
+    def __init__(self, parent=None):
+        # type: (Optional[Any]) -> None
+        super().__init__("http://fake", model="fake", parent=parent)
+
+    def queryAsync(self, params):
+        # type: (AiParameters) -> None
+        _ = params
+        # This triggers the same Qt thread-affinity warning when called from the wrong thread.
+        self._tmpObj = QObject(ApplicationBase.instance().networkManager)
+        self.finished.emit()
+
+    def models(self):
+        # type: () -> List[Tuple[str, str]]
+        return [("fake", "Fake")]
+
+    def supportsToolCalls(self, modelId="fake"):
+        # type: (str) -> bool
+        return True
+
+
+class AdapterStreamRunner(QThread):
+    def __init__(self, adapter, messages, parent=None):
+        # type: (AiModelBaseAdapter, List[Any], Optional[Any]) -> None
+        super().__init__(parent)
+        self._adapter = adapter
+        self._messages = messages
+        self.events = []
+        self.error = None
+
+    def run(self):
+        # type: () -> None
+        try:
+            self.events = list(self._adapter.stream(self._messages))
+        except Exception as e:
+            self.error = e
 
 
 class TestStreamTextResponse(TestBase):
@@ -295,8 +361,10 @@ class TestStreamParameters(TestBase):
         list(adapter.stream(messages, tools=tools))
 
         self.assertIsNotNone(model.last_params)
-        self.assertFalse(hasattr(model.last_params, "tools") and model.last_params.tools)
-        self.assertFalse(hasattr(model.last_params, "tool_choice") and model.last_params.tool_choice)
+        self.assertFalse(hasattr(model.last_params, "tools")
+                         and model.last_params.tools)
+        self.assertFalse(hasattr(model.last_params, "tool_choice")
+                         and model.last_params.tool_choice)
 
     def test_tools_preserved_when_agent_mode(self):
         model = FakeAiModel([])
@@ -315,6 +383,75 @@ class TestStreamParameters(TestBase):
         self.assertIsNotNone(model.last_params)
         self.assertEqual(model.last_params.tools, tools)
         self.assertEqual(model.last_params.tool_choice, "auto")
+
+    def test_queryAsync_invoked_on_model_thread_when_stream_runs_off_main_thread(self):
+        model = ThreadCheckingAiModel()
+        adapter = AiModelBaseAdapter(
+            model=model,
+            modelId="fake",
+            max_tokens=100,
+            temperature=0.0,
+            chat_mode=AiChatMode.Chat,
+        )
+
+        messages = [UserMessage(content=[TextBlock(text="Hi")])]
+        runner = AdapterStreamRunner(adapter, messages)
+        runner.start()
+        self.wait(2000, lambda: runner.isRunning())
+
+        if runner.isRunning():
+            runner.requestInterruption()
+            runner.wait(1000)
+            self.fail("runner thread did not finish")
+
+        self.assertIsNone(runner.error)
+        self.assertIsNotNone(model.queryThread)
+        self.assertIsNotNone(model.ownerThread)
+        self.assertIs(
+            model.queryThread,
+            model.ownerThread,
+            "queryAsync() must run on model owner thread",
+        )
+
+    def test_stream_off_main_thread_does_not_emit_cross_thread_network_warning(self):
+        model = NetworkRequestAiModel()
+        adapter = AiModelBaseAdapter(
+            model=model,
+            modelId="fake",
+            max_tokens=100,
+            temperature=0.0,
+            chat_mode=AiChatMode.Chat,
+        )
+
+        warnings = []
+        previousHandler = qInstallMessageHandler(None)
+
+        def _capturingHandler(msgType, context, msg):
+            # type: (QtMsgType, Any, str) -> None
+            if msgType == QtMsgType.QtWarningMsg:
+                warnings.append(msg)
+            if previousHandler is not None:
+                previousHandler(msgType, context, msg)
+
+        qInstallMessageHandler(_capturingHandler)
+        try:
+            messages = [UserMessage(content=[TextBlock(text="Hi")])]
+            runner = AdapterStreamRunner(adapter, messages)
+            runner.start()
+            self.wait(3000, lambda: runner.isRunning())
+
+            if runner.isRunning():
+                runner.requestInterruption()
+                runner.wait(1000)
+                self.fail("runner thread did not finish")
+
+            self.assertIsNone(runner.error)
+            self.assertFalse(any(
+                "Cannot create children for a parent that is in a different thread" in w
+                for w in warnings
+            ))
+        finally:
+            qInstallMessageHandler(previousHandler)
 
 
 if __name__ == "__main__":

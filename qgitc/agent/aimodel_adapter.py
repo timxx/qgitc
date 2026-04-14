@@ -4,7 +4,7 @@ import json
 import queue
 from typing import Any, Dict, Iterator, List, Optional
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QObject, Qt, QThread, Signal
 
 from qgitc.agent.provider import (
     ContentDelta,
@@ -25,6 +25,10 @@ from qgitc.agent.types import (
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
 
 
+class _QueryDispatcher(QObject):
+    queryRequested = Signal(object)
+
+
 class AiModelBaseAdapter(ModelProvider):
     """Bridges the signal-driven AiModelBase to the iterator-based ModelProvider."""
 
@@ -35,6 +39,19 @@ class AiModelBaseAdapter(ModelProvider):
         self._max_tokens = max_tokens
         self._temperature = temperature
         self._chat_mode = chat_mode
+        self._queryDispatcher = _QueryDispatcher(model)
+        self._queryDispatcher.queryRequested.connect(
+            self._model.queryAsync, Qt.ConnectionType.QueuedConnection)
+
+    def _startQueryOnModelThread(self, params):
+        # type: (AiParameters) -> None
+        modelThread = self._model.thread()
+        if modelThread is None or QThread.currentThread() is modelThread:
+            self._model.queryAsync(params)
+            return
+
+        # Ensure model network operations are created on the model owner's thread.
+        self._queryDispatcher.queryRequested.emit(params)
 
     def stream(
         self,
@@ -121,8 +138,8 @@ class AiModelBaseAdapter(ModelProvider):
                 params.tools = tools
                 params.tool_choice = "auto"
 
-            # Start async query
-            self._model.queryAsync(params)
+            # Start async query on the model's owner thread.
+            self._startQueryOnModelThread(params)
 
             # Pump event loop until finished
             while not finished_flag[0]:
