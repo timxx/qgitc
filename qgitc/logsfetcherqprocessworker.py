@@ -4,7 +4,7 @@ import os
 import time
 from typing import List
 
-from PySide6.QtCore import QEventLoop, QObject, QProcess, Signal
+from PySide6.QtCore import QEventLoop, QObject, QProcess, Qt, QThread, Signal, Slot
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import (
@@ -107,6 +107,8 @@ class LocalChangesFetcher(QObject):
 
 class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
+    _quitEventLoopRequested = Signal()
+
     def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__(submodules, branchDir, noLocalChanges, *args)
 
@@ -117,6 +119,9 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         self._lucCommit = Commit()
 
         self._queueTasks = []
+
+        self._quitEventLoopRequested.connect(
+            self._quitEventLoop, Qt.QueuedConnection)
 
     def run(self):
         if not self._submodules:
@@ -132,6 +137,11 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
     def _fetchNormal(self):
         self._eventLoop = QEventLoop()
+
+        if self.isInterruptionRequested():
+            self._quitEventLoop()
+            self._eventLoop = None
+            return
 
         fetcher = LogsFetcherImpl()
         fetcher.logsAvailable.connect(
@@ -267,6 +277,13 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
                 else:
                     self._queueTasks.append(fetcher)
 
+        if self.isInterruptionRequested():
+            self._clearFetcher()
+            self._eventLoop = None
+            span.setStatus(False, "cancelled")
+            span.end()
+            return
+
         self._eventLoop.exec()
 
         logger.debug("fetch elapsed: %fs", time.time() - b)
@@ -295,10 +312,19 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
     def requestInterruption(self):
         self._interruptionRequested = True
-        if self._eventLoop:
-            self._eventLoop.quit()
+        if not self._eventLoop:
+            return
+
+        if self.thread() == QThread.currentThread():
+            self._quitEventLoop()
+        else:
+            self._quitEventLoopRequested.emit()
         # we don't cancel fetchers here, because we have to cancel
         # in the thread is was started
+
+    def _quitEventLoop(self):
+        if self._eventLoop:
+            self._eventLoop.quit()
 
     def _clearFetcher(self):
         self._queueTasks.clear()

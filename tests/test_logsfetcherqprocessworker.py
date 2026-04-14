@@ -1,10 +1,13 @@
 import os
 from typing import List
+from unittest.mock import patch
 
+from PySide6.QtCore import QThread
 from PySide6.QtTest import QSignalSpy
 
 from qgitc.common import Commit
 from qgitc.gitutils import Git
+from qgitc.logsfetcherimpl import LogsFetcherImpl
 from qgitc.logsfetcherqprocessworker import LogsFetcherQProcessWorker
 from tests.base import TestBase
 
@@ -108,3 +111,64 @@ class TestLogsFetcherQProcessWorker(TestBase):
         lucCommit: Commit = spyLocalChangesAvailable.at(0)[1]
         self.assertEqual(lccCommit.sha1, '')
         self.assertEqual(lucCommit.sha1, '')
+
+    def testRequestInterruptionQuitsEventLoopOnWorkerThread(self):
+        class StrictEventLoop:
+            def __init__(self, ownerThread):
+                self.ownerThread = ownerThread
+                self.quitCalled = False
+                self.quitThread = None
+
+            def quit(self):
+                current = QThread.currentThread()
+                if current != self.ownerThread:
+                    raise AssertionError(
+                        "event loop quit called from wrong thread")
+                self.quitCalled = True
+                self.quitThread = current
+
+        worker = LogsFetcherQProcessWorker(
+            None, self.gitDir.name, False, "main", None)
+        thread = QThread()
+        worker.moveToThread(thread)
+        loop = StrictEventLoop(thread)
+        worker._eventLoop = loop
+
+        thread.start()
+        try:
+            worker.requestInterruption()
+            self.wait(1000, lambda: not loop.quitCalled)
+
+            self.assertTrue(loop.quitCalled)
+            self.assertIs(loop.quitThread, thread)
+        finally:
+            thread.quit()
+            thread.wait(1000)
+
+    def testRequestInterruptionBeforeEventLoopSkipsExec(self):
+        class FakeEventLoop:
+            instance = None
+
+            def __init__(self):
+                self.execCalled = False
+                self.quitCalled = False
+                FakeEventLoop.instance = self
+
+            def exec(self):
+                self.execCalled = True
+
+            def quit(self):
+                self.quitCalled = True
+
+        worker = LogsFetcherQProcessWorker(
+            None, None, False, "main", None)
+        worker.requestInterruption()
+
+        with patch("qgitc.logsfetcherqprocessworker.QEventLoop", FakeEventLoop), \
+                patch.object(LogsFetcherImpl, "fetch", return_value=None):
+            worker._fetchNormal()
+
+        loop = FakeEventLoop.instance
+        self.assertIsNotNone(loop)
+        self.assertTrue(loop.quitCalled)
+        self.assertFalse(loop.execCalled)
