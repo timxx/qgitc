@@ -85,8 +85,10 @@ class TestAiChat(TestBase):
                 self.chatWidget._contextPanel.btnSend, Qt.LeftButton)
             self.assertGreater(chatbot.blockCount(), initialBlockCount)
 
-            self.wait(10000, lambda: model.isRunning())
-            self.wait(50)
+            # Wait for the AgentLoop thread to finish while processing events
+            # so that QTimer-based mock signals (finished etc.) can fire.
+            self.wait(10000, lambda: self.chatWidget._agentLoop is not None
+                      and self.chatWidget._agentLoop.isRunning())
 
             self.assertGreater(chatbot.blockCount(), initialBlockCount)
             self.assertEqual("This is a mock response",
