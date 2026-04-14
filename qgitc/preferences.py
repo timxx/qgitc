@@ -5,7 +5,13 @@ import os
 import subprocess
 import sys
 
-from PySide6.QtWidgets import QComboBox, QFileDialog, QLabel, QMessageBox, QStyleFactory
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QHeaderView,
+    QMessageBox,
+    QStyleFactory,
+    QTableWidgetItem,
+)
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.colorschema import ColorSchemaMode
@@ -80,6 +86,11 @@ class Preferences(QDialog):
         self.ui.btnGithubCopilot.clicked.connect(
             self._onGithubCopilotClicked)
 
+        self.ui.btnAddHeader.clicked.connect(
+            self._onBtnAddHeaderClicked)
+        self.ui.btnRemoveHeader.clicked.connect(
+            self._onBtnRemoveHeaderClicked)
+
         self._initedTabs = set()
         # FIXME: we'd better use interface to implement tabs
         self._tabs = {
@@ -110,6 +121,20 @@ class Preferences(QDialog):
 
     def _onBtnDeleteClicked(self, checked=False):
         self._tableViewAddItem(self.ui.tableView)
+
+    def _onBtnAddHeaderClicked(self, checked=False):
+        table = self.ui.twCustomHeaders
+        row = table.rowCount()
+        table.insertRow(row)
+        table.edit(table.model().index(row, 0))
+
+    def _onBtnRemoveHeaderClicked(self, checked=False):
+        table = self.ui.twCustomHeaders
+        rows = set()
+        for index in table.selectionModel().selectedRows():
+            rows.add(index.row())
+        for row in sorted(rows, reverse=True):
+            table.removeRow(row)
 
     def _tableViewDeleteItem(self, tableView: QTableView):
         indexes = tableView.selectionModel().selectedRows()
@@ -547,6 +572,19 @@ class Preferences(QDialog):
         self.ui.cbToolExecutionStrategy.setCurrentIndex(
             self.ui.cbToolExecutionStrategy.findData(strategy))
 
+        headers = self.settings.customLlmHeaders()
+        table = self.ui.twCustomHeaders
+        table.setRowCount(0)
+        for key, value in headers.items():
+            row = table.rowCount()
+            table.insertRow(row)
+            table.setItem(row, 0, QTableWidgetItem(key))
+            table.setItem(row, 1, QTableWidgetItem(value))
+        table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.ResizeMode.Stretch)
+
     def _onModelsReady(self):
         model: AiModelBase = self.sender()
         if model == self.ui.cbModels.currentData():
@@ -623,6 +661,27 @@ class Preferences(QDialog):
         # Save tool execution strategy
         strategy = self.ui.cbToolExecutionStrategy.currentData()
         self.settings.setToolExecutionStrategy(strategy)
+
+        headers = {}
+        table = self.ui.twCustomHeaders
+        incomplete = []
+        for row in range(table.rowCount()):
+            keyItem = table.item(row, 0)
+            valueItem = table.item(row, 1)
+            key = keyItem.text().strip() if keyItem else ""
+            value = valueItem.text().strip() if valueItem else ""
+            if not key and not value:
+                continue
+            if not key:
+                incomplete.append(row + 1)
+                continue
+            headers[key] = value
+        if incomplete:
+            QMessageBox.warning(
+                self, self.window().windowTitle(),
+                self.tr("Header rows %s have empty key and will be skipped.") % ", ".join(
+                    str(r) for r in incomplete))
+        self.settings.setCustomLlmHeaders(headers)
 
     def _initCommitMessageTab(self):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())

@@ -207,4 +207,8 @@ class LocalLLM(AiModelBase):
         if self.authorization:
             headers[b"Authorization"] = self.authorization.encode()
 
+        settings = ApplicationBase.instance().settings()
+        for key, value in settings.customLlmHeaders().items():
+            headers[key.encode()] = value.encode()
+
         self.post(self.url, headers=headers, data=payload, stream=stream)

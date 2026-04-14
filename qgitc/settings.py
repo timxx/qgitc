@@ -329,6 +329,19 @@ class Settings(QSettings):
         self.setValue("localAuth", auth)
         self.endGroup()
 
+    def customLlmHeaders(self) -> dict:
+        self.beginGroup("llm")
+        headers = self.value("customHeaders", {})
+        self.endGroup()
+        if not isinstance(headers, dict):
+            return {}
+        return headers
+
+    def setCustomLlmHeaders(self, headers: dict):
+        self.beginGroup("llm")
+        self.setValue("customHeaders", headers)
+        self.endGroup()
+
     def defaultLlmModel(self):
         self.beginGroup("llm")
         value = self.value("defaultModel", "GithubCopilot")
