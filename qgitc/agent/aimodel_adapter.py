@@ -39,7 +39,7 @@ class AiModelBaseAdapter(ModelProvider):
         self._max_tokens = max_tokens
         self._temperature = temperature
         self._chat_mode = chat_mode
-        self._queryDispatcher = _QueryDispatcher(model)
+        self._queryDispatcher = _QueryDispatcher()
         self._queryDispatcher.queryRequested.connect(
             self._model.queryAsync, Qt.ConnectionType.QueuedConnection)
 
