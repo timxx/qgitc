@@ -342,6 +342,10 @@ class AiChatWidget(QWidget):
         self._conversationTitleLabel = None
         self._historyPopupMenu = None
         self._historyPopupPanel = None
+        self._agentLoop = None  # type: Optional[AgentLoop]
+        self._toolRegistry = None  # type: Optional[ToolRegistry]
+        self._skillRegistry = None  # type: Optional[SkillRegistry]
+        self._slashCommandRegistry = None  # type: Optional[CommandRegistry]
 
         if not embedded:
             mainLayout = QHBoxLayout(self)
@@ -362,11 +366,6 @@ class AiChatWidget(QWidget):
             settings.toolExecutionStrategy())
         settings.toolExecutionStrategyChanged.connect(
             self._onToolExecutionStrategyChanged)
-
-        self._agentLoop = None  # type: Optional[AgentLoop]
-        self._toolRegistry = None  # type: Optional[ToolRegistry]
-        self._skillRegistry = None  # type: Optional[SkillRegistry]
-        self._slashCommandRegistry = None  # type: Optional[CommandRegistry]
         self._firstTextDelta = True
         self._firstReasoningDelta = True
 

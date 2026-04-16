@@ -3,6 +3,7 @@
 import unittest
 
 from qgitc.aichatwidget import AiChatWidget
+from tests.base import TestBase
 
 
 class TestAiChatWidgetSlashHelpers(unittest.TestCase):
@@ -35,6 +36,23 @@ class TestAiChatWidgetSlashHelpers(unittest.TestCase):
             "with details",
         )
         self.assertEqual(expanded, "Do the task\n\nARGUMENTS: with details")
+
+
+class TestAiChatWidgetSlashInit(TestBase):
+
+    def doCreateRepo(self):
+        pass
+
+    def test_constructor_initializes_slash_registry_before_panel_setup(self):
+        widget = None
+        try:
+            widget = AiChatWidget()
+            self.assertIsNotNone(widget)
+        except:
+            self.fail("Constructor raised an exception")
+        finally:
+            if widget:
+                widget.close()
 
 
 if __name__ == "__main__":
