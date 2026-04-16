@@ -71,6 +71,19 @@ class TestLoadSkillRegistry(unittest.TestCase):
             self.assertEqual(registry.get("user_sk").source, "userSettings")
             self.assertEqual(registry.get("proj_sk").source, "projectSettings")
 
+    def test_project_skill_overrides_user_skill(self):
+        with tempfile.TemporaryDirectory() as home_td, tempfile.TemporaryDirectory() as proj_td:
+            home = Path(home_td)
+            proj = Path(proj_td)
+            # Same skill name in both user and project locations
+            self._write_skill(home / ".qgitc" / "skills", "review", "review", "User description")
+            self._write_skill(proj / ".qgitc" / "skills", "review", "review", "Project description")
+            registry = load_skill_registry(cwd=str(proj), home_directory=str(home))
+            skill = registry.get("review")
+            self.assertIsNotNone(skill)
+            self.assertEqual(skill.source, "projectSettings")
+            self.assertEqual(skill.description, "Project description")
+
 
 if __name__ == "__main__":
     unittest.main()
