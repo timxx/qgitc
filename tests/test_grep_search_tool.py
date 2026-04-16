@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 from typing import List
 
+from qgitc.agent.tools.grep_search import grepSearch
 from qgitc.gitutils import Git, GitProcess
-from qgitc.tools.grepsearch import grepSearch
 
 
 class TestGrepSearchTool(unittest.TestCase):

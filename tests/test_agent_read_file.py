@@ -5,10 +5,10 @@ import os
 import tempfile
 from unittest.mock import patch
 
-from qgitc.agent.tool import ToolContext, ToolResult
+from qgitc.agent.tool import ToolContext
+from qgitc.agent.tools import read_file as readfile_tool
 from qgitc.agent.tools.read_file import ReadFileTool
 from qgitc.gitutils import Git
-from qgitc.tools import readfile as readfile_tool
 from tests.base import TestBase
 
 

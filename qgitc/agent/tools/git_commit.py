@@ -3,7 +3,7 @@
 from typing import Any, Dict
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.agent.tools._utils import run_git
+from qgitc.agent.tools.utils import run_git
 
 
 class GitCommitTool(Tool):

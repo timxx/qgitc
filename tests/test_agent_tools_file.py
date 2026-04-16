@@ -6,10 +6,10 @@ import stat
 import sys
 import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from qgitc.agent.tool import ToolContext, ToolResult
-from qgitc.agent.tools.apply_patch import ApplyPatchTool
+from qgitc.agent.tool import ToolContext
+from qgitc.agent.tools.apply_patch import ApplyPatchTool, DiffError
 from qgitc.agent.tools.create_file import CreateFileTool
 from qgitc.agent.tools.grep_search import GrepSearchTool
 from qgitc.agent.tools.read_external_file import ReadExternalFileTool
@@ -578,7 +578,6 @@ class TestApplyPatchToolExecute(_TempDirMixin, unittest.TestCase):
 
     @patch("qgitc.agent.tools.apply_patch.process_patch")
     def test_diff_error(self, mock_process):
-        from qgitc.tools.applypatch import DiffError
         mock_process.side_effect = DiffError("Hunk mismatch")
         result = self.tool.execute(
             {"input": "*** Begin Patch\n*** End Patch", "explanation": "test"},

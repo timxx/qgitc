@@ -366,7 +366,7 @@ class TestRunGitHelper(unittest.TestCase):
     @patch("qgitc.agent.tools._utils.runGit")
     def test_success(self, mock_run_git):
         mock_run_git.return_value = (True, "output\n", "")
-        from qgitc.agent.tools._utils import run_git
+        from qgitc.agent.tools.utils import run_git
         ok, out = run_git("/tmp/repo", ["status"])
         self.assertTrue(ok)
         self.assertEqual(out, "output")
@@ -374,14 +374,14 @@ class TestRunGitHelper(unittest.TestCase):
     @patch("qgitc.agent.tools._utils.runGit")
     def test_failure_with_stderr(self, mock_run_git):
         mock_run_git.return_value = (False, "", "fatal: error\n")
-        from qgitc.agent.tools._utils import run_git
+        from qgitc.agent.tools.utils import run_git
         ok, out = run_git("/tmp/repo", ["bad"])
         self.assertFalse(ok)
         self.assertIn("fatal: error", out)
 
     @patch("qgitc.agent.tools._utils.runGit", side_effect=Exception("boom"))
     def test_exception(self, mock_run_git):
-        from qgitc.agent.tools._utils import run_git
+        from qgitc.agent.tools.utils import run_git
         with self.assertRaises(Exception):
             run_git("/tmp/repo", ["status"])
 

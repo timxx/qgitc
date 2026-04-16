@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.tools.readfile import buildReadFileOutput, normalizeToolFilePath
+from qgitc.agent.tools.read_file import buildReadFileOutput, normalizeToolFilePath
 
 
 class ReadExternalFileTool(Tool):
