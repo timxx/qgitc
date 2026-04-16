@@ -19,6 +19,7 @@ from qgitc.agent.skills.types import SkillDefinition
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.tools.skill import SkillTool
+from tests.base import TestBase
 
 
 def wait_for(app, condition, timeout=5000):
@@ -73,12 +74,10 @@ class DummyRunCommandTool(Tool):
         }
 
 
-class TestAgentLoopSkills(unittest.TestCase):
+class TestAgentLoopSkills(TestBase):
 
     def setUp(self):
-        self.app = QCoreApplication.instance()
-        if self.app is None:
-            self.app = QCoreApplication([])
+        super().setUp()
 
         self.provider = SequenceProvider()
         self.registry = ToolRegistry()
@@ -107,6 +106,10 @@ class TestAgentLoopSkills(unittest.TestCase):
     def tearDown(self):
         self.loop.abort()
         self.loop.wait(3000)
+        super().tearDown()
+
+    def doCreateRepo(self):
+        pass
 
     def test_skill_allowlist_blocks_disallowed_tool(self):
         finished_spy = QSignalSpy(self.loop.agentFinished)
