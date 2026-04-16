@@ -33,11 +33,13 @@ from qgitc.agent import (
     AgentLoop,
     AiModelBaseAdapter,
     QueryParams,
+    SkillRegistry,
     ToolRegistry,
     UiTool,
     UiToolDispatcher,
     create_permission_engine,
     history_dicts_to_messages,
+    load_skill_registry,
     messages_to_history_dicts,
     register_builtin_tools,
 )
@@ -352,6 +354,7 @@ class AiChatWidget(QWidget):
 
         self._agentLoop = None  # type: Optional[AgentLoop]
         self._toolRegistry = None  # type: Optional[ToolRegistry]
+        self._skillRegistry = None  # type: Optional[SkillRegistry]
         self._firstTextDelta = True
         self._firstReasoningDelta = True
 
@@ -943,7 +946,14 @@ class AiChatWidget(QWidget):
             system_prompt=self._buildSystemPrompt(chatMode, sysPrompt),
             context_window=caps.context_window,
             max_output_tokens=caps.max_output_tokens,
+            skill_registry=self._ensureSkillRegistry(),
         )
+
+    def _ensureSkillRegistry(self):
+        # type: () -> SkillRegistry
+        if self._skillRegistry is None:
+            self._skillRegistry = load_skill_registry(cwd=".")
+        return self._skillRegistry
 
     def _connectAgentLoop(self, loop):
         loop.textDelta.connect(self._onAgentTextDelta)

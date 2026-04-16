@@ -29,6 +29,8 @@ from qgitc.agent.provider import (
     StreamEvent,
     ToolCallDelta,
 )
+from qgitc.agent.skills.discovery import load_skill_registry
+from qgitc.agent.skills.registry import SkillRegistry
 from qgitc.agent.tool import (
     Tool,
     ToolContext,
@@ -72,6 +74,7 @@ __all__ = [
     "PermissionRule",
     "PermissionUpdate",
     "ReasoningDelta",
+    "SkillRegistry",
     "StreamEvent",
     "SystemMessage",
     "TextBlock",
@@ -92,6 +95,7 @@ __all__ = [
     "estimate_tokens",
     "history_dicts_to_messages",
     "messages_to_history_dicts",
+    "load_skill_registry",
     "register_builtin_tools",
     "tool_type_from_tool",
 ]

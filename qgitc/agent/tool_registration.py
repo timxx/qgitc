@@ -25,7 +25,6 @@ from qgitc.agent.tools.read_file import ReadFileTool
 from qgitc.agent.tools.run_command import RunCommandTool
 from qgitc.agent.tools.skill import SkillTool
 
-
 _BUILTIN_TOOLS = [
     GitStatusTool,
     GitLogTool,

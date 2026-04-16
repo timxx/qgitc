@@ -2,10 +2,10 @@
 
 import unittest
 
-from qgitc.agent.tool import ToolContext
-from qgitc.agent.tools.skill import SkillTool
 from qgitc.agent.skills.registry import SkillRegistry
 from qgitc.agent.skills.types import SkillDefinition
+from qgitc.agent.tool import ToolContext
+from qgitc.agent.tools.skill import SkillTool
 
 
 class TestSkillTool(unittest.TestCase):

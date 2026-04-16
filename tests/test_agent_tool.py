@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from typing import Any, Dict
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-
-from typing import Any, Dict
 
 
 class EchoTool(Tool):

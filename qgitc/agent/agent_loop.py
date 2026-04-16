@@ -16,6 +16,8 @@ from qgitc.agent.provider import (
     ReasoningDelta,
     ToolCallDelta,
 )
+from qgitc.agent.skills.prompt import render_skills_reminder
+from qgitc.agent.skills.registry import SkillRegistry
 from qgitc.agent.tool import ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import (
@@ -37,6 +39,7 @@ class QueryParams:
     system_prompt: str = ""
     context_window: int = 100000
     max_output_tokens: int = 4096
+    skill_registry: Optional[SkillRegistry] = None
 
 
 class AgentLoop(QThread):
@@ -70,6 +73,7 @@ class AgentLoop(QThread):
 
         self._messages = []  # type: List[Message]
         self._abort_flag = False
+        self._context_extra_state = {}  # type: Dict[str, Any]
 
         # Permission wait mechanism
         self._perm_mutex = QMutex()
@@ -87,6 +91,10 @@ class AgentLoop(QThread):
         self._params = params
         self._abort_flag = False
         self._perm_decisions.clear()
+        self._context_extra_state = {
+            "tool_allowed_tools": None,
+            "skill_registry": params.skill_registry,
+        }
         self.start()
 
     def approve_tool(self, tool_call_id):
@@ -165,9 +173,20 @@ class AgentLoop(QThread):
 
             # Stream from provider
             tool_schemas = self._tool_registry.get_tool_schemas() or None
+            system_prompt = params.system_prompt or ""
+            if params.skill_registry is not None:
+                reminder = render_skills_reminder(
+                    params.skill_registry.get_model_visible_skills()
+                )
+                if reminder:
+                    if system_prompt:
+                        system_prompt = system_prompt + "\n\n" + reminder
+                    else:
+                        system_prompt = reminder
+
             assistant_msg = self._stream_response(
                 params.provider,
-                params.system_prompt,
+                system_prompt,
                 tool_schemas,
             )
             if assistant_msg is None:
@@ -263,9 +282,29 @@ class AgentLoop(QThread):
         # type: (List[ToolUseBlock]) -> Optional[List[ToolResultBlock]]
         """Execute tool calls, respecting permissions."""
         results = []  # type: List[ToolResultBlock]
+
+        if self._params is not None:
+            self._context_extra_state["skill_registry"] = self._params.skill_registry
+
         for block in tool_blocks:
             if self._abort_flag:
                 return None
+
+            allowed_tools = self._context_extra_state.get("tool_allowed_tools")
+            if (
+                isinstance(allowed_tools, list)
+                and allowed_tools
+                and block.name != "Skill"
+                and block.name not in allowed_tools
+            ):
+                message = "Tool '{}' is not allowed by active skill".format(block.name)
+                results.append(ToolResultBlock(
+                    tool_use_id=block.id,
+                    content=message,
+                    is_error=True,
+                ))
+                self.toolCallResult.emit(block.id, message, True)
+                continue
 
             tool = self._tool_registry.get(block.name)
             if tool is None:
@@ -320,6 +359,7 @@ class AgentLoop(QThread):
             ctx = ToolContext(
                 working_directory=".",
                 abort_requested=lambda: self._abort_flag,
+                extra=self._context_extra_state,
             )
             try:
                 result = tool.execute(block.input, ctx)
