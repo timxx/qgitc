@@ -1,57 +1,50 @@
 # Copilot instructions for QGitc
 
 ## Big picture
-- QGitc is a cross-platform PySide6 (Qt) desktop Git GUI with optional AI features (chat, commit message generation, code review, conflict resolution).
+- QGitc is a PySide6 desktop Git GUI with AI-assisted chat, code review, commit message generation, and merge conflict resolution.
 - Entry points:
-  - Installed command: `qgitc` → `qgitc.main:main` (see `pyproject.toml`).
-  - Repo-local launcher: `python qgitc.py ...` (thin wrapper calling `qgitc.main:main`).
+  - Installed app: `qgitc` → `qgitc.main:main` (`pyproject.toml` `[project.gui-scripts]`).
+  - Source launcher: `python qgitc.py <subcommand>`.
+- `qgitc/main.py` is the CLI/router (`log`, `blame`, `commit`, `chat`, `bcompare`, `pick`, `mergetool`, `shell`) and bootstraps `Application`.
 
-## Architecture & navigation
-- App wiring + window routing is in `qgitc/application.py`:
-  - `Application.event()` dispatches custom events (see `qgitc/events.py`) to the active window.
-  - Windows are keyed by `WindowType` (see `qgitc/windowtype.py`) and created via `Application.getWindow()`.
-- The CLI parses subcommands in `qgitc/main.py` (`log`, `blame`, `commit`, `chat`, `bcompare`, `pick`, `mergetool`, `shell`).
+## Architecture that matters
+- `qgitc/application.py` is the app composition root: creates shared services (`Settings`, telemetry/network manager), lazily creates windows, and routes custom Qt events.
+- Cross-window actions are event-driven via `qgitc/events.py` (`BlameEvent`, `ShowCommitEvent`, `CodeReviewEvent`, etc.) handled in `Application.event()`.
+- Window identity is centralized in `qgitc/windowtype.py` and instantiated through `Application.getWindow()`.
+- AI chat UI (`qgitc/aichatwidget.py`) runs agent mode through `AgentLoop` (`qgitc/agent/agent_loop.py`) and permission-gated tool execution.
 
-## Git integration (important conventions)
-- Prefer the repo’s Git wrappers over ad-hoc `subprocess`:
-  - Core wrappers: `qgitc/gitutils.py` (`Git`, `GitProcess`, `QGitProcess`).
-  - Tool-style helpers: `qgitc/tools/utils.py:runGit()`.
-- These wrappers handle Windows process flags, `LANGUAGE=en_US`, Qt-thread compatibility, and consistent error reporting.
-- Multi-repo/submodule support is a first-class concept:
-  - Main repo is conceptually `.`; submodules are identified by repo-relative paths.
-  - See the canonical rules in `qgitc/models/prompts.py` (`REPO_DESC`).
+## Git + repo conventions (project-specific)
+- Use `qgitc/gitutils.py` (`Git`, `GitProcess`, `QGitProcess`) instead of raw `subprocess`; these enforce `LANGUAGE=en_US`, platform flags, and Qt-safe process behavior.
+- For agent/tool code, use `qgitc/agent/tools/utils.py:runGit` / `run_git`.
+- Multi-repo/submodule semantics are first-class: main repo is `.`; submodules are repo-relative paths. Canonical wording lives in `qgitc/models/prompts.py` (`REPO_DESC`).
 
-## AI / agent tooling
-- LLM abstractions live in `qgitc/llm.py` (history → OpenAI Chat Completions messages + tool call sequencing).
-- Providers are registered with `AiModelFactory`; key implementations:
-  - `qgitc/models/githubcopilot.py` (Copilot endpoints, model capabilities, may use `/responses`).
-  - `qgitc/models/localllm.py` (OpenAI-compatible local server).
-- Agent tool definitions and execution:
-  - Schemas + registry: `qgitc/agenttools.py`.
-  - Handlers + safety checks: `qgitc/agenttoolexecutor.py`.
-  - When adding a new tool: add a schema/model + register it, implement a handler in the executor, then add/extend tests under `tests/test_agent_*.py`.
+## AI/agent integration points
+- Provider abstraction + history/tool-call normalization: `qgitc/llm.py`.
+- Providers are registered via `AiModelFactory`; main implementation is `qgitc/models/githubcopilot.py` (dynamic model capability fetch + `/chat/completions` vs `/responses` endpoint selection).
+- Built-in agent tools are registered in `qgitc/agent/tool_registration.py`; concrete tools live under `qgitc/agent/tools/`.
+- Permission policy is explicit (`qgitc/agent/permissions.py`): deny rules, allow rules, read-only auto-allow, write tools require ask/allow.
+- Tool path safety: `qgitc/agent/tools/read_file.py` normalizes `/C:/...` on Windows and blocks access outside repo root.
 
-## Build/run workflows
-- Run from source (examples):
-  - `python qgitc.py log`
-  - `python qgitc.py commit`
-  - `python qgitc.py chat`
-- Build Qt assets (regenerates `qgitc/ui_*.py` from `qgitc/*.ui`): `python setup.py build` (see `setup.py:BuildQt`).
-- `build/` is generated output from the build; do not edit anything under `build/`.
-- If you change any `qgitc/*.ui` file, rebuild to regenerate the corresponding `qgitc/ui_*.py` files (do not hand-edit the generated `ui_*.py`).
-- Shell integration is implemented in `qgitc/shell.py` (`qgitc shell register|unregister`).
+## Build/test workflows
+- Install deps: `python -m pip install -r requirements.txt`.
+- Rebuild Qt generated files: `python setup.py build` (runs `BuildQt`, regenerates `qgitc/ui_*.py` from `qgitc/*.ui`).
+- Do not edit generated output under `build/` or generated `qgitc/ui_*.py` directly.
+- Run app locally: `python qgitc.py log` / `python qgitc.py commit` / `python qgitc.py chat`.
+- Tests are `unittest` + Qt app harness (`tests/base.py` creates temp repos and sets `QT_QPA_PLATFORM=offscreen`).
+- Typical test command: `python -m unittest discover -s tests -p "test_*.py" -v`.
 
-## Coding style (project conventions)
-- Prefer `camelCase` for Python variables, function/method names, and locals to match the existing codebase.
-- Keep changes minimal and consistent with surrounding code (especially in Qt widget classes and tool handlers).
-
-## Tests (unittest + Qt)
-- Tests are `unittest`-based and use a Qt `Application(testing=True)` harness that creates temporary git repos (see `tests/base.py`).
-- Run tests headlessly:
+## Editing workflow (required)
+- Keep edits minimal and file-local; avoid broad refactors unless explicitly requested.
+- After editing Python files, run import formatting with `python -m isort <changed-files-or-dirs>` (project uses `pyproject.toml` `[tool.isort]`, profile `black`).
+- Run lint/syntax check on changed files before handoff: `python -m py_compile <changed-python-files>`.
+- Always run tests after changes (at least targeted tests; prefer full suite before final handoff):
   - `python -m unittest discover -s tests -p "test_*.py" -v`
-- CI reference: `.github/workflows/tests.yml` (also shows the coverage command used).
+- If validation fails, report the exact failing command/output and keep fixes scoped to the requested change.
 
-## Tooling safety notes (apply_patch/read_file)
-- The in-app `apply_patch` tool preserves BOM/newline style and refuses writes outside the repo:
-  - Implementation: `qgitc/tools/applypatch.py` + path checks in `qgitc/tools/readfile.py`.
-- On Windows, tool-provided absolute paths may show up as `/C:/...`; they are normalized by `normalizeToolFilePath()`.
+## Coding conventions for this repo
+- Match existing Python style: `camelCase` names are common across UI/controllers/tools.
+- Keep patches surgical in Qt-heavy code: avoid broad refactors across window classes.
+- If changing `qgitc/*.ui`, regenerate with build step; do not hand-edit generated UI modules.
+- When adding/changing agent tools: implement tool in `qgitc/agent/tools/`, register in `qgitc/agent/tool_registration.py`, and add/update tests under `tests/test_agent_*.py`.
+- Test rule: for UI-related tests that require a `QApplication`, use `tests.base.TestBase` as the base class.
+- If a `TestBase` test does not need a git repository, override `doCreateRepo()` and leave it empty (`pass`) to skip repo setup (see `tests/test_agent_ui_tool.py`).
