@@ -97,3 +97,4 @@ qgitc/ui_*.py
 qgitc/version.py
 
 otelenv.py
+.worktrees/
