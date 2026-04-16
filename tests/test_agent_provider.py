@@ -20,7 +20,7 @@ class FakeProvider(ModelProvider):
         self._events = events or []
         self._token_count = token_count
 
-    def stream(self, messages, system_prompt=None, tools=None,
+    def stream(self, messages, tools=None,
                model=None, max_tokens=4096):
         for event in self._events:
             yield event
@@ -155,7 +155,6 @@ class TestFakeProvider(unittest.TestCase):
         messages = [UserMessage(content=[TextBlock(text="hi")])]
         result = list(provider.stream(
             messages,
-            system_prompt="You are helpful.",
             tools=[{"name": "read", "description": "Read a file"}],
             model="claude-3",
             max_tokens=1024,

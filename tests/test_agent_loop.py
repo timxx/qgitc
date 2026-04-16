@@ -48,10 +48,9 @@ class SimpleProvider(ModelProvider):
     def __init__(self):
         self.last_system_prompt = None
 
-    def stream(self, messages, system_prompt=None, tools=None,
+    def stream(self, messages, tools=None,
                model=None, max_tokens=4096):
         # type: (...) -> Iterator[StreamEvent]
-        self.last_system_prompt = system_prompt
         yield ContentDelta(text="Hello from LLM")
         yield MessageComplete(stop_reason="end_turn")
 
@@ -66,7 +65,7 @@ class ToolCallProvider(ModelProvider):
     def __init__(self):
         self._call_count = 0
 
-    def stream(self, messages, system_prompt=None, tools=None,
+    def stream(self, messages, tools=None,
                model=None, max_tokens=4096):
         # type: (...) -> Iterator[StreamEvent]
         self._call_count += 1
@@ -89,10 +88,10 @@ class ToolCallProvider(ModelProvider):
 class ErrorProvider(ModelProvider):
     """Raises an exception from stream()."""
 
-    def stream(self, messages, system_prompt=None, tools=None,
+    def stream(self, messages, tools=None,
                model=None, max_tokens=4096):
         # type: (...) -> Iterator[StreamEvent]
-        _ = (messages, system_prompt, tools, model, max_tokens)
+        _ = (messages, tools, model, max_tokens)
         raise RuntimeError("connection dropped")
         yield MessageComplete(stop_reason="end_turn")
 
@@ -141,7 +140,6 @@ def _make_params(provider):
     # type: (ModelProvider) -> QueryParams
     return QueryParams(
         provider=provider,
-        system_prompt="You are a test assistant.",
         context_window=100000,
         max_output_tokens=4096,
     )
@@ -296,12 +294,6 @@ class TestAgentLoopSetMessages(TestBase):
         self.loop.set_messages(msgs)
         msgs.append(UserMessage(content=[TextBlock(text="World")]))
         self.assertEqual(len(self.loop.messages()), 1)
-
-    def test_system_prompt_is_passed_via_query_params(self):
-        self.loop.submit("Hello", self.params)
-        self.loop.wait(3000)
-        self.assertEqual(self.provider.last_system_prompt,
-                         "You are a test assistant.")
 
 
 class TestAgentLoopErrors(TestBase):

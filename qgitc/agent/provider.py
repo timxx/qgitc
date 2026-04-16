@@ -38,7 +38,6 @@ class ModelProvider(ABC):
     def stream(
         self,
         messages,          # type: List[Message]
-        system_prompt=None,  # type: Optional[str]
         tools=None,        # type: Optional[List[Dict[str, Any]]]
         model=None,        # type: Optional[str]
         max_tokens=4096,   # type: int

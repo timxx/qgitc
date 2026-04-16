@@ -42,6 +42,7 @@ from qgitc.agent import (
     load_skill_registry,
     register_builtin_tools,
 )
+from qgitc.agent.skills.prompt import render_skills_reminder
 from qgitc.agent.skills.types import SkillDefinition
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.agent.tool import ToolType
@@ -190,11 +191,11 @@ class ResolveConflictJob(QObject):
         self._agentLoop = AgentLoop(
             tool_registry=toolRegistry,
             permission_engine=allAutoEngine,
+            system_prompt=RESOLVE_SYS_PROMPT,
             parent=self,
         )
         params = QueryParams(
             provider=adapter,
-            system_prompt=RESOLVE_SYS_PROMPT,
             context_window=caps.context_window,
             max_output_tokens=caps.max_output_tokens,
         )
@@ -775,8 +776,7 @@ class AiChatWidget(QWidget):
         if model is None:
             return
         loop = self._ensureAgentLoop()
-        params = self._buildQueryParams(chatMode, sysPrompt)
-        effectiveSysPrompt = params.system_prompt
+        params = self._buildQueryParams(chatMode)
 
         isNewConversation = len(loop.messages()) == 0
 
@@ -804,15 +804,9 @@ class AiChatWidget(QWidget):
             if contextText:
                 fullPrompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + prompt
 
-        # Keep title generation based on the user's original prompt (no injected context).
-        titleSeed = (effectiveSysPrompt + "\n" +
-                     prompt) if effectiveSysPrompt else prompt
-
-        # System prompts are not persisted as messages in the loop, so render
-        # once per conversation to avoid repeating the same prompt every turn.
-        if effectiveSysPrompt and isNewConversation:
-            self._chatBot.appendResponse(
-                AiResponse(AiRole.System, effectiveSysPrompt), collapsed=True)
+        if isNewConversation and loop.get_system_prompt():
+            self._chatBot.appendResponse(AiResponse(
+                AiRole.System, loop.get_system_prompt()), collapsed=True)
 
         # Show user message in chatbot
         self._chatBot.appendResponse(
@@ -835,9 +829,9 @@ class AiChatWidget(QWidget):
         # Clear tool restrictions after the request is sent
         self._restrictedToolNames = None
 
-        if isNewConversation and not ApplicationBase.instance().testing and titleSeed:
+        if isNewConversation and not ApplicationBase.instance().testing and prompt:
             self._generateChatTitle(
-                self._historyPanel.currentHistory().historyId, titleSeed)
+                self._historyPanel.currentHistory().historyId, prompt)
 
         self._updateChatHistoryModel(model)
         self._setEmbeddedRecentListVisible(False)
@@ -992,9 +986,11 @@ class AiChatWidget(QWidget):
         if self._agentLoop is not None:
             return self._agentLoop
         self._toolRegistry = self._buildToolRegistry()
+        system_prompt = self._buildSystemPrompt()
         loop = AgentLoop(
             tool_registry=self._toolRegistry,
             permission_engine=self._permissionEngine,
+            system_prompt=system_prompt,
             parent=self,
         )
         self._connectAgentLoop(loop)
@@ -1008,17 +1004,22 @@ class AiChatWidget(QWidget):
         modelId = model.modelId or model.name
         return model.getModelCapabilities(modelId)
 
-    def _buildSystemPrompt(self, chatMode: AiChatMode, sysPrompt: str = None):
-        effectiveSysPrompt = sysPrompt
-        if chatMode == AiChatMode.Agent and not sysPrompt:
-            provider = self.contextProvider()
-            overridePrompt = provider.agentSystemPrompt() if provider is not None else None
-            effectiveSysPrompt = overridePrompt or AGENT_SYS_PROMPT
-        elif chatMode == AiChatMode.CodeReview:
-            effectiveSysPrompt = sysPrompt or CODE_REVIEW_SYS_PROMPT
+    def _buildSystemPrompt(self):
+        provider = self.contextProvider()
+        overridePrompt = provider.agentSystemPrompt() if provider is not None else None
+        effectiveSysPrompt = overridePrompt or AGENT_SYS_PROMPT
+
+        skillRegistry = self._ensureSkillRegistry()
+        if skillRegistry is not None:
+            reminder = render_skills_reminder(
+                skillRegistry.get_model_visible_skills()
+            )
+            if reminder:
+                effectiveSysPrompt = effectiveSysPrompt + "\n\n" + reminder
+
         return effectiveSysPrompt
 
-    def _buildQueryParams(self, chatMode: AiChatMode, sysPrompt: str = None):
+    def _buildQueryParams(self, chatMode: AiChatMode):
         settings = ApplicationBase.instance().settings()
         model = self.currentChatModel()
         if model is None:
@@ -1034,7 +1035,6 @@ class AiChatWidget(QWidget):
         )
         return QueryParams(
             provider=adapter,
-            system_prompt=self._buildSystemPrompt(chatMode, sysPrompt),
             context_window=caps.context_window,
             max_output_tokens=caps.max_output_tokens,
             skill_registry=self._ensureSkillRegistry(),

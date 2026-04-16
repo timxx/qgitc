@@ -36,7 +36,7 @@ class FakeSummaryProvider(ModelProvider):
         # type: (str) -> None
         self._summary_text = summary_text
 
-    def stream(self, messages, system_prompt=None, tools=None,
+    def stream(self, messages, tools=None,
                model=None, max_tokens=4096):
         # type: (...) -> Iterator[StreamEvent]
         yield ContentDelta(text=self._summary_text)

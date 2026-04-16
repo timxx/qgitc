@@ -281,7 +281,6 @@ class TestAgentMode(TestBase):
         submittedPrompt, submittedParams = fakeLoop.submit.call_args.args
         self.assertIn("<<<<<<< ours", submittedPrompt)
         self.assertIsInstance(submittedParams, QueryParams)
-        self.assertEqual(submittedParams.system_prompt, RESOLVE_SYS_PROMPT)
         self.assertEqual(submittedParams.context_window, 24680)
         self.assertEqual(submittedParams.max_output_tokens, 1357)
         self.assertIsInstance(submittedParams.provider, AiModelBaseAdapter)
@@ -306,3 +305,19 @@ class TestAgentMode(TestBase):
         self.chatWidget._doRequest("hello", AiChatMode.Agent, collapsed=True)
 
         fakeLoop.submit.assert_called_once_with("hello", params)
+
+    def test_build_system_prompt_injects_skills_reminder_for_agent_mode(self):
+        from qgitc.agent.skills.registry import SkillRegistry
+        from qgitc.agent.skills.types import SkillDefinition
+
+        skill_registry = SkillRegistry()
+        skill_registry.register(SkillDefinition(
+            name="review",
+            description="Review code changes",
+            content="Body",
+        ))
+        self.chatWidget._skillRegistry = skill_registry
+
+        sp = self.chatWidget._buildSystemPrompt()
+        self.assertIn("Available skills:", sp)
+        self.assertIn("review", sp)

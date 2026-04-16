@@ -16,7 +16,6 @@ from qgitc.agent.provider import (
     ReasoningDelta,
     ToolCallDelta,
 )
-from qgitc.agent.skills.prompt import render_skills_reminder
 from qgitc.agent.skills.registry import SkillRegistry
 from qgitc.agent.tool import ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
@@ -24,6 +23,7 @@ from qgitc.agent.types import (
     AssistantMessage,
     ContentBlock,
     Message,
+    SystemMessage,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 @dataclass
 class QueryParams:
     provider: ModelProvider
-    system_prompt: str = ""
     context_window: int = 100000
     max_output_tokens: int = 4096
     skill_registry: Optional[SkillRegistry] = None
@@ -63,6 +62,7 @@ class AgentLoop(QThread):
         tool_registry,     # type: ToolRegistry
         permission_engine,  # type: PermissionEngine
         max_turns=25,      # type: int
+        system_prompt=None,  # type: str
         parent=None,
     ):
         super().__init__(parent)
@@ -70,6 +70,7 @@ class AgentLoop(QThread):
         self._permission_engine = permission_engine
         self._max_turns = max_turns
         self._params = None  # type: Optional[QueryParams]
+        self._system_prompt = system_prompt
 
         self._messages = []  # type: List[Message]
         self._abort_flag = False
@@ -87,6 +88,10 @@ class AgentLoop(QThread):
             content = [TextBlock(text=prompt)]
         else:
             content = list(prompt)
+
+        if self._system_prompt and len(self._messages) == 0:
+            self._messages.append(SystemMessage(content=self._system_prompt))
+
         self._messages.append(UserMessage(content=content))
         self._params = params
         self._abort_flag = False
@@ -132,6 +137,11 @@ class AgentLoop(QThread):
         """Replace conversation history (call before submit, not while running)."""
         self._messages = list(messages)
 
+    def get_system_prompt(self):
+        # type: () -> Optional[str]
+        """Return the system prompt if set."""
+        return self._system_prompt
+
     def run(self):
         # type: () -> None
         """Main agent loop -- runs in a dedicated thread."""
@@ -155,7 +165,7 @@ class AgentLoop(QThread):
             params.max_output_tokens,
         )
 
-        for _turn in range(self._max_turns):
+        for _ in range(self._max_turns):
             if self._abort_flag:
                 return
 
@@ -173,20 +183,9 @@ class AgentLoop(QThread):
 
             # Stream from provider
             tool_schemas = self._tool_registry.get_tool_schemas() or None
-            system_prompt = params.system_prompt or ""
-            if params.skill_registry is not None:
-                reminder = render_skills_reminder(
-                    params.skill_registry.get_model_visible_skills()
-                )
-                if reminder:
-                    if system_prompt:
-                        system_prompt = system_prompt + "\n\n" + reminder
-                    else:
-                        system_prompt = reminder
 
             assistant_msg = self._stream_response(
                 params.provider,
-                system_prompt,
                 tool_schemas,
             )
             if assistant_msg is None:
@@ -212,8 +211,8 @@ class AgentLoop(QThread):
                 UserMessage(content=tool_results)
             )
 
-    def _stream_response(self, provider, system_prompt, tool_schemas):
-        # type: (ModelProvider, str, Optional[List[Dict[str, Any]]]) -> Optional[AssistantMessage]
+    def _stream_response(self, provider, tool_schemas):
+        # type: (ModelProvider, Optional[List[Dict[str, Any]]]) -> Optional[AssistantMessage]
         """Stream from the LLM and accumulate into an AssistantMessage."""
         text_parts = []  # type: List[str]
         reasoning_parts = []  # type: List[str]
@@ -224,7 +223,6 @@ class AgentLoop(QThread):
         try:
             for event in provider.stream(
                 messages=self._messages,
-                system_prompt=system_prompt or None,
                 tools=tool_schemas,
             ):
                 if self._abort_flag:
@@ -297,7 +295,8 @@ class AgentLoop(QThread):
                 and block.name != "Skill"
                 and block.name not in allowed_tools
             ):
-                message = "Tool '{}' is not allowed by active skill".format(block.name)
+                message = "Tool '{}' is not allowed by active skill".format(
+                    block.name)
                 results.append(ToolResultBlock(
                     tool_use_id=block.id,
                     content=message,

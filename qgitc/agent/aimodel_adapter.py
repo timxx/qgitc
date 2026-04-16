@@ -17,6 +17,7 @@ from qgitc.agent.provider import (
 from qgitc.agent.types import (
     AssistantMessage,
     Message,
+    SystemMessage,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
@@ -56,7 +57,6 @@ class AiModelBaseAdapter(ModelProvider):
     def stream(
         self,
         messages,          # type: List[Message]
-        system_prompt=None,  # type: Optional[str]
         tools=None,        # type: Optional[List[Dict[str, Any]]]
     ):
         # type: (...) -> Iterator[StreamEvent]
@@ -129,6 +129,8 @@ class AiModelBaseAdapter(ModelProvider):
                             AiRole.Assistant, text, toolCalls=tool_calls)
                     else:
                         self._model.addHistory(AiRole.Assistant, text)
+                elif isinstance(msg, SystemMessage):
+                    self._model.addHistory(AiRole.System, msg.content)
 
             # Build parameters
             params = AiParameters()
@@ -139,8 +141,6 @@ class AiModelBaseAdapter(ModelProvider):
             params.model = self._modelId
             if self._max_tokens is not None:
                 params.max_tokens = self._max_tokens
-            if system_prompt is not None:
-                params.sys_prompt = system_prompt
             if self._chat_mode == AiChatMode.Agent and tools:
                 params.tools = tools
                 params.tool_choice = "auto"
