@@ -42,6 +42,8 @@ from qgitc.agent import (
     load_skill_registry,
     register_builtin_tools,
 )
+from qgitc.agent.skills.types import SkillDefinition
+from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.agent.tool import ToolType
 from qgitc.agent.types import TextBlock
 from qgitc.aichatbot import AiChatbot
@@ -89,6 +91,16 @@ from qgitc.resolutionreport import (
 from qgitc.submoduleexecutor import SubmoduleExecutor
 
 SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
+
+
+class _SkillSlashCommand:
+
+    def __init__(self, skill: SkillDefinition):
+        self.name = skill.name
+        self.description = skill.description
+        self.aliases = list(skill.aliases or [])
+        self.argument_hint = skill.argument_hint
+        self.skill = skill
 
 
 class DiffAvailableEvent(QEvent):
@@ -354,6 +366,7 @@ class AiChatWidget(QWidget):
         self._agentLoop = None  # type: Optional[AgentLoop]
         self._toolRegistry = None  # type: Optional[ToolRegistry]
         self._skillRegistry = None  # type: Optional[SkillRegistry]
+        self._slashCommandRegistry = None  # type: Optional[CommandRegistry]
         self._firstTextDelta = True
         self._firstReasoningDelta = True
 
@@ -518,6 +531,9 @@ class AiChatWidget(QWidget):
 
         self._contextPanel.btnSend.clicked.connect(self._onButtonSend)
         self._contextPanel.btnStop.clicked.connect(self._onButtonStop)
+
+        self._contextPanel.edit.setCommandRegistry(
+            self._ensureSlashCommandRegistry())
 
         self._contextPanel.cbBots.currentIndexChanged.connect(
             self._onModelChanged)
@@ -740,8 +756,21 @@ class AiChatWidget(QWidget):
         if self._agentLoop is not None:
             self._agentLoop.abort()
 
-    def _doRequest(self, prompt: str, chatMode: AiChatMode, sysPrompt: str = None, collapsed=False):
+    def _doRequest(
+        self,
+        prompt: str,
+        chatMode: AiChatMode,
+        sysPrompt: str = None,
+        collapsed=False,
+        parseSlashCommand: bool = True,
+    ):
         self._disableAutoScroll = False
+
+        if parseSlashCommand:
+            commandName, commandArgs = self._parseSlashCommand(prompt)
+            if commandName:
+                if self._executeSlashCommand(commandName, commandArgs, chatMode, sysPrompt):
+                    return
 
         model = self.currentChatModel()
         if model is None:
@@ -813,6 +842,70 @@ class AiChatWidget(QWidget):
 
         self._updateChatHistoryModel(model)
         self._setEmbeddedRecentListVisible(False)
+
+    @staticmethod
+    def _parseSlashCommand(text: str) -> Tuple[str, str]:
+        stripped = (text or "").strip()
+        if not stripped.startswith("/"):
+            return "", ""
+
+        withoutSlash = stripped[1:]
+        if not withoutSlash:
+            return "", ""
+
+        parts = withoutSlash.split(None, 1)
+        commandName = parts[0].strip()
+        if not commandName:
+            return "", ""
+
+        commandArgs = parts[1].strip() if len(parts) > 1 else ""
+        return commandName, commandArgs
+
+    @staticmethod
+    def _expandSkillArguments(content: str, args: str) -> str:
+        base = content or ""
+        if "$ARGUMENTS" in base:
+            return base.replace("$ARGUMENTS", args or "")
+
+        if args:
+            return base + "\n\nARGUMENTS: {}".format(args)
+        return base
+
+    def _buildSlashCommandRegistry(self) -> CommandRegistry:
+        registry = CommandRegistry()
+        skillRegistry = self._ensureSkillRegistry()
+        for skill in skillRegistry.list_skills():
+            if not skill.user_invocable:
+                continue
+            registry.register(_SkillSlashCommand(skill))
+        return registry
+
+    def _ensureSlashCommandRegistry(self) -> CommandRegistry:
+        if self._slashCommandRegistry is None:
+            self._slashCommandRegistry = self._buildSlashCommandRegistry()
+        return self._slashCommandRegistry
+
+    def _executeSlashCommand(
+        self,
+        commandName: str,
+        commandArgs: str,
+        chatMode: AiChatMode,
+        sysPrompt: Optional[str],
+    ) -> bool:
+        command = self._ensureSlashCommandRegistry().find(commandName)
+        if command is None:
+            return False
+
+        expandedPrompt = self._expandSkillArguments(command.skill.content, commandArgs)
+        self._contextPanel.clear()
+        self._doRequest(
+            expandedPrompt,
+            chatMode,
+            sysPrompt,
+            collapsed=False,
+            parseSlashCommand=False,
+        )
+        return True
 
     @staticmethod
     def _historyHasSameSystemPrompt(history, sp: str) -> bool:
@@ -952,6 +1045,7 @@ class AiChatWidget(QWidget):
         # type: () -> SkillRegistry
         if self._skillRegistry is None:
             self._skillRegistry = load_skill_registry(cwd=Git.REPO_DIR or ".")
+            self._slashCommandRegistry = None
         return self._skillRegistry
 
     def _connectAgentLoop(self, loop: AgentLoop):
