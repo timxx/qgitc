@@ -35,6 +35,7 @@
 
 ## Editing workflow (required)
 - Keep edits minimal and file-local; avoid broad refactors unless explicitly requested.
+- Follow TDD for bug fixes and new features: write/update a failing unittest first, run it to confirm failure, then implement code changes, then rerun tests until green.
 - After editing Python files, run import formatting with `python -m isort <changed-files-or-dirs>` (project uses `pyproject.toml` `[tool.isort]`, profile `black`).
 - Run lint/syntax check on changed files before handoff: `python -m py_compile <changed-python-files>`.
 - Always run tests after changes (at least targeted tests; prefer full suite before final handoff):
