@@ -24,7 +24,7 @@ class TestToolRegistration(unittest.TestCase):
             "git_blame", "git_current_branch", "git_branch",
             "git_checkout", "git_cherry_pick", "git_commit", "git_add",
             "grep_search", "read_file", "read_external_file",
-            "create_file", "apply_patch", "run_command",
+            "create_file", "apply_patch", "run_command", "Skill",
         ]
         for name in expected_names:
             tool = registry.get(name)

@@ -122,6 +122,13 @@ class TestToolContext(unittest.TestCase):
         self.assertEqual(ctx.working_directory, "/home/user")
         self.assertFalse(ctx.abort_requested())
 
+    def test_extra_default_empty_dict(self):
+        ctx = ToolContext(
+            working_directory="/tmp",
+            abort_requested=lambda: False,
+        )
+        self.assertEqual(ctx.extra, {})
+
     def test_abort_requested_callable(self):
         aborted = False
 

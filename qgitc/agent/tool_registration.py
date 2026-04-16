@@ -23,6 +23,7 @@ from qgitc.agent.tools.grep_search import GrepSearchTool
 from qgitc.agent.tools.read_external_file import ReadExternalFileTool
 from qgitc.agent.tools.read_file import ReadFileTool
 from qgitc.agent.tools.run_command import RunCommandTool
+from qgitc.agent.tools.skill import SkillTool
 
 
 _BUILTIN_TOOLS = [
@@ -48,6 +49,7 @@ _BUILTIN_TOOLS = [
     CreateFileTool,
     ApplyPatchTool,
     RunCommandTool,
+    SkillTool,
 ]
 
 

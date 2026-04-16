@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict
 
 
@@ -15,6 +15,7 @@ class ToolResult:
 class ToolContext:
     working_directory: str
     abort_requested: Callable[[], bool]
+    extra: Dict[str, Any] = field(default_factory=dict)
 
 
 class Tool(ABC):
