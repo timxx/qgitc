@@ -3,13 +3,13 @@
 import unittest
 from unittest.mock import patch
 
-from qgitc.agent.tool import ToolContext, ToolResult
-from qgitc.agent.tools.git_current_branch import GitCurrentBranchTool
+from qgitc.agent.tool import ToolContext
+from qgitc.agent.tools.git_add import GitAddTool
 from qgitc.agent.tools.git_branch import GitBranchTool
 from qgitc.agent.tools.git_checkout import GitCheckoutTool
 from qgitc.agent.tools.git_cherry_pick import GitCherryPickTool
 from qgitc.agent.tools.git_commit import GitCommitTool
-from qgitc.agent.tools.git_add import GitAddTool
+from qgitc.agent.tools.git_current_branch import GitCurrentBranchTool
 
 
 def _make_context(working_directory="/tmp/repo"):
@@ -363,7 +363,7 @@ class TestGitAddTool(unittest.TestCase):
 
 
 class TestRunGitHelper(unittest.TestCase):
-    @patch("qgitc.agent.tools._utils.runGit")
+    @patch("qgitc.agent.tools.utils.runGit")
     def test_success(self, mock_run_git):
         mock_run_git.return_value = (True, "output\n", "")
         from qgitc.agent.tools.utils import run_git
@@ -371,7 +371,7 @@ class TestRunGitHelper(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(out, "output")
 
-    @patch("qgitc.agent.tools._utils.runGit")
+    @patch("qgitc.agent.tools.utils.runGit")
     def test_failure_with_stderr(self, mock_run_git):
         mock_run_git.return_value = (False, "", "fatal: error\n")
         from qgitc.agent.tools.utils import run_git
@@ -379,7 +379,7 @@ class TestRunGitHelper(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("fatal: error", out)
 
-    @patch("qgitc.agent.tools._utils.runGit", side_effect=Exception("boom"))
+    @patch("qgitc.agent.tools.utils.runGit", side_effect=Exception("boom"))
     def test_exception(self, mock_run_git):
         from qgitc.agent.tools.utils import run_git
         with self.assertRaises(Exception):
