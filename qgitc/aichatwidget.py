@@ -686,14 +686,20 @@ class AiChatWidget(QWidget):
         if self._titleGenerator:
             self._titleGenerator.cancel()
 
-        self._resetAgentLoop()
-
+        models: List[AiModelBase] = []
         for i in range(self._contextPanel.cbBots.count()):
             model = self._contextPanel.cbBots.itemData(i)
-            if not isinstance(model, AiModelBase):
-                continue
+            if isinstance(model, AiModelBase):
+                models.append(model)
+
+        # Unblock any in-flight provider stream before waiting on AgentLoop.
+        for model in models:
             if model.isRunning():
                 model.requestInterruption()
+
+        self._resetAgentLoop()
+
+        for model in models:
             model.cleanup()
 
         if self._codeReviewExecutor:

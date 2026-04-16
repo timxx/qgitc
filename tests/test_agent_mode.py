@@ -69,6 +69,56 @@ class TestAgentMode(TestBase):
         self.assertIsNone(self.chatWidget._agentLoop)
         self.assertIsNone(self.chatWidget._toolRegistry)
 
+    def test_query_close_interrupts_model_before_waiting_for_agent_loop(self):
+        events = []
+
+        class _Sig(object):
+            def connect(self, _slot):
+                pass
+
+            def disconnect(self, _slot):
+                pass
+
+        class _FakeLoop(object):
+            def __init__(self):
+                self.textDelta = _Sig()
+                self.reasoningDelta = _Sig()
+                self.toolCallStart = _Sig()
+                self.toolCallResult = _Sig()
+                self.turnComplete = _Sig()
+                self.agentFinished = _Sig()
+                self.permissionRequired = _Sig()
+                self.errorOccurred = _Sig()
+
+            def abort(self):
+                events.append("loop.abort")
+
+            def wait(self, _ms):
+                events.append("loop.wait")
+                return True
+
+        fakeLoop = _FakeLoop()
+        self.chatWidget._agentLoop = fakeLoop
+        self.chatWidget._toolRegistry = MagicMock()
+
+        model = self.chatWidget.currentChatModel()
+        model.isRunning.return_value = True
+        model.requestInterruption.side_effect = lambda: events.append(
+            "model.requestInterruption")
+        model.cleanup.side_effect = lambda: events.append("model.cleanup")
+
+        self.chatWidget.queryClose()
+
+        self.assertEqual(
+            events,
+            [
+                "model.requestInterruption",
+                "loop.abort",
+                "loop.wait",
+                "model.cleanup",
+            ],
+        )
+
     def test_tool_registry_includes_builtin_tools(self):
         """Registry built by the widget should include builtin tools."""
         registry = self.chatWidget._buildToolRegistry()
