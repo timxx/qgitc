@@ -753,6 +753,10 @@ class AiChatWidget(QWidget):
         self._contextPanel.clear()
 
     def _onButtonStop(self):
+        model = self._contextPanel.cbBots.currentData()
+        if isinstance(model, AiModelBase):
+            model.requestInterruption()
+
         if self._agentLoop is not None:
             self._agentLoop.abort()
 
