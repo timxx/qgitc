@@ -597,3 +597,20 @@ class TestDiffFetcherBugHunting(unittest.TestCase):
 
         self.assertNotIn('dst.txt', fileItems3)
         self.assertEqual(self.stateChanges, [])
+
+    def test_new_submodule_state_is_added(self):
+        """
+        BUG SCENARIO: A new submodule appears as:
+            Submodule test/submodule 0000000...67508f8 (new submodule)
+        Expected: FileState should be Added.
+        """
+        diff_data = b'\x00'.join([
+            b'Submodule test/submodule 0000000...67508f8 (new submodule)',
+            b'\x00'
+        ])
+
+        lineItems, fileItems = self._parse(diff_data)
+
+        self.assertIsNotNone(fileItems)
+        self.assertIn('test/submodule', fileItems)
+        self.assertEqual(fileItems['test/submodule'].state, FileState.Added)

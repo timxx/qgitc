@@ -110,8 +110,11 @@ class DiffFetcher(DataFetcher):
 
                 submodule = match.group(1)
                 lineItems.append((DiffType.File, submodule))
-                fileItems[submodule.decode(
-                    diff_encoding)] = FileInfo(self._row)
+                submoduleStr = submodule.decode(diff_encoding)
+                fileItems[submoduleStr] = FileInfo(self._row)
+                if b"(new submodule)" in line:
+                    fileItems[submoduleStr].state = FileState.Added
+                    self._fileStates[submoduleStr] = FileState.Added
                 self._row += 1
 
                 lineItems.append((DiffType.FileInfo, line))
