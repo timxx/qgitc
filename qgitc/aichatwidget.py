@@ -952,7 +952,7 @@ class AiChatWidget(QWidget):
     def _ensureSkillRegistry(self):
         # type: () -> SkillRegistry
         if self._skillRegistry is None:
-            self._skillRegistry = load_skill_registry(cwd=".")
+            self._skillRegistry = load_skill_registry(cwd=self._repoDir or ".")
         return self._skillRegistry
 
     def _connectAgentLoop(self, loop):
