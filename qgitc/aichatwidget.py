@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from PySide6.QtCore import (
     QEvent,
@@ -40,7 +40,6 @@ from qgitc.agent import (
     create_permission_engine,
     history_dicts_to_messages,
     load_skill_registry,
-    messages_to_history_dicts,
     register_builtin_tools,
 )
 from qgitc.agent.tool import ToolType
@@ -952,10 +951,10 @@ class AiChatWidget(QWidget):
     def _ensureSkillRegistry(self):
         # type: () -> SkillRegistry
         if self._skillRegistry is None:
-            self._skillRegistry = load_skill_registry(cwd=self._repoDir or ".")
+            self._skillRegistry = load_skill_registry(cwd=Git.REPO_DIR or ".")
         return self._skillRegistry
 
-    def _connectAgentLoop(self, loop):
+    def _connectAgentLoop(self, loop: AgentLoop):
         loop.textDelta.connect(self._onAgentTextDelta)
         loop.reasoningDelta.connect(self._onAgentReasoningDelta)
         loop.toolCallStart.connect(self._onAgentToolCallStart)
