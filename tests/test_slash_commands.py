@@ -6,7 +6,7 @@ from PySide6.QtCore import QPoint, QRect, QSize
 from PySide6.QtTest import QSignalSpy
 
 from qgitc.agent.slash_commands import CommandRegistry
-from qgitc.slash_command_popup import SlashCommandPopup
+from qgitc.slash_command_popup import SlashCommandItemDelegate, SlashCommandPopup
 from tests.base import TestBase
 
 
@@ -125,6 +125,51 @@ class TestSlashCommandPopup(TestBase):
         pos = SlashCommandPopup.computePopupPos(anchor, popupSize, bounds)
 
         self.assertEqual(pos.x(), bounds.left())
+
+    def test_popup_item_text_includes_description(self):
+        popup = SlashCommandPopup()
+        popup.setCommands([
+            _DummyCommand("review", description="Review changes quickly"),
+        ])
+
+        item = popup._list.item(0)
+        self.assertIsNotNone(item)
+        self.assertEqual(item.text(), "/review - Review changes quickly")
+
+    def test_popup_item_text_elides_and_respects_max_width(self):
+        popup = SlashCommandPopup()
+        longDesc = "This description is intentionally very long to verify that it is elided on the right when it exceeds popup width"
+        popup.setCommands([
+            _DummyCommand("review", description=longDesc),
+        ])
+
+        item = popup._list.item(0)
+        self.assertIsNotNone(item)
+        text = item.text()
+        self.assertTrue(text.startswith("/review - "))
+        self.assertNotIn(longDesc, text)
+        self.assertLessEqual(popup.width(), popup.MAX_WIDTH)
+
+    def test_popup_uses_delegate_for_bold_command_part(self):
+        popup = SlashCommandPopup()
+        self.assertIsInstance(popup._list.itemDelegate(), SlashCommandItemDelegate)
+
+    def test_popup_height_reduces_for_few_items(self):
+        popup = SlashCommandPopup()
+        popup.setCommands([_DummyCommand("only")])
+        shortHeight = popup.height()
+
+        popup.setCommands([
+            _DummyCommand("one"),
+            _DummyCommand("two"),
+            _DummyCommand("three"),
+            _DummyCommand("four"),
+            _DummyCommand("five"),
+            _DummyCommand("six"),
+        ])
+        tallHeight = popup.height()
+
+        self.assertLess(shortHeight, tallHeight)
 
 
 if __name__ == "__main__":
