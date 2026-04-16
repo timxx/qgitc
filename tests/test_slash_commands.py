@@ -2,6 +2,7 @@
 
 import unittest
 
+from PySide6.QtCore import QPoint, QRect, QSize
 from PySide6.QtTest import QSignalSpy
 
 from qgitc.agent.slash_commands import CommandRegistry
@@ -106,6 +107,24 @@ class TestSlashCommandPopup(TestBase):
 
         self.assertEqual(spy.count(), 1)
         self.assertEqual(spy.at(0)[0].name, "review")
+
+    def test_compute_popup_pos_flips_above_when_no_space_below(self):
+        anchor = QPoint(200, 585)
+        popupSize = QSize(120, 80)
+        bounds = QRect(0, 0, 800, 600)
+
+        pos = SlashCommandPopup.computePopupPos(anchor, popupSize, bounds)
+
+        self.assertLess(pos.y(), anchor.y())
+
+    def test_compute_popup_pos_clamps_to_screen_left(self):
+        anchor = QPoint(-10, 50)
+        popupSize = QSize(120, 80)
+        bounds = QRect(0, 0, 800, 600)
+
+        pos = SlashCommandPopup.computePopupPos(anchor, popupSize, bounds)
+
+        self.assertEqual(pos.x(), bounds.left())
 
 
 if __name__ == "__main__":

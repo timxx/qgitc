@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
+
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.aichatedit import AiChatEdit
 from tests.base import TestBase
@@ -66,3 +69,17 @@ class TestAiChatEditSlashCommands(TestBase):
         self.processEvents()
 
         self.assertEqual(self.widget.toPlainText(), "/review ")
+
+    def test_popup_allows_typing_when_visible(self):
+        self.widget.edit.setPlainText("/")
+        cursor = self.widget.edit.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        self.widget.edit.setTextCursor(cursor)
+        self.processEvents()
+
+        self.assertTrue(self.widget._slashCommandPopup.isVisible())
+
+        QTest.keyClick(self.widget._slashCommandPopup, Qt.Key_R)
+        self.processEvents()
+
+        self.assertEqual(self.widget.toPlainText(), "/r")

@@ -70,6 +70,7 @@ class AiChatEdit(QWidget):
     def _ensureSlashCommandPopup(self) -> SlashCommandPopup:
         if self._slashCommandPopup is None:
             self._slashCommandPopup = SlashCommandPopup(self)
+            self._slashCommandPopup.setKeyTarget(self.edit)
             self._slashCommandPopup.commandSelected.connect(
                 self._onSlashCommandSelected)
         return self._slashCommandPopup
@@ -118,6 +119,7 @@ class AiChatEdit(QWidget):
         cursor_rect = self.edit.cursorRect()
         pos = self.edit.mapToGlobal(cursor_rect.bottomLeft())
         popup.showAt(pos)
+        self.edit.setFocus()
 
     def _onSlashCommandSelected(self, command: SlashCommand):
         self.edit.setPlainText("/{} ".format(command.name))

@@ -2,8 +2,15 @@
 
 from typing import List, Optional
 
-from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QGuiApplication, QKeyEvent
+from PySide6.QtWidgets import (
+    QApplication,
+    QListWidget,
+    QListWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 from qgitc.agent.slash_commands import SlashCommand
 
@@ -15,13 +22,18 @@ class SlashCommandPopup(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowFlags(Qt.Popup | Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowDoesNotAcceptFocus, True)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self.setFocusPolicy(Qt.NoFocus)
 
         self._commands = []  # type: List[SlashCommand]
+        self._keyTarget = None  # type: Optional[QWidget]
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self._list = QListWidget(self)
+        self._list.setFocusPolicy(Qt.NoFocus)
         self._list.setSelectionMode(QListWidget.SingleSelection)
         self._list.itemClicked.connect(self._onItemClicked)
         self._list.itemActivated.connect(self._onItemClicked)
@@ -72,9 +84,39 @@ class SlashCommandPopup(QWidget):
         if cmd is not None:
             self.commandSelected.emit(cmd)
 
+    def setKeyTarget(self, target: QWidget) -> None:
+        self._keyTarget = target
+
     def showAt(self, pos: QPoint) -> None:
-        self.move(pos)
+        popupSize = self.sizeHint()
+        if popupSize.width() <= 0 or popupSize.height() <= 0:
+            popupSize = QSize(max(200, self.width()), max(100, self.height()))
+
+        screen = QGuiApplication.screenAt(pos)
+        if screen is None:
+            screen = QGuiApplication.primaryScreen()
+        bounds = screen.availableGeometry() if screen is not None else QRect(0, 0, 1920, 1080)
+
+        self.move(self.computePopupPos(pos, popupSize, bounds))
         self.show()
+
+    @staticmethod
+    def computePopupPos(anchorPos: QPoint, popupSize: QSize, bounds: QRect) -> QPoint:
+        x = anchorPos.x()
+        y = anchorPos.y()
+
+        if y + popupSize.height() > bounds.bottom():
+            y = anchorPos.y() - popupSize.height()
+
+        if x + popupSize.width() > bounds.right():
+            x = bounds.right() - popupSize.width()
+
+        if x < bounds.left():
+            x = bounds.left()
+        if y < bounds.top():
+            y = bounds.top()
+
+        return QPoint(x, y)
 
     def _onItemClicked(self, item: QListWidgetItem) -> None:
         name = item.data(Qt.UserRole)
@@ -82,3 +124,18 @@ class SlashCommandPopup(QWidget):
             if cmd.name == name:
                 self.commandSelected.emit(cmd)
                 return
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if self._keyTarget is not None:
+            forwarded = QKeyEvent(
+                event.type(),
+                event.key(),
+                event.modifiers(),
+                event.text(),
+                event.isAutoRepeat(),
+                event.count(),
+            )
+            self._keyTarget.setFocus()
+            QApplication.sendEvent(self._keyTarget, forwarded)
+            return
+        super().keyPressEvent(event)
