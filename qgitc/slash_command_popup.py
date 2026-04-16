@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 from qgitc.agent.slash_commands import SlashCommand
@@ -71,6 +71,10 @@ class SlashCommandPopup(QWidget):
         cmd = self.currentCommand()
         if cmd is not None:
             self.commandSelected.emit(cmd)
+
+    def showAt(self, pos: QPoint) -> None:
+        self.move(pos)
+        self.show()
 
     def _onItemClicked(self, item: QListWidgetItem) -> None:
         name = item.data(Qt.UserRole)
