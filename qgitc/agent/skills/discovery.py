@@ -6,7 +6,6 @@ from qgitc.agent.skills.loader import load_skills_from_directory
 from qgitc.agent.skills.registry import SkillRegistry
 
 _SKILL_SUBDIRS = (
-    ".qgitc/skills",
     ".claude/skills",
     ".agents/skills",
     ".github/skills",
@@ -15,18 +14,9 @@ _SKILL_SUBDIRS = (
 )
 
 
-def load_skill_registry(cwd, home_directory=None, additional_directories=None):
-    # type: (str, object, object) -> SkillRegistry
-    if home_directory is None:
-        home_directory = Path.home()
-
+def load_skill_registry(cwd, additional_directories=None):
+    # type: (str, list[str]) -> SkillRegistry
     registry = SkillRegistry()
-
-    for subdir in _SKILL_SUBDIRS:
-        user_skills_dir = Path(home_directory) / subdir
-        for skill in load_skills_from_directory(str(user_skills_dir)):
-            skill.source = "userSettings"
-            registry.register(skill)
 
     for subdir in _SKILL_SUBDIRS:
         project_skills_dir = Path(cwd) / subdir

@@ -37,52 +37,56 @@ class TestLoadSkillRegistry(unittest.TestCase):
             encoding="utf-8",
         )
 
-    def test_loads_from_multiple_subdirs(self):
-        with tempfile.TemporaryDirectory() as home_td, tempfile.TemporaryDirectory() as proj_td:
-            home = Path(home_td)
+    def test_loads_from_project_subdirs_only(self):
+        with tempfile.TemporaryDirectory() as proj_td:
             proj = Path(proj_td)
 
-            # Put a skill in each location
-            self._write_skill(home / ".qgitc" / "skills", "sk1", "sk1", "Skill 1")
-            self._write_skill(home / ".claude" / "skills", "sk2", "sk2", "Skill 2")
-            self._write_skill(proj / ".agents" / "skills", "sk3", "sk3", "Skill 3")
-            self._write_skill(proj / ".github" / "skills", "sk4", "sk4", "Skill 4")
-            self._write_skill(proj / ".codex" / "skills", "sk5", "sk5", "Skill 5")
-            self._write_skill(proj / ".cursor" / "skills", "sk6", "sk6", "Skill 6")
+            self._write_skill(proj / ".claude" / "skills", "sk1", "sk1", "Skill 1")
+            self._write_skill(proj / ".agents" / "skills", "sk2", "sk2", "Skill 2")
+            self._write_skill(proj / ".github" / "skills", "sk3", "sk3", "Skill 3")
+            self._write_skill(proj / ".codex" / "skills", "sk4", "sk4", "Skill 4")
+            self._write_skill(proj / ".cursor" / "skills", "sk5", "sk5", "Skill 5")
 
-            registry = load_skill_registry(
-                cwd=str(proj), home_directory=str(home)
-            )
+            registry = load_skill_registry(cwd=str(proj))
             names = {s.name for s in registry.list_skills()}
             self.assertIn("sk1", names)
             self.assertIn("sk2", names)
             self.assertIn("sk3", names)
             self.assertIn("sk4", names)
             self.assertIn("sk5", names)
-            self.assertIn("sk6", names)
 
-    def test_user_skills_source_tag(self):
+    def test_home_directory_skills_are_not_loaded(self):
         with tempfile.TemporaryDirectory() as home_td, tempfile.TemporaryDirectory() as proj_td:
             home = Path(home_td)
             proj = Path(proj_td)
-            self._write_skill(home / ".qgitc" / "skills", "user_sk", "user_sk")
+            # Put skills only in home directory locations
+            self._write_skill(home / ".claude" / "skills", "home_sk", "home_sk")
+
+            # load_skill_registry no longer accepts/uses home_directory
+            registry = load_skill_registry(cwd=str(proj))
+            names = {s.name for s in registry.list_skills()}
+            self.assertNotIn("home_sk", names)
+            self.assertNotIn("home_qgitc_sk", names)
+
+    def test_project_skills_source_tag(self):
+        with tempfile.TemporaryDirectory() as proj_td:
+            proj = Path(proj_td)
             self._write_skill(proj / ".claude" / "skills", "proj_sk", "proj_sk")
-            registry = load_skill_registry(cwd=str(proj), home_directory=str(home))
-            self.assertEqual(registry.get("user_sk").source, "userSettings")
+            registry = load_skill_registry(cwd=str(proj))
             self.assertEqual(registry.get("proj_sk").source, "projectSettings")
 
-    def test_project_skill_overrides_user_skill(self):
-        with tempfile.TemporaryDirectory() as home_td, tempfile.TemporaryDirectory() as proj_td:
-            home = Path(home_td)
+    def test_project_skill_overrides_earlier_skill_same_name(self):
+        # Two different project dirs with the same skill name; the later one wins
+        with tempfile.TemporaryDirectory() as proj_td:
             proj = Path(proj_td)
-            # Same skill name in both user and project locations
-            self._write_skill(home / ".qgitc" / "skills", "review", "review", "User description")
-            self._write_skill(proj / ".qgitc" / "skills", "review", "review", "Project description")
-            registry = load_skill_registry(cwd=str(proj), home_directory=str(home))
+            # .claude loaded before .github alphabetically by _SKILL_SUBDIRS order
+            self._write_skill(proj / ".claude" / "skills", "review", "review", "Claude description")
+            self._write_skill(proj / ".github" / "skills", "review", "review", "GitHub description")
+            registry = load_skill_registry(cwd=str(proj))
             skill = registry.get("review")
             self.assertIsNotNone(skill)
-            self.assertEqual(skill.source, "projectSettings")
-            self.assertEqual(skill.description, "Project description")
+            # .github comes after .claude in _SKILL_SUBDIRS so it overrides
+            self.assertEqual(skill.description, "GitHub description")
 
 
 if __name__ == "__main__":
