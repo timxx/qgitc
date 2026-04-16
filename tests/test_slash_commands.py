@@ -2,7 +2,11 @@
 
 import unittest
 
+from PySide6.QtTest import QSignalSpy
+
 from qgitc.agent.slash_commands import CommandRegistry
+from qgitc.slash_command_popup import SlashCommandPopup
+from tests.base import TestBase
 
 
 class _DummyCommand:
@@ -59,6 +63,49 @@ class TestCommandRegistry(unittest.TestCase):
 
         self.assertIs(registry.find("r"), cmd)
         self.assertIs(registry.find("rv"), cmd)
+
+
+class TestSlashCommandPopup(TestBase):
+
+    def doCreateRepo(self):
+        pass
+
+    def test_popup_set_commands(self):
+        popup = SlashCommandPopup()
+        popup.setCommands([
+            _DummyCommand("review", description="Review changes"),
+            _DummyCommand("plan", description="Plan tasks"),
+        ])
+
+        self.assertEqual(popup.commandCount(), 2)
+        self.assertEqual(popup.currentCommand().name, "review")
+
+    def test_popup_select_next_and_previous(self):
+        popup = SlashCommandPopup()
+        popup.setCommands([
+            _DummyCommand("review"),
+            _DummyCommand("plan"),
+            _DummyCommand("tests"),
+        ])
+
+        popup.selectNext()
+        self.assertEqual(popup.currentCommand().name, "plan")
+
+        popup.selectNext()
+        self.assertEqual(popup.currentCommand().name, "tests")
+
+        popup.selectPrevious()
+        self.assertEqual(popup.currentCommand().name, "plan")
+
+    def test_popup_activate_current_emits_selected(self):
+        popup = SlashCommandPopup()
+        popup.setCommands([_DummyCommand("review")])
+        spy = QSignalSpy(popup.commandSelected)
+
+        popup.activateCurrent()
+
+        self.assertEqual(spy.count(), 1)
+        self.assertEqual(spy.at(0)[0].name, "review")
 
 
 if __name__ == "__main__":
