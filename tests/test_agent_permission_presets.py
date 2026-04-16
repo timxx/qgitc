@@ -2,8 +2,8 @@
 
 import unittest
 
-from qgitc.agent.permissions import PermissionAllow, PermissionAsk
 from qgitc.agent.permission_presets import create_permission_engine
+from qgitc.agent.permissions import PermissionAllow, PermissionAsk
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 
 

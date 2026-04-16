@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-
 from typing import Any, Dict
 
-from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.permissions import (
     PermissionAllow,
     PermissionAsk,
@@ -14,7 +12,7 @@ from qgitc.agent.permissions import (
     PermissionRule,
     PermissionUpdate,
 )
-
+from qgitc.agent.tool import Tool, ToolContext, ToolResult
 
 # ---------------------------------------------------------------------------
 # Stub tools

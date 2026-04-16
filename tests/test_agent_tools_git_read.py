@@ -4,11 +4,11 @@ import unittest
 from unittest.mock import patch
 
 from qgitc.agent.tool import ToolContext, ToolResult
-from qgitc.agent.tools.git_log import GitLogTool
 from qgitc.agent.tools.git_diff import GitDiffTool
-from qgitc.agent.tools.git_diff_unstaged import GitDiffUnstagedTool
-from qgitc.agent.tools.git_diff_staged import GitDiffStagedTool
 from qgitc.agent.tools.git_diff_range import GitDiffRangeTool
+from qgitc.agent.tools.git_diff_staged import GitDiffStagedTool
+from qgitc.agent.tools.git_diff_unstaged import GitDiffUnstagedTool
+from qgitc.agent.tools.git_log import GitLogTool
 
 
 def _ctx(wd="/fake/repo"):

@@ -4,10 +4,10 @@ import unittest
 from unittest.mock import patch
 
 from qgitc.agent.tool import ToolContext, ToolResult
+from qgitc.agent.tools.git_blame import GitBlameTool
 from qgitc.agent.tools.git_show import GitShowTool
 from qgitc.agent.tools.git_show_file import GitShowFileTool
 from qgitc.agent.tools.git_show_index_file import GitShowIndexFileTool
-from qgitc.agent.tools.git_blame import GitBlameTool
 
 
 def _make_context(working_directory="/fake/repo"):

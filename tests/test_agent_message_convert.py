@@ -2,6 +2,10 @@
 
 import unittest
 
+from qgitc.agent.message_convert import (
+    history_dicts_to_messages,
+    messages_to_history_dicts,
+)
 from qgitc.agent.types import (
     AssistantMessage,
     SystemMessage,
@@ -10,10 +14,6 @@ from qgitc.agent.types import (
     ToolResultBlock,
     ToolUseBlock,
     UserMessage,
-)
-from qgitc.agent.message_convert import (
-    history_dicts_to_messages,
-    messages_to_history_dicts,
 )
 
 
