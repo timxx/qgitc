@@ -34,9 +34,12 @@ def _prepare_block_execution(
     context: ToolContext,
     is_aborted: Callable[[], bool],
     request_permission: Callable[[str, object, dict], bool],
-) -> Optional[_PreparedExecution]:
+) -> _PreparedExecution:
     if is_aborted():
-        return None
+        return _PreparedExecution(
+            block=block,
+            immediate_result=_build_error_result(block.id, "Tool execution aborted"),
+        )
 
     allowed_tools = context.extra.get("tool_allowed_tools")
     if (
@@ -108,8 +111,6 @@ def _execute_one_block(
         is_aborted,
         request_permission,
     )
-    if prepared is None:
-        return None
 
     if prepared.immediate_result is not None:
         on_tool_result(block.id, prepared.immediate_result.content, True)
@@ -141,9 +142,6 @@ def execute_tool_blocks(
     ordered_results: List[ToolResultBlock] = []
 
     for batch in batches:
-        if is_aborted():
-            return None
-
         if batch.is_parallel and len(batch.blocks) > 1:
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 parallel_futures: List[Optional[Future]] = []
@@ -156,8 +154,6 @@ def execute_tool_blocks(
                         is_aborted,
                         request_permission,
                     )
-                    if prepared is None:
-                        return None
 
                     if prepared.immediate_result is not None:
                         on_tool_result(
@@ -185,9 +181,6 @@ def execute_tool_blocks(
                     )
 
                 for future in parallel_futures:
-                    if future is None:
-                        continue
-
                     result = future.result()
                     on_tool_result(result.tool_use_id, result.content, result.is_error)
                     ordered_results.append(result)
@@ -203,9 +196,8 @@ def execute_tool_blocks(
                     on_tool_start,
                     on_tool_result,
                 )
-                if result is None:
-                    return None
-                ordered_results.append(result)
+                if result is not None:
+                    ordered_results.append(result)
 
     return ordered_results
 

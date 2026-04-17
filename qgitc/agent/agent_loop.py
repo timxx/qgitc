@@ -208,12 +208,12 @@ class AgentLoop(QThread):
 
             # Execute tools
             tool_results = self._execute_tool_blocks(tool_blocks)
-            if tool_results is None:
-                return  # aborted
 
-            self._messages.append(
-                UserMessage(content=tool_results)
-            )
+            # Always append tool results, even if aborted (might have partial results)
+            if tool_results:
+                self._messages.append(
+                    UserMessage(content=tool_results)
+                )
 
     def _stream_response(self, provider, tool_schemas):
         # type: (ModelProvider, Optional[List[Dict[str, Any]]]) -> Optional[AssistantMessage]
@@ -283,8 +283,6 @@ class AgentLoop(QThread):
     def _execute_tool_blocks(self, tool_blocks):
         # type: (List[ToolUseBlock]) -> Optional[List[ToolResultBlock]]
         """Execute tool calls, respecting permissions."""
-        aborted_during_permission = {"value": False}
-
         if self._params is not None:
             self._context_extra_state["skill_registry"] = self._params.skill_registry
 
@@ -299,7 +297,6 @@ class AgentLoop(QThread):
             self._perm_mutex.unlock()
 
             if self._abort_flag:
-                aborted_during_permission["value"] = True
                 return False
 
             return self._perm_decisions.get(tool_call_id, False)
@@ -330,8 +327,5 @@ class AgentLoop(QThread):
             on_tool_start=on_tool_start,
             on_tool_result=on_tool_result,
         )
-
-        if self._abort_flag or aborted_during_permission["value"]:
-            return None
 
         return results

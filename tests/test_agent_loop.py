@@ -147,6 +147,45 @@ class AskPermissionToolCallProvider(ModelProvider):
         return 10
 
 
+class MultipleToolsWithDelaysProvider(ModelProvider):
+    """Yields multiple concurrent tools with different delays."""
+
+    def __init__(self):
+        self._call_count = 0
+
+    def stream(self, messages, tools=None,
+               model=None, max_tokens=4096):
+        # type: (...) -> Iterator[StreamEvent]
+        self._call_count += 1
+        if self._call_count == 1:
+            # First tool: quick read-only (finishes fast)
+            yield ToolCallDelta(
+                id="multi_1",
+                name="sleep_echo",
+                arguments_delta='{"text":"first","delay":0.01}',
+            )
+            # Second tool: slower read-only (medium delay)
+            yield ToolCallDelta(
+                id="multi_2",
+                name="sleep_echo",
+                arguments_delta='{"text":"second","delay":0.1}',
+            )
+            # Third tool: write tool (requires permission)
+            yield ToolCallDelta(
+                id="multi_3",
+                name="write_echo",
+                arguments_delta='{"text":"third"}',
+            )
+            yield MessageComplete(stop_reason="tool_use")
+        else:
+            yield ContentDelta(text="all tools completed")
+            yield MessageComplete(stop_reason="end_turn")
+
+    def count_tokens(self, messages, system_prompt=None, tools=None):
+        # type: (...) -> int
+        return 10
+
+
 class ErrorProvider(ModelProvider):
     """Raises an exception from stream()."""
 
@@ -446,7 +485,55 @@ class TestAgentLoopToolExecution(TestBase):
         self.assertEqual(tool_result_spy.count(), 0)
         self.assertEqual(text_spy.count(), 0)
         self.assertEqual(provider.call_count, 1)
-        self.assertEqual(len(loop.messages()), 2)
+
+        msgs = loop.messages()
+        self.assertEqual(len(msgs), 3)
+        self.assertIsInstance(msgs[2], UserMessage)
+        self.assertEqual(len(msgs[2].content), 1)
+        self.assertEqual(msgs[2].content[0].tool_use_id, "ask_1")
+        self.assertEqual(msgs[2].content[0].content, "Tool execution denied by user")
+        self.assertTrue(msgs[2].content[0].is_error)
+
+        loop.wait(3000)
+
+    def test_abort_during_concurrent_tools_preserves_partial_results(self):
+        # Comprehensive test: multiple concurrent tools with different states when abort occurs
+        registry = ToolRegistry()
+        registry.register(SleepEchoTool())
+        registry.register(WriteEchoTool())
+        provider = MultipleToolsWithDelaysProvider()
+        loop = _make_loop(provider, registry=registry)
+        params = _make_params(provider)
+
+        permission_spy = QSignalSpy(loop.permissionRequired)
+        tool_result_spy = QSignalSpy(loop.toolCallResult)
+        finished_spy = QSignalSpy(loop.agentFinished)
+        
+        # Auto-approve permission requests so all tools can execute
+        loop.permissionRequired.connect(lambda tool_call_id, tool, tool_input: loop.approve_tool(tool_call_id))
+
+        loop.submit("Run multiple tools", params)
+        # Wait for tools to start executing
+        waitFor(self.app, lambda: tool_result_spy.count() >= 1)
+        # Abort while some tools are still running
+        loop.abort()
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        msgs = loop.messages()
+        # Must have at least 3 messages: user input, assistant (tool calls), tool results
+        self.assertGreaterEqual(len(msgs), 3)
+        
+        # Last message should be UserMessage with tool results (not dropped even though aborted)
+        self.assertIsInstance(msgs[-1], UserMessage)
+        
+        # Should have at least some tool result blocks from tools that did complete before abort
+        tool_results = msgs[-1].content
+        self.assertGreater(len(tool_results), 0, "Tool results should be preserved even after abort")
+        
+        # Each result should be a ToolResultBlock with tool_use_id
+        for result_block in tool_results:
+            self.assertTrue(hasattr(result_block, 'tool_use_id'))
+            self.assertIn(result_block.tool_use_id, ["multi_1", "multi_2", "multi_3"])
 
         loop.wait(3000)
 
