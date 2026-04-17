@@ -26,6 +26,17 @@ class SkillTool(Tool):
             return content + "\n\nARGUMENTS: {}".format(args)
         return replaced
 
+    def _render_skill_content(self, skill_content: str, args: str, skill_root: str) -> str:
+        skill_dir = skill_root.replace("\\", "/") if skill_root else None
+        content = skill_content
+        if skill_dir:
+            content = f"Base dictory for this skill: {skill_dir}\n\n{content}"
+
+        content = self._substitute_arguments(content, args)
+        if skill_dir:
+            content = content.replace("${CLAUDE_SKILL_DIR}", skill_dir)
+        return content
+
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         skill_name = (input_data.get("skill") or "").strip()
         args = input_data.get("args") or ""
@@ -50,15 +61,7 @@ class SkillTool(Tool):
                 is_error=True,
             )
 
-        content = self._substitute_arguments(skill.content, args)
-
-        # Keep common substitutions to align with external skill format conventions.
-        if skill.skill_root:
-            normalized_root = skill.skill_root.replace("\\", "/")
-            content = content.replace("${CLAUDE_SKILL_DIR}", normalized_root)
-        session_id = context.extra.get("session_id") if context.extra else None
-        if session_id:
-            content = content.replace("${CLAUDE_SESSION_ID}", str(session_id))
+        content = self._render_skill_content(skill.content, args, skill.skill_root)
 
         if skill.allowed_tools:
             context.extra["tool_allowed_tools"] = list(skill.allowed_tools)
