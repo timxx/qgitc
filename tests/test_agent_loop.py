@@ -85,6 +85,37 @@ class ToolCallProvider(ModelProvider):
         return 10
 
 
+class TwoReadOnlyToolCallsProvider(ModelProvider):
+    """First call yields two tool calls, second call yields text."""
+
+    def __init__(self):
+        self._call_count = 0
+
+    def stream(self, messages, tools=None,
+               model=None, max_tokens=4096):
+        # type: (...) -> Iterator[StreamEvent]
+        self._call_count += 1
+        if self._call_count == 1:
+            yield ToolCallDelta(
+                id="c1",
+                name="sleep_echo",
+                arguments_delta='{"text":"first","delay":0.05}',
+            )
+            yield ToolCallDelta(
+                id="c2",
+                name="sleep_echo",
+                arguments_delta='{"text":"second","delay":0.01}',
+            )
+            yield MessageComplete(stop_reason="tool_use")
+        else:
+            yield ContentDelta(text="done")
+            yield MessageComplete(stop_reason="end_turn")
+
+    def count_tokens(self, messages, system_prompt=None, tools=None):
+        # type: (...) -> int
+        return 10
+
+
 class ErrorProvider(ModelProvider):
     """Raises an exception from stream()."""
 
@@ -121,6 +152,32 @@ class EchoTool(Tool):
             "type": "object",
             "properties": {
                 "text": {"type": "string"},
+            },
+        }
+
+
+class SleepEchoTool(Tool):
+    name = "sleep_echo"
+    description = "Returns supplied text after an optional delay"
+
+    def is_read_only(self):
+        # type: () -> bool
+        return True
+
+    def execute(self, input_data, context):
+        # type: (Dict[str, Any], ToolContext) -> ToolResult
+        import time
+
+        time.sleep(float(input_data.get("delay", 0)))
+        return ToolResult(content=str(input_data.get("text", "")))
+
+    def input_schema(self):
+        # type: () -> Dict[str, Any]
+        return {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
+                "delay": {"type": "number"},
             },
         }
 
@@ -260,6 +317,39 @@ class TestAgentLoopToolExecution(TestBase):
         # UserMessage, AssistantMessage(tool_use), UserMessage(tool_result),
         # AssistantMessage(text)
         self.assertEqual(len(msgs), 4)
+
+    def test_two_read_only_tool_calls_emit_two_results_in_order(self):
+        registry = ToolRegistry()
+        registry.register(SleepEchoTool())
+        provider = TwoReadOnlyToolCallsProvider()
+        loop = _make_loop(provider, registry=registry)
+        params = _make_params(provider)
+
+        finished_spy = QSignalSpy(loop.agentFinished)
+        events = []
+
+        loop.toolCallStart.connect(lambda call_id, name, data: events.append(("start", call_id)))
+        loop.toolCallResult.connect(lambda call_id, content, is_error: events.append(("result", call_id, content, is_error)))
+
+        loop.submit("Run two tools", params)
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        result_events = [e for e in events if e[0] == "result"]
+        self.assertEqual([e[1] for e in result_events], ["c1", "c2"])
+        self.assertEqual([e[2] for e in result_events], ["first", "second"])
+        self.assertFalse(result_events[0][3])
+        self.assertFalse(result_events[1][3])
+
+        self.assertGreaterEqual(len(events), 4)
+        self.assertEqual(events[0], ("start", "c1"))
+        self.assertEqual(events[1], ("start", "c2"))
+        self.assertEqual(events[2][0], "result")
+        self.assertEqual(events[2][1], "c1")
+        self.assertEqual(events[3][0], "result")
+        self.assertEqual(events[3][1], "c2")
+
+        loop.abort()
+        loop.wait(3000)
 
 
 class TestAgentLoopSetMessages(TestBase):

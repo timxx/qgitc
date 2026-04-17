@@ -18,6 +18,7 @@ from qgitc.agent.provider import (
 )
 from qgitc.agent.skills.registry import SkillRegistry
 from qgitc.agent.tool import ToolContext, ToolResult
+from qgitc.agent.tool_executor import execute_tool_blocks
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import (
     AssistantMessage,
@@ -282,99 +283,55 @@ class AgentLoop(QThread):
     def _execute_tool_blocks(self, tool_blocks):
         # type: (List[ToolUseBlock]) -> Optional[List[ToolResultBlock]]
         """Execute tool calls, respecting permissions."""
-        results = []  # type: List[ToolResultBlock]
+        aborted_during_permission = {"value": False}
 
         if self._params is not None:
             self._context_extra_state["skill_registry"] = self._params.skill_registry
 
-        for block in tool_blocks:
+        def request_permission(tool_call_id, tool, tool_input):
+            # type: (str, object, Dict[str, Any]) -> bool
+            self.permissionRequired.emit(tool_call_id, tool, tool_input)
+
+            self._perm_mutex.lock()
+            while (tool_call_id not in self._perm_decisions
+                   and not self._abort_flag):
+                self._perm_cond.wait(self._perm_mutex)
+            self._perm_mutex.unlock()
+
             if self._abort_flag:
-                return None
+                aborted_during_permission["value"] = True
+                return False
 
-            allowed_tools = self._context_extra_state.get("tool_allowed_tools")
-            if (
-                isinstance(allowed_tools, list)
-                and allowed_tools
-                and block.name != "Skill"
-                and block.name not in allowed_tools
-            ):
-                message = "Tool '{}' is not allowed by active skill".format(
-                    block.name)
-                results.append(ToolResultBlock(
-                    tool_use_id=block.id,
-                    content=message,
-                    is_error=True,
-                ))
-                self.toolCallResult.emit(block.id, message, True)
-                continue
+            return self._perm_decisions.get(tool_call_id, False)
 
-            tool = self._tool_registry.get(block.name)
-            if tool is None:
-                results.append(ToolResultBlock(
-                    tool_use_id=block.id,
-                    content="Unknown tool: {}".format(block.name),
-                    is_error=True,
-                ))
-                self.toolCallResult.emit(
-                    block.id,
-                    "Unknown tool: {}".format(block.name),
-                    True,
-                )
-                continue
+        def on_tool_start(tool_call_id, tool_name, tool_input):
+            # type: (str, str, Dict[str, Any]) -> None
+            self.toolCallStart.emit(tool_call_id, tool_name, tool_input)
 
-            # Permission check
-            perm = self._permission_engine.check(tool, block.input)
-            if isinstance(perm, PermissionDeny):
-                results.append(ToolResultBlock(
-                    tool_use_id=block.id,
-                    content=perm.message,
-                    is_error=True,
-                ))
-                self.toolCallResult.emit(block.id, perm.message, True)
-                continue
+        def on_tool_result(tool_call_id, content, is_error):
+            # type: (str, str, bool) -> None
+            if self._abort_flag:
+                return
+            self.toolCallResult.emit(tool_call_id, content, is_error)
 
-            if isinstance(perm, PermissionAsk):
-                self.permissionRequired.emit(block.id, tool, block.input)
+        context = ToolContext(
+            working_directory=".",
+            abort_requested=lambda: self._abort_flag,
+            extra=self._context_extra_state,
+        )
 
-                # Wait for user decision
-                self._perm_mutex.lock()
-                while (block.id not in self._perm_decisions
-                       and not self._abort_flag):
-                    self._perm_cond.wait(self._perm_mutex)
-                self._perm_mutex.unlock()
+        results = execute_tool_blocks(
+            tool_blocks=tool_blocks,
+            registry=self._tool_registry,
+            permission_engine=self._permission_engine,
+            context=context,
+            is_aborted=lambda: self._abort_flag,
+            request_permission=request_permission,
+            on_tool_start=on_tool_start,
+            on_tool_result=on_tool_result,
+        )
 
-                if self._abort_flag:
-                    return None
-
-                if not self._perm_decisions.get(block.id, False):
-                    results.append(ToolResultBlock(
-                        tool_use_id=block.id,
-                        content="Tool execution denied by user",
-                        is_error=True,
-                    ))
-                    self.toolCallResult.emit(
-                        block.id, "Tool execution denied by user", True)
-                    continue
-
-            # Execute
-            self.toolCallStart.emit(block.id, block.name, block.input)
-            ctx = ToolContext(
-                working_directory=".",
-                abort_requested=lambda: self._abort_flag,
-                extra=self._context_extra_state,
-            )
-            try:
-                result = tool.execute(block.input, ctx)
-            except Exception as e:
-                logger.exception("Tool execution error: %s", block.name)
-                result = ToolResult(content=str(e), is_error=True)
-
-            results.append(ToolResultBlock(
-                tool_use_id=block.id,
-                content=result.content,
-                is_error=result.is_error,
-            ))
-            self.toolCallResult.emit(
-                block.id, result.content, result.is_error)
+        if self._abort_flag or aborted_during_permission["value"]:
+            return None
 
         return results
