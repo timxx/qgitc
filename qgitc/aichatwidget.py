@@ -779,6 +779,9 @@ class AiChatWidget(QWidget):
         model = self.currentChatModel()
         if model is None:
             return
+
+        self._onButtonStop()
+
         loop = self._ensureAgentLoop()
         params = self._buildQueryParams(chatMode)
 
@@ -1210,6 +1213,9 @@ class AiChatWidget(QWidget):
             self._loadMessagesFromHistory(chatHistory.messages, False)
 
     def _onEnterKeyPressed(self):
+        if self._agentLoop and self._agentLoop.isRunning():
+            return
+
         self._onButtonSend(False)
 
     def _onUsrInputTextChanged(self):
