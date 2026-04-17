@@ -116,6 +116,37 @@ class TwoReadOnlyToolCallsProvider(ModelProvider):
         return 10
 
 
+class AskPermissionToolCallProvider(ModelProvider):
+    """First call yields a write tool call, second call yields text."""
+
+    def __init__(self):
+        self._call_count = 0
+
+    @property
+    def call_count(self):
+        # type: () -> int
+        return self._call_count
+
+    def stream(self, messages, tools=None,
+               model=None, max_tokens=4096):
+        # type: (...) -> Iterator[StreamEvent]
+        self._call_count += 1
+        if self._call_count == 1:
+            yield ToolCallDelta(
+                id="ask_1",
+                name="write_echo",
+                arguments_delta='{"text":"ping"}',
+            )
+            yield MessageComplete(stop_reason="tool_use")
+        else:
+            yield ContentDelta(text="continuation after tool")
+            yield MessageComplete(stop_reason="end_turn")
+
+    def count_tokens(self, messages, system_prompt=None, tools=None):
+        # type: (...) -> int
+        return 10
+
+
 class ErrorProvider(ModelProvider):
     """Raises an exception from stream()."""
 
@@ -178,6 +209,24 @@ class SleepEchoTool(Tool):
             "properties": {
                 "text": {"type": "string"},
                 "delay": {"type": "number"},
+            },
+        }
+
+
+class WriteEchoTool(Tool):
+    name = "write_echo"
+    description = "Echoes supplied text as a write tool"
+
+    def execute(self, input_data, context):
+        # type: (Dict[str, Any], ToolContext) -> ToolResult
+        return ToolResult(content=str(input_data.get("text", "")))
+
+    def input_schema(self):
+        # type: () -> Dict[str, Any]
+        return {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string"},
             },
         }
 
@@ -349,6 +398,56 @@ class TestAgentLoopToolExecution(TestBase):
         self.assertEqual(events[3][1], "c2")
 
         loop.abort()
+        loop.wait(3000)
+
+    def test_permission_ask_user_denied_emits_error_result_once(self):
+        registry = ToolRegistry()
+        registry.register(WriteEchoTool())
+        provider = AskPermissionToolCallProvider()
+        loop = _make_loop(provider, registry=registry)
+        params = _make_params(provider)
+
+        permission_spy = QSignalSpy(loop.permissionRequired)
+        tool_result_spy = QSignalSpy(loop.toolCallResult)
+        finished_spy = QSignalSpy(loop.agentFinished)
+
+        loop.permissionRequired.connect(lambda tool_call_id, tool, tool_input: loop.deny_tool(tool_call_id))
+
+        loop.submit("Run write tool", params)
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        self.assertEqual(permission_spy.count(), 1)
+        self.assertEqual(tool_result_spy.count(), 1)
+        self.assertEqual(tool_result_spy.at(0)[0], "ask_1")
+        self.assertEqual(tool_result_spy.at(0)[1], "Tool execution denied by user")
+        self.assertTrue(tool_result_spy.at(0)[2])
+
+        loop.abort()
+        loop.wait(3000)
+
+    def test_abort_while_waiting_for_permission_does_not_continue(self):
+        registry = ToolRegistry()
+        registry.register(WriteEchoTool())
+        provider = AskPermissionToolCallProvider()
+        loop = _make_loop(provider, registry=registry)
+        params = _make_params(provider)
+
+        permission_spy = QSignalSpy(loop.permissionRequired)
+        tool_result_spy = QSignalSpy(loop.toolCallResult)
+        finished_spy = QSignalSpy(loop.agentFinished)
+        text_spy = QSignalSpy(loop.textDelta)
+
+        loop.submit("Run write tool", params)
+        waitFor(self.app, lambda: permission_spy.count() > 0)
+        loop.abort()
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        self.assertEqual(permission_spy.count(), 1)
+        self.assertEqual(tool_result_spy.count(), 0)
+        self.assertEqual(text_spy.count(), 0)
+        self.assertEqual(provider.call_count, 1)
+        self.assertEqual(len(loop.messages()), 2)
+
         loop.wait(3000)
 
 
