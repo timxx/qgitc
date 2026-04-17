@@ -37,6 +37,16 @@ class SkillTool(Tool):
             content = content.replace("${CLAUDE_SKILL_DIR}", skill_dir)
         return content
 
+    @staticmethod
+    def _queue_prompt(context: ToolContext, prompt: str) -> None:
+        if context.extra is None:
+            return
+        queued = context.extra.get("tool_queued_prompts")
+        if not queued:
+            queued = []
+            context.extra["tool_queued_prompts"] = queued
+        queued.append(prompt)
+
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         skill_name = (input_data.get("skill") or "").strip()
         args = input_data.get("args") or ""
@@ -62,11 +72,12 @@ class SkillTool(Tool):
             )
 
         content = self._render_skill_content(skill.content, args, skill.skill_root)
+        self._queue_prompt(context, content)
 
         if skill.allowed_tools:
             context.extra["tool_allowed_tools"] = list(skill.allowed_tools)
 
-        return ToolResult(content=content)
+        return ToolResult(content="Successfully loaded skill: {}".format(skill.name))
 
     def input_schema(self) -> Dict[str, Any]:
         return {

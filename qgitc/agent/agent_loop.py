@@ -218,6 +218,10 @@ class AgentLoop(QThread):
                     UserMessage(content=tool_results)
                 )
 
+            prompts: List[str] = self._context_extra_state.pop("tool_queued_prompts", [])
+            for prompt in prompts:
+                self._messages.append(UserMessage(content=[TextBlock(text=prompt)]))
+
     def _stream_response(self, provider, tool_schemas):
         # type: (ModelProvider, Optional[List[Dict[str, Any]]]) -> Optional[AssistantMessage]
         """Stream from the LLM and accumulate into an AssistantMessage."""

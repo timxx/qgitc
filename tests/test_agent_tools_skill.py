@@ -25,14 +25,18 @@ class TestSkillTool(unittest.TestCase):
         )
         self.tool = SkillTool()
 
-    def test_invoke_skill_returns_content(self):
+    def test_invoke_skill_queues_prompt_and_returns_status(self):
         result = self.tool.execute(
             {"skill": "review", "args": "target.py"},
             self.context,
         )
         self.assertFalse(result.is_error)
-        self.assertIn("Use checklist", result.content)
-        self.assertIn("target.py", result.content)
+        self.assertIn("Successfully loaded skill", result.content)
+        queued = self.context.extra.get("tool_queued_prompts")
+        self.assertIsInstance(queued, list)
+        self.assertEqual(len(queued), 1)
+        self.assertIn("Use checklist", queued[0])
+        self.assertIn("target.py", queued[0])
 
     def test_sets_allowed_tools_in_context(self):
         result = self.tool.execute({"skill": "review"}, self.context)
