@@ -482,7 +482,7 @@ class TestAgentLoopToolExecution(TestBase):
         waitFor(self.app, lambda: finished_spy.count() > 0)
 
         self.assertEqual(permission_spy.count(), 1)
-        self.assertEqual(tool_result_spy.count(), 0)
+        self.assertEqual(tool_result_spy.count(), 1)
         self.assertEqual(text_spy.count(), 0)
         self.assertEqual(provider.call_count, 1)
 
