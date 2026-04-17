@@ -194,12 +194,15 @@ class AgentLoop(QThread):
             self._messages.append(assistant_msg)
             self.turnComplete.emit(assistant_msg)
 
+            if assistant_msg.stop_reason != "tool_use":
+                return
+
             # Check if we need to execute tools
             tool_blocks = [
                 b for b in assistant_msg.content
                 if isinstance(b, ToolUseBlock)
             ]
-            if assistant_msg.stop_reason != "tool_use" or not tool_blocks:
+            if not tool_blocks:
                 return
 
             # Execute tools
