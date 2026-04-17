@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
@@ -30,6 +31,7 @@ from qgitc.agent.types import (
     ToolUseBlock,
     UserMessage,
 )
+from qgitc.gitutils import Git
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +313,7 @@ class AgentLoop(QThread):
             self.toolCallResult.emit(tool_call_id, tool_name, content, is_error)
 
         context = ToolContext(
-            working_directory=".",
+            working_directory=Git.REPO_DIR or os.getcwd(),
             abort_requested=lambda: self._abort_flag,
             extra=self._context_extra_state,
         )
