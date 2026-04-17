@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 from PySide6.QtCore import QMutex, QThread, QWaitCondition, Signal
 
 from qgitc.agent.compaction import ConversationCompactor
-from qgitc.agent.permissions import PermissionAsk, PermissionDeny, PermissionEngine
+from qgitc.agent.permissions import PermissionEngine
 from qgitc.agent.provider import (
     ContentDelta,
     MessageComplete,
@@ -17,7 +17,7 @@ from qgitc.agent.provider import (
     ToolCallDelta,
 )
 from qgitc.agent.skills.registry import SkillRegistry
-from qgitc.agent.tool import ToolContext, ToolResult
+from qgitc.agent.tool import ToolContext
 from qgitc.agent.tool_executor import execute_tool_blocks
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import (
@@ -51,7 +51,8 @@ class AgentLoop(QThread):
     textDelta = Signal(str)
     reasoningDelta = Signal(str)
     toolCallStart = Signal(str, str, dict)        # id, name, input
-    toolCallResult = Signal(str, str, bool)        # id, content, is_error
+    # id, name, content, is_error
+    toolCallResult = Signal(str, str, str, bool)
     turnComplete = Signal(object)                  # AssistantMessage
     agentFinished = Signal()
     conversationCompacted = Signal(int, int)       # pre, post tokens
@@ -305,11 +306,9 @@ class AgentLoop(QThread):
             # type: (str, str, Dict[str, Any]) -> None
             self.toolCallStart.emit(tool_call_id, tool_name, tool_input)
 
-        def on_tool_result(tool_call_id, content, is_error):
-            # type: (str, str, bool) -> None
-            if self._abort_flag:
-                return
-            self.toolCallResult.emit(tool_call_id, content, is_error)
+        def on_tool_result(tool_call_id, tool_name, content, is_error):
+            # type: (str, str, str, bool) -> None
+            self.toolCallResult.emit(tool_call_id, tool_name, content, is_error)
 
         context = ToolContext(
             working_directory=".",

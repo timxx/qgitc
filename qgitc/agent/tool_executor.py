@@ -9,6 +9,9 @@ from qgitc.agent.tool import ToolContext, ToolResult
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import ToolResultBlock, ToolUseBlock
 
+TOOL_ABORTED_MESSAGE = "Tool execution aborted"
+TOOL_SKIPPED_MESSAGE = "The user chose to skip the tool call, they want to proceed without running it"
+
 
 @dataclass
 class ToolBatch:
@@ -38,7 +41,7 @@ def _prepare_block_execution(
     if is_aborted():
         return _PreparedExecution(
             block=block,
-            immediate_result=_build_error_result(block.id, "Tool execution aborted"),
+            immediate_result=_build_error_result(block.id, TOOL_ABORTED_MESSAGE)
         )
 
     allowed_tools = context.extra.get("tool_allowed_tools")
@@ -71,7 +74,7 @@ def _prepare_block_execution(
 
     if isinstance(perm, PermissionAsk):
         if not request_permission(block.id, tool, block.input):
-            message = "The user chose to skip the tool call, they want to proceed without running it"
+            message = TOOL_ABORTED_MESSAGE if is_aborted() else TOOL_SKIPPED_MESSAGE
             return _PreparedExecution(
                 block=block,
                 immediate_result=_build_error_result(block.id, message),
@@ -113,7 +116,8 @@ def _execute_one_block(
     )
 
     if prepared.immediate_result is not None:
-        on_tool_result(block.id, prepared.immediate_result.content, True)
+        on_tool_result(block.id, block.name,
+                       prepared.immediate_result.content, True)
         return prepared.immediate_result
 
     on_tool_start(block.id, block.name, block.input)
@@ -123,7 +127,7 @@ def _execute_one_block(
         extra=context.extra,
     )
     result = _execute_tool(block, prepared.tool, block_context)
-    on_tool_result(block.id, result.content, result.is_error)
+    on_tool_result(block.id, block.name, result.content, result.is_error)
     return result
 
 
@@ -135,7 +139,7 @@ def execute_tool_blocks(
     is_aborted: Callable[[], bool],
     request_permission: Callable[[str, object, dict], bool],
     on_tool_start: Callable[[str, str, dict], None],
-    on_tool_result: Callable[[str, str, bool], None],
+    on_tool_result: Callable[[str, str, str, bool], None],
     max_workers: int = 4,
 ) -> Optional[List[ToolResultBlock]]:
     batches = _partition_tool_calls(tool_blocks, registry)
@@ -158,6 +162,7 @@ def execute_tool_blocks(
                     if prepared.immediate_result is not None:
                         on_tool_result(
                             prepared.block.id,
+                            block.name,
                             prepared.immediate_result.content,
                             True,
                         )
@@ -165,7 +170,8 @@ def execute_tool_blocks(
                         parallel_futures.append(None)
                         continue
 
-                    on_tool_start(prepared.block.id, prepared.block.name, prepared.block.input)
+                    on_tool_start(prepared.block.id,
+                                  prepared.block.name, prepared.block.input)
                     block_context = ToolContext(
                         working_directory=context.working_directory,
                         abort_requested=context.abort_requested,
@@ -180,9 +186,12 @@ def execute_tool_blocks(
                         )
                     )
 
+                id_to_name = {block.id: block.name for block in batch.blocks}
                 for future in parallel_futures:
                     result = future.result()
-                    on_tool_result(result.tool_use_id, result.content, result.is_error)
+                    on_tool_result(result.tool_use_id,
+                                   id_to_name[result.tool_use_id],
+                                   result.content, result.is_error)
                     ordered_results.append(result)
         else:
             for block in batch.blocks:

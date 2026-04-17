@@ -46,6 +46,7 @@ from qgitc.agent.skills.prompt import render_skills_reminder
 from qgitc.agent.skills.types import SkillDefinition
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.agent.tool import ToolType
+from qgitc.agent.tool_executor import TOOL_ABORTED_MESSAGE, TOOL_SKIPPED_MESSAGE
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichatcontextprovider import AiChatContextProvider
@@ -1111,9 +1112,18 @@ class AiChatWidget(QWidget):
             sb.setValue(sb.maximum())
             self._adjustingSccrollbar = False
 
-    def _onAgentToolCallResult(self, toolCallId, content, isError):
-        prefix = "✓" if not isError else "✗"
-        desc = self.tr("{} tool output").format(prefix)
+    def _onAgentToolCallResult(self, toolCallId, toolName, content, isError):
+        desc = None
+        if isError:
+            if content == TOOL_ABORTED_MESSAGE:
+                desc = self.tr("✗ `{}` cancelled").format(toolName)
+            elif content == TOOL_SKIPPED_MESSAGE:
+                desc = self.tr("✗ `{}` skipped").format(toolName)
+
+        if not desc:
+            prefix = "✓" if not isError else "✗"
+            desc = self.tr("{} `{}` output").format(prefix, toolName)
+
         response = AiResponse(AiRole.Tool, content, description=desc)
         self._chatBot.appendResponse(response, collapsed=True)
 

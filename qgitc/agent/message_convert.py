@@ -3,6 +3,7 @@
 import json
 from typing import Any, Dict, List
 
+from qgitc.agent.tool_executor import TOOL_ABORTED_MESSAGE, TOOL_SKIPPED_MESSAGE
 from qgitc.agent.types import (
     AssistantMessage,
     Message,
@@ -24,6 +25,7 @@ def messages_to_history_dicts(messages):
     one dict per result (matching the old per-tool-call history format).
     """
     result = []  # type: List[Dict[str, Any]]
+    toolId2Name = {}  # type: Dict[str, str]
 
     for msg in messages:
         if isinstance(msg, SystemMessage):
@@ -35,11 +37,24 @@ def messages_to_history_dicts(messages):
         elif isinstance(msg, UserMessage):
             tool_results = [b for b in msg.content if isinstance(b, ToolResultBlock)]
             if tool_results:
+                from PySide6.QtCore import QCoreApplication
                 for tr in tool_results:
+                    prefix = "✗" if tr.is_error else "✓"
+                    toolName = toolId2Name.get(tr.tool_use_id, "Unknown")
+                    app = QCoreApplication.instance()
+                    desc = None
+                    if tr.is_error:
+                        if tr.content == TOOL_ABORTED_MESSAGE:
+                            desc = app.translate("AiChatWidget", "✗ `{}` cancelled").format(toolName)
+                        elif tr.content == TOOL_SKIPPED_MESSAGE:
+                            desc = app.translate("AiChatWidget", "✗ `{}` skipped").format(toolName)
+                    if not desc:
+                        desc = app.translate("AiChatWidget", "{} `{}` output").format(prefix, toolName)
+
                     result.append({
                         "role": "tool",
                         "content": tr.content,
-                        "description": None,
+                        "description": desc,
                         "tool_calls": {"tool_call_id": tr.tool_use_id},
                     })
             else:
@@ -52,7 +67,7 @@ def messages_to_history_dicts(messages):
         elif isinstance(msg, AssistantMessage):
             text = _extract_text(msg.content)
             reasoning = _extract_reasoning(msg.content)
-            tool_calls = _extract_tool_calls(msg.content)
+            tool_calls = _extract_tool_calls(msg.content, toolId2Name)
             entry = {
                 "role": "assistant",
                 "content": text,
@@ -167,8 +182,8 @@ def _extract_reasoning(content):
     return "".join(parts) if parts else None
 
 
-def _extract_tool_calls(content):
-    # type: (list) -> list
+def _extract_tool_calls(content, toolId2Name):
+    # type: (list, Dict[str, str]) -> list
     calls = []
     for block in content:
         if isinstance(block, ToolUseBlock):
@@ -180,4 +195,5 @@ def _extract_tool_calls(content):
                     "arguments": json.dumps(block.input, ensure_ascii=False),
                 },
             })
+            toolId2Name[block.id] = block.name
     return calls if calls else None
