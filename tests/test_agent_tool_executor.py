@@ -5,12 +5,7 @@ from threading import Lock, current_thread
 from time import sleep
 from typing import Any, Dict
 
-from qgitc.agent.permissions import (
-    PermissionAllow,
-    PermissionAsk,
-    PermissionDeny,
-    PermissionEngine,
-)
+from qgitc.agent.permissions import PermissionAsk, PermissionDeny, PermissionEngine
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_executor import (
     TOOL_SKIPPED_MESSAGE,

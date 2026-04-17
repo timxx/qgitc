@@ -415,13 +415,17 @@ class TestAgentLoopToolExecution(TestBase):
         params = _make_params(provider)
 
         finished_spy = QSignalSpy(loop.agentFinished)
+        callresult_spy = QSignalSpy(loop.toolCallResult)
         events = []
 
         loop.toolCallStart.connect(lambda call_id, name, data: events.append(("start", call_id)))
         loop.toolCallResult.connect(lambda call_id, name, content, is_error: events.append(("result", call_id, content, is_error)))
 
         loop.submit("Run two tools", params)
-        waitFor(self.app, lambda: finished_spy.count() > 0)
+        waitFor(self.app, lambda: finished_spy.count()
+                > 0 and callresult_spy.count() >= 2)
+        waitFor(self.app, lambda: sum(
+            1 for e in events if e[0] == "result") >= 2)
 
         result_events = [e for e in events if e[0] == "result"]
         self.assertEqual([e[1] for e in result_events], ["c1", "c2"])
