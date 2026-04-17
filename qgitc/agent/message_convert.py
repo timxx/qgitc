@@ -3,6 +3,8 @@
 import json
 from typing import Any, Dict, List
 
+from PySide6.QtCore import QCoreApplication
+
 from qgitc.agent.tool_executor import TOOL_ABORTED_MESSAGE, TOOL_SKIPPED_MESSAGE
 from qgitc.agent.types import (
     AssistantMessage,
@@ -37,19 +39,27 @@ def messages_to_history_dicts(messages):
         elif isinstance(msg, UserMessage):
             tool_results = [b for b in msg.content if isinstance(b, ToolResultBlock)]
             if tool_results:
-                from PySide6.QtCore import QCoreApplication
                 for tr in tool_results:
                     prefix = "✗" if tr.is_error else "✓"
                     toolName = toolId2Name.get(tr.tool_use_id, "Unknown")
-                    app = QCoreApplication.instance()
-                    desc = None
+                    desc_fmt = None
                     if tr.is_error:
                         if tr.content == TOOL_ABORTED_MESSAGE:
-                            desc = app.translate("AiChatWidget", "✗ `{}` cancelled").format(toolName)
+                            desc_fmt = "✗ `{}` cancelled"
                         elif tr.content == TOOL_SKIPPED_MESSAGE:
-                            desc = app.translate("AiChatWidget", "✗ `{}` skipped").format(toolName)
-                    if not desc:
-                        desc = app.translate("AiChatWidget", "{} `{}` output").format(prefix, toolName)
+                            desc_fmt = "✗ `{}` skipped"
+   
+                    app = QCoreApplication.instance()
+                    if app:
+                        if not desc_fmt:
+                            desc = app.translate("AiChatWidget", "{} `{}` output").format(prefix, toolName)
+                        else:
+                            desc = app.translate("AiChatWidget", desc_fmt).format(toolName)
+                    else:
+                        if not desc_fmt:
+                            desc = "{} `{}` output".format(prefix, toolName)
+                        else:
+                            desc = desc_fmt.format(toolName)
 
                     result.append({
                         "role": "tool",

@@ -12,7 +12,11 @@ from qgitc.agent.permissions import (
     PermissionEngine,
 )
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.agent.tool_executor import _partition_tool_calls, execute_tool_blocks
+from qgitc.agent.tool_executor import (
+    TOOL_SKIPPED_MESSAGE,
+    _partition_tool_calls,
+    execute_tool_blocks,
+)
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import ToolUseBlock
 
@@ -244,7 +248,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, content, is_error: None,
+            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -283,7 +287,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, ask_tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, content, is_error: None,
+            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -315,7 +319,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
-            on_tool_result=lambda tool_id, content, is_error: result_calls.append((tool_id, content, is_error)),
+            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -349,7 +353,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, content, is_error: result_calls.append((tool_id, content, is_error)),
+            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -389,7 +393,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: permission_requests.append(tool_id) or True,
             on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
-            on_tool_result=lambda tool_id, content, is_error: result_calls.append((tool_id, content, is_error)),
+            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -430,16 +434,16 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: False,
             on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
-            on_tool_result=lambda tool_id, content, is_error: result_calls.append((tool_id, content, is_error)),
+            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].tool_use_id, "a")
-        self.assertEqual(results[0].content, "The user chose to skip the tool call, they want to proceed without running it")
+        self.assertEqual(results[0].content, TOOL_SKIPPED_MESSAGE)
         self.assertTrue(results[0].is_error)
         self.assertEqual(start_calls, [])
-        self.assertEqual(result_calls, [("a", "The user chose to skip the tool call, they want to proceed without running it", True)])
+        self.assertEqual(result_calls, [("a", TOOL_SKIPPED_MESSAGE, True)])
 
     def test_permission_ask_user_approved_executes_tool(self):
         class AskEngine:
@@ -470,7 +474,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append((tool_id, tool_name)),
-            on_tool_result=lambda tool_id, content, is_error: result_calls.append((tool_id, content, is_error)),
+            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -504,7 +508,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, content, is_error: None,
+            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -539,7 +543,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, content, is_error: None,
+            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -578,7 +582,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             is_aborted=lambda: False,
             request_permission=lambda tool_id, tool, tool_input: True,
             on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, content, is_error: None,
+            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -622,7 +626,7 @@ class TestExecuteToolBlocks(unittest.TestCase):
             on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(
                 (tool_id, tool_name, current_thread().ident)
             ),
-            on_tool_result=lambda tool_id, content, is_error: result_calls.append(
+            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append(
                 (tool_id, content, is_error, current_thread().ident)
             ),
             max_workers=4,

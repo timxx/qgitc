@@ -120,8 +120,8 @@ class TestAgentLoopSkills(TestBase):
         found_block = False
         for i in range(result_spy.count()):
             call_id = result_spy.at(i)[0]
-            content = result_spy.at(i)[1]
-            is_error = result_spy.at(i)[2]
+            content = result_spy.at(i)[2]
+            is_error = result_spy.at(i)[3]
             if call_id == "cmd_1":
                 found_block = True
                 self.assertTrue(is_error)

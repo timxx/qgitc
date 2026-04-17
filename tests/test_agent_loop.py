@@ -16,6 +16,7 @@ from qgitc.agent.provider import (
     ToolCallDelta,
 )
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
+from qgitc.agent.tool_executor import TOOL_ABORTED_MESSAGE, TOOL_SKIPPED_MESSAGE
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import AssistantMessage, TextBlock, UserMessage
 from tests.base import TestBase
@@ -417,7 +418,7 @@ class TestAgentLoopToolExecution(TestBase):
         events = []
 
         loop.toolCallStart.connect(lambda call_id, name, data: events.append(("start", call_id)))
-        loop.toolCallResult.connect(lambda call_id, content, is_error: events.append(("result", call_id, content, is_error)))
+        loop.toolCallResult.connect(lambda call_id, name, content, is_error: events.append(("result", call_id, content, is_error)))
 
         loop.submit("Run two tools", params)
         waitFor(self.app, lambda: finished_spy.count() > 0)
@@ -458,8 +459,8 @@ class TestAgentLoopToolExecution(TestBase):
         self.assertEqual(permission_spy.count(), 1)
         self.assertEqual(tool_result_spy.count(), 1)
         self.assertEqual(tool_result_spy.at(0)[0], "ask_1")
-        self.assertEqual(tool_result_spy.at(0)[1], "The user chose to skip the tool call, they want to proceed without running it")
-        self.assertTrue(tool_result_spy.at(0)[2])
+        self.assertEqual(tool_result_spy.at(0)[2], TOOL_SKIPPED_MESSAGE)
+        self.assertTrue(tool_result_spy.at(0)[3])
 
         loop.abort()
         loop.wait(3000)
@@ -491,7 +492,7 @@ class TestAgentLoopToolExecution(TestBase):
         self.assertIsInstance(msgs[2], UserMessage)
         self.assertEqual(len(msgs[2].content), 1)
         self.assertEqual(msgs[2].content[0].tool_use_id, "ask_1")
-        self.assertEqual(msgs[2].content[0].content, "The user chose to skip the tool call, they want to proceed without running it")
+        self.assertEqual(msgs[2].content[0].content, TOOL_ABORTED_MESSAGE)
         self.assertTrue(msgs[2].content[0].is_error)
 
         loop.wait(3000)
