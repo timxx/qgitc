@@ -71,7 +71,7 @@ def _prepare_block_execution(
 
     if isinstance(perm, PermissionAsk):
         if not request_permission(block.id, tool, block.input):
-            message = "Tool execution denied by user"
+            message = "The user chose to skip the tool call, they want to proceed without running it"
             return _PreparedExecution(
                 block=block,
                 immediate_result=_build_error_result(block.id, message),

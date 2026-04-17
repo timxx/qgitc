@@ -46,7 +46,6 @@ from qgitc.agent.skills.prompt import render_skills_reminder
 from qgitc.agent.skills.types import SkillDefinition
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.agent.tool import ToolType
-from qgitc.agent.types import TextBlock
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichatcontextprovider import AiChatContextProvider
@@ -72,7 +71,6 @@ from qgitc.llm import (
     AiModelBase,
     AiModelCapabilities,
     AiModelFactory,
-    AiParameters,
     AiResponse,
     AiRole,
 )
@@ -80,7 +78,6 @@ from qgitc.llmprovider import AiModelDescriptor, AiModelProvider
 from qgitc.models.prompts import (
     AGENT_SYS_PROMPT,
     CODE_REVIEW_PROMPT,
-    CODE_REVIEW_SYS_PROMPT,
     RESOLVE_PROMPT,
     RESOLVE_SYS_PROMPT,
 )
@@ -90,8 +87,6 @@ from qgitc.resolutionreport import (
     buildResolutionReportEntry,
 )
 from qgitc.submoduleexecutor import SubmoduleExecutor
-
-SKIP_TOOL = "The user chose to skip the tool call, they want to proceed without running it"
 
 
 class _SkillSlashCommand:

@@ -436,10 +436,10 @@ class TestExecuteToolBlocks(unittest.TestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].tool_use_id, "a")
-        self.assertEqual(results[0].content, "Tool execution denied by user")
+        self.assertEqual(results[0].content, "The user chose to skip the tool call, they want to proceed without running it")
         self.assertTrue(results[0].is_error)
         self.assertEqual(start_calls, [])
-        self.assertEqual(result_calls, [("a", "Tool execution denied by user", True)])
+        self.assertEqual(result_calls, [("a", "The user chose to skip the tool call, they want to proceed without running it", True)])
 
     def test_permission_ask_user_approved_executes_tool(self):
         class AskEngine:

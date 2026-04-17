@@ -458,7 +458,7 @@ class TestAgentLoopToolExecution(TestBase):
         self.assertEqual(permission_spy.count(), 1)
         self.assertEqual(tool_result_spy.count(), 1)
         self.assertEqual(tool_result_spy.at(0)[0], "ask_1")
-        self.assertEqual(tool_result_spy.at(0)[1], "Tool execution denied by user")
+        self.assertEqual(tool_result_spy.at(0)[1], "The user chose to skip the tool call, they want to proceed without running it")
         self.assertTrue(tool_result_spy.at(0)[2])
 
         loop.abort()
@@ -491,7 +491,7 @@ class TestAgentLoopToolExecution(TestBase):
         self.assertIsInstance(msgs[2], UserMessage)
         self.assertEqual(len(msgs[2].content), 1)
         self.assertEqual(msgs[2].content[0].tool_use_id, "ask_1")
-        self.assertEqual(msgs[2].content[0].content, "Tool execution denied by user")
+        self.assertEqual(msgs[2].content[0].content, "The user chose to skip the tool call, they want to proceed without running it")
         self.assertTrue(msgs[2].content[0].is_error)
 
         loop.wait(3000)
