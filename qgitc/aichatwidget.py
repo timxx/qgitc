@@ -556,7 +556,7 @@ class AiChatWidget(QWidget):
 
         self._onButtonStop()
 
-        loop = self._ensureAgentLoop()
+        loop = self._ensureAgentLoop(sysPrompt)
         params = self._buildQueryParams(chatMode)
 
         isNewConversation = len(loop.messages()) == 0
@@ -776,11 +776,11 @@ class AiChatWidget(QWidget):
             return False, "No context provider"
         return provider.executeUiTool(toolName, params)
 
-    def _ensureAgentLoop(self):
+    def _ensureAgentLoop(self, systemPrompt: Optional[str] = None) -> AgentLoop:
         if self._agentLoop is not None:
             return self._agentLoop
         self._toolRegistry = self._buildToolRegistry()
-        system_prompt = self._buildSystemPrompt()
+        system_prompt = self._buildSystemPrompt(systemPrompt)
         loop = AgentLoop(
             tool_registry=self._toolRegistry,
             permission_engine=self._permissionEngine,
@@ -798,10 +798,10 @@ class AiChatWidget(QWidget):
         modelId = model.modelId or model.name
         return model.getModelCapabilities(modelId)
 
-    def _buildSystemPrompt(self):
+    def _buildSystemPrompt(self, systemPrompt: Optional[str] = None):
         provider = self.contextProvider()
         overridePrompt = provider.agentSystemPrompt() if provider is not None else None
-        effectiveSysPrompt = overridePrompt or AGENT_SYS_PROMPT
+        effectiveSysPrompt = overridePrompt or systemPrompt or AGENT_SYS_PROMPT
 
         skillRegistry = self._ensureSkillRegistry()
         if skillRegistry is not None:

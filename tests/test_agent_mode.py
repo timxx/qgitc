@@ -8,6 +8,7 @@ from qgitc.agent.agent_loop import QueryParams
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.tool_registration import register_builtin_tools
 from qgitc.agent.tool_registry import ToolRegistry
+from qgitc.agent.tools.resolve_result import ResolveResultTool
 from qgitc.agent.types import TextBlock, UserMessage
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.airesolve import ResolveConflictJob
@@ -237,56 +238,131 @@ class TestAgentMode(TestBase):
 
         self.assertEqual(systemCount, 1)
 
-    def test_resolve_conflict_job_submits_query_params(self):
-        settings = self.app.settings()
-        settings.setLlmTemperature(0.37)
-
-        caps = MagicMock()
-        caps.context_window = 24680
-        caps.max_output_tokens = 1357
-
+    def test_resolve_conflict_job_registers_resolve_tool_and_uses_widget_request_flow(self):
         class _Sig(object):
-            def connect(self, _slot):
-                pass
+            def __init__(self):
+                self._slots = []
+
+            def connect(self, slot):
+                self._slots.append(slot)
+
+            def disconnect(self, slot):
+                if slot in self._slots:
+                    self._slots.remove(slot)
 
         class _FakeLoop(object):
             def __init__(self):
-                self.textDelta = _Sig()
-                self.reasoningDelta = _Sig()
-                self.toolCallStart = _Sig()
-                self.toolCallResult = _Sig()
-                self.agentFinished = _Sig()
+                self.finished = _Sig()
                 self.errorOccurred = _Sig()
-                self.submit = MagicMock()
-
-            def abort(self):
-                pass
-
-            def wait(self, _ms):
-                return True
+                self._permission_engine = object()
 
         fakeLoop = _FakeLoop()
-        with patch.object(self.chatWidget, "_getModelCapabilities", return_value=caps):
-            with patch("qgitc.aichatwidget.AgentLoop", return_value=fakeLoop):
-                job = ResolveConflictJob(
-                    widget=self.chatWidget,
-                    repoDir=self.gitDir.name,
-                    sha1=None,
-                    path="README.md",
-                    conflictText="<<<<<<< ours\nfoo\n=======\nbar\n>>>>>>> theirs",
-                )
-                job.start()
+        oldPermissionEngine = self.chatWidget._permissionEngine
+        self.chatWidget._resetAgentLoop = MagicMock()
+        self.chatWidget._doRequest = MagicMock()
 
-        fakeLoop.submit.assert_called_once()
-        submittedPrompt, submittedParams = fakeLoop.submit.call_args.args
+        def ensureLoop(systemPrompt=None):
+            self.assertEqual(systemPrompt, RESOLVE_SYS_PROMPT)
+            self.chatWidget._agentLoop = fakeLoop
+            self.chatWidget._toolRegistry = ToolRegistry()
+            return fakeLoop
+
+        self.chatWidget._ensureAgentLoop = MagicMock(side_effect=ensureLoop)
+
+        job = ResolveConflictJob(
+            widget=self.chatWidget,
+            repoDir=self.gitDir.name,
+            sha1=None,
+            path="README.md",
+            conflictText="<<<<<<< ours\nfoo\n=======\nbar\n>>>>>>> theirs",
+        )
+        job.start()
+
+        self.assertEqual(self.chatWidget._resetAgentLoop.call_count, 2)
+        self.chatWidget._ensureAgentLoop.assert_called_once_with(RESOLVE_SYS_PROMPT)
+        self.chatWidget._doRequest.assert_called_once()
+        submittedPrompt, submittedMode = self.chatWidget._doRequest.call_args.args
         self.assertIn("<<<<<<< ours", submittedPrompt)
-        self.assertIsInstance(submittedParams, QueryParams)
-        self.assertEqual(submittedParams.context_window, 24680)
-        self.assertEqual(submittedParams.max_output_tokens, 1357)
-        self.assertIsInstance(submittedParams.provider, AiModelBaseAdapter)
-        self.assertEqual(submittedParams.provider._chat_mode, AiChatMode.Agent)
-        self.assertAlmostEqual(submittedParams.provider._temperature, 0.37, places=2)
-        self.assertEqual(submittedParams.provider._max_tokens, 1357)
+        self.assertEqual(submittedMode, AiChatMode.Agent)
+        self.assertEqual(
+            self.chatWidget._doRequest.call_args.kwargs,
+            {"parseSlashCommand": False},
+        )
+        self.assertEqual(self.chatWidget.currentChatModel().requestInterruption.call_count, 1)
+        self.assertIs(job._oldPermissionEngine, oldPermissionEngine)
+        self.assertIsNot(fakeLoop._permission_engine, oldPermissionEngine)
+        self.assertIsInstance(
+            self.chatWidget._toolRegistry.get("resolve_result"),
+            ResolveResultTool,
+        )
+
+    def test_resolve_conflict_job_finishes_from_resolve_result_and_restores_agent_state(self):
+        class _Sig(object):
+            def __init__(self):
+                self._slots = []
+
+            def connect(self, slot):
+                self._slots.append(slot)
+
+            def disconnect(self, slot):
+                if slot in self._slots:
+                    self._slots.remove(slot)
+
+        class _FakeLoop(object):
+            def __init__(self):
+                self.finished = _Sig()
+                self.errorOccurred = _Sig()
+                self._permission_engine = object()
+
+        resolvedPath = self.gitDir.name + "/resolved.txt"
+        with open(resolvedPath, "w", encoding="utf-8") as f:
+            f.write("resolved content\n")
+
+        fakeLoop = _FakeLoop()
+        originalPermissionEngine = self.chatWidget._permissionEngine
+        self.chatWidget._resetAgentLoop = MagicMock()
+        self.chatWidget._doRequest = MagicMock()
+
+        def ensureLoop(_systemPrompt=None):
+            self.chatWidget._agentLoop = fakeLoop
+            self.chatWidget._toolRegistry = ToolRegistry()
+            return fakeLoop
+
+        self.chatWidget._ensureAgentLoop = MagicMock(side_effect=ensureLoop)
+
+        job = ResolveConflictJob(
+            widget=self.chatWidget,
+            repoDir=self.gitDir.name,
+            sha1=None,
+            path="resolved.txt",
+            conflictText="<<<<<<< ours\nfoo\n=======\nbar\n>>>>>>> theirs",
+        )
+        results = []
+        job.finished.connect(lambda ok, reason: results.append((ok, reason)))
+
+        job.start()
+        job._resolveContext.setResult("ok", "kept both edits")
+        job._onAgentFinished()
+
+        self.assertEqual(results, [(True, "kept both edits")])
+        self.assertIs(fakeLoop._permission_engine, originalPermissionEngine)
+        self.assertEqual(fakeLoop.finished._slots, [])
+        self.assertEqual(fakeLoop.errorOccurred._slots, [])
+        self.assertIsNone(self.chatWidget._toolRegistry.get("resolve_result"))
+
+    def test_validate_resolve_outcome_requires_resolve_result_tool_call(self):
+        job = ResolveConflictJob(
+            widget=self.chatWidget,
+            repoDir=self.gitDir.name,
+            sha1=None,
+            path="README.md",
+            conflictText="<<<<<<< ours\nfoo\n=======\nbar\n>>>>>>> theirs",
+        )
+
+        self.assertEqual(
+            job._validateResolveOutcome(None),
+            (False, "No resolve result tool call recorded"),
+        )
 
     def test_do_request_submits_prompt_with_query_params(self):
         fakeLoop = MagicMock()

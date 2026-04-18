@@ -1,21 +1,40 @@
 # -*- coding: utf-8 -*-
 
 import os
+from threading import Lock
+from typing import Dict
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from qgitc.agent.agent_loop import AgentLoop, QueryParams
-from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.permission_presets import create_permission_engine
-from qgitc.agent.tool_registration import register_builtin_tools
-from qgitc.agent.tool_registry import ToolRegistry
-from qgitc.applicationbase import ApplicationBase
-from qgitc.llm import AiChatMode, AiResponse, AiRole
+from qgitc.agent.tools.resolve_result import ResolveResultTool
+from qgitc.llm import AiChatMode
 from qgitc.models.prompts import RESOLVE_PROMPT, RESOLVE_SYS_PROMPT
 from qgitc.resolutionreport import (
     appendResolutionReportEntry,
     buildResolutionReportEntry,
 )
+
+
+class _ResolveSessionContext(object):
+    def __init__(self):
+        self._lock = Lock()
+        self._status = None
+        self._reason = ""
+
+    def setResult(self, status, reason):
+        with self._lock:
+            self._status = status
+            self._reason = reason or ""
+
+    def result(self):
+        with self._lock:
+            if not self._status:
+                return None
+            return {
+                "status": self._status,
+                "reason": self._reason,
+            }
 
 
 class ResolveConflictJob(QObject):
@@ -33,7 +52,8 @@ class ResolveConflictJob(QObject):
         parent=None,
     ):
         super().__init__(parent or widget)
-        self._widget = widget
+        from qgitc.aichatwidget import AiChatWidget  # Avoid circular import
+        self._widget: AiChatWidget = widget
         self._repoDir = repoDir
         self._sha1 = sha1
         self._path = path
@@ -44,7 +64,9 @@ class ResolveConflictJob(QObject):
         self._done = False
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
-        self._agentLoop = None
+        self._oldPermissionEngine = None
+
+        self._resolveContext = _ResolveSessionContext()
 
     def start(self):
         w = self._widget
@@ -54,6 +76,8 @@ class ResolveConflictJob(QObject):
         if not model:
             self._finish(False, "no_model")
             return
+        else:
+            model.requestInterruption()
 
         # Always start a new conversation for conflict resolution.
         w._createNewConversation()
@@ -66,92 +90,48 @@ class ResolveConflictJob(QObject):
             conflict=self._conflictText,
         )
 
-        # Build full prompt with context
-        fullPrompt = prompt
-        if contextText:
-            fullPrompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + prompt
+        w._resetAgentLoop()
+        w._ensureAgentLoop(RESOLVE_SYS_PROMPT)
 
-        # Create own AgentLoop with all-auto permissions
-        caps = w._getModelCapabilities(model)
-        settings = ApplicationBase.instance().settings()
-        adapter = AiModelBaseAdapter(
-            model,
-            w._contextPanel.currentModelId(),
-            max_tokens=(caps.max_output_tokens if model.isLocal() else None),
-            temperature=settings.llmTemperature(),
-            chat_mode=AiChatMode.Agent,
-        )
-        toolRegistry = ToolRegistry()
-        register_builtin_tools(toolRegistry)
-        allAutoEngine = create_permission_engine(3)  # AllAuto
-        self._agentLoop = AgentLoop(
-            tool_registry=toolRegistry,
-            permission_engine=allAutoEngine,
-            system_prompt=RESOLVE_SYS_PROMPT,
-            parent=self,
-        )
-        params = QueryParams(
-            provider=adapter,
-            context_window=caps.context_window,
-            max_output_tokens=caps.max_output_tokens,
-        )
+        self._oldPermissionEngine = w._permissionEngine
+        w._agentLoop._permission_engine = create_permission_engine(
+            3)  # AllAuto
+        w._agentLoop.finished.connect(self._onAgentFinished)
+        w._agentLoop.errorOccurred.connect(self._onError)
 
-        # Connect rendering signals to widget
-        self._agentLoop.textDelta.connect(w._onAgentTextDelta)
-        self._agentLoop.reasoningDelta.connect(w._onAgentReasoningDelta)
-        self._agentLoop.toolCallStart.connect(w._onAgentToolCallStart)
-        self._agentLoop.toolCallResult.connect(w._onAgentToolCallResult)
-        self._agentLoop.agentFinished.connect(self._onAgentFinished)
-        self._agentLoop.errorOccurred.connect(self._onError)
+        w._toolRegistry.register(ResolveResultTool(self._resolveContext))
+
+        w._doRequest(prompt, AiChatMode.Agent, parseSlashCommand=False)
 
         self._timer.timeout.connect(self._onTimeout)
         self._timer.start(5 * 60 * 1000)
 
-        # Display messages in chatbot
-        w._chatBot.appendResponse(AiResponse(AiRole.User, fullPrompt))
-        w._chatBot.appendResponse(
-            AiResponse(AiRole.System, RESOLVE_SYS_PROMPT), True)
-
-        # UI state
-        w._contextPanel.btnSend.setVisible(False)
-        w._contextPanel.btnStop.setVisible(True)
-        w._setGenerating(True)
-
-        self._agentLoop.submit(fullPrompt, params)
-
     def abort(self):
-        if self._agentLoop:
-            self._agentLoop.abort()
+        self._widget._onButtonStop()
 
     def _onAgentFinished(self):
-        if self._done:
-            return
-        self._checkDone()
+        result = self._resolveContext.result()
+        ok, reason = self._validateResolveOutcome(result)
+        self._finish(ok, reason)
+        self._restoreAgent()
 
     def _onError(self, errorMsg):
         self._finish(False, errorMsg)
 
     def _onTimeout(self):
-        if self._agentLoop:
-            self._agentLoop.abort()
         self._finish(False, "Assistant response timed out")
+        self.abort()
 
-    def _checkDone(self):
-        if self._done:
-            return
-        if self._agentLoop is None:
-            return
+    def _validateResolveOutcome(self, result: Dict[str, str]):
+        if not result:
+            return False, "No resolve result tool call recorded"
 
-        response = self._lastAssistantText()
-        status, detail = self._parseFinalResolveMessage(response)
-
+        status = result.get("status")
+        reason = result.get("reason", "")
         if status == "failed":
-            self._finish(False, detail or "Assistant reported failure")
-            return
-
+            return False, reason or "Assistant reported failure"
         if status != "ok":
-            self._finish(False, "No resolve status marker found")
-            return
+            return False, "Invalid resolve result status"
 
         # Verify file is conflict-marker-free
         try:
@@ -159,40 +139,12 @@ class ResolveConflictJob(QObject):
             with open(absPath, "rb") as f:
                 merged = f.read()
         except Exception as e:
-            self._finish(False, f"read_back_failed: {e}")
-            return
+            return False, f"read_back_failed: {e}"
 
         if b"<<<<<<<" in merged or b"=======" in merged or b">>>>>>>" in merged:
-            self._finish(False, "conflict_markers_remain")
-            return
+            return False, "conflict_markers_remain"
 
-        self._finish(True, detail or "Assistant reported success")
-
-    def _lastAssistantText(self):
-        if self._agentLoop is None:
-            return ""
-        from qgitc.agent.types import AssistantMessage as AMsg
-        from qgitc.agent.types import TextBlock as TBlk
-        for msg in reversed(self._agentLoop.messages()):
-            if isinstance(msg, AMsg):
-                parts = [b.text for b in msg.content if isinstance(b, TBlk)]
-                if parts:
-                    return "".join(parts)
-        return ""
-
-    @staticmethod
-    def _parseFinalResolveMessage(text):
-        if not text:
-            return None, ""
-        pos = text.find("QGITC_RESOLVE_OK")
-        if pos != -1:
-            detail = text[pos + len("QGITC_RESOLVE_OK"):].lstrip('\n')
-            return "ok", detail
-        pos = text.find("QGITC_RESOLVE_FAILED")
-        if pos != -1:
-            detail = text[pos + len("QGITC_RESOLVE_FAILED"):].lstrip('\n')
-            return "failed", detail
-        return None, ""
+        return True, reason or "Assistant reported success"
 
     def _finish(self, ok, reason):
         if self._done:
@@ -214,9 +166,13 @@ class ResolveConflictJob(QObject):
                 pass
 
         self._timer.stop()
-        if self._agentLoop:
-            self._agentLoop.abort()
-            self._agentLoop.wait(3000)
-
-        self._widget._updateStatus()
         self.finished.emit(ok, reason)
+
+    def _restoreAgent(self):
+        agent = self._widget._agentLoop
+        if not agent:
+            return
+        agent._permission_engine = self._oldPermissionEngine
+        agent.finished.disconnect(self._onAgentFinished)
+        agent.errorOccurred.disconnect(self._onError)
+        self._widget._toolRegistry.unregister("resolve_result")

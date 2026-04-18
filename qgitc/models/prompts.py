@@ -91,6 +91,7 @@ READ_ONLY tools you may use to gather information:
 - git_log / git_blame / git_diff_unstaged / git_diff_staged / git_diff_range / git_status as needed.
   - For git_blame, rev must be a commit SHA1 (from conflict context or git_log), not ':1', ':2', or ':3'.
 - read_file(filePath, startLine?, endLine?) to read the current working tree file.
+- resolve_result(status, reason) to report the final resolve outcome.
 
 WRITE tool you MUST use to apply the resolution:
 - apply_patch(input, explanation)
@@ -108,21 +109,16 @@ Hard requirements
 - Do NOT output the V4A patch as plain assistant text; call the apply_patch tool.
 - Do NOT invent context text: only replace exact text that exists in the working tree file.
 - If there are multiple conflicted hunks, resolve all of them in one final file.
+- After a successful resolution, you MUST call `resolve_result({"status": "ok", "reason": "<short summary>"})` exactly once.
+- If you cannot resolve safely, you MUST call `resolve_result({"status": "failed", "reason": "<short reason>"})` exactly once.
 
 Output protocol
 - Respond in the UI language.
-- After successfully resolved the conflict, output EXACTLY one final assistant message in this format:
-  - Line 1: `QGITC_RESOLVE_OK`
-  - Line 2: (empty line)
-  - Remaining lines: a short summary (2-6 bullets max) of how you resolved the conflict.
-    - Must include which side(s) you kept and any transformations (move/rename/adapt).
-    - If you know the conflict-causing commit (while resolving, you should run tools to investigate), include it as a bullet (e.g. `- our commit: <sha1> | their commit: <sha1>`).
-    - Keep it short.
-- If you cannot resolve safely (missing context, binary file, ambiguous intent, or tool failures), output EXACTLY one final assistant message in this format:
-  - Line 1: `QGITC_RESOLVE_FAILED`
-  - Line 2: (empty line)
-  - Remaining lines: a short reason / next step (1-3 lines).
-  and do not attempt further changes.
+- After you have applied the final resolution and verified it, call:
+  - `resolve_result({"status": "ok", "reason": "<short summary>"})`
+- If you cannot resolve safely, call:
+  - `resolve_result({"status": "failed", "reason": "<short reason>"})`
+- After the tool call returns, send one short final assistant message summarizing the outcome and stop.
 """
 
 RESOLVE_PROMPT = """Please resolve this {operation} conflict.
