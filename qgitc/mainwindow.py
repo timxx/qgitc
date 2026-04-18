@@ -543,6 +543,12 @@ class MainWindow(StateWindow):
             self.ui.gitViewA.logView.update()
             if self.gitViewB:
                 self.gitViewB.logView.update()
+        elif settings.isCompositeMode() and hasSubmodule and Git.REF_MAP:
+            # Clear REF_MAP that may have been populated by __onRepoChanged
+            # before submodules were discovered (race on Windows where the
+            # FindSubmoduleThread finishes after the delay-timer fires).
+            Git.REF_MAP.clear()
+            Git.REV_HEAD = None
 
     def __onDelayTimeout(self):
         repoDir = self.ui.leRepo.text()
