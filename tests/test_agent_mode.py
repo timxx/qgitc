@@ -154,13 +154,13 @@ class TestAgentMode(TestBase):
         caps.max_output_tokens = 2222
 
         with patch.object(self.chatWidget, "_getModelCapabilities", return_value=caps):
-            params = self.chatWidget._buildQueryParams(AiChatMode.CodeReview)
+            params = self.chatWidget._buildQueryParams(AiChatMode.Agent)
 
         self.assertEqual(params.context_window, 77777)
         self.assertEqual(params.max_output_tokens, 2222)
         self.assertIsInstance(params.provider, AiModelBaseAdapter)
         self.assertAlmostEqual(params.provider._temperature, 0.42, places=2)
-        self.assertEqual(params.provider._chat_mode, AiChatMode.CodeReview)
+        self.assertEqual(params.provider._chat_mode, AiChatMode.Agent)
         self.assertEqual(params.provider._max_tokens, 2222)
 
     def test_ensure_agent_loop_uses_new_constructor(self):

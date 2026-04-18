@@ -82,7 +82,6 @@ class AiParameters:
 class AiChatMode(Enum):
 
     Chat = 0
-    CodeReview = 1
     Agent = 2
 
 
