@@ -69,6 +69,7 @@ qgitc = [
     "data/licenses/Apache-2.0.html",
     "data/translations/*.qm",
     "data/templates/*.xlsx",
+    "data/skills/*/SKILL.md",
 ]
 
 [tool.setuptools_scm]
