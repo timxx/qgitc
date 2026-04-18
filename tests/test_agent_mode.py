@@ -9,8 +9,8 @@ from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.tool_registration import register_builtin_tools
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import TextBlock, UserMessage
-from qgitc.aichatwidget import ResolveConflictJob
 from qgitc.aichatwindow import AiChatWidget
+from qgitc.airesolve import ResolveConflictJob
 from qgitc.llm import AiChatMode, AiModelBase, AiResponse, AiRole
 from qgitc.models.prompts import RESOLVE_SYS_PROMPT
 from qgitc.windowtype import WindowType
