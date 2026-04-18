@@ -88,6 +88,16 @@ class TestLoadSkillRegistry(unittest.TestCase):
             # .github comes after .claude in _SKILL_SUBDIRS so it overrides
             self.assertEqual(skill.description, "GitHub description")
 
+    def test_additional_directories_are_tagged_as_builtin_skills(self):
+        with tempfile.TemporaryDirectory() as extra_td, tempfile.TemporaryDirectory() as proj_td:
+            extra = Path(extra_td)
+            proj = Path(proj_td)
+            self._write_skill(extra, "patch-review", "patch-review", "Review a patch")
+            registry = load_skill_registry(cwd=str(proj), additional_directories=[str(extra)])
+            skill = registry.get("patch-review")
+            self.assertIsNotNone(skill)
+            self.assertEqual(skill.source, "builtinSkills")
+
 
 if __name__ == "__main__":
     unittest.main()

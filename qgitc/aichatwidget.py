@@ -1046,7 +1046,12 @@ class AiChatWidget(QWidget):
     def _ensureSkillRegistry(self):
         # type: () -> SkillRegistry
         if self._skillRegistry is None:
-            self._skillRegistry = load_skill_registry(cwd=Git.REPO_DIR or ".")
+            self._skillRegistry = load_skill_registry(
+                cwd=Git.REPO_DIR or ".",
+                additional_directories=[
+                    dataDirPath() + "/skills"
+                ],
+            )
             self._slashCommandRegistry = None
         return self._skillRegistry
 

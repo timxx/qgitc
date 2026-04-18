@@ -26,6 +26,7 @@ def load_skill_registry(cwd, additional_directories=None):
 
     for extra_dir in additional_directories or []:
         for skill in load_skills_from_directory(str(extra_dir)):
+            skill.source = "builtinSkills"
             registry.register(skill)
 
     return registry
