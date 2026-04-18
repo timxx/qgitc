@@ -78,7 +78,6 @@ from qgitc.llm import (
 from qgitc.llmprovider import AiModelDescriptor, AiModelProvider
 from qgitc.models.prompts import (
     AGENT_SYS_PROMPT,
-    CODE_REVIEW_PROMPT,
     RESOLVE_PROMPT,
     RESOLVE_SYS_PROMPT,
 )
@@ -785,9 +784,6 @@ class AiChatWidget(QWidget):
 
         injectedContext = self._injectedContext
 
-        if chatMode == AiChatMode.CodeReview:
-            prompt = CODE_REVIEW_PROMPT.format(diff=prompt)
-
         # Build context
         fullPrompt = prompt
         if not collapsed:
@@ -866,6 +862,22 @@ class AiChatWidget(QWidget):
         if args:
             return base + "\n\nARGUMENTS: {}".format(args)
         return base
+
+    def _executeSkillDirectly(self, skillName: str, args: str):
+        """Look up a skill by name and execute it in Agent mode."""
+        skillRegistry = self._ensureSkillRegistry()
+        skill = skillRegistry.get(skillName) if skillRegistry is not None else None
+        if skill is None:
+            logger.warning("Skill '%s' not found in registry", skillName)
+            return
+
+        expandedPrompt = self._expandSkillArguments(skill.content, args)
+        self._doRequest(
+            expandedPrompt,
+            AiChatMode.Agent,
+            collapsed=False,
+            parseSlashCommand=False,
+        )
 
     def _buildSlashCommandRegistry(self) -> CommandRegistry:
         registry = CommandRegistry()
@@ -1334,7 +1346,7 @@ class AiChatWidget(QWidget):
         if not curHistory or curHistory.messages:
             self._createNewConversation()
         self._injectedContext = scene
-        self._doRequest(diff, AiChatMode.CodeReview)
+        self._executeSkillDirectly("patch-review", diff)
 
     def _makeFileList(self, files: List[str]) -> str:
         l = []
@@ -1349,7 +1361,7 @@ class AiChatWidget(QWidget):
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
             self._createNewConversation()
-        self._doRequest(diff, AiChatMode.CodeReview)
+        self._executeSkillDirectly("patch-review", diff)
 
     def codeReviewForStagedFiles(self, submodules):
         """Start a code review for staged/local changes across submodules."""
