@@ -801,7 +801,7 @@ class AiChatWidget(QWidget):
     def _buildSystemPrompt(self, systemPrompt: Optional[str] = None):
         provider = self.contextProvider()
         overridePrompt = provider.agentSystemPrompt() if provider is not None else None
-        effectiveSysPrompt = overridePrompt or systemPrompt or AGENT_SYS_PROMPT
+        effectiveSysPrompt = systemPrompt or overridePrompt or AGENT_SYS_PROMPT
 
         skillRegistry = self._ensureSkillRegistry()
         if skillRegistry is not None:
