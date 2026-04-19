@@ -196,7 +196,7 @@ class AiChatbot(QPlainTextEdit):
 
         cursor.insertBlock()
         cursor.insertText(self.tr("Service Unavailable")
-                          if errorMsg is None else errorMsg)
+                          if not errorMsg else errorMsg)
 
         if selectionStart != selectionEnd and selectionEnd == docLength:
             newCursor = self.textCursor()

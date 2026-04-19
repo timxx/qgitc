@@ -97,6 +97,7 @@ class AiModelBaseAdapter(ModelProvider):
         self._model.responseAvailable.connect(_on_response)
         self._model.finished.connect(_on_finished)
         self._model.networkError.connect(_on_network_error)
+        self._model.serviceUnavailable.connect(lambda: _on_network_error(""))
 
         try:
             # Build history from messages
@@ -163,7 +164,7 @@ class AiModelBaseAdapter(ModelProvider):
             # Pump event loop until finished
             while not finished_flag[0]:
                 QCoreApplication.processEvents()
-                if network_error[0]:
+                if network_error[0] is not None:
                     raise RuntimeError(network_error[0])
                 while not event_queue.empty():
                     yield event_queue.get_nowait()
@@ -172,7 +173,7 @@ class AiModelBaseAdapter(ModelProvider):
             while not event_queue.empty():
                 yield event_queue.get_nowait()
 
-            if network_error[0]:
+            if network_error[0] is not None:
                 raise RuntimeError(network_error[0])
 
             # Yield final completion event
