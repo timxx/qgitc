@@ -1,8 +1,7 @@
 ---
 name: patch-review
-description: Review a patch or diff for code quality, correctness, and potential issues
-aliases: [code-review, review]
-argument-hint: Unified diff or patch content to review
+description: Review a patch/diff (unified diff; .patch/.diff file content) for correctness and potential issues. Use when the user asks to review a patch/diff/commit/sha1 (including a .patch/.diff file path or pasted unified diff), e.g. "review this patch", "review D:/a.patch", "review commit abc123"
+argument-hint: Unified diff text or the contents of a .patch/.diff file to review
 ---
 # Patch Review
 
