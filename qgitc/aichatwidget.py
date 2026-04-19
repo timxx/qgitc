@@ -1138,7 +1138,7 @@ class AiChatWidget(QWidget):
         if not curHistory or curHistory.messages:
             self._createNewConversation()
         self._injectedContext = scene
-        self._executeSkillDirectly("patch-review", diff)
+        self._executeSkillDirectly("patch-review", f"```diff\n{diff}\n```\n")
 
         self._scrollToBottom()
 
@@ -1161,7 +1161,7 @@ class AiChatWidget(QWidget):
         curHistory = self._historyPanel.currentHistory()
         if not curHistory or curHistory.messages:
             self._createNewConversation()
-        self._executeSkillDirectly("patch-review", diff)
+        self._executeSkillDirectly("patch-review", f"```diff\n{diff}\n```\n")
         self._scrollToBottom()
 
     def codeReviewForStagedFiles(self, submodules):
