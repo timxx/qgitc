@@ -268,7 +268,7 @@ class AgentLoop(QThread):
                     usage = event.usage
 
         except Exception as e:
-            logger.exception("Provider stream error")
+            logger.debug("Provider stream error %s", str(e))
             self.errorOccurred.emit(str(e))
             return None
 
