@@ -527,6 +527,8 @@ class AiChatWidget(QWidget):
         # Clear input after sending
         self._contextPanel.clear()
 
+        self._scrollToBottom()
+
     def _onButtonStop(self):
         model = self._contextPanel.cbBots.currentData()
         if isinstance(model, AiModelBase):
@@ -899,10 +901,7 @@ class AiChatWidget(QWidget):
         self._firstTextDelta = False
         self._chatBot.appendResponse(response)
         if not self._disableAutoScroll:
-            sb = self._chatBot.verticalScrollBar()
-            self._adjustingSccrollbar = True
-            sb.setValue(sb.maximum())
-            self._adjustingSccrollbar = False
+            self._scrollToBottom()
 
     def _onAgentReasoningDelta(self, text):
         response = AiResponse(
@@ -918,10 +917,7 @@ class AiChatWidget(QWidget):
         uiResponse = self._makeUiToolCallResponse(toolName, params)
         self._chatBot.appendResponse(uiResponse, collapsed=True)
         if not self._disableAutoScroll:
-            sb = self._chatBot.verticalScrollBar()
-            self._adjustingSccrollbar = True
-            sb.setValue(sb.maximum())
-            self._adjustingSccrollbar = False
+            self._scrollToBottom()
 
     def _onAgentToolCallResult(self, toolCallId, toolName, content, isError):
         desc = None
@@ -1142,6 +1138,14 @@ class AiChatWidget(QWidget):
         self._injectedContext = scene
         self._executeSkillDirectly("patch-review", diff)
 
+        self._scrollToBottom()
+
+    def _scrollToBottom(self):
+        sb = self._chatBot.verticalScrollBar()
+        self._adjustingSccrollbar = True
+        sb.setValue(sb.maximum())
+        self._adjustingSccrollbar = False
+
     def _makeFileList(self, files: List[str]) -> str:
         l = []
         for file in files:
@@ -1156,6 +1160,7 @@ class AiChatWidget(QWidget):
         if not curHistory or curHistory.messages:
             self._createNewConversation()
         self._executeSkillDirectly("patch-review", diff)
+        self._scrollToBottom()
 
     def codeReviewForStagedFiles(self, submodules):
         """Start a code review for staged/local changes across submodules."""
