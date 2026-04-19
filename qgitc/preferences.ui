@@ -995,14 +995,14 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
             <item>
              <widget class="QPushButton" name="btnAddHeader">
               <property name="text">
-               <string notr="true">Add</string>
+               <string>Add</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="btnRemoveHeader">
               <property name="text">
-               <string notr="true">Delete</string>
+               <string>Delete</string>
               </property>
              </widget>
             </item>
