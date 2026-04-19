@@ -61,28 +61,28 @@ class TestAiChatToolConfirmationSession(TestBase):
     def doCreateRepo(self):
         pass
 
-    def test_onToolRejected_calls_deny_tool(self):
-        """_onToolRejected should call deny_tool on the agent loop."""
+    def test_onToolRejected_calls_denyTool(self):
+        """_onToolRejected should call denyTool on the agent loop."""
         # Create an agent loop
         loop = self.chatWidget._ensureAgentLoop()
-        loop.deny_tool = MagicMock()
+        loop.denyTool = MagicMock()
 
         self.chatWidget.messages.setToolConfirmationStatus = MagicMock()
 
         self.chatWidget._onToolRejected("git_status", "call_123")
 
-        loop.deny_tool.assert_called_once_with("call_123")
+        loop.denyTool.assert_called_once_with("call_123")
         self.chatWidget.messages.setToolConfirmationStatus.assert_called_once_with(
             "call_123", ConfirmationStatus.REJECTED)
 
-    def test_onToolApproved_calls_approve_tool(self):
-        """_onToolApproved should call approve_tool on the agent loop."""
+    def test_onToolApproved_calls_approveTool(self):
+        """_onToolApproved should call approveTool on the agent loop."""
         loop = self.chatWidget._ensureAgentLoop()
-        loop.approve_tool = MagicMock()
+        loop.approveTool = MagicMock()
 
         self.chatWidget._onToolApproved("git_status", {}, "call_456")
 
-        loop.approve_tool.assert_called_once_with("call_456")
+        loop.approveTool.assert_called_once_with("call_456")
 
     def test_new_chat_resets_agent_loop(self):
         """Creating a new conversation should reset the agent loop."""

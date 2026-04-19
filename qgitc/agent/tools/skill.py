@@ -9,7 +9,7 @@ class SkillTool(Tool):
     name = "Skill"
     description = "Execute a skill by name and load its instructions"
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def _resolve_registry(self, context):
@@ -79,7 +79,7 @@ class SkillTool(Tool):
 
         return ToolResult(content="Successfully loaded skill: {}".format(skill.name))
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

@@ -3,7 +3,7 @@
 import unittest
 
 from qgitc.agent.tool import ToolContext
-from qgitc.agent.tool_registration import register_builtin_tools
+from qgitc.agent.tool_registration import registerBuiltinTools
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.tools.resolve_result import ResolveResultTool
 
@@ -45,7 +45,7 @@ class TestResolveResultTool(unittest.TestCase):
     def test_reports_as_read_only_tool(self):
         tool = ResolveResultTool(_FakeResolveContext())
 
-        self.assertTrue(tool.is_read_only())
+        self.assertTrue(tool.isReadOnly())
 
     def test_rejects_unknown_status(self):
         tool = ResolveResultTool(_FakeResolveContext())
@@ -69,7 +69,7 @@ class TestResolveResultTool(unittest.TestCase):
 
     def test_not_registered_as_builtin_tool(self):
         registry = ToolRegistry()
-        register_builtin_tools(registry)
+        registerBuiltinTools(registry)
 
         self.assertIsNone(registry.get("resolve_result"))
 

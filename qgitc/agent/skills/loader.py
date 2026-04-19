@@ -12,7 +12,7 @@ from qgitc.agent.skills.types import SkillDefinition
 logger = logging.getLogger(__name__)
 
 
-def parse_skill_frontmatter(content):
+def parseSkillFrontmatter(content):
     # type: (str) -> Tuple[Dict[str, Any], str]
     match = re.match(r"\A---\s*\n(.*?)\n?---\s*\n?(.*)", content, re.DOTALL)
     if not match:
@@ -76,7 +76,7 @@ def _extract_description(body):
     return "Skill command"
 
 
-def create_skill_definition(frontmatter, body, file_path):
+def createSkillDefinition(frontmatter, body, file_path):
     # type: (Dict[str, Any], str, str) -> SkillDefinition
     skill_dir = os.path.dirname(file_path)
     inferred_name = os.path.basename(skill_dir)
@@ -136,7 +136,7 @@ def create_skill_definition(frontmatter, body, file_path):
     )
 
 
-def load_skills_from_directory(directory):
+def loadSkillsFromDirectory(directory):
     # type: (str) -> List[SkillDefinition]
     skills = []  # type: List[SkillDefinition]
     if not os.path.isdir(directory):
@@ -160,8 +160,8 @@ def load_skills_from_directory(directory):
         try:
             with open(skill_file, encoding="utf-8") as f:
                 content = f.read()
-            frontmatter, body = parse_skill_frontmatter(content)
-            skills.append(create_skill_definition(frontmatter, body, skill_file))
+            frontmatter, body = parseSkillFrontmatter(content)
+            skills.append(createSkillDefinition(frontmatter, body, skill_file))
         except OSError as e:
             logger.warning("Failed to read skill file %s: %s", skill_file, e)
 

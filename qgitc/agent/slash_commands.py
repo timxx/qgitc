@@ -36,5 +36,5 @@ class CommandRegistry:
     def has(self, name: str) -> bool:
         return self.find(name) is not None
 
-    def list_commands(self) -> List[SlashCommand]:
+    def listCommands(self) -> List[SlashCommand]:
         return list(self._commands.values())

@@ -3,14 +3,14 @@
 from typing import Any, Dict
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.agent.tools.utils import run_git
+from qgitc.agent.tools.utils import runGit
 
 
 class GitDiffStagedTool(Tool):
     name = "git_diff_staged"
     description = "Shows changes that are staged for commit"
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -26,12 +26,12 @@ class GitDiffStagedTool(Tool):
         if files:
             args += ["--"] + [str(f) for f in files]
 
-        ok, output = run_git(context.working_directory, args)
+        ok, output = runGit(context.working_directory, args)
         if not output:
             output = "No changed files found"
         return ToolResult(content=output, is_error=not ok)
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

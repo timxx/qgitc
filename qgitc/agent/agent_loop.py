@@ -19,7 +19,7 @@ from qgitc.agent.provider import (
 )
 from qgitc.agent.skills.registry import SkillRegistry
 from qgitc.agent.tool import ToolContext
-from qgitc.agent.tool_executor import execute_tool_blocks
+from qgitc.agent.tool_executor import executeToolBlocks
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import (
     AssistantMessage,
@@ -107,7 +107,7 @@ class AgentLoop(QThread):
         }
         self.start()
 
-    def approve_tool(self, tool_call_id):
+    def approveTool(self, tool_call_id):
         # type: (str) -> None
         """Approve a pending tool execution (called from main thread)."""
         self._perm_mutex.lock()
@@ -115,7 +115,7 @@ class AgentLoop(QThread):
         self._perm_cond.wakeAll()
         self._perm_mutex.unlock()
 
-    def deny_tool(self, tool_call_id, message=""):
+    def denyTool(self, tool_call_id, message=""):
         # type: (str, str) -> None
         """Deny a pending tool execution (called from main thread)."""
         self._perm_mutex.lock()
@@ -137,12 +137,12 @@ class AgentLoop(QThread):
         """Return a copy of the conversation history (thread-safe)."""
         return list(self._messages)
 
-    def set_messages(self, messages):
+    def setMessages(self, messages):
         # type: (List[Message]) -> None
         """Replace conversation history (call before submit, not while running)."""
         self._messages = list(messages)
 
-    def get_system_prompt(self):
+    def getSystemPrompt(self):
         # type: () -> Optional[str]
         """Return the system prompt if set."""
         return self._system_prompt
@@ -175,7 +175,7 @@ class AgentLoop(QThread):
                 return
 
             # Check compaction
-            if compactor.should_compact(self._messages):
+            if compactor.shouldCompact(self._messages):
                 result = compactor.compact(self._messages)
                 self._messages = [result.boundary, result.summary]
                 self.conversationCompacted.emit(
@@ -187,7 +187,7 @@ class AgentLoop(QThread):
                 return
 
             # Stream from provider
-            tool_schemas = self._tool_registry.get_tool_schemas() or None
+            tool_schemas = self._tool_registry.getToolSchemas() or None
 
             assistant_msg = self._stream_response(
                 params.provider,
@@ -303,7 +303,7 @@ class AgentLoop(QThread):
         if self._params is not None:
             self._context_extra_state["skill_registry"] = self._params.skill_registry
 
-        def request_permission(tool_call_id, tool, tool_input):
+        def requestPermission(tool_call_id, tool, tool_input):
             # type: (str, object, Dict[str, Any]) -> bool
             self.permissionRequired.emit(tool_call_id, tool, tool_input)
 
@@ -318,11 +318,11 @@ class AgentLoop(QThread):
 
             return self._perm_decisions.get(tool_call_id, False)
 
-        def on_tool_start(tool_call_id, tool_name, tool_input):
+        def onToolStart(tool_call_id, tool_name, tool_input):
             # type: (str, str, Dict[str, Any]) -> None
             self.toolCallStart.emit(tool_call_id, tool_name, tool_input)
 
-        def on_tool_result(tool_call_id, tool_name, content, is_error):
+        def onToolResult(tool_call_id, tool_name, content, is_error):
             # type: (str, str, str, bool) -> None
             self.toolCallResult.emit(tool_call_id, tool_name, content, is_error)
 
@@ -332,15 +332,15 @@ class AgentLoop(QThread):
             extra=self._context_extra_state,
         )
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=tool_blocks,
             registry=self._tool_registry,
             permission_engine=self._permission_engine,
             context=context,
             is_aborted=lambda: self._abort_flag,
-            request_permission=request_permission,
-            on_tool_start=on_tool_start,
-            on_tool_result=on_tool_result,
+            requestPermission=requestPermission,
+            onToolStart=onToolStart,
+            onToolResult=onToolResult,
         )
 
         return results

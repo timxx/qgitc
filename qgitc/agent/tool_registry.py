@@ -19,8 +19,8 @@ class ToolRegistry:
     def get(self, name: str) -> Optional[Tool]:
         return self._tools.get(name)
 
-    def list_tools(self) -> List[Tool]:
+    def listTools(self) -> List[Tool]:
         return list(self._tools.values())
 
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        return [tool.openai_schema() for tool in self._tools.values()]
+    def getToolSchemas(self) -> List[Dict[str, Any]]:
+        return [tool.openaiSchema() for tool in self._tools.values()]

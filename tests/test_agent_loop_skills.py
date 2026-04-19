@@ -52,7 +52,7 @@ class SequenceProvider(ModelProvider):
             yield ContentDelta(text="done")
             yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         return 10
 
 class InspectSkillInjectionProvider(ModelProvider):
@@ -81,7 +81,7 @@ class InspectSkillInjectionProvider(ModelProvider):
         yield ContentDelta(text="done")
         yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         return 10
 
 
@@ -92,7 +92,7 @@ class DummyRunCommandTool(Tool):
     def execute(self, input_data, context):
         return ToolResult(content="command executed")
 
-    def input_schema(self):
+    def inputSchema(self):
         return {
             "type": "object",
             "properties": {

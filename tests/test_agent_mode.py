@@ -6,7 +6,7 @@ from PySide6.QtTest import QTest
 
 from qgitc.agent.agent_loop import QueryParams
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
-from qgitc.agent.tool_registration import register_builtin_tools
+from qgitc.agent.tool_registration import registerBuiltinTools
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.tools.resolve_result import ResolveResultTool
 from qgitc.agent.types import TextBlock, UserMessage
@@ -131,8 +131,8 @@ class TestAgentMode(TestBase):
         # Sanity check the registry includes the dedicated current-branch tool,
         # so the LLM can fetch it without listing all branches.
         registry = ToolRegistry()
-        register_builtin_tools(registry)
-        names = [t.name for t in registry.list_tools()]
+        registerBuiltinTools(registry)
+        names = [t.name for t in registry.listTools()]
         self.assertIn("git_current_branch", names)
 
     def test_model_change_does_not_reset_existing_loop(self):

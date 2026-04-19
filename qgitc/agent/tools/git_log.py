@@ -3,7 +3,7 @@
 from typing import Any, Dict
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.agent.tools.utils import run_git
+from qgitc.agent.tools.utils import runGit
 
 
 class GitLogTool(Tool):
@@ -13,7 +13,7 @@ class GitLogTool(Tool):
         "If you pass `path`, shows history for that file and can follow renames."
     )
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -46,7 +46,7 @@ class GitLogTool(Tool):
                 args.append("--follow")
             args += ["--", path]
 
-        ok, output = run_git(context.working_directory, args)
+        ok, output = runGit(context.working_directory, args)
         if ok:
             if nth:
                 line = output.splitlines()[0].strip() if output.strip() else ""
@@ -65,7 +65,7 @@ class GitLogTool(Tool):
 
         return ToolResult(content=output, is_error=not ok)
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

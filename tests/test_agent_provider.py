@@ -25,7 +25,7 @@ class FakeProvider(ModelProvider):
         for event in self._events:
             yield event
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         return self._token_count
 
 
@@ -150,11 +150,11 @@ class TestFakeProvider(unittest.TestCase):
     def test_count_tokens_returns_expected_value(self):
         provider = FakeProvider(token_count=42)
         messages = [UserMessage(content=[TextBlock(text="test")])]
-        self.assertEqual(provider.count_tokens(messages), 42)
+        self.assertEqual(provider.countTokens(messages), 42)
 
     def test_count_tokens_zero(self):
         provider = FakeProvider(token_count=0)
-        self.assertEqual(provider.count_tokens([]), 0)
+        self.assertEqual(provider.countTokens([]), 0)
 
     def test_stream_with_optional_params(self):
         events = [MessageComplete(stop_reason="max_tokens")]
@@ -172,7 +172,7 @@ class TestFakeProvider(unittest.TestCase):
     def test_count_tokens_with_optional_params(self):
         provider = FakeProvider(token_count=99)
         messages = [UserMessage(content=[TextBlock(text="hi")])]
-        result = provider.count_tokens(
+        result = provider.countTokens(
             messages,
             system_prompt="Be concise.",
             tools=[{"name": "search"}],

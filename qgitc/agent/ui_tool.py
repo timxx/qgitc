@@ -25,7 +25,7 @@ class UiToolDispatcher(QObject):
         self._results = {}  # type: Dict[str, Tuple[bool, str]]
         self._executeRequested.connect(self._onExecute)
 
-    def set_handler(self, handler):
+    def setHandler(self, handler):
         # type: (Callable[[str, Dict[str, Any]], Tuple[bool, str]]) -> None
         """Set the handler called on the main thread.
 
@@ -50,7 +50,7 @@ class UiToolDispatcher(QObject):
         self._cond.wakeAll()
         self._mutex.unlock()
 
-    def dispatch_and_wait(self, request_id, tool_name, params):
+    def dispatchAndWait(self, request_id, tool_name, params):
         # type: (str, str, dict) -> Tuple[bool, str]
         """Called from background thread. Dispatches to main thread and
         blocks until the result is available."""
@@ -78,11 +78,11 @@ class UiTool(Tool):
         self._dispatcher = dispatcher
         self._next_id = 0
 
-    def set_dispatcher(self, dispatcher):
+    def setDispatcher(self, dispatcher):
         # type: (UiToolDispatcher) -> None
         self._dispatcher = dispatcher
 
-    def is_read_only(self):
+    def isReadOnly(self):
         # type: () -> bool
         return True
 
@@ -95,11 +95,11 @@ class UiTool(Tool):
             )
         self._next_id += 1
         request_id = "{}_{}".format(self.name, self._next_id)
-        ok, output = self._dispatcher.dispatch_and_wait(
+        ok, output = self._dispatcher.dispatchAndWait(
             request_id, self.name, input_data,
         )
         return ToolResult(content=output, is_error=not ok)
 
-    def input_schema(self):
+    def inputSchema(self):
         # type: () -> Dict[str, Any]
         return self._schema

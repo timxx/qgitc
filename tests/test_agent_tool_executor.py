@@ -10,7 +10,7 @@ from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_executor import (
     TOOL_SKIPPED_MESSAGE,
     _partition_tool_calls,
-    execute_tool_blocks,
+    executeToolBlocks,
 )
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.types import ToolUseBlock
@@ -20,13 +20,13 @@ class ReadOnlyTool(Tool):
     name = "read_tool"
     description = "Read-only test tool"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="ok")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -37,7 +37,7 @@ class WriteTool(Tool):
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="ok")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -45,14 +45,14 @@ class SleepyReadTool(Tool):
     name = "sleepy_read"
     description = "Read-only test tool with delay"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         sleep(input_data.get("delay", 0))
         return ToolResult(content=input_data.get("label", ""))
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -74,7 +74,7 @@ class SleepyWriteTool(Tool):
             self.active -= 1
         return ToolResult(content=input_data.get("label", ""))
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -82,13 +82,13 @@ class ContextIdReadTool(Tool):
     name = "context_id_read"
     description = "Read-only tool that returns current context object id"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content=str(id(context)))
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -96,13 +96,13 @@ class SkillTool(Tool):
     name = "Skill"
     description = "Skill tool"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="skill")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -114,7 +114,7 @@ class SetExtraTool(Tool):
         context.extra[input_data["key"]] = input_data["value"]
         return ToolResult(content="set")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -122,13 +122,13 @@ class ReadExtraTool(Tool):
     name = "read_extra"
     description = "Reads from shared context.extra"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content=str(context.extra.get(input_data["key"])))
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -136,14 +136,14 @@ class MutateExtraReadTool(Tool):
     name = "mutate_extra_read"
     description = "Read-only tool that mutates context.extra"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         context.extra[input_data["key"]] = input_data["value"]
         return ToolResult(content=input_data["key"])
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -235,15 +235,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
             extra={},
         )
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: None,
+            onToolResult=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -274,15 +274,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
             extra={},
         )
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, ask_tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
+            requestPermission=lambda tool_id, ask_tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: None,
+            onToolResult=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -306,15 +306,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
         start_calls = []
         result_calls = []
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
-            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
+            onToolResult=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -340,15 +340,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
 
         result_calls = []
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: None,
+            onToolResult=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -380,15 +380,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
         start_calls = []
         result_calls = []
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=DenyEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: permission_requests.append(tool_id) or True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
-            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
+            requestPermission=lambda tool_id, tool, tool_input: permission_requests.append(tool_id) or True,
+            onToolStart=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
+            onToolResult=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -421,15 +421,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
         start_calls = []
         result_calls = []
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=AskEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: False,
-            on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
-            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
+            requestPermission=lambda tool_id, tool, tool_input: False,
+            onToolStart=lambda tool_id, tool_name, tool_input: start_calls.append(tool_id),
+            onToolResult=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -461,15 +461,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
         start_calls = []
         result_calls = []
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=AskEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append((tool_id, tool_name)),
-            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: start_calls.append((tool_id, tool_name)),
+            onToolResult=lambda tool_id, tool_name, content, is_error: result_calls.append((tool_id, content, is_error)),
             max_workers=4,
         )
 
@@ -495,15 +495,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
             extra={"k": "v"},
         )
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: None,
+            onToolResult=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -530,15 +530,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
             extra={},
         )
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: None,
+            onToolResult=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -569,15 +569,15 @@ class TestExecuteToolBlocks(unittest.TestCase):
             extra={"seed": "x"},
         )
 
-        results = execute_tool_blocks(
+        results = executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: None,
-            on_tool_result=lambda tool_id, tool_name, content, is_error: None,
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: None,
+            onToolResult=lambda tool_id, tool_name, content, is_error: None,
             max_workers=4,
         )
 
@@ -611,17 +611,17 @@ class TestExecuteToolBlocks(unittest.TestCase):
         start_calls = []
         result_calls = []
 
-        execute_tool_blocks(
+        executeToolBlocks(
             tool_blocks=blocks,
             registry=registry,
             permission_engine=PermissionEngine(),
             context=context,
             is_aborted=lambda: False,
-            request_permission=lambda tool_id, tool, tool_input: True,
-            on_tool_start=lambda tool_id, tool_name, tool_input: start_calls.append(
+            requestPermission=lambda tool_id, tool, tool_input: True,
+            onToolStart=lambda tool_id, tool_name, tool_input: start_calls.append(
                 (tool_id, tool_name, current_thread().ident)
             ),
-            on_tool_result=lambda tool_id, tool_name, content, is_error: result_calls.append(
+            onToolResult=lambda tool_id, tool_name, content, is_error: result_calls.append(
                 (tool_id, content, is_error, current_thread().ident)
             ),
             max_workers=4,

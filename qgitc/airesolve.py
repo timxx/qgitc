@@ -6,7 +6,7 @@ from typing import Dict
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from qgitc.agent.permission_presets import create_permission_engine
+from qgitc.agent.permission_presets import createPermissionEngine
 from qgitc.agent.tools.resolve_result import ResolveResultTool
 from qgitc.llm import AiChatMode
 from qgitc.models.prompts import RESOLVE_PROMPT, RESOLVE_SYS_PROMPT
@@ -94,7 +94,7 @@ class ResolveConflictJob(QObject):
         w._ensureAgentLoop(RESOLVE_SYS_PROMPT)
 
         self._oldPermissionEngine = w._permissionEngine
-        w._agentLoop._permission_engine = create_permission_engine(
+        w._agentLoop._permission_engine = createPermissionEngine(
             3)  # AllAuto
         w._agentLoop.finished.connect(self._onAgentFinished)
         w._agentLoop.errorOccurred.connect(self._onError)

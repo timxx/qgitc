@@ -81,14 +81,14 @@ class PermissionEngine:
             if _rule_matches(rule, tool, input_data):
                 return PermissionAllow()
 
-        if tool.is_read_only():
+        if tool.isReadOnly():
             return PermissionAllow()
 
         return PermissionAsk(
             message="Tool '{}' requires permission to proceed".format(tool.name)
         )
 
-    def apply_update(self, update):
+    def applyUpdate(self, update):
         # type: (PermissionUpdate) -> None
         """Add or remove a permission rule."""
         if update.rule.behavior == PermissionBehavior.ALLOW:

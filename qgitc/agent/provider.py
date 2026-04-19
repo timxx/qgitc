@@ -47,7 +47,7 @@ class ModelProvider(ABC):
         ...
 
     @abstractmethod
-    def count_tokens(
+    def countTokens(
         self,
         messages,          # type: List[Message]
         system_prompt=None,  # type: Optional[str]

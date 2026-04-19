@@ -3,8 +3,8 @@
 import unittest
 
 from qgitc.agent.message_convert import (
-    history_dicts_to_messages,
-    messages_to_history_dicts,
+    historyDictsToMessages,
+    messagesToHistoryDicts,
 )
 from qgitc.agent.types import (
     AssistantMessage,
@@ -21,7 +21,7 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
 
     def test_user_text_message(self):
         msgs = [UserMessage(content=[TextBlock(text="Hello")])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(len(dicts), 1)
         self.assertEqual(dicts[0]["role"], "user")
         self.assertEqual(dicts[0]["content"], "Hello")
@@ -29,7 +29,7 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
 
     def test_assistant_text_message(self):
         msgs = [AssistantMessage(content=[TextBlock(text="Hi there")])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(dicts[0]["role"], "assistant")
         self.assertEqual(dicts[0]["content"], "Hi there")
 
@@ -38,7 +38,7 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
             ThinkingBlock(thinking="Let me think..."),
             TextBlock(text="Answer"),
         ])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(dicts[0]["content"], "Answer")
         self.assertEqual(dicts[0]["reasoning"], "Let me think...")
 
@@ -48,7 +48,7 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
             ThinkingBlock(thinking="Step-by-step", reasoning_data=reasoning_data),
             TextBlock(text="Done"),
         ])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(dicts[0]["reasoning"], "Step-by-step")
         self.assertEqual(dicts[0]["reasoning_data"], reasoning_data)
 
@@ -57,7 +57,7 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
             TextBlock(text="I'll check"),
             ToolUseBlock(id="call_1", name="git_status", input={"untracked": True}),
         ])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(dicts[0]["content"], "I'll check")
         tc = dicts[0]["tool_calls"]
         self.assertIsInstance(tc, list)
@@ -69,14 +69,14 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
         msgs = [UserMessage(content=[
             ToolResultBlock(tool_use_id="call_1", content="output", is_error=False),
         ])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(dicts[0]["role"], "tool")
         self.assertEqual(dicts[0]["content"], "output")
         self.assertEqual(dicts[0]["tool_calls"], {"tool_call_id": "call_1"})
 
     def test_system_message(self):
         msgs = [SystemMessage(subtype="system", content="You are helpful")]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(dicts[0]["role"], "system")
         self.assertEqual(dicts[0]["content"], "You are helpful")
 
@@ -85,7 +85,7 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
             ToolResultBlock(tool_use_id="c1", content="out1"),
             ToolResultBlock(tool_use_id="c2", content="out2"),
         ])]
-        dicts = messages_to_history_dicts(msgs)
+        dicts = messagesToHistoryDicts(msgs)
         self.assertEqual(len(dicts), 2)
         self.assertEqual(dicts[0]["role"], "tool")
         self.assertEqual(dicts[0]["tool_calls"], {"tool_call_id": "c1"})
@@ -96,20 +96,20 @@ class TestHistoryDictsToMessages(unittest.TestCase):
 
     def test_user_message(self):
         dicts = [{"role": "user", "content": "Hello"}]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         self.assertEqual(len(msgs), 1)
         self.assertIsInstance(msgs[0], UserMessage)
         self.assertEqual(msgs[0].content[0].text, "Hello")
 
     def test_assistant_message(self):
         dicts = [{"role": "assistant", "content": "Hi there"}]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         self.assertIsInstance(msgs[0], AssistantMessage)
         self.assertEqual(msgs[0].content[0].text, "Hi there")
 
     def test_assistant_with_reasoning(self):
         dicts = [{"role": "assistant", "content": "Answer", "reasoning": "Let me think..."}]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         self.assertIsInstance(msgs[0], AssistantMessage)
         blocks = msgs[0].content
         thinking_blocks = [b for b in blocks if isinstance(b, ThinkingBlock)]
@@ -126,7 +126,7 @@ class TestHistoryDictsToMessages(unittest.TestCase):
             "reasoning": "Step-by-step",
             "reasoning_data": reasoning_data,
         }]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         thinking_blocks = [b for b in msgs[0].content if isinstance(b, ThinkingBlock)]
         self.assertEqual(len(thinking_blocks), 1)
         self.assertEqual(thinking_blocks[0].thinking, "Step-by-step")
@@ -142,7 +142,7 @@ class TestHistoryDictsToMessages(unittest.TestCase):
                 "function": {"name": "git_status", "arguments": '{"untracked": true}'},
             }],
         }]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         blocks = msgs[0].content
         text_blocks = [b for b in blocks if isinstance(b, TextBlock)]
         tool_blocks = [b for b in blocks if isinstance(b, ToolUseBlock)]
@@ -157,7 +157,7 @@ class TestHistoryDictsToMessages(unittest.TestCase):
             "content": "output text",
             "tool_calls": {"tool_call_id": "call_1"},
         }]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         self.assertIsInstance(msgs[0], UserMessage)
         self.assertIsInstance(msgs[0].content[0], ToolResultBlock)
         self.assertEqual(msgs[0].content[0].tool_use_id, "call_1")
@@ -165,7 +165,7 @@ class TestHistoryDictsToMessages(unittest.TestCase):
 
     def test_system_message(self):
         dicts = [{"role": "system", "content": "You are helpful"}]
-        msgs = history_dicts_to_messages(dicts)
+        msgs = historyDictsToMessages(dicts)
         self.assertIsInstance(msgs[0], SystemMessage)
         self.assertEqual(msgs[0].content, "You are helpful")
 
@@ -182,9 +182,9 @@ class TestHistoryDictsToMessages(unittest.TestCase):
             ]),
             AssistantMessage(content=[TextBlock(text="All good")]),
         ]
-        dicts = messages_to_history_dicts(original)
-        restored = history_dicts_to_messages(dicts)
-        dicts2 = messages_to_history_dicts(restored)
+        dicts = messagesToHistoryDicts(original)
+        restored = historyDictsToMessages(dicts)
+        dicts2 = messagesToHistoryDicts(restored)
         self.assertEqual(dicts, dicts2)
 
     def test_roundtrip_preserves_reasoning_data(self):
@@ -196,8 +196,8 @@ class TestHistoryDictsToMessages(unittest.TestCase):
                 TextBlock(text="Result"),
             ]),
         ]
-        dicts = messages_to_history_dicts(original)
-        restored = history_dicts_to_messages(dicts)
+        dicts = messagesToHistoryDicts(original)
+        restored = historyDictsToMessages(dicts)
         thinking_blocks = [b for b in restored[1].content if isinstance(b, ThinkingBlock)]
         self.assertEqual(thinking_blocks[0].reasoning_data, reasoning_data)
 

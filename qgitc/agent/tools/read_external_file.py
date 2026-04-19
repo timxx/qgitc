@@ -17,10 +17,10 @@ class ReadExternalFileTool(Tool):
         "Do NOT use this tool for repo-relative paths; use read_file instead."
     )
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return False
 
-    def is_destructive(self):
+    def isDestructive(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -46,7 +46,7 @@ class ReadExternalFileTool(Tool):
         ok, outputOrErr = buildReadFileOutput(absPath, startLine, endLine)
         return ToolResult(content=outputOrErr, is_error=not ok)
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

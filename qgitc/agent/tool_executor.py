@@ -36,7 +36,7 @@ def _prepare_block_execution(
     permission_engine: PermissionEngine,
     context: ToolContext,
     is_aborted: Callable[[], bool],
-    request_permission: Callable[[str, object, dict], bool],
+    requestPermission: Callable[[str, object, dict], bool],
 ) -> _PreparedExecution:
     if is_aborted():
         return _PreparedExecution(
@@ -73,7 +73,7 @@ def _prepare_block_execution(
         )
 
     if isinstance(perm, PermissionAsk):
-        if not request_permission(block.id, tool, block.input):
+        if not requestPermission(block.id, tool, block.input):
             message = TOOL_ABORTED_MESSAGE if is_aborted() else TOOL_SKIPPED_MESSAGE
             return _PreparedExecution(
                 block=block,
@@ -102,9 +102,9 @@ def _execute_one_block(
     permission_engine: PermissionEngine,
     context: ToolContext,
     is_aborted: Callable[[], bool],
-    request_permission: Callable[[str, object, dict], bool],
-    on_tool_start: Callable[[str, str, dict], None],
-    on_tool_result: Callable[[str, str, bool], None],
+    requestPermission: Callable[[str, object, dict], bool],
+    onToolStart: Callable[[str, str, dict], None],
+    onToolResult: Callable[[str, str, bool], None],
 ) -> Optional[ToolResultBlock]:
     prepared = _prepare_block_execution(
         block,
@@ -112,34 +112,34 @@ def _execute_one_block(
         permission_engine,
         context,
         is_aborted,
-        request_permission,
+        requestPermission,
     )
 
     if prepared.immediate_result is not None:
-        on_tool_result(block.id, block.name,
+        onToolResult(block.id, block.name,
                        prepared.immediate_result.content, True)
         return prepared.immediate_result
 
-    on_tool_start(block.id, block.name, block.input)
+    onToolStart(block.id, block.name, block.input)
     block_context = ToolContext(
         working_directory=context.working_directory,
         abort_requested=context.abort_requested,
         extra=context.extra,
     )
     result = _execute_tool(block, prepared.tool, block_context)
-    on_tool_result(block.id, block.name, result.content, result.is_error)
+    onToolResult(block.id, block.name, result.content, result.is_error)
     return result
 
 
-def execute_tool_blocks(
+def executeToolBlocks(
     tool_blocks: List[ToolUseBlock],
     registry: ToolRegistry,
     permission_engine: PermissionEngine,
     context: ToolContext,
     is_aborted: Callable[[], bool],
-    request_permission: Callable[[str, object, dict], bool],
-    on_tool_start: Callable[[str, str, dict], None],
-    on_tool_result: Callable[[str, str, str, bool], None],
+    requestPermission: Callable[[str, object, dict], bool],
+    onToolStart: Callable[[str, str, dict], None],
+    onToolResult: Callable[[str, str, str, bool], None],
     max_workers: int = 4,
 ) -> Optional[List[ToolResultBlock]]:
     batches = _partition_tool_calls(tool_blocks, registry)
@@ -156,11 +156,11 @@ def execute_tool_blocks(
                         permission_engine,
                         context,
                         is_aborted,
-                        request_permission,
+                        requestPermission,
                     )
 
                     if prepared.immediate_result is not None:
-                        on_tool_result(
+                        onToolResult(
                             prepared.block.id,
                             block.name,
                             prepared.immediate_result.content,
@@ -170,7 +170,7 @@ def execute_tool_blocks(
                         parallel_futures.append(None)
                         continue
 
-                    on_tool_start(prepared.block.id,
+                    onToolStart(prepared.block.id,
                                   prepared.block.name, prepared.block.input)
                     block_context = ToolContext(
                         working_directory=context.working_directory,
@@ -189,7 +189,7 @@ def execute_tool_blocks(
                 id_to_name = {block.id: block.name for block in batch.blocks}
                 for future in parallel_futures:
                     result = future.result()
-                    on_tool_result(result.tool_use_id,
+                    onToolResult(result.tool_use_id,
                                    id_to_name[result.tool_use_id],
                                    result.content, result.is_error)
                     ordered_results.append(result)
@@ -201,9 +201,9 @@ def execute_tool_blocks(
                     permission_engine,
                     context,
                     is_aborted,
-                    request_permission,
-                    on_tool_start,
-                    on_tool_result,
+                    requestPermission,
+                    onToolStart,
+                    onToolResult,
                 )
                 if result is not None:
                     ordered_results.append(result)
@@ -215,7 +215,7 @@ def _is_parallel_safe(block: ToolUseBlock, registry: ToolRegistry) -> bool:
     if block.name == "Skill":
         return False
     tool = registry.get(block.name)
-    return tool is not None and tool.is_read_only()
+    return tool is not None and tool.isReadOnly()
 
 
 def _partition_tool_calls(

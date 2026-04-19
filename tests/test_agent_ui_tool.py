@@ -29,16 +29,16 @@ class TestUiTool(TestBase):
         )
         self.assertEqual(tool.name, "ui_test")
         self.assertEqual(tool.description, "Test UI tool")
-        self.assertTrue(tool.is_read_only())
-        self.assertFalse(tool.is_destructive())
+        self.assertTrue(tool.isReadOnly())
+        self.assertFalse(tool.isDestructive())
 
-    def test_openai_schema(self):
+    def test_openaiSchema(self):
         tool = UiTool(
             name="ui_test",
             description="A test tool",
             schema={"type": "object", "properties": {}},
         )
-        schema = tool.openai_schema()
+        schema = tool.openaiSchema()
         self.assertEqual(schema["function"]["name"], "ui_test")
         self.assertEqual(schema["function"]["description"], "A test tool")
 
@@ -48,7 +48,7 @@ class TestUiTool(TestBase):
         def mock_handler(tool_name, params):
             return True, "executed ok"
 
-        dispatcher.set_handler(mock_handler)
+        dispatcher.setHandler(mock_handler)
 
         tool = UiTool(
             name="ui_test",
@@ -79,7 +79,7 @@ class TestUiTool(TestBase):
         def mock_handler(tool_name, params):
             return False, "something went wrong"
 
-        dispatcher.set_handler(mock_handler)
+        dispatcher.setHandler(mock_handler)
 
         tool = UiTool(
             name="ui_test",

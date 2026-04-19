@@ -56,7 +56,7 @@ class SimpleProvider(ModelProvider):
         yield ContentDelta(text="Hello from LLM")
         yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -74,7 +74,7 @@ class ReasoningProvider(ModelProvider):
         yield ContentDelta(text="Hello from LLM")
         yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -100,7 +100,7 @@ class ToolCallProvider(ModelProvider):
             yield ContentDelta(text="Tool returned: pong")
             yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -131,7 +131,7 @@ class TwoReadOnlyToolCallsProvider(ModelProvider):
             yield ContentDelta(text="done")
             yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -162,7 +162,7 @@ class AskPermissionToolCallProvider(ModelProvider):
             yield ContentDelta(text="continuation after tool")
             yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -201,7 +201,7 @@ class MultipleToolsWithDelaysProvider(ModelProvider):
             yield ContentDelta(text="all tools completed")
             yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -216,7 +216,7 @@ class ErrorProvider(ModelProvider):
         raise RuntimeError("connection dropped")
         yield MessageComplete(stop_reason="end_turn")
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 10
 
@@ -228,7 +228,7 @@ class EchoTool(Tool):
     name = "echo"
     description = "Echoes back a fixed response"
 
-    def is_read_only(self):
+    def isReadOnly(self):
         # type: () -> bool
         return True
 
@@ -236,7 +236,7 @@ class EchoTool(Tool):
         # type: (Dict[str, Any], ToolContext) -> ToolResult
         return ToolResult(content="pong")
 
-    def input_schema(self):
+    def inputSchema(self):
         # type: () -> Dict[str, Any]
         return {
             "type": "object",
@@ -250,7 +250,7 @@ class SleepEchoTool(Tool):
     name = "sleep_echo"
     description = "Returns supplied text after an optional delay"
 
-    def is_read_only(self):
+    def isReadOnly(self):
         # type: () -> bool
         return True
 
@@ -261,7 +261,7 @@ class SleepEchoTool(Tool):
         time.sleep(float(input_data.get("delay", 0)))
         return ToolResult(content=str(input_data.get("text", "")))
 
-    def input_schema(self):
+    def inputSchema(self):
         # type: () -> Dict[str, Any]
         return {
             "type": "object",
@@ -280,7 +280,7 @@ class WriteEchoTool(Tool):
         # type: (Dict[str, Any], ToolContext) -> ToolResult
         return ToolResult(content=str(input_data.get("text", "")))
 
-    def input_schema(self):
+    def inputSchema(self):
         # type: () -> Dict[str, Any]
         return {
             "type": "object",
@@ -515,7 +515,7 @@ class TestAgentLoopToolExecution(TestBase):
         tool_result_spy = QSignalSpy(loop.toolCallResult)
         finished_spy = QSignalSpy(loop.agentFinished)
 
-        loop.permissionRequired.connect(lambda tool_call_id, tool, tool_input: loop.deny_tool(tool_call_id))
+        loop.permissionRequired.connect(lambda tool_call_id, tool, tool_input: loop.denyTool(tool_call_id))
 
         loop.submit("Run write tool", params)
         waitFor(self.app, lambda: finished_spy.count() > 0)
@@ -575,7 +575,7 @@ class TestAgentLoopToolExecution(TestBase):
         finished_spy = QSignalSpy(loop.agentFinished)
         
         # Auto-approve permission requests so all tools can execute
-        loop.permissionRequired.connect(lambda tool_call_id, tool, tool_input: loop.approve_tool(tool_call_id))
+        loop.permissionRequired.connect(lambda tool_call_id, tool, tool_input: loop.approveTool(tool_call_id))
 
         loop.submit("Run multiple tools", params)
         # Wait for tools to start executing
@@ -619,20 +619,20 @@ class TestAgentLoopSetMessages(TestBase):
     def doCreateRepo(self):
         pass
 
-    def test_set_messages(self):
+    def test_setMessages(self):
         msgs = [
             UserMessage(content=[TextBlock(text="Hello")]),
             AssistantMessage(content=[TextBlock(text="Hi")]),
         ]
-        self.loop.set_messages(msgs)
+        self.loop.setMessages(msgs)
         result = self.loop.messages()
         self.assertEqual(len(result), 2)
         self.assertIsInstance(result[0], UserMessage)
         self.assertIsInstance(result[1], AssistantMessage)
 
-    def test_set_messages_copies(self):
+    def test_setMessages_copies(self):
         msgs = [UserMessage(content=[TextBlock(text="Hello")])]
-        self.loop.set_messages(msgs)
+        self.loop.setMessages(msgs)
         msgs.append(UserMessage(content=[TextBlock(text="World")]))
         self.assertEqual(len(self.loop.messages()), 1)
 

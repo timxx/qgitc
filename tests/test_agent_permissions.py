@@ -22,13 +22,13 @@ class StubReadOnlyTool(Tool):
     name = "git_status"
     description = "A read-only tool"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="ok")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -39,7 +39,7 @@ class StubWriteTool(Tool):
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="ok")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -47,13 +47,13 @@ class StubDestructiveTool(Tool):
     name = "run_command"
     description = "A destructive tool"
 
-    def is_destructive(self) -> bool:
+    def isDestructive(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="ok")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {"type": "object", "properties": {}}
 
 
@@ -156,12 +156,12 @@ class TestAllowRules(unittest.TestCase):
 
 
 class TestApplyUpdate(unittest.TestCase):
-    """Tests for apply_update method."""
+    """Tests for applyUpdate method."""
 
     def test_add_allow_rule(self):
         engine = PermissionEngine()
         rule = PermissionRule(tool_name="git_commit", behavior=PermissionBehavior.ALLOW)
-        engine.apply_update(PermissionUpdate(action="add", rule=rule))
+        engine.applyUpdate(PermissionUpdate(action="add", rule=rule))
         self.assertIn(rule, engine.allow_rules)
         # Verify the rule actually takes effect
         result = engine.check(StubWriteTool(), {})
@@ -170,7 +170,7 @@ class TestApplyUpdate(unittest.TestCase):
     def test_add_deny_rule(self):
         engine = PermissionEngine()
         rule = PermissionRule(tool_name="git_status", behavior=PermissionBehavior.DENY)
-        engine.apply_update(PermissionUpdate(action="add", rule=rule))
+        engine.applyUpdate(PermissionUpdate(action="add", rule=rule))
         self.assertIn(rule, engine.deny_rules)
         # Verify the rule actually takes effect
         result = engine.check(StubReadOnlyTool(), {})
@@ -179,7 +179,7 @@ class TestApplyUpdate(unittest.TestCase):
     def test_remove_rule(self):
         rule = PermissionRule(tool_name="git_commit", behavior=PermissionBehavior.ALLOW)
         engine = PermissionEngine(allow_rules=[rule])
-        engine.apply_update(PermissionUpdate(action="remove", rule=rule))
+        engine.applyUpdate(PermissionUpdate(action="remove", rule=rule))
         self.assertNotIn(rule, engine.allow_rules)
         # Write tool should now ask again
         result = engine.check(StubWriteTool(), {})
@@ -189,7 +189,7 @@ class TestApplyUpdate(unittest.TestCase):
         engine = PermissionEngine()
         rule = PermissionRule(tool_name="git_commit", behavior=PermissionBehavior.ALLOW)
         # Should not raise
-        engine.apply_update(PermissionUpdate(action="remove", rule=rule))
+        engine.applyUpdate(PermissionUpdate(action="remove", rule=rule))
 
 
 class TestAskMessage(unittest.TestCase):

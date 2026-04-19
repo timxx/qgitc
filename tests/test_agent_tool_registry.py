@@ -14,7 +14,7 @@ class StubToolA(Tool):
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="a")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -31,7 +31,7 @@ class StubToolB(Tool):
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="b")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {},
@@ -40,13 +40,13 @@ class StubToolB(Tool):
 
 class TestToolRegistryEmpty(unittest.TestCase):
 
-    def test_empty_list_tools(self):
+    def test_empty_listTools(self):
         registry = ToolRegistry()
-        self.assertEqual(registry.list_tools(), [])
+        self.assertEqual(registry.listTools(), [])
 
-    def test_empty_get_tool_schemas(self):
+    def test_empty_getToolSchemas(self):
         registry = ToolRegistry()
-        self.assertEqual(registry.get_tool_schemas(), [])
+        self.assertEqual(registry.getToolSchemas(), [])
 
 
 class TestToolRegistryRegisterAndGet(unittest.TestCase):
@@ -64,10 +64,10 @@ class TestToolRegistryRegisterAndGet(unittest.TestCase):
     def test_get_missing_returns_none(self):
         self.assertIsNone(self.registry.get("nonexistent"))
 
-    def test_list_tools_returns_all(self):
+    def test_listTools_returns_all(self):
         self.registry.register(self.tool_a)
         self.registry.register(self.tool_b)
-        tools = self.registry.list_tools()
+        tools = self.registry.listTools()
         self.assertEqual(len(tools), 2)
         self.assertIn(self.tool_a, tools)
         self.assertIn(self.tool_b, tools)
@@ -76,7 +76,7 @@ class TestToolRegistryRegisterAndGet(unittest.TestCase):
         self.registry.register(self.tool_a)
         self.registry.unregister("tool_a")
         self.assertIsNone(self.registry.get("tool_a"))
-        self.assertEqual(self.registry.list_tools(), [])
+        self.assertEqual(self.registry.listTools(), [])
 
     def test_unregister_missing_is_noop(self):
         self.registry.unregister("nonexistent")
@@ -88,12 +88,12 @@ class TestToolRegistryRegisterAndGet(unittest.TestCase):
         result = self.registry.get("tool_a")
         self.assertIs(result, replacement)
         self.assertIsNot(result, self.tool_a)
-        self.assertEqual(len(self.registry.list_tools()), 1)
+        self.assertEqual(len(self.registry.listTools()), 1)
 
-    def test_get_tool_schemas(self):
+    def test_getToolSchemas(self):
         self.registry.register(self.tool_a)
         self.registry.register(self.tool_b)
-        schemas = self.registry.get_tool_schemas()
+        schemas = self.registry.getToolSchemas()
         self.assertEqual(len(schemas), 2)
         names = {s["function"]["name"] for s in schemas}
         self.assertEqual(names, {"tool_a", "tool_b"})

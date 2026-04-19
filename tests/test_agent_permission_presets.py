@@ -2,7 +2,7 @@
 
 import unittest
 
-from qgitc.agent.permission_presets import create_permission_engine
+from qgitc.agent.permission_presets import createPermissionEngine
 from qgitc.agent.permissions import PermissionAllow, PermissionAsk
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 
@@ -11,13 +11,13 @@ class ReadOnlyTool(Tool):
     name = "git_status"
     description = "test read-only tool"
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def execute(self, input_data, context):
         return ToolResult(content="ok")
 
-    def input_schema(self):
+    def inputSchema(self):
         return {"type": "object", "properties": {}}
 
 
@@ -28,7 +28,7 @@ class WriteTool(Tool):
     def execute(self, input_data, context):
         return ToolResult(content="ok")
 
-    def input_schema(self):
+    def inputSchema(self):
         return {"type": "object", "properties": {}}
 
 
@@ -36,20 +36,20 @@ class DangerousTool(Tool):
     name = "run_command"
     description = "test dangerous tool"
 
-    def is_destructive(self):
+    def isDestructive(self):
         return True
 
     def execute(self, input_data, context):
         return ToolResult(content="ok")
 
-    def input_schema(self):
+    def inputSchema(self):
         return {"type": "object", "properties": {}}
 
 
 class TestDefaultPreset(unittest.TestCase):
 
     def setUp(self):
-        self.engine = create_permission_engine(0)
+        self.engine = createPermissionEngine(0)
 
     def test_read_only_allowed(self):
         result = self.engine.check(ReadOnlyTool(), {})
@@ -67,7 +67,7 @@ class TestDefaultPreset(unittest.TestCase):
 class TestAggressivePreset(unittest.TestCase):
 
     def setUp(self):
-        self.engine = create_permission_engine(1)
+        self.engine = createPermissionEngine(1)
 
     def test_read_only_allowed(self):
         result = self.engine.check(ReadOnlyTool(), {})
@@ -85,7 +85,7 @@ class TestAggressivePreset(unittest.TestCase):
 class TestSafePreset(unittest.TestCase):
 
     def setUp(self):
-        self.engine = create_permission_engine(2)
+        self.engine = createPermissionEngine(2)
 
     def test_read_only_asks(self):
         result = self.engine.check(ReadOnlyTool(), {})
@@ -103,7 +103,7 @@ class TestSafePreset(unittest.TestCase):
 class TestAllAutoPreset(unittest.TestCase):
 
     def setUp(self):
-        self.engine = create_permission_engine(3)
+        self.engine = createPermissionEngine(3)
 
     def test_read_only_allowed(self):
         result = self.engine.check(ReadOnlyTool(), {})
@@ -121,7 +121,7 @@ class TestAllAutoPreset(unittest.TestCase):
 class TestUnknownStrategy(unittest.TestCase):
 
     def test_fallback(self):
-        engine = create_permission_engine(99)
+        engine = createPermissionEngine(99)
         result = engine.check(WriteTool(), {})
         self.assertIsInstance(result, PermissionAsk)
 

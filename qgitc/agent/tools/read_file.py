@@ -118,7 +118,7 @@ class ReadFileTool(Tool):
         "If it is a relative path, treat it as relative to the repository root."
     )
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -147,7 +147,7 @@ class ReadFileTool(Tool):
         ok, outputOrErr = buildReadFileOutput(absPathOrErr, startLine, endLine)
         return ToolResult(content=outputOrErr, is_error=not ok)
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

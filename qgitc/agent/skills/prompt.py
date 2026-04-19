@@ -5,7 +5,7 @@ from typing import List
 from qgitc.agent.skills.types import SkillDefinition
 
 
-def render_skills_reminder(skills):
+def renderSkillsReminder(skills):
     # type: (List[SkillDefinition]) -> str
     if not skills:
         return ""

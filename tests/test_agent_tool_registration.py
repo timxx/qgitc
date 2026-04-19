@@ -2,21 +2,21 @@
 
 import unittest
 
-from qgitc.agent.tool_registration import register_builtin_tools
+from qgitc.agent.tool_registration import registerBuiltinTools
 from qgitc.agent.tool_registry import ToolRegistry
 
 
 class TestToolRegistration(unittest.TestCase):
 
-    def test_register_builtin_tools(self):
+    def test_registerBuiltinTools(self):
         registry = ToolRegistry()
-        register_builtin_tools(registry)
-        tools = registry.list_tools()
+        registerBuiltinTools(registry)
+        tools = registry.listTools()
         self.assertGreater(len(tools), 0)
 
     def test_known_tools_registered(self):
         registry = ToolRegistry()
-        register_builtin_tools(registry)
+        registerBuiltinTools(registry)
         expected_names = [
             "git_status", "git_log", "git_diff", "git_diff_range",
             "git_diff_staged", "git_diff_unstaged",
@@ -32,9 +32,9 @@ class TestToolRegistration(unittest.TestCase):
 
     def test_schemas_generated(self):
         registry = ToolRegistry()
-        register_builtin_tools(registry)
-        schemas = registry.get_tool_schemas()
-        self.assertEqual(len(schemas), len(registry.list_tools()))
+        registerBuiltinTools(registry)
+        schemas = registry.getToolSchemas()
+        self.assertEqual(len(schemas), len(registry.listTools()))
         for schema in schemas:
             self.assertIn("function", schema)
             self.assertIn("name", schema["function"])

@@ -185,7 +185,7 @@ class AiModelBaseAdapter(ModelProvider):
             self._model.finished.disconnect(_on_finished)
             self._model.networkError.disconnect(_on_network_error)
 
-    def count_tokens(
+    def countTokens(
         self,
         messages,          # type: List[Message]
         system_prompt=None,  # type: Optional[str]

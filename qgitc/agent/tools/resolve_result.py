@@ -12,7 +12,7 @@ class ResolveResultTool(Tool):
     def __init__(self, resolveContext):
         self._resolveContext = resolveContext
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -28,7 +28,7 @@ class ResolveResultTool(Tool):
         self._resolveContext.setResult(status, reason)
         return ToolResult(content="Recorded resolve result: {}".format(status))
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

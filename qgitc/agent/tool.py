@@ -22,10 +22,10 @@ class Tool(ABC):
     name: str = ""
     description: str = ""
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return False
 
-    def is_destructive(self) -> bool:
+    def isDestructive(self) -> bool:
         return False
 
     @abstractmethod
@@ -33,16 +33,16 @@ class Tool(ABC):
         ...
 
     @abstractmethod
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         ...
 
-    def openai_schema(self) -> Dict[str, Any]:
+    def openaiSchema(self) -> Dict[str, Any]:
         return {
             "type": "function",
             "function": {
                 "name": self.name,
                 "description": self.description,
-                "parameters": self.input_schema(),
+                "parameters": self.inputSchema(),
             },
         }
 
@@ -54,11 +54,11 @@ class ToolType:
     DANGEROUS = 2
 
 
-def tool_type_from_tool(tool):
+def toolTypeFromTool(tool):
     # type: (Tool) -> int
     """Convert Tool boolean flags to ToolType constant for UI."""
-    if tool.is_destructive():
+    if tool.isDestructive():
         return ToolType.DANGEROUS
-    if tool.is_read_only():
+    if tool.isReadOnly():
         return ToolType.READ_ONLY
     return ToolType.WRITE

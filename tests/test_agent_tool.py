@@ -14,7 +14,7 @@ class EchoTool(Tool):
         message = input_data.get("message", "")
         return ToolResult(content=message)
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {
@@ -31,13 +31,13 @@ class ReadOnlyTool(Tool):
     name = "read_only"
     description = "A read-only tool"
 
-    def is_read_only(self) -> bool:
+    def isReadOnly(self) -> bool:
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
         return ToolResult(content="read only result")
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {},
@@ -64,11 +64,11 @@ class TestEchoTool(unittest.TestCase):
     def test_description(self):
         self.assertEqual(self.tool.description, "Echoes the input message back")
 
-    def test_is_read_only_default(self):
-        self.assertFalse(self.tool.is_read_only())
+    def test_isReadOnly_default(self):
+        self.assertFalse(self.tool.isReadOnly())
 
-    def test_is_destructive_default(self):
-        self.assertFalse(self.tool.is_destructive())
+    def test_isDestructive_default(self):
+        self.assertFalse(self.tool.isDestructive())
 
     def test_execute_returns_correct_result(self):
         result = self.tool.execute({"message": "hello"}, self.context)
@@ -81,8 +81,8 @@ class TestEchoTool(unittest.TestCase):
         self.assertEqual(result.content, "")
         self.assertFalse(result.is_error)
 
-    def test_input_schema_valid(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema_valid(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("properties", schema)
         self.assertIn("message", schema["properties"])
@@ -90,14 +90,14 @@ class TestEchoTool(unittest.TestCase):
         self.assertIn("required", schema)
         self.assertIn("message", schema["required"])
 
-    def test_openai_schema_format(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema_format(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertIn("function", schema)
         func = schema["function"]
         self.assertEqual(func["name"], "echo")
         self.assertEqual(func["description"], "Echoes the input message back")
-        self.assertEqual(func["parameters"], self.tool.input_schema())
+        self.assertEqual(func["parameters"], self.tool.inputSchema())
 
 
 class TestToolResult(unittest.TestCase):
@@ -145,13 +145,13 @@ class TestToolContext(unittest.TestCase):
 
 
 class TestReadOnlyTool(unittest.TestCase):
-    def test_is_read_only_true(self):
+    def test_isReadOnly_true(self):
         tool = ReadOnlyTool()
-        self.assertTrue(tool.is_read_only())
+        self.assertTrue(tool.isReadOnly())
 
-    def test_is_destructive_default(self):
+    def test_isDestructive_default(self):
         tool = ReadOnlyTool()
-        self.assertFalse(tool.is_destructive())
+        self.assertFalse(tool.isDestructive())
 
     def test_execute(self):
         tool = ReadOnlyTool()

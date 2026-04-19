@@ -142,7 +142,7 @@ class Parser:
         return line.rstrip("\r")
 
     # ------------- scanning convenience ----------------------------------- #
-    def is_done(self, prefixes: Optional[Tuple[str, ...]] = None) -> bool:
+    def isDone(self, prefixes: Optional[Tuple[str, ...]] = None) -> bool:
         if self.index >= len(self.lines):
             return True
         if (
@@ -156,7 +156,7 @@ class Parser:
     def startswith(self, prefix: Union[str, Tuple[str, ...]]) -> bool:
         return self._norm(self._cur_line()).startswith(prefix)
 
-    def read_str(self, prefix: str) -> str:
+    def readStr(self, prefix: str) -> str:
         """
         Consume the current line if it starts with *prefix* and return the text
         **after** the prefix.  Raises if prefix is empty.
@@ -169,7 +169,7 @@ class Parser:
             return text
         return ""
 
-    def read_line(self) -> str:
+    def readLine(self) -> str:
         """Return the current raw line and advance."""
         line = self._cur_line()
         self.index += 1
@@ -177,13 +177,13 @@ class Parser:
 
     # ------------- public entry point -------------------------------------- #
     def parse(self) -> None:
-        while not self.is_done(("*** End Patch",)):
+        while not self.isDone(("*** End Patch",)):
             # ---------- UPDATE ---------- #
-            path = self.read_str("*** Update File: ")
+            path = self.readStr("*** Update File: ")
             if path:
                 if path in self.patch.actions:
                     raise DiffError(f"Duplicate update for file: {path}")
-                move_to = self.read_str("*** Move to: ")
+                move_to = self.readStr("*** Move to: ")
                 if path not in self.current_files:
                     raise DiffError(
                         f"Update File Error - missing file: {path}")
@@ -194,7 +194,7 @@ class Parser:
                 continue
 
             # ---------- DELETE ---------- #
-            path = self.read_str("*** Delete File: ")
+            path = self.readStr("*** Delete File: ")
             if path:
                 if path in self.patch.actions:
                     raise DiffError(f"Duplicate delete for file: {path}")
@@ -205,7 +205,7 @@ class Parser:
                 continue
 
             # ---------- ADD ---------- #
-            path = self.read_str("*** Add File: ")
+            path = self.readStr("*** Add File: ")
             if path:
                 if path in self.patch.actions:
                     raise DiffError(f"Duplicate add for file: {path}")
@@ -226,7 +226,7 @@ class Parser:
         action = PatchAction(type=ActionType.UPDATE)
         lines = text.split("\n")
         index = 0
-        while not self.is_done(
+        while not self.isDone(
             (
                 "*** End Patch",
                 "*** Update File:",
@@ -235,15 +235,15 @@ class Parser:
                 "*** End of File",
             )
         ):
-            def_str = self.read_str("@@ ")
+            def_str = self.readStr("@@ ")
             if not def_str:
                 # Accept anchors without a space after '@@' (e.g. '@@void foo()').
                 cur = self._norm(self._cur_line())
                 if cur.startswith("@@") and cur != "@@":
-                    def_str = self.read_str("@@")
+                    def_str = self.readStr("@@")
             section_str = ""
             if not def_str and self._norm(self._cur_line()) == "@@":
-                section_str = self.read_line()
+                section_str = self.readLine()
 
             if not (def_str or section_str or index == 0):
                 raise DiffError(
@@ -267,9 +267,9 @@ class Parser:
                             found = True
                             break
 
-            next_ctx, chunks, end_idx, eof = peek_next_section(
+            next_ctx, chunks, end_idx, eof = peekNextSection(
                 self.lines, self.index)
-            new_index, fuzz = find_context(lines, next_ctx, index, eof)
+            new_index, fuzz = findContext(lines, next_ctx, index, eof)
             if new_index == -1:
                 ctx_txt = "\n".join(next_ctx)
                 raise DiffError(
@@ -285,11 +285,11 @@ class Parser:
 
     def _parse_add_file(self) -> PatchAction:
         lines: List[str] = []
-        while not self.is_done(
+        while not self.isDone(
             ("*** End Patch", "*** Update File:",
              "*** Delete File:", "*** Add File:")
         ):
-            s = self.read_line()
+            s = self.readLine()
             if not s.startswith("+"):
                 raise DiffError(f"Invalid Add File line (missing '+'): {s}")
             lines.append(s[1:])  # strip leading '+'
@@ -299,7 +299,7 @@ class Parser:
 # --------------------------------------------------------------------------- #
 #  Helper functions
 # --------------------------------------------------------------------------- #
-def find_context_core(
+def findContextCore(
     lines: List[str], context: List[str], start: int
 ) -> Tuple[int, int]:
     if not context:
@@ -321,20 +321,20 @@ def find_context_core(
     return -1, 0
 
 
-def find_context(
+def findContext(
     lines: List[str], context: List[str], start: int, eof: bool
 ) -> Tuple[int, int]:
     if eof:
-        new_index, fuzz = find_context_core(
+        new_index, fuzz = findContextCore(
             lines, context, len(lines) - len(context))
         if new_index != -1:
             return new_index, fuzz
-        new_index, fuzz = find_context_core(lines, context, start)
+        new_index, fuzz = findContextCore(lines, context, start)
         return new_index, fuzz + 10_000
-    return find_context_core(lines, context, start)
+    return findContextCore(lines, context, start)
 
 
-def peek_next_section(
+def peekNextSection(
     lines: List[str], index: int
 ) -> Tuple[List[str], List[Chunk], int, bool]:
     old: List[str] = []
@@ -470,7 +470,7 @@ def _get_updated_file(text: str, action: PatchAction, path: str) -> str:
     return "\n".join(dest_lines)
 
 
-def patch_to_commit(patch: Patch, orig: Dict[str, str]) -> Commit:
+def patchToCommit(patch: Patch, orig: Dict[str, str]) -> Commit:
     commit = Commit()
     for path, action in patch.actions.items():
         if action.type is ActionType.DELETE:
@@ -497,7 +497,7 @@ def patch_to_commit(patch: Patch, orig: Dict[str, str]) -> Commit:
 # --------------------------------------------------------------------------- #
 #  User-facing helpers
 # --------------------------------------------------------------------------- #
-def text_to_patch(lines: List[str], orig: Dict[str, str]) -> Tuple[Patch, int]:
+def textToPatch(lines: List[str], orig: Dict[str, str]) -> Tuple[Patch, int]:
     if (
         len(lines) < 2
         or not Parser._norm(lines[0]).startswith("*** Begin Patch")
@@ -510,7 +510,7 @@ def text_to_patch(lines: List[str], orig: Dict[str, str]) -> Tuple[Patch, int]:
     return parser.patch, parser.fuzz
 
 
-def identify_files_needed(lines: List[str]) -> List[str]:
+def identifyFilesNeeded(lines: List[str]) -> List[str]:
     return [
         line[len("*** Update File: "):]
         for line in lines
@@ -525,11 +525,11 @@ def identify_files_needed(lines: List[str]) -> List[str]:
 # --------------------------------------------------------------------------- #
 #  File-system helpers
 # --------------------------------------------------------------------------- #
-def load_files(paths: List[str], open_fn: Callable[[str], str]) -> Dict[str, str]:
+def loadFiles(paths: List[str], open_fn: Callable[[str], str]) -> Dict[str, str]:
     return {path: open_fn(path) for path in paths}
 
 
-def apply_commit(
+def applyCommit(
     commit: Commit,
     write_fn: Callable[[str, str, Optional[str]], None],
     remove_fn: Callable[[str], None],
@@ -550,7 +550,7 @@ def apply_commit(
                 remove_fn(path)
 
 
-def process_patch(
+def processPatch(
     text: str,
     open_fn: Callable[[str], str],
     write_fn: Callable[[str, str, Optional[str]], None],
@@ -559,30 +559,30 @@ def process_patch(
     if not text.startswith("*** Begin Patch"):
         raise DiffError("Patch text must start with *** Begin Patch")
     text_lines = text.splitlines()
-    paths = identify_files_needed(text_lines)
-    orig = load_files(paths, open_fn)
-    patch, _fuzz = text_to_patch(text_lines, orig)
-    commit = patch_to_commit(patch, orig)
-    apply_commit(commit, write_fn, remove_fn)
+    paths = identifyFilesNeeded(text_lines)
+    orig = loadFiles(paths, open_fn)
+    patch, _fuzz = textToPatch(text_lines, orig)
+    commit = patchToCommit(patch, orig)
+    applyCommit(commit, write_fn, remove_fn)
     return "Done!"
 
 
 # --------------------------------------------------------------------------- #
 #  Default FS helpers
 # --------------------------------------------------------------------------- #
-def open_file(path: str) -> str:
+def openFile(path: str) -> str:
     with open(path, "rt", encoding="utf-8") as fh:
         return fh.read()
 
 
-def write_file(path: str, content: str, source_path: Optional[str] = None) -> None:
+def writeFile(path: str, content: str, source_path: Optional[str] = None) -> None:
     target = pathlib.Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("wt", encoding="utf-8") as fh:
         fh.write(content)
 
 
-def remove_file(path: str) -> None:
+def removeFile(path: str) -> None:
     pathlib.Path(path).unlink(missing_ok=True)
 
 
@@ -590,7 +590,7 @@ class ApplyPatchTool(Tool):
     name = "apply_patch"
     description = APPLY_PATCH_TOOL_DESC
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return False
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -744,7 +744,7 @@ class ApplyPatchTool(Tool):
                 os.unlink(absPath)
 
         try:
-            message = process_patch(
+            message = processPatch(
                 patch_text, _open_file, _write_file, _remove_file
             )
             return ToolResult(content=message)
@@ -755,7 +755,7 @@ class ApplyPatchTool(Tool):
                 content="Failed to apply patch: {}".format(e), is_error=True
             )
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

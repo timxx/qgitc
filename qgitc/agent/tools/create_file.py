@@ -14,7 +14,7 @@ class CreateFileTool(Tool):
         "a file that already exists."
     )
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return False
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -88,7 +88,7 @@ class CreateFileTool(Tool):
                 content="Failed to create file: {}".format(e), is_error=True
             )
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

@@ -19,12 +19,12 @@ def _make_context(working_directory="/tmp/repo"):
     )
 
 
-_PATCH_CURRENT_BRANCH = "qgitc.agent.tools.git_current_branch.run_git"
-_PATCH_BRANCH = "qgitc.agent.tools.git_branch.run_git"
-_PATCH_CHECKOUT = "qgitc.agent.tools.git_checkout.run_git"
-_PATCH_CHERRY_PICK = "qgitc.agent.tools.git_cherry_pick.run_git"
-_PATCH_COMMIT = "qgitc.agent.tools.git_commit.run_git"
-_PATCH_ADD = "qgitc.agent.tools.git_add.run_git"
+_PATCH_CURRENT_BRANCH = "qgitc.agent.tools.git_current_branch.runGit"
+_PATCH_BRANCH = "qgitc.agent.tools.git_branch.runGit"
+_PATCH_CHECKOUT = "qgitc.agent.tools.git_checkout.runGit"
+_PATCH_CHERRY_PICK = "qgitc.agent.tools.git_cherry_pick.runGit"
+_PATCH_COMMIT = "qgitc.agent.tools.git_commit.runGit"
+_PATCH_ADD = "qgitc.agent.tools.git_add.runGit"
 
 
 # ---- GitCurrentBranchTool ----
@@ -38,25 +38,25 @@ class TestGitCurrentBranchTool(unittest.TestCase):
         self.assertEqual(self.tool.name, "git_current_branch")
         self.assertTrue(len(self.tool.description) > 0)
 
-    def test_is_read_only(self):
-        self.assertTrue(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertTrue(self.tool.isReadOnly())
 
     def test_is_not_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertEqual(schema["properties"], {})
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema_format(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema_format(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         func = schema["function"]
         self.assertEqual(func["name"], "git_current_branch")
         self.assertEqual(func["description"], self.tool.description)
-        self.assertEqual(func["parameters"], self.tool.input_schema())
+        self.assertEqual(func["parameters"], self.tool.inputSchema())
 
     @patch(_PATCH_CURRENT_BRANCH, return_value=(True, "main"))
     def test_execute_returns_branch(self, mock_git):
@@ -112,14 +112,14 @@ class TestGitBranchTool(unittest.TestCase):
         self.assertEqual(self.tool.name, "git_branch")
         self.assertTrue(len(self.tool.description) > 0)
 
-    def test_is_read_only(self):
-        self.assertTrue(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertTrue(self.tool.isReadOnly())
 
     def test_is_not_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("all", schema["properties"])
         self.assertEqual(schema["properties"]["all"]["type"], "boolean")
@@ -156,13 +156,13 @@ class TestGitCheckoutTool(unittest.TestCase):
         self.assertTrue(len(self.tool.description) > 0)
 
     def test_is_not_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+        self.assertFalse(self.tool.isReadOnly())
 
     def test_is_not_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("branch", schema["properties"])
         self.assertIn("branch", schema["required"])
@@ -200,13 +200,13 @@ class TestGitCherryPickTool(unittest.TestCase):
         self.assertTrue(len(self.tool.description) > 0)
 
     def test_is_not_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+        self.assertFalse(self.tool.isReadOnly())
 
     def test_is_not_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("commits", schema["properties"])
         self.assertIn("commits", schema["required"])
@@ -261,13 +261,13 @@ class TestGitCommitTool(unittest.TestCase):
         self.assertTrue(len(self.tool.description) > 0)
 
     def test_is_not_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+        self.assertFalse(self.tool.isReadOnly())
 
     def test_is_not_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("message", schema["properties"])
         self.assertIn("message", schema["required"])
@@ -308,13 +308,13 @@ class TestGitAddTool(unittest.TestCase):
         self.assertTrue(len(self.tool.description) > 0)
 
     def test_is_not_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+        self.assertFalse(self.tool.isReadOnly())
 
     def test_is_not_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("files", schema["properties"])
         self.assertIn("files", schema["required"])
@@ -359,31 +359,31 @@ class TestGitAddTool(unittest.TestCase):
         self.assertTrue(result.is_error)
 
 
-# ---- run_git helper ----
+# ---- runGit helper ----
 
 
 class TestRunGitHelper(unittest.TestCase):
-    @patch("qgitc.agent.tools.utils.runGit")
-    def test_success(self, mock_run_git):
-        mock_run_git.return_value = (True, "output\n", "")
-        from qgitc.agent.tools.utils import run_git
-        ok, out = run_git("/tmp/repo", ["status"])
+    @patch("qgitc.agent.tools.utils.runGitRaw")
+    def test_success(self, mock_runGit):
+        mock_runGit.return_value = (True, "output\n", "")
+        from qgitc.agent.tools.utils import runGit
+        ok, out = runGit("/tmp/repo", ["status"])
         self.assertTrue(ok)
         self.assertEqual(out, "output")
 
-    @patch("qgitc.agent.tools.utils.runGit")
-    def test_failure_with_stderr(self, mock_run_git):
-        mock_run_git.return_value = (False, "", "fatal: error\n")
-        from qgitc.agent.tools.utils import run_git
-        ok, out = run_git("/tmp/repo", ["bad"])
+    @patch("qgitc.agent.tools.utils.runGitRaw")
+    def test_failure_with_stderr(self, mock_runGit):
+        mock_runGit.return_value = (False, "", "fatal: error\n")
+        from qgitc.agent.tools.utils import runGit
+        ok, out = runGit("/tmp/repo", ["bad"])
         self.assertFalse(ok)
         self.assertIn("fatal: error", out)
 
-    @patch("qgitc.agent.tools.utils.runGit", side_effect=Exception("boom"))
-    def test_exception(self, mock_run_git):
-        from qgitc.agent.tools.utils import run_git
+    @patch("qgitc.agent.tools.utils.runGitRaw", side_effect=Exception("boom"))
+    def test_exception(self, mock_runGit):
+        from qgitc.agent.tools.utils import runGit
         with self.assertRaises(Exception):
-            run_git("/tmp/repo", ["status"])
+            runGit("/tmp/repo", ["status"])
 
 
 if __name__ == "__main__":

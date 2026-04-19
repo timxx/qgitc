@@ -32,7 +32,7 @@ class TestSkillRegistry(unittest.TestCase):
             content="B body",
             disable_model_invocation=True,
         ))
-        names = [s.name for s in reg.get_model_visible_skills()]
+        names = [s.name for s in reg.getModelVisibleSkills()]
         self.assertEqual(names, ["a"])
 
 

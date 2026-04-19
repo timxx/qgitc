@@ -186,7 +186,7 @@ class AiChatHistoryStore(QObject):
 
     def updateFromMessages(self, historyId, messages, modelKey=None, modelId=None):
         """Update a history item from agent Message list and persist."""
-        from qgitc.agent.message_convert import messages_to_history_dicts
+        from qgitc.agent.message_convert import messagesToHistoryDicts
 
         self.ensureLoaded()
         row = self._model.findHistoryRow(historyId)
@@ -198,7 +198,7 @@ class AiChatHistoryStore(QObject):
         if not history:
             return None
 
-        history.messages = messages_to_history_dicts(messages)
+        history.messages = messagesToHistoryDicts(messages)
         if modelKey is not None:
             history.modelKey = modelKey
         if modelId is not None:

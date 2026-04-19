@@ -52,7 +52,7 @@ _BUILTIN_TOOLS = [
 ]
 
 
-def register_builtin_tools(registry):
+def registerBuiltinTools(registry):
     # type: (ToolRegistry) -> None
     """Register all built-in agent tools into the given registry."""
     for tool_cls in _BUILTIN_TOOLS:

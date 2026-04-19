@@ -27,5 +27,5 @@ class SkillDefinition:
     skill_root: Optional[str] = None
 
     @property
-    def content_length(self) -> int:
+    def contentLength(self) -> int:
         return len(self.content)

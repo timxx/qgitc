@@ -20,16 +20,16 @@ class _MockTool(Tool):
         self._read_only = read_only
         self._destructive = destructive
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return self._read_only
 
-    def is_destructive(self):
+    def isDestructive(self):
         return self._destructive
 
     def execute(self, input_data, context):
         return ToolResult(content="ok")
 
-    def input_schema(self):
+    def inputSchema(self):
         return {"type": "object", "properties": {}}
 
 

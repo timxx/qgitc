@@ -8,7 +8,7 @@ from qgitc.agent.compaction import (
     ConversationCompactor,
     _build_summarization_prompt,
     _message_text,
-    estimate_tokens,
+    estimateTokens,
 )
 from qgitc.agent.provider import (
     ContentDelta,
@@ -44,7 +44,7 @@ class FakeSummaryProvider(ModelProvider):
                               usage=Usage(input_tokens=10,
                                           output_tokens=5))
 
-    def count_tokens(self, messages, system_prompt=None, tools=None):
+    def countTokens(self, messages, system_prompt=None, tools=None):
         # type: (...) -> int
         return 0
 
@@ -93,16 +93,16 @@ class TestMessageText(unittest.TestCase):
         self.assertEqual(_message_text(msg), "")
 
 
-# ── estimate_tokens ─────────────────────────────────────────────────
+# ── estimateTokens ─────────────────────────────────────────────────
 
 class TestEstimateTokens(unittest.TestCase):
     def test_empty_list_returns_zero(self):
-        self.assertEqual(estimate_tokens([]), 0)
+        self.assertEqual(estimateTokens([]), 0)
 
     def test_single_message(self):
         # "abcdefgh" = 8 chars -> 8 // 4 = 2 tokens
         msg = UserMessage(content=[TextBlock(text="abcdefgh")])
-        self.assertEqual(estimate_tokens([msg]), 2)
+        self.assertEqual(estimateTokens([msg]), 2)
 
     def test_multiple_messages_sum_correctly(self):
         # "aaaa" = 4 chars, "bbbbbbbb" = 8 chars -> total 12 // 4 = 3
@@ -110,12 +110,12 @@ class TestEstimateTokens(unittest.TestCase):
             UserMessage(content=[TextBlock(text="aaaa")]),
             AssistantMessage(content=[TextBlock(text="bbbbbbbb")]),
         ]  # type: List[Message]
-        self.assertEqual(estimate_tokens(msgs), 3)
+        self.assertEqual(estimateTokens(msgs), 3)
 
     def test_integer_division(self):
         # "abc" = 3 chars -> 3 // 4 = 0
         msg = UserMessage(content=[TextBlock(text="abc")])
-        self.assertEqual(estimate_tokens([msg]), 0)
+        self.assertEqual(estimateTokens([msg]), 0)
 
 
 # ── _build_summarization_prompt ──────────────────────────────────────
@@ -146,7 +146,7 @@ class TestShouldCompact(unittest.TestCase):
         compactor = ConversationCompactor(provider,
                                           context_window=100000,
                                           max_output_tokens=4096)
-        self.assertFalse(compactor.should_compact([]))
+        self.assertFalse(compactor.shouldCompact([]))
 
     def test_returns_false_when_under_threshold(self):
         provider = FakeSummaryProvider()
@@ -156,7 +156,7 @@ class TestShouldCompact(unittest.TestCase):
                                           context_window=100000,
                                           max_output_tokens=4096)
         msgs = [UserMessage(content=[TextBlock(text="hello")])]
-        self.assertFalse(compactor.should_compact(msgs))
+        self.assertFalse(compactor.shouldCompact(msgs))
 
     def test_returns_true_when_over_threshold(self):
         provider = FakeSummaryProvider()
@@ -172,7 +172,7 @@ class TestShouldCompact(unittest.TestCase):
         ConversationCompactor.BUFFER_TOKENS = 20
         try:
             msgs = [UserMessage(content=[TextBlock(text="a" * 300)])]
-            self.assertTrue(compactor.should_compact(msgs))
+            self.assertTrue(compactor.shouldCompact(msgs))
         finally:
             ConversationCompactor.BUFFER_TOKENS = 2000
 

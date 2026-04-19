@@ -106,7 +106,7 @@ class AiChatEdit(QWidget):
 
         query = after_slash
         commands = [
-            cmd for cmd in self._commandRegistry.list_commands()
+            cmd for cmd in self._commandRegistry.listCommands()
             if self._fuzzyMatch(cmd.name, query)
         ]
 

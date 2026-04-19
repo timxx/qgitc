@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
-from qgitc.agent.tools.utils import detectBom, runGit
+from qgitc.agent.tools.utils import detectBom, runGitRaw
 from qgitc.common import decodeFileData
 
 
@@ -32,11 +32,11 @@ def _splitZ(data: bytes) -> List[str]:
 
 def _gitListNonIgnoredFiles(repoDir: str) -> Tuple[bool, str, List[str]]:
     """List tracked + untracked (not ignored) files. Returns repo-relative paths."""
-    ok, outTracked, err = runGit(repoDir, ["ls-files", "-z"], text=False)
+    ok, outTracked, err = runGitRaw(repoDir, ["ls-files", "-z"], text=False)
     if not ok:
         return False, (err.decode("utf-8", errors="replace") or "git ls-files failed"), []
 
-    ok, outOthers, err = runGit(
+    ok, outOthers, err = runGitRaw(
         repoDir, ["ls-files", "-z", "--others", "--exclude-standard"], text=False)
     if not ok:
         return False, (err.decode("utf-8", errors="replace") or "git ls-files --others failed"), []
@@ -55,7 +55,7 @@ def _gitFilterIgnored(repoDir: str, relPaths: List[str]) -> Tuple[bool, str, Set
 
     payload = ("\x00".join(relPaths) +
                "\x00").encode("utf-8", errors="replace")
-    ok, out, err = runGit(
+    ok, out, err = runGitRaw(
         repoDir, ["check-ignore", "-z", "--stdin"], stdin=payload, text=False)
     if not ok:
         # If git can't evaluate ignore rules (e.g. not a repo), treat as no ignored.
@@ -292,7 +292,7 @@ class GrepSearchTool(Tool):
         "words at once."
     )
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -330,7 +330,7 @@ class GrepSearchTool(Tool):
 
         return ToolResult(content=output)
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

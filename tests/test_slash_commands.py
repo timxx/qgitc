@@ -27,7 +27,7 @@ class TestCommandRegistry(unittest.TestCase):
 
         registry.register(cmd)
 
-        cmds = registry.list_commands()
+        cmds = registry.listCommands()
         self.assertEqual(len(cmds), 1)
         self.assertIs(cmds[0], cmd)
 

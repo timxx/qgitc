@@ -27,11 +27,11 @@ class SkillRegistry:
             return self._skills.get(canonical)
         return None
 
-    def list_skills(self):
+    def listSkills(self):
         # type: () -> List[SkillDefinition]
         return list(self._skills.values())
 
-    def get_model_visible_skills(self):
+    def getModelVisibleSkills(self):
         # type: () -> List[SkillDefinition]
         return [s for s in self._skills.values() if not s.disable_model_invocation]
 

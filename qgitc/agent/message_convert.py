@@ -18,7 +18,7 @@ from qgitc.agent.types import (
 )
 
 
-def messages_to_history_dicts(messages):
+def messagesToHistoryDicts(messages):
     # type: (List[Message]) -> List[Dict[str, Any]]
     """Convert agent Message list to the history store dict format.
 
@@ -94,7 +94,7 @@ def messages_to_history_dicts(messages):
     return result
 
 
-def history_dicts_to_messages(dicts):
+def historyDictsToMessages(dicts):
     # type: (List[Dict[str, Any]]) -> List[Message]
     """Convert history store dicts back to agent Message list.
 

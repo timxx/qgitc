@@ -4,8 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from qgitc.agent.skills.discovery import load_skill_registry
-from qgitc.agent.skills.loader import load_skills_from_directory
+from qgitc.agent.skills.discovery import loadSkillRegistry
+from qgitc.agent.skills.loader import loadSkillsFromDirectory
 
 
 class TestSkillLoader(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestSkillLoader(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            skills = load_skills_from_directory(str(root))
+            skills = loadSkillsFromDirectory(str(root))
             self.assertEqual(len(skills), 1)
             self.assertEqual(skills[0].name, "review")
             self.assertEqual(skills[0].aliases, ["rv"])
@@ -47,8 +47,8 @@ class TestLoadSkillRegistry(unittest.TestCase):
             self._write_skill(proj / ".codex" / "skills", "sk4", "sk4", "Skill 4")
             self._write_skill(proj / ".cursor" / "skills", "sk5", "sk5", "Skill 5")
 
-            registry = load_skill_registry(cwd=str(proj))
-            names = {s.name for s in registry.list_skills()}
+            registry = loadSkillRegistry(cwd=str(proj))
+            names = {s.name for s in registry.listSkills()}
             self.assertIn("sk1", names)
             self.assertIn("sk2", names)
             self.assertIn("sk3", names)
@@ -62,9 +62,9 @@ class TestLoadSkillRegistry(unittest.TestCase):
             # Put skills only in home directory locations
             self._write_skill(home / ".claude" / "skills", "home_sk", "home_sk")
 
-            # load_skill_registry no longer accepts/uses home_directory
-            registry = load_skill_registry(cwd=str(proj))
-            names = {s.name for s in registry.list_skills()}
+            # loadSkillRegistry no longer accepts/uses home_directory
+            registry = loadSkillRegistry(cwd=str(proj))
+            names = {s.name for s in registry.listSkills()}
             self.assertNotIn("home_sk", names)
             self.assertNotIn("home_qgitc_sk", names)
 
@@ -72,7 +72,7 @@ class TestLoadSkillRegistry(unittest.TestCase):
         with tempfile.TemporaryDirectory() as proj_td:
             proj = Path(proj_td)
             self._write_skill(proj / ".claude" / "skills", "proj_sk", "proj_sk")
-            registry = load_skill_registry(cwd=str(proj))
+            registry = loadSkillRegistry(cwd=str(proj))
             self.assertEqual(registry.get("proj_sk").source, "projectSettings")
 
     def test_project_skill_overrides_earlier_skill_same_name(self):
@@ -82,7 +82,7 @@ class TestLoadSkillRegistry(unittest.TestCase):
             # .claude loaded before .github alphabetically by _SKILL_SUBDIRS order
             self._write_skill(proj / ".claude" / "skills", "review", "review", "Claude description")
             self._write_skill(proj / ".github" / "skills", "review", "review", "GitHub description")
-            registry = load_skill_registry(cwd=str(proj))
+            registry = loadSkillRegistry(cwd=str(proj))
             skill = registry.get("review")
             self.assertIsNotNone(skill)
             # .github comes after .claude in _SKILL_SUBDIRS so it overrides
@@ -93,7 +93,7 @@ class TestLoadSkillRegistry(unittest.TestCase):
             extra = Path(extra_td)
             proj = Path(proj_td)
             self._write_skill(extra, "patch-review", "patch-review", "Review a patch")
-            registry = load_skill_registry(cwd=str(proj), additional_directories=[str(extra)])
+            registry = loadSkillRegistry(cwd=str(proj), additional_directories=[str(extra)])
             skill = registry.get("patch-review")
             self.assertIsNotNone(skill)
             self.assertEqual(skill.source, "builtinSkills")

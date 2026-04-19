@@ -15,10 +15,10 @@ class RunCommandTool(Tool):
         "it can execute potentially destructive commands."
     )
 
-    def is_read_only(self):
+    def isReadOnly(self):
         return False
 
-    def is_destructive(self):
+    def isDestructive(self):
         return True
 
     def execute(self, input_data: Dict[str, Any], context: ToolContext) -> ToolResult:
@@ -90,7 +90,7 @@ class RunCommandTool(Tool):
                 is_error=True,
             )
 
-    def input_schema(self) -> Dict[str, Any]:
+    def inputSchema(self) -> Dict[str, Any]:
         return {
             "type": "object",
             "properties": {

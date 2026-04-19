@@ -61,14 +61,14 @@ class TestRunCommandToolMeta(unittest.TestCase):
     def test_description(self):
         self.assertTrue(len(self.tool.description) > 0)
 
-    def test_is_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertFalse(self.tool.isReadOnly())
 
-    def test_is_destructive(self):
-        self.assertTrue(self.tool.is_destructive())
+    def test_isDestructive(self):
+        self.assertTrue(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         props = schema["properties"]
         self.assertIn("command", props)
@@ -79,8 +79,8 @@ class TestRunCommandToolMeta(unittest.TestCase):
         self.assertIn("explanation", schema["required"])
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertEqual(schema["function"]["name"], "run_command")
 
@@ -172,14 +172,14 @@ class TestReadFileToolMeta(unittest.TestCase):
     def test_name(self):
         self.assertEqual(self.tool.name, "read_file")
 
-    def test_is_read_only(self):
-        self.assertTrue(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertTrue(self.tool.isReadOnly())
 
-    def test_is_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+    def test_isDestructive(self):
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("filePath", schema["properties"])
         self.assertIn("startLine", schema["properties"])
@@ -187,8 +187,8 @@ class TestReadFileToolMeta(unittest.TestCase):
         self.assertIn("filePath", schema["required"])
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertEqual(schema["function"]["name"], "read_file")
 
@@ -255,14 +255,14 @@ class TestReadExternalFileToolMeta(unittest.TestCase):
     def test_name(self):
         self.assertEqual(self.tool.name, "read_external_file")
 
-    def test_is_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertFalse(self.tool.isReadOnly())
 
-    def test_is_destructive(self):
-        self.assertTrue(self.tool.is_destructive())
+    def test_isDestructive(self):
+        self.assertTrue(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("filePath", schema["properties"])
         self.assertIn("explanation", schema["properties"])
@@ -270,8 +270,8 @@ class TestReadExternalFileToolMeta(unittest.TestCase):
         self.assertIn("explanation", schema["required"])
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertEqual(schema["function"]["name"], "read_external_file")
 
@@ -331,14 +331,14 @@ class TestGrepSearchToolMeta(unittest.TestCase):
     def test_name(self):
         self.assertEqual(self.tool.name, "grep_search")
 
-    def test_is_read_only(self):
-        self.assertTrue(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertTrue(self.tool.isReadOnly())
 
-    def test_is_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+    def test_isDestructive(self):
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("query", schema["properties"])
         self.assertIn("isRegexp", schema["properties"])
@@ -349,8 +349,8 @@ class TestGrepSearchToolMeta(unittest.TestCase):
         self.assertIn("isRegexp", schema["required"])
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertEqual(schema["function"]["name"], "grep_search")
 
@@ -419,14 +419,14 @@ class TestCreateFileToolMeta(unittest.TestCase):
     def test_name(self):
         self.assertEqual(self.tool.name, "create_file")
 
-    def test_is_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertFalse(self.tool.isReadOnly())
 
-    def test_is_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+    def test_isDestructive(self):
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("filePath", schema["properties"])
         self.assertIn("content", schema["properties"])
@@ -434,8 +434,8 @@ class TestCreateFileToolMeta(unittest.TestCase):
         self.assertIn("content", schema["required"])
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertEqual(schema["function"]["name"], "create_file")
 
@@ -518,14 +518,14 @@ class TestApplyPatchToolMeta(unittest.TestCase):
     def test_name(self):
         self.assertEqual(self.tool.name, "apply_patch")
 
-    def test_is_read_only(self):
-        self.assertFalse(self.tool.is_read_only())
+    def test_isReadOnly(self):
+        self.assertFalse(self.tool.isReadOnly())
 
-    def test_is_destructive(self):
-        self.assertFalse(self.tool.is_destructive())
+    def test_isDestructive(self):
+        self.assertFalse(self.tool.isDestructive())
 
-    def test_input_schema(self):
-        schema = self.tool.input_schema()
+    def test_inputSchema(self):
+        schema = self.tool.inputSchema()
         self.assertEqual(schema["type"], "object")
         self.assertIn("input", schema["properties"])
         self.assertIn("explanation", schema["properties"])
@@ -533,8 +533,8 @@ class TestApplyPatchToolMeta(unittest.TestCase):
         self.assertIn("explanation", schema["required"])
         self.assertFalse(schema["additionalProperties"])
 
-    def test_openai_schema(self):
-        schema = self.tool.openai_schema()
+    def test_openaiSchema(self):
+        schema = self.tool.openaiSchema()
         self.assertEqual(schema["type"], "function")
         self.assertEqual(schema["function"]["name"], "apply_patch")
 
@@ -566,7 +566,7 @@ class TestApplyPatchToolExecute(_TempDirMixin, unittest.TestCase):
         )
         self.assertTrue(result.is_error)
 
-    @patch("qgitc.agent.tools.apply_patch.process_patch")
+    @patch("qgitc.agent.tools.apply_patch.processPatch")
     def test_successful_patch(self, mock_process):
         mock_process.return_value = "Applied 1 change to 1 file."
         result = self.tool.execute(
@@ -576,7 +576,7 @@ class TestApplyPatchToolExecute(_TempDirMixin, unittest.TestCase):
         self.assertFalse(result.is_error)
         self.assertIn("Applied", result.content)
 
-    @patch("qgitc.agent.tools.apply_patch.process_patch")
+    @patch("qgitc.agent.tools.apply_patch.processPatch")
     def test_diff_error(self, mock_process):
         mock_process.side_effect = DiffError("Hunk mismatch")
         result = self.tool.execute(
@@ -586,7 +586,7 @@ class TestApplyPatchToolExecute(_TempDirMixin, unittest.TestCase):
         self.assertTrue(result.is_error)
         self.assertIn("Hunk mismatch", result.content)
 
-    @patch("qgitc.agent.tools.apply_patch.process_patch")
+    @patch("qgitc.agent.tools.apply_patch.processPatch")
     def test_generic_exception(self, mock_process):
         mock_process.side_effect = RuntimeError("unexpected")
         result = self.tool.execute(
@@ -598,7 +598,7 @@ class TestApplyPatchToolExecute(_TempDirMixin, unittest.TestCase):
 
     def test_bom_stripped_from_input(self):
         """Verify BOM character is stripped from patch input."""
-        with patch("qgitc.agent.tools.apply_patch.process_patch") as mock_process:
+        with patch("qgitc.agent.tools.apply_patch.processPatch") as mock_process:
             mock_process.return_value = "ok"
             self.tool.execute(
                 {"input": "\ufeff*** Begin Patch\n*** End Patch",

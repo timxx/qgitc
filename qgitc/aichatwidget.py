@@ -27,12 +27,12 @@ from qgitc.agent import (
     ToolRegistry,
     UiTool,
     UiToolDispatcher,
-    create_permission_engine,
-    history_dicts_to_messages,
-    load_skill_registry,
-    register_builtin_tools,
+    createPermissionEngine,
+    historyDictsToMessages,
+    loadSkillRegistry,
+    registerBuiltinTools,
 )
-from qgitc.agent.skills.prompt import render_skills_reminder
+from qgitc.agent.skills.prompt import renderSkillsReminder
 from qgitc.agent.skills.types import SkillDefinition
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.agent.tool import ToolType
@@ -135,10 +135,10 @@ class AiChatWidget(QWidget):
 
         self._titleGenerator: AiChatTitleGenerator = None
         self._uiToolDispatcher = UiToolDispatcher(self)
-        self._uiToolDispatcher.set_handler(self._executeUiToolHandler)
+        self._uiToolDispatcher.setHandler(self._executeUiToolHandler)
 
         settings = ApplicationBase.instance().settings()
-        self._permissionEngine = create_permission_engine(
+        self._permissionEngine = createPermissionEngine(
             settings.toolExecutionStrategy())
         settings.toolExecutionStrategyChanged.connect(
             self._onToolExecutionStrategyChanged)
@@ -583,9 +583,9 @@ class AiChatWidget(QWidget):
             if contextText and not self._historyHasSameContextInMessages(loop.messages(), contextText):
                 fullPrompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + prompt
 
-        if isNewConversation and loop.get_system_prompt():
+        if isNewConversation and loop.getSystemPrompt():
             self._chatBot.appendResponse(AiResponse(
-                AiRole.System, loop.get_system_prompt()), collapsed=True)
+                AiRole.System, loop.getSystemPrompt()), collapsed=True)
 
         # Show user message in chatbot
         self._chatBot.appendResponse(
@@ -662,7 +662,7 @@ class AiChatWidget(QWidget):
     def _buildSlashCommandRegistry(self) -> CommandRegistry:
         registry = CommandRegistry()
         skillRegistry = self._ensureSkillRegistry()
-        for skill in skillRegistry.list_skills():
+        for skill in skillRegistry.listSkills():
             if not skill.user_invocable:
                 continue
             registry.register(_SkillSlashCommand(skill))
@@ -750,9 +750,9 @@ class AiChatWidget(QWidget):
     def _makeUiToolCallResponse(self, toolName: str, args: Union[str, dict]):
         tool = self._toolRegistry.get(toolName) if self._toolRegistry else None
         if tool:
-            if tool.is_destructive():
+            if tool.isDestructive():
                 toolType = ToolType.DANGEROUS
-            elif tool.is_read_only():
+            elif tool.isReadOnly():
                 toolType = ToolType.READ_ONLY
             else:
                 toolType = ToolType.WRITE
@@ -778,10 +778,10 @@ class AiChatWidget(QWidget):
 
     def _buildToolRegistry(self):
         registry = ToolRegistry()
-        register_builtin_tools(registry)
+        registerBuiltinTools(registry)
         for tool in self._providerUiTools():
             if isinstance(tool, UiTool):
-                tool.set_dispatcher(self._uiToolDispatcher)
+                tool.setDispatcher(self._uiToolDispatcher)
             registry.register(tool)
         return registry
 
@@ -820,8 +820,8 @@ class AiChatWidget(QWidget):
 
         skillRegistry = self._ensureSkillRegistry()
         if skillRegistry is not None:
-            reminder = render_skills_reminder(
-                skillRegistry.get_model_visible_skills()
+            reminder = renderSkillsReminder(
+                skillRegistry.getModelVisibleSkills()
             )
             if reminder:
                 effectiveSysPrompt = effectiveSysPrompt + "\n\n" + reminder
@@ -852,7 +852,7 @@ class AiChatWidget(QWidget):
     def _ensureSkillRegistry(self):
         # type: () -> SkillRegistry
         if self._skillRegistry is None:
-            self._skillRegistry = load_skill_registry(
+            self._skillRegistry = loadSkillRegistry(
                 cwd=Git.REPO_DIR or ".",
                 additional_directories=[
                     dataDirPath() + "/skills"
@@ -951,9 +951,9 @@ class AiChatWidget(QWidget):
 
     def _onAgentPermissionRequired(self, toolCallId, tool, inputData):
         toolName = tool.name if hasattr(tool, 'name') else str(tool)
-        if tool.is_destructive():
+        if tool.isDestructive():
             toolType = ToolType.DANGEROUS
-        elif tool.is_read_only():
+        elif tool.isReadOnly():
             toolType = ToolType.READ_ONLY
         else:
             toolType = ToolType.WRITE
@@ -995,7 +995,7 @@ class AiChatWidget(QWidget):
 
     def _onToolExecutionStrategyChanged(self, strategyValue: int):
         """Handle tool execution strategy change."""
-        self._permissionEngine = create_permission_engine(strategyValue)
+        self._permissionEngine = createPermissionEngine(strategyValue)
 
     def _updateStatus(self):
         self._contextPanel.btnSend.setVisible(True)
@@ -1009,13 +1009,13 @@ class AiChatWidget(QWidget):
 
     def _onToolApproved(self, toolName: str, params: dict, toolCallId: str):
         if self._agentLoop is not None:
-            self._agentLoop.approve_tool(toolCallId)
+            self._agentLoop.approveTool(toolCallId)
 
     def _onToolRejected(self, toolName: str, toolCallId: str):
         if self._agentLoop is not None:
             self._chatBot.setToolConfirmationStatus(
                 toolCallId, ConfirmationStatus.REJECTED)
-            self._agentLoop.deny_tool(toolCallId)
+            self._agentLoop.denyTool(toolCallId)
 
     def _onModelChanged(self, index: int):
         model = self._ensureModelInstantiatedAt(index)
@@ -1331,11 +1331,11 @@ class AiChatWidget(QWidget):
         if not historyDicts:
             return
 
-        agentMessages = history_dicts_to_messages(historyDicts)
+        agentMessages = historyDictsToMessages(historyDicts)
 
         # Set messages on agent loop (will be created on next submit)
         loop = self._ensureAgentLoop()
-        loop.set_messages(agentMessages)
+        loop.setMessages(agentMessages)
 
         if not addToChatBot:
             return

@@ -34,7 +34,7 @@ def _makeError(msg: str, text: bool) -> Union[bytes, str]:
     return msg.encode("utf-8")
 
 
-def runGit(
+def runGitRaw(
     repoDir: str,
     args: List[str],
     *,
@@ -76,12 +76,12 @@ def runGit(
         return False, emptyStr, _makeError(str(e), text)
 
 
-def run_git(working_directory: str, args: List[str]) -> Tuple[bool, str]:
+def runGit(working_directory: str, args: List[str]) -> Tuple[bool, str]:
     """Run a git command using the project's GitProcess (which handles CREATE_NO_WINDOW on Windows).
 
     Returns (ok: bool, output: str) where output merges stderr into stdout on failure.
     """
-    ok, out, err = runGit(working_directory, args, text=True)
+    ok, out, err = runGitRaw(working_directory, args, text=True)
     output = out.strip("\n")
 
     # Only include stderr when the command fails.

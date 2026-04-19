@@ -7,7 +7,7 @@ from qgitc.agent.permissions import (
 )
 
 
-def create_permission_engine(strategy_value):
+def createPermissionEngine(strategy_value):
     # type: (int) -> PermissionEngine
     """Create a PermissionEngine from a strategy setting value.
 
@@ -33,9 +33,9 @@ class _AggressivePermissionEngine(PermissionEngine):
         super().__init__()
 
     def check(self, tool, input_data):
-        if tool.is_read_only():
+        if tool.isReadOnly():
             return PermissionAllow()
-        if not tool.is_destructive():
+        if not tool.isDestructive():
             return PermissionAllow()
         return PermissionAsk()
 
