@@ -94,10 +94,14 @@ class AiModelBaseAdapter(ModelProvider):
             network_error[0] = errorMsg
             finished_flag[0] = True
 
+        def _on_service_unavailable():
+            # type: () -> None
+            _on_network_error("")
+
         self._model.responseAvailable.connect(_on_response)
         self._model.finished.connect(_on_finished)
         self._model.networkError.connect(_on_network_error)
-        self._model.serviceUnavailable.connect(lambda: _on_network_error(""))
+        self._model.serviceUnavailable.connect(_on_service_unavailable)
 
         try:
             # Build history from messages
@@ -184,6 +188,7 @@ class AiModelBaseAdapter(ModelProvider):
             self._model.responseAvailable.disconnect(_on_response)
             self._model.finished.disconnect(_on_finished)
             self._model.networkError.disconnect(_on_network_error)
+            self._model.serviceUnavailable.disconnect(_on_service_unavailable)
 
     def countTokens(
         self,
