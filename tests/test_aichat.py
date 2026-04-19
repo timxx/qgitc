@@ -108,6 +108,21 @@ class TestAiChat(TestBase):
         self.assertFalse(self.chatWidget._contextPanel.btnSend.isEnabled())
         self.assertIsNone(self.chatWidget._historyPanel.currentHistory())
 
+    def test_text_delta_after_reasoning_starts_new_assistant_block(self):
+        chatbot = self.chatWidget.messages
+        chatbot.clear()
+
+        self.chatWidget._firstTextDelta = True
+        self.chatWidget._firstReasoningDelta = True
+
+        self.chatWidget._onAgentTextDelta("first text")
+        self.chatWidget._onAgentReasoningDelta("thinking")
+        self.chatWidget._onAgentTextDelta("second text")
+
+        text = chatbot.toPlainText()
+        self.assertEqual(3, text.count("Assistant:"))
+        self.assertIn("Reasoning\nthinking\nAssistant: \nsecond text", text)
+
     def test_setCurrentHistory_clears_previous_selection(self):
         panel = self.chatWidget._historyPanel
 
