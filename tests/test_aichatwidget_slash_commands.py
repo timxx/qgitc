@@ -2,6 +2,7 @@
 
 import unittest
 
+from qgitc.agent.types import TextBlock, UserMessage
 from qgitc.aichatwidget import AiChatWidget
 from tests.base import TestBase
 
@@ -36,6 +37,27 @@ class TestAiChatWidgetSlashHelpers(unittest.TestCase):
             "with details",
         )
         self.assertEqual(expanded, "Do the task\n\nARGUMENTS: with details")
+
+    def test_history_has_same_context_in_messages_matches_existing_context(self):
+        context_text = "repo: .\nfiles_changed:\n- qgitc/aichatwidget.py"
+        full_prompt = (
+            f"<context>\n{context_text}\n</context>\n\n"
+            "Please review these changes"
+        )
+        messages = [UserMessage(content=[TextBlock(text=full_prompt)])]
+
+        self.assertTrue(
+            AiChatWidget._historyHasSameContextInMessages(messages, context_text)
+        )
+
+    def test_history_has_same_context_in_messages_returns_false_for_different_context(self):
+        messages = [
+            UserMessage(content=[TextBlock(text="<context>\na\n</context>\n\nPrompt")])
+        ]
+
+        self.assertFalse(
+            AiChatWidget._historyHasSameContextInMessages(messages, "b")
+        )
 
 
 class TestAiChatWidgetSlashInit(TestBase):

@@ -37,6 +37,7 @@ from qgitc.agent.skills.types import SkillDefinition
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.agent.tool import ToolType
 from qgitc.agent.tool_executor import TOOL_ABORTED_MESSAGE, TOOL_SKIPPED_MESSAGE
+from qgitc.agent.types import TextBlock, UserMessage
 from qgitc.aichatbot import AiChatbot
 from qgitc.aichatcontextpanel import AiChatContextPanel
 from qgitc.aichatcontextprovider import AiChatContextProvider
@@ -579,7 +580,7 @@ class AiChatWidget(QWidget):
                     merged = injectedContext
                 contextText = merged
 
-            if contextText:
+            if contextText and not self._historyHasSameContextInMessages(loop.messages(), contextText):
                 fullPrompt = f"<context>\n{contextText.rstrip()}\n</context>\n\n" + prompt
 
         if isNewConversation and loop.get_system_prompt():
@@ -715,6 +716,20 @@ class AiChatWidget(QWidget):
         for msg in messages:
             if isinstance(msg, SysMsg) and msg.content == sp:
                 return True
+        return False
+
+    @staticmethod
+    def _historyHasSameContextInMessages(messages, contextText: str) -> bool:
+        if not contextText:
+            return False
+
+        target = f"<context>\n{contextText.rstrip()}\n</context>"
+        for msg in messages:
+            if not isinstance(msg, UserMessage):
+                continue
+            for block in (msg.content or []):
+                if isinstance(block, TextBlock) and (block.text or "").startswith(target):
+                    return True
         return False
 
     @staticmethod
