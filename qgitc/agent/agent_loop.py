@@ -27,6 +27,7 @@ from qgitc.agent.types import (
     Message,
     SystemMessage,
     TextBlock,
+    ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
     UserMessage,
@@ -227,6 +228,7 @@ class AgentLoop(QThread):
         """Stream from the LLM and accumulate into an AssistantMessage."""
         text_parts = []  # type: List[str]
         reasoning_parts = []  # type: List[str]
+        reasoning_data = None  # type: Optional[Dict[str, Any]]
         tool_calls = {}  # type: Dict[str, Dict[str, Any]]
         stop_reason = None  # type: Optional[str]
         usage = None
@@ -244,8 +246,11 @@ class AgentLoop(QThread):
                     self.textDelta.emit(event.text)
 
                 elif isinstance(event, ReasoningDelta):
-                    reasoning_parts.append(event.text)
-                    self.reasoningDelta.emit(event.text)
+                    if event.text:
+                        reasoning_parts.append(event.text)
+                        self.reasoningDelta.emit(event.text)
+                    if event.reasoning_data:
+                        reasoning_data = event.reasoning_data
 
                 elif isinstance(event, ToolCallDelta):
                     if event.id not in tool_calls:
@@ -269,6 +274,11 @@ class AgentLoop(QThread):
 
         # Build content blocks
         content = []  # type: List[Any]
+        if reasoning_parts or reasoning_data:
+            content.append(ThinkingBlock(
+                thinking="".join(reasoning_parts),
+                reasoning_data=reasoning_data,
+            ))
         if text_parts:
             content.append(TextBlock(text="".join(text_parts)))
         for tc_id, tc_data in tool_calls.items():

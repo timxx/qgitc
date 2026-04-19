@@ -15,6 +15,7 @@ class ContentDelta:
 @dataclass
 class ReasoningDelta:
     text: str
+    reasoning_data: Optional[Dict[str, Any]] = None
 
 
 @dataclass

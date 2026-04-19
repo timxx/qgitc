@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import QCoreApplication
 
@@ -77,6 +77,7 @@ def messages_to_history_dicts(messages):
         elif isinstance(msg, AssistantMessage):
             text = _extract_text(msg.content)
             reasoning = _extract_reasoning(msg.content)
+            reasoning_data = _extract_reasoning_data(msg.content)
             tool_calls = _extract_tool_calls(msg.content, toolId2Name)
             entry = {
                 "role": "assistant",
@@ -84,6 +85,8 @@ def messages_to_history_dicts(messages):
             }  # type: Dict[str, Any]
             if reasoning:
                 entry["reasoning"] = reasoning
+            if reasoning_data:
+                entry["reasoning_data"] = reasoning_data
             if tool_calls:
                 entry["tool_calls"] = tool_calls
             result.append(entry)
@@ -123,7 +126,8 @@ def history_dicts_to_messages(dicts):
             content = []
             reasoning = d.get("reasoning")
             if reasoning:
-                content.append(ThinkingBlock(thinking=reasoning))
+                reasoning_data = d.get("reasoning_data")
+                content.append(ThinkingBlock(thinking=reasoning, reasoning_data=reasoning_data))
             text = d.get("content") or ""
             if text:
                 content.append(TextBlock(text=text))
@@ -190,6 +194,14 @@ def _extract_reasoning(content):
         if isinstance(block, ThinkingBlock):
             parts.append(block.thinking)
     return "".join(parts) if parts else None
+
+
+def _extract_reasoning_data(content):
+    # type: (list) -> Optional[Dict[str, Any]]
+    for block in content:
+        if isinstance(block, ThinkingBlock) and block.reasoning_data:
+            return block.reasoning_data
+    return None
 
 
 def _extract_tool_calls(content, toolId2Name):

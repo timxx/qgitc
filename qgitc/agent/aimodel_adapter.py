@@ -19,6 +19,7 @@ from qgitc.agent.types import (
     Message,
     SystemMessage,
     TextBlock,
+    ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
     UserMessage,
@@ -67,8 +68,11 @@ class AiModelBaseAdapter(ModelProvider):
 
         def _on_response(response):
             # type: (AiResponse) -> None
-            if response.reasoning:
-                event_queue.put(ReasoningDelta(text=response.reasoning))
+            if response.reasoning or response.reasoningData:
+                event_queue.put(ReasoningDelta(
+                    text=response.reasoning or "",
+                    reasoning_data=response.reasoningData,
+                ))
             if response.message:
                 event_queue.put(ContentDelta(text=response.message))
             if response.tool_calls:
@@ -111,6 +115,8 @@ class AiModelBaseAdapter(ModelProvider):
                 elif isinstance(msg, AssistantMessage):
                     text_parts = []  # type: List[str]
                     tool_calls = []  # type: List[Dict[str, Any]]
+                    reasoning_text = None  # type: Optional[str]
+                    reasoning_data = None
                     for block in msg.content:
                         if isinstance(block, TextBlock):
                             text_parts.append(block.text)
@@ -123,12 +129,18 @@ class AiModelBaseAdapter(ModelProvider):
                                     "arguments": json.dumps(block.input),
                                 },
                             })
+                        elif isinstance(block, ThinkingBlock):
+                            reasoning_text = block.thinking
+                            reasoning_data = block.reasoning_data
                     text = "".join(text_parts)
+                    kwargs = {}
+                    if reasoning_text:
+                        kwargs["reasoning"] = reasoning_text
+                    if reasoning_data:
+                        kwargs["reasoningData"] = reasoning_data
                     if tool_calls:
-                        self._model.addHistory(
-                            AiRole.Assistant, text, toolCalls=tool_calls)
-                    else:
-                        self._model.addHistory(AiRole.Assistant, text)
+                        kwargs["toolCalls"] = tool_calls
+                    self._model.addHistory(AiRole.Assistant, text, **kwargs)
                 elif isinstance(msg, SystemMessage):
                     self._model.addHistory(AiRole.System, msg.content)
 

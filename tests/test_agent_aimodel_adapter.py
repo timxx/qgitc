@@ -12,7 +12,13 @@ from qgitc.agent.provider import (
     ReasoningDelta,
     ToolCallDelta,
 )
-from qgitc.agent.types import TextBlock, UserMessage
+from qgitc.agent.types import (
+    AssistantMessage,
+    TextBlock,
+    ThinkingBlock,
+    ToolUseBlock,
+    UserMessage,
+)
 from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
 from tests.base import TestBase
@@ -284,6 +290,45 @@ class TestStreamReasoning(TestBase):
         self.assertIsInstance(events[2], MessageComplete)
         self.assertEqual(events[2].stop_reason, "end_turn")
 
+    def test_stream_reasoning_with_reasoning_data(self):
+        reasoning_data = {"id": "rs_123", "encrypted_content": "enc=="}
+        responses = [
+            AiResponse(
+                role=AiRole.Assistant,
+                reasoning="Let me think about this...",
+                reasoningData=reasoning_data,
+                is_delta=True,
+                first_delta=True,
+            ),
+            AiResponse(
+                role=AiRole.Assistant,
+                message="The answer is 42.",
+                is_delta=True,
+                first_delta=False,
+            ),
+        ]
+        model = FakeAiModel(responses)
+        adapter = AiModelBaseAdapter(
+            model=model,
+            modelId="fake",
+            max_tokens=4096,
+            temperature=0.0,
+            chat_mode=AiChatMode.Chat,
+        )
+
+        messages = [UserMessage(
+            content=[TextBlock(text="What is the answer?")])]
+        events = list(adapter.stream(messages))
+
+        self.assertEqual(len(events), 3)
+        self.assertIsInstance(events[0], ReasoningDelta)
+        self.assertEqual(events[0].text, "Let me think about this...")
+        self.assertEqual(events[0].reasoning_data, reasoning_data)
+        self.assertIsInstance(events[1], ContentDelta)
+        self.assertEqual(events[1].text, "The answer is 42.")
+        self.assertIsInstance(events[2], MessageComplete)
+        self.assertEqual(events[2].stop_reason, "end_turn")
+
 
 class TestStreamParameters(TestBase):
 
@@ -489,6 +534,73 @@ class TestStreamParameters(TestBase):
         messages = [UserMessage(content=[TextBlock(text="Hi")])]
         with self.assertRaisesRegex(RuntimeError, "connection dropped"):
             list(adapter.stream(messages))
+
+
+class TestHistoryReasoningPassThrough(TestBase):
+    """Adapter must pass reasoning and reasoningData from ThinkingBlock into addHistory."""
+
+    def doCreateRepo(self):
+        pass
+
+    def _make_adapter(self, responses=None):
+        model = FakeAiModel(responses or [])
+        adapter = AiModelBaseAdapter(
+            model=model,
+            modelId="fake",
+            max_tokens=100,
+            temperature=0.0,
+            chat_mode=AiChatMode.Agent,
+        )
+        return model, adapter
+
+    def test_reasoning_text_passed_to_add_history(self):
+        """When an AssistantMessage has a ThinkingBlock, addHistory receives reasoning=..."""
+        model, adapter = self._make_adapter()
+        messages = [
+            UserMessage(content=[TextBlock(text="Hi")]),
+            AssistantMessage(content=[
+                ThinkingBlock(thinking="My reasoning"),
+                TextBlock(text="Answer"),
+            ]),
+        ]
+        # Drain the stream (FakeAiModel has no responses, just finishes immediately)
+        list(adapter.stream(messages))
+
+        assistant_history = [h for h in model._history if h.role == AiRole.Assistant]
+        self.assertEqual(len(assistant_history), 1)
+        self.assertEqual(assistant_history[0].reasoning, "My reasoning")
+
+    def test_reasoning_data_passed_to_add_history(self):
+        """When ThinkingBlock has reasoning_data, addHistory receives reasoningData=..."""
+        reasoning_data = {"id": "rs_abc", "encrypted_content": "enc=="}
+        model, adapter = self._make_adapter()
+        messages = [
+            UserMessage(content=[TextBlock(text="Hi")]),
+            AssistantMessage(content=[
+                ThinkingBlock(thinking="Thought", reasoning_data=reasoning_data),
+                TextBlock(text="Answer"),
+            ]),
+        ]
+        list(adapter.stream(messages))
+
+        assistant_history = [h for h in model._history if h.role == AiRole.Assistant]
+        self.assertEqual(len(assistant_history), 1)
+        self.assertEqual(assistant_history[0].reasoningData, reasoning_data)
+
+    def test_no_reasoning_data_does_not_set_reasoning_data(self):
+        """ThinkingBlock without reasoning_data must not set reasoningData on history."""
+        model, adapter = self._make_adapter()
+        messages = [
+            UserMessage(content=[TextBlock(text="Hi")]),
+            AssistantMessage(content=[
+                ThinkingBlock(thinking="Some thought"),
+                TextBlock(text="Answer"),
+            ]),
+        ]
+        list(adapter.stream(messages))
+
+        assistant_history = [h for h in model._history if h.role == AiRole.Assistant]
+        self.assertIsNone(assistant_history[0].reasoningData)
 
 
 if __name__ == "__main__":

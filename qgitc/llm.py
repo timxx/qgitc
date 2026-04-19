@@ -48,6 +48,7 @@ class AiResponse:
     message: str = None
     description: str = None
     reasoning: str = None
+    reasoningData: Dict[str, Any] = None
     is_delta: bool = False
     first_delta: bool = False
     # OpenAI-compatible tool calls (Chat Completions).
@@ -645,8 +646,9 @@ class AiModelBase(QObject):
 
     def _emitResponse(self, text: str = None, reasoning: str = None,
                       isDelta=True, role=AiRole.Assistant,
-                      toolCalls: Optional[List[Dict[str, Any]]] = None):
-        if not text and not reasoning and not toolCalls:
+                      toolCalls: Optional[List[Dict[str, Any]]] = None,
+                      reasoningData: Dict[str, Any] = None):
+        if not text and not reasoning and not toolCalls and not reasoningData:
             return
 
         aiResponse = AiResponse()
@@ -654,6 +656,7 @@ class AiModelBase(QObject):
         aiResponse.role = role
         aiResponse.message = text
         aiResponse.reasoning = reasoning
+        aiResponse.reasoningData = reasoningData
         aiResponse.tool_calls = toolCalls
         aiResponse.first_delta = self._firstDelta
         self.responseAvailable.emit(aiResponse)
@@ -788,6 +791,10 @@ class AiModelBase(QObject):
                 self._responsesReasoningData["encrypted_content"] = item.get(
                     "encrypted_content", "")
                 self._responsesReasoningData["id"] = item.get("id", "")
+                self._emitResponse(
+                    isDelta=False,
+                    reasoningData=dict(self._responsesReasoningData),
+                )
                 self.reasoningFinished.emit()
 
         # A response is complete

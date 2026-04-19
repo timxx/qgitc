@@ -42,6 +42,16 @@ class TestMessagesToHistoryDicts(unittest.TestCase):
         self.assertEqual(dicts[0]["content"], "Answer")
         self.assertEqual(dicts[0]["reasoning"], "Let me think...")
 
+    def test_assistant_with_reasoning_data_serialized(self):
+        reasoning_data = {"id": "rs_abc123", "encrypted_content": "enc=="}
+        msgs = [AssistantMessage(content=[
+            ThinkingBlock(thinking="Step-by-step", reasoning_data=reasoning_data),
+            TextBlock(text="Done"),
+        ])]
+        dicts = messages_to_history_dicts(msgs)
+        self.assertEqual(dicts[0]["reasoning"], "Step-by-step")
+        self.assertEqual(dicts[0]["reasoning_data"], reasoning_data)
+
     def test_assistant_tool_call(self):
         msgs = [AssistantMessage(content=[
             TextBlock(text="I'll check"),
@@ -108,6 +118,20 @@ class TestHistoryDictsToMessages(unittest.TestCase):
         self.assertEqual(thinking_blocks[0].thinking, "Let me think...")
         self.assertEqual(text_blocks[0].text, "Answer")
 
+    def test_assistant_with_reasoning_data_restored(self):
+        reasoning_data = {"id": "rs_abc123", "encrypted_content": "enc=="}
+        dicts = [{
+            "role": "assistant",
+            "content": "Done",
+            "reasoning": "Step-by-step",
+            "reasoning_data": reasoning_data,
+        }]
+        msgs = history_dicts_to_messages(dicts)
+        thinking_blocks = [b for b in msgs[0].content if isinstance(b, ThinkingBlock)]
+        self.assertEqual(len(thinking_blocks), 1)
+        self.assertEqual(thinking_blocks[0].thinking, "Step-by-step")
+        self.assertEqual(thinking_blocks[0].reasoning_data, reasoning_data)
+
     def test_assistant_with_tool_calls(self):
         dicts = [{
             "role": "assistant",
@@ -162,6 +186,20 @@ class TestHistoryDictsToMessages(unittest.TestCase):
         restored = history_dicts_to_messages(dicts)
         dicts2 = messages_to_history_dicts(restored)
         self.assertEqual(dicts, dicts2)
+
+    def test_roundtrip_preserves_reasoning_data(self):
+        reasoning_data = {"id": "rs_xyz", "encrypted_content": "abc="}
+        original = [
+            UserMessage(content=[TextBlock(text="Hi")]),
+            AssistantMessage(content=[
+                ThinkingBlock(thinking="Reasoning", reasoning_data=reasoning_data),
+                TextBlock(text="Result"),
+            ]),
+        ]
+        dicts = messages_to_history_dicts(original)
+        restored = history_dicts_to_messages(dicts)
+        thinking_blocks = [b for b in restored[1].content if isinstance(b, ThinkingBlock)]
+        self.assertEqual(thinking_blocks[0].reasoning_data, reasoning_data)
 
 
 if __name__ == "__main__":

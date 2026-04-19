@@ -38,6 +38,7 @@ class ToolResultBlock:
 @dataclass
 class ThinkingBlock:
     thinking: str = ""
+    reasoning_data: Optional[Dict[str, Any]] = None
 
 
 ContentBlock = Union[TextBlock, ToolUseBlock, ToolResultBlock, ThinkingBlock]

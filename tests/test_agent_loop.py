@@ -12,13 +12,14 @@ from qgitc.agent.provider import (
     ContentDelta,
     MessageComplete,
     ModelProvider,
+    ReasoningDelta,
     StreamEvent,
     ToolCallDelta,
 )
 from qgitc.agent.tool import Tool, ToolContext, ToolResult
 from qgitc.agent.tool_executor import TOOL_ABORTED_MESSAGE, TOOL_SKIPPED_MESSAGE
 from qgitc.agent.tool_registry import ToolRegistry
-from qgitc.agent.types import AssistantMessage, TextBlock, UserMessage
+from qgitc.agent.types import AssistantMessage, TextBlock, ThinkingBlock, UserMessage
 from tests.base import TestBase
 
 
@@ -52,6 +53,24 @@ class SimpleProvider(ModelProvider):
     def stream(self, messages, tools=None,
                model=None, max_tokens=4096):
         # type: (...) -> Iterator[StreamEvent]
+        yield ContentDelta(text="Hello from LLM")
+        yield MessageComplete(stop_reason="end_turn")
+
+    def count_tokens(self, messages, system_prompt=None, tools=None):
+        # type: (...) -> int
+        return 10
+
+
+class ReasoningProvider(ModelProvider):
+    """Yields reasoning, then text, then completes."""
+
+    def stream(self, messages, tools=None,
+               model=None, max_tokens=4096):
+        # type: (...) -> Iterator[StreamEvent]
+        yield ReasoningDelta(
+            text="Let me think about this...",
+            reasoning_data={"id": "rs_123", "encrypted_content": "enc=="},
+        )
         yield ContentDelta(text="Hello from LLM")
         yield MessageComplete(stop_reason="end_turn")
 
@@ -353,6 +372,47 @@ class TestAgentLoopSimple(TestBase):
         self.loop.abort()
         self.loop.wait(3000)
         self.assertFalse(self.loop.isRunning())
+
+
+class TestAgentLoopReasoning(TestBase):
+
+    def setUp(self):
+        super().setUp()
+        self.provider = ReasoningProvider()
+        self.loop = _make_loop(self.provider)
+        self.params = _make_params(self.provider)
+
+    def tearDown(self):
+        self.loop.abort()
+        self.loop.wait(3000)
+        super().tearDown()
+
+    def doCreateRepo(self):
+        pass
+
+    def test_reasoning_is_stored_in_assistant_message(self):
+        finished_spy = QSignalSpy(self.loop.agentFinished)
+        turn_spy = QSignalSpy(self.loop.turnComplete)
+        reasoning_spy = QSignalSpy(self.loop.reasoningDelta)
+
+        self.loop.submit("Hello", self.params)
+        waitFor(self.app, lambda: finished_spy.count() > 0)
+
+        self.assertEqual(reasoning_spy.count(), 1)
+        self.assertEqual(reasoning_spy.at(0)[0], "Let me think about this...")
+        self.assertEqual(turn_spy.count(), 1)
+
+        assistant_msg = turn_spy.at(0)[0]
+        thinking_blocks = [
+            block for block in assistant_msg.content
+            if isinstance(block, ThinkingBlock)
+        ]
+        self.assertEqual(len(thinking_blocks), 1)
+        self.assertEqual(thinking_blocks[0].thinking, "Let me think about this...")
+        self.assertEqual(
+            thinking_blocks[0].reasoning_data,
+            {"id": "rs_123", "encrypted_content": "enc=="},
+        )
 
 
 # ── Tool Execution Tests ────────────────────────────────────────────

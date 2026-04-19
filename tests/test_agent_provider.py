@@ -43,6 +43,13 @@ class TestReasoningDelta(unittest.TestCase):
     def test_creation_and_field_access(self):
         delta = ReasoningDelta(text="thinking...")
         self.assertEqual(delta.text, "thinking...")
+        self.assertIsNone(delta.reasoning_data)
+
+    def test_creation_with_reasoning_data(self):
+        reasoning_data = {"id": "rs_123", "encrypted_content": "enc=="}
+        delta = ReasoningDelta(text="thinking...", reasoning_data=reasoning_data)
+        self.assertEqual(delta.text, "thinking...")
+        self.assertEqual(delta.reasoning_data, reasoning_data)
 
     def test_isinstance(self):
         delta = ReasoningDelta(text="hmm")
