@@ -12,6 +12,89 @@ class TestActionRunner(unittest.TestCase):
     def setUp(self):
         self.runner = ActionRunner()
 
+    def testWriteInput(self):
+        mock_process = MagicMock()
+        self.runner._process = mock_process
+
+        self.runner.writeInput(b'y\n')
+
+        mock_process.write.assert_called_once_with(b'y\n')
+
+    def testDetectsPromptFromTrailingStdoutBuffer(self):
+        mock_process = MagicMock()
+        mock_process.readAllStandardOutput.return_value.data.return_value = b'Password: '
+        self.runner._process = mock_process
+        stdoutSpy = MagicMock()
+        stdinSpy = MagicMock()
+        self.runner.stdoutAvailable.connect(stdoutSpy)
+        self.runner.stdinRequired.connect(stdinSpy)
+
+        self.runner.onStdoutReady()
+
+        stdoutSpy.assert_called_once_with(b'Password: ')
+        stdinSpy.assert_called_once_with('Password: ', True)
+        self.assertIsNone(self.runner._stdoutChunk)
+
+    def testDoesNotRepeatSamePrompt(self):
+        mock_process = MagicMock()
+        mock_process.readAllStandardOutput.return_value.data.side_effect = [
+            b'Proceed? ',
+            b'Proceed? ',
+        ]
+        self.runner._process = mock_process
+        stdoutSpy = MagicMock()
+        stdinSpy = MagicMock()
+        self.runner.stdoutAvailable.connect(stdoutSpy)
+        self.runner.stdinRequired.connect(stdinSpy)
+
+        self.runner.onStdoutReady()
+        self.runner.onStdoutReady()
+
+        self.assertEqual(stdoutSpy.call_count, 2)
+        stdinSpy.assert_called_once_with('Proceed? ', False)
+
+    def testDoesNotDetectPromptFromCompletedStdoutBlock(self):
+        mock_process = MagicMock()
+        mock_process.readAllStandardOutput.return_value.data.return_value = b'Password: \n'
+        self.runner._process = mock_process
+        stdoutSpy = MagicMock()
+        stdinSpy = MagicMock()
+        self.runner.stdoutAvailable.connect(stdoutSpy)
+        self.runner.stdinRequired.connect(stdinSpy)
+
+        self.runner.onStdoutReady()
+
+        stdoutSpy.assert_called_once_with(b'Password: \n')
+        stdinSpy.assert_not_called()
+
+    def testEmitsCompletedStdoutBeforeTrailingPromptChunk(self):
+        mock_process = MagicMock()
+        mock_process.readAllStandardOutput.return_value.data.return_value = b'line1\nProceed? '
+        self.runner._process = mock_process
+
+        events = []
+
+        def onStdout(data):
+            events.append(('stdout', data))
+
+        def onStdin(prompt, isSecret):
+            events.append(('stdin', prompt, isSecret))
+
+        self.runner.stdoutAvailable.connect(onStdout)
+        self.runner.stdinRequired.connect(onStdin)
+
+        self.runner.onStdoutReady()
+
+        self.assertEqual(
+            events,
+            [
+                ('stdout', b'line1\n'),
+                ('stdout', b'Proceed? '),
+                ('stdin', 'Proceed? ', False),
+            ],
+        )
+        self.assertIsNone(self.runner._stdoutChunk)
+
     @patch('qgitc.actionrunner.QObject.disconnect')
     @patch('qgitc.actionrunner.logger')
     def testCancelRunningProcess(self, mock_logger, mock_disconnect):
@@ -139,18 +222,23 @@ class TestActionRunner(unittest.TestCase):
         self.runner.stderrAvailable.emit.assert_called_once_with(data)
 
     def testFinishedWithChunks(self):
-        self.runner._stdoutChunk = b'leftover'
+        stdoutSpy = MagicMock()
+        stdinSpy = MagicMock()
+        self.runner._stdoutChunk = b'Password: '
         self.runner._stderrChunk = b'errleft'
         self.runner._process = MagicMock()
-        self.runner.stdoutAvailable = MagicMock()
+        self.runner.stdoutAvailable.connect(stdoutSpy)
         self.runner.stderrAvailable = MagicMock()
+        self.runner.stdinRequired.connect(stdinSpy)
         self.runner.finished = MagicMock()
 
         self.runner.onRunFinished(5, 0)
 
-        self.runner.stdoutAvailable.assert_called_with(b'leftover')
-        self.runner.stderrAvailable.assert_called_with(b'errleft')
+        stdoutSpy.assert_called_once_with(b'Password: ')
+        self.runner.stderrAvailable.emit.assert_called_once_with(b'errleft')
+        stdinSpy.assert_not_called()
         self.assertIsNone(self.runner._process)
+        self.assertIsNone(self.runner._stdoutChunk)
+        self.assertIsNone(self.runner._stderrChunk)
         self.assertEqual(self.runner.exitCode, 5)
         self.runner.finished.emit.assert_called_once_with(5)
-

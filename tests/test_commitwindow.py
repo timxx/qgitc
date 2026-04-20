@@ -5,13 +5,14 @@ from unittest.mock import MagicMock, patch
 
 from PySide6.QtCore import QItemSelectionModel, Qt, QThread
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QDialog, QLineEdit, QMessageBox
 
 from qgitc.aichatwindow import AiChatWidget
 from qgitc.cancelevent import CancelEvent
 from qgitc.events import CodeReviewEvent, LocalChangesCommittedEvent
 from qgitc.gitutils import Git
 from qgitc.llm import AiModelBase
+from qgitc.terminaloutputwidget import TerminalOutputWidget
 from qgitc.windowtype import WindowType
 from tests.base import TemporaryDirectory, TestBase, createRepo
 from tests.mockgithubcopilot import MockGithubCopilot, MockGithubCopilotStep
@@ -274,6 +275,34 @@ class TestCommitWindow(TestBase):
             self.assertIn("1 file changed, 1 insertion", result)
 
             self.assertEqual(branch, self.window._branchLabel.text())
+
+    def testProgressPageUsesTerminalWidget(self):
+        self.assertIsInstance(self.window.ui.teOutput, TerminalOutputWidget)
+
+    def testPromptSignalShowsInputBar(self):
+        self.assertTrue(self.window.ui.wgInputBar.isHidden())
+        self.window.ui.stackedWidget.setCurrentWidget(self.window.ui.pageProgress)
+
+        self.window._onRunnerStdinRequired("Enter password: ", True)
+
+        self.assertTrue(self.window.ui.wgInputBar.isVisible())
+        self.assertEqual(self.window.ui.lbPrompt.text(), "Enter password: ")
+        self.assertEqual(self.window.ui.lePrompt.echoMode(), QLineEdit.Password)
+
+    def testSendingInputWritesToRunner(self):
+        runner = MagicMock()
+        self.window._interactiveRunner = runner
+
+        self.window._onRunnerStdinRequired("Input: ", False)
+        self.window.ui.lePrompt.setText("answer")
+        self.window._onSendPromptInput()
+
+        runner.writeInput.assert_called_once_with(b"answer\n")
+        self.assertEqual(self.window.ui.lePrompt.text(), "")
+        self.assertTrue(self.window.ui.wgInputBar.isHidden())
+        self.assertEqual(self.window.ui.lbPrompt.text(), "")
+        # Verify runner is retained for next input (not cleared when clearRunner=False)
+        self.assertIs(self.window._interactiveRunner, runner)
 
     def testCancelRunningCommit(self):
         self.waitForLoaded()

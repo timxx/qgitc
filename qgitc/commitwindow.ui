@@ -614,10 +614,44 @@
               </widget>
              </item>
              <item>
-              <widget class="QPlainTextEdit" name="teOutput">
-               <property name="readOnly">
-                <bool>true</bool>
+              <widget class="TerminalOutputWidget" name="teOutput"/>
+             </item>
+             <item>
+              <widget class="QWidget" name="wgInputBar" native="true">
+               <property name="visible">
+                <bool>false</bool>
                </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_8">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="lbPrompt">
+                  <property name="text">
+                   <string/>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="lePrompt"/>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnSendPrompt">
+                  <property name="text">
+                   <string>Send</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </widget>
              </item>
              <item>
@@ -708,6 +742,11 @@
    <extends>QLineEdit</extends>
    <header>searchlineedit.h</header>
   </customwidget>
+    <customwidget>
+     <class>TerminalOutputWidget</class>
+     <extends>QTextEdit</extends>
+      <header>qgitc.terminaloutputwidget</header>
+    </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>teMessage</tabstop>

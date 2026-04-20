@@ -21,19 +21,13 @@ from PySide6.QtCore import (
     QTimer,
     QUrl,
 )
-from PySide6.QtGui import (
-    QDesktopServices,
-    QIcon,
-    QKeySequence,
-    QTextBlockFormat,
-    QTextCharFormat,
-    QTextCursor,
-)
+from PySide6.QtGui import QDesktopServices, QIcon, QKeySequence, QTextCursor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListView,
     QMenu,
     QMessageBox,
@@ -157,6 +151,16 @@ class AmendCommitDetectedEvent(QEvent):
     def __init__(self, commitInfo: AmendCommitInfo):
         super().__init__(QEvent.Type(AmendCommitDetectedEvent.Type))
         self.commitInfo = commitInfo
+
+
+class RunnerStdinRequiredEvent(QEvent):
+    Type = QEvent.User + 10
+
+    def __init__(self, prompt: str, isSecret: bool, runner: ActionRunner = None):
+        super().__init__(QEvent.Type(RunnerStdinRequiredEvent.Type))
+        self.prompt = prompt
+        self.isSecret = isSecret
+        self.runner = runner
 
 
 class CommitWindow(StateWindow):
@@ -319,6 +323,10 @@ class CommitWindow(StateWindow):
 
         self.ui.btnAction.clicked.connect(
             self._onCommitActionClicked)
+        self.ui.btnSendPrompt.clicked.connect(self._onSendPromptInput)
+        self.ui.lePrompt.returnPressed.connect(self._onSendPromptInput)
+        self._interactiveRunner: ActionRunner = None
+        self._resetPromptInputUi(True)
 
         self.ui.cbRunAction.setChecked(
             ApplicationBase.instance().settings().runCommitActions())
@@ -397,8 +405,6 @@ class CommitWindow(StateWindow):
 
         self._setupContextMenu()
 
-        self._outputBlocks: Dict[str, int] = {}
-
         self._ntpTimer = None
         self._ntpDateTime = None
         self._ntpElapsed = None
@@ -454,7 +460,7 @@ class CommitWindow(StateWindow):
         self._repoBranch.clear()
         self._branchMessage.clear()
         self._branchWidget.setVisible(False)
-        self._outputBlocks.clear()
+        self._resetPromptInputUi(True)
         self._currentTemplateFile = None
 
     def clearModels(self):
@@ -705,6 +711,7 @@ class CommitWindow(StateWindow):
             0, len(submodules) + len(self._committedActions))
         self.ui.progressBar.setValue(0)
         self.ui.teOutput.clear()
+        self._resetPromptInputUi(True)
         self._updateCommitStatus(True)
         self.ui.stackedWidget.setCurrentWidget(self.ui.pageProgress)
         self._commitExecutor.submit(submodules, self._doCommit)
@@ -1017,56 +1024,19 @@ class CommitWindow(StateWindow):
             self._handleAmendCommitDetectedEvent(evt.commitInfo)
             return True
 
+        if evt.type() == RunnerStdinRequiredEvent.Type:
+            self._onRunnerStdinRequired(evt.prompt, evt.isSecret, evt.runner)
+            return True
+
         return super().event(evt)
 
-    def _addBlock(self, key: str, title: str):
-        cursor = self.ui.teOutput.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        cursor.insertBlock()
-
-        blockFmt = QTextBlockFormat()
-        blockFmt.topMargin = 8
-
-        charFmt = QTextCharFormat()
-        charFmt.setBackground(
-            ApplicationBase.instance().colorSchema().RepoTagBg)
-        charFmt.setForeground(
-            ApplicationBase.instance().colorSchema().RepoTagFg)
-
-        cursor.setBlockFormat(blockFmt)
-        cursor.insertText(f"{title}\n", charFmt)
-        self._outputBlocks[key] = cursor.position()
-        cursor.setCharFormat(QTextCharFormat())
-        self.ui.teOutput.setTextCursor(cursor)
-
-    def _updateBlockOutput(self, repoName: str, content: str, isError: bool = False, action: str = None):
-        cursor = self.ui.teOutput.textCursor()
+    def _blockInfo(self, repoName: str, action: str = None):
         blockKey = f"{repoName}.{action}" if action else repoName
-        pos = self._outputBlocks.get(blockKey)
-        if pos is None:
-            if action:
-                title = self.tr("Action: ") + action + f" ({repoName})"
-            else:
-                title = self.tr("Repo: ") + repoName
-
-            self._addBlock(blockKey, title)
-            pos = self._outputBlocks[blockKey]
-
-        if not content:
-            return
-
-        cursor.setPosition(pos)
-        cursor.movePosition(QTextCursor.EndOfBlock)
-        format = QTextCharFormat()
-        if isError:
-            format.setForeground(
-                ApplicationBase.instance().colorSchema().ErrorText)
-        cursor.insertText(content if content.endswith("\n")
-                          else (content + "\n"), format)
-        cursor.setCharFormat(QTextCharFormat())
-        self._outputBlocks[blockKey] = cursor.position()
-        self.ui.teOutput.setTextCursor(cursor)
-        self.ui.teOutput.ensureCursorVisible()
+        if action:
+            title = self.tr("Action: ") + action + f" ({repoName})"
+        else:
+            title = self.tr("Repo: ") + repoName
+        return blockKey, title
 
     def _handleUpdateCommitProgress(self, submodule: str, out: str, error: str, updateProgress: bool = True, action: str = None):
         if updateProgress:
@@ -1077,14 +1047,44 @@ class CommitWindow(StateWindow):
         else:
             repoName = submodule
 
-        if out:
-            self._updateBlockOutput(repoName, out, False, action)
-        if error:
-            self._updateBlockOutput(repoName, error, True, action)
+        blockKey, title = self._blockInfo(repoName, action)
+        self.ui.teOutput.ensureBlock(blockKey, title)
 
-        if not out and not error:
-            # add title only
-            self._updateBlockOutput(repoName, "", False, action)
+        if out:
+            self.ui.teOutput.appendOutput(blockKey, out.encode("utf-8"), False)
+        if error:
+            self.ui.teOutput.appendOutput(blockKey, error.encode("utf-8"), True)
+
+    def _resetPromptInputUi(self, clearRunner: bool = False):
+        if clearRunner:
+            self._interactiveRunner = None
+        self.ui.wgInputBar.hide()
+        self.ui.lbPrompt.setText("")
+        self.ui.lePrompt.clear()
+        self.ui.lePrompt.setEchoMode(QLineEdit.Normal)
+
+    def _onRunnerStdinRequired(self, prompt: str, isSecret: bool, runner: ActionRunner = None):
+        if runner is not None:
+            self._interactiveRunner = runner
+
+        self.ui.lbPrompt.setText(prompt)
+        echoMode = QLineEdit.Password if isSecret else QLineEdit.Normal
+        self.ui.lePrompt.setEchoMode(echoMode)
+        self.ui.lePrompt.clear()
+        self.ui.wgInputBar.show()
+        self.ui.lePrompt.setFocus()
+
+    def _onSendPromptInput(self):
+        runner = self._interactiveRunner
+        if not runner:
+            # Should not happen if input bar is shown correctly, but handle gracefully
+            return
+        text = self.ui.lePrompt.text().strip()
+        if not text:
+            # Prevent empty input submission
+            return
+        runner.writeInput((text + "\n").encode("utf-8"))
+        self._resetPromptInputUi()
 
     def _handleAmendCommitDetectedEvent(self, commitInfo: AmendCommitInfo):
         """Handle single commit detected from worker thread"""
@@ -1481,7 +1481,7 @@ class CommitWindow(StateWindow):
             self._commitExecutor.submit(submodules, self._runCommittedAction)
             return
 
-        self._outputBlocks.clear()
+        self._resetPromptInputUi(True)
         if self.ui.cbAmend.isChecked():
             self.ui.cbAmend.setChecked(False)
         self.reloadLocalChanges()
@@ -1505,9 +1505,11 @@ class CommitWindow(StateWindow):
         if self._commitExecutor.isRunning():
             self._commitExecutor.cancel()
             self._committedActions.clear()
+            self._resetPromptInputUi(True)
             self._updateCommitStatus(False)
             self.ui.lbStatus.setText(self.tr("Commit aborted"))
         else:
+            self._resetPromptInputUi(True)
             self.ui.stackedWidget.setCurrentWidget(self.ui.pageMessage)
             self.ui.teMessage.setFocus()
             btnCommit = self.ui.btnCommit
@@ -1551,6 +1553,10 @@ class CommitWindow(StateWindow):
 
         runner.stdoutAvailable.connect(lambda data: _update(data, False))
         runner.stderrAvailable.connect(lambda data: _update(data, True))
+        runner.stdinRequired.connect(
+            lambda prompt, isSecret: ApplicationBase.instance().postEvent(
+                self, RunnerStdinRequiredEvent(prompt, isSecret, runner))
+        )
         runner.finished.connect(eventLoop.quit)
         runner.run(args, repoDir)
         eventLoop.exec()
