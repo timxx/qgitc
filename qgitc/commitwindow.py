@@ -484,9 +484,23 @@ class CommitWindow(StateWindow):
     def _onStatusAvailable(self, repoDir: str, fileList: List[Tuple[str, str, str]]):
         logger.debug("Status available %s -> %s", repoDir, fileList)
         ignoredUntrackedFiles = self._ignoredUntrackedFilesSet()
+        hiddenDirs = self._ignoredDirectoriesSet()
         for status, file, oldFile in fileList:
-            if status[1] == "?" and file in ignoredUntrackedFiles:
-                continue
+            if status[1] == "?":
+                if file in ignoredUntrackedFiles:
+                    logger.debug("Ignore untracked file: %s", file)
+                    continue
+                normalizedPath = os.path.normpath(file)
+                isHidden = False
+                for hiddenDir in hiddenDirs:
+                    if normalizedPath.startswith(hiddenDir + os.sep):
+                        logger.debug(
+                            "Ignore untracked file in hidden directory: %s", file)
+                        isHidden = True
+                        break
+                if isHidden:
+                    continue
+
             if status[0] != " " and status[0] not in ["?", "!"]:
                 self._stagedModel.addFile(file, repoDir, status[0], oldFile)
             if status[1] != " ":
@@ -1111,6 +1125,12 @@ class CommitWindow(StateWindow):
             self._updateHiddenUntrackedMenu)
         self._wdMenu.addMenu(self._hiddenUntrackedMenu)
 
+        self._hiddenDirectoryMenu = QMenu(self)
+        self._hiddenDirectoryMenu.setTitle(self.tr("Hidden directories"))
+        self._hiddenDirectoryMenu.aboutToShow.connect(
+            self._updateHiddenDirectoryMenu)
+        self._wdMenu.addMenu(self._hiddenDirectoryMenu)
+
         self.ui.tbWDChanges.setMenu(self._wdMenu)
 
     def _setupTemplateMenu(self):
@@ -1173,6 +1193,79 @@ class CommitWindow(StateWindow):
         self.reloadLocalChanges()
         ApplicationBase.instance().trackFeatureUsage(
             "commit.show_all_untracked_files")
+
+    def _onShowHiddenDirectory(self, directory: str):
+        """Show a specific hidden directory."""
+        directories = self._ignoredDirectoriesSet()
+        normalizedDir = os.path.normpath(directory)
+        if normalizedDir in directories:
+            directories.remove(normalizedDir)
+            self._saveIgnoredDirectories(directories)
+            self.reloadLocalChanges()
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.show_directory")
+
+    def _onShowAllHiddenDirectories(self):
+        """Show all hidden directories."""
+        self._saveIgnoredDirectories(set())
+        self.reloadLocalChanges()
+        ApplicationBase.instance().trackFeatureUsage(
+            "commit.show_all_directories")
+
+    def _updateHiddenDirectoryMenu(self):
+        """Update the hidden directories menu."""
+        self._hiddenDirectoryMenu.clear()
+        entries = self._getHiddenDirectoryEntries()
+        if not entries:
+            action = self._hiddenDirectoryMenu.addAction(
+                self.tr("(No hidden directories)"))
+            action.setEnabled(False)
+            return
+
+        maxItems = 20
+        visibleEntries = entries[:maxItems]
+        for directory in visibleEntries:
+            action = self._hiddenDirectoryMenu.addAction(directory)
+            action.triggered.connect(
+                lambda checked, d=directory: self._onShowHiddenDirectory(d))
+
+        if len(entries) > maxItems:
+            remaining = len(entries) - maxItems
+            moreAction = self._hiddenDirectoryMenu.addAction(
+                self.tr("... and {} more").format(remaining))
+            moreAction.setEnabled(False)
+
+        self._hiddenDirectoryMenu.addSeparator()
+        self._hiddenDirectoryMenu.addAction(
+            self.tr("Show all hidden directories"),
+            self._onShowAllHiddenDirectories)
+
+    def _onHideDirectory(self):
+        """Hide a selected directory."""
+        ApplicationBase.instance().trackFeatureUsage("commit.hide_directory")
+        # This will be called from context menu on a selected file
+        # We need to extract the directory from the file path
+        listView: QListView = self._acHideDirectory.data()
+        indexes = listView.selectedIndexes()
+        if not indexes:
+            return
+
+        # Get the directory from the first selected file
+        model = listView.model()
+        index = indexes[0]
+        fileName = model.data(index, Qt.DisplayRole)
+
+        # Get the directory part of the file path
+        dirPath = os.path.dirname(fileName)
+        if not dirPath:
+            # If no directory (file at root), use the filename as directory
+            # For now, we'll just return
+            return
+
+        directories = self._ignoredDirectoriesSet()
+        directories.add(os.path.normpath(dirPath))
+        self._saveIgnoredDirectories(directories)
+        self.reloadLocalChanges()
 
     def _updateTemplateMenuItems(self):
         """Populate template menu with available templates and management options"""
@@ -1773,6 +1866,15 @@ class CommitWindow(StateWindow):
         self._acHideUntrackedFiles.setVisible(
             isUnstagedList and untrackedCount > 0)
 
+        # Show hide directory option for files in subdirectories
+        selectedFile = indexes[0].data(Qt.DisplayRole)
+        hasDirectory = os.path.dirname(selectedFile) != ""
+        hideDirectoryText = self.tr("&Hide this directory")
+        self._acHideDirectory.setText(hideDirectoryText)
+        self._acHideDirectory.setData(listView)
+        self._acHideDirectory.setVisible(
+            isUnstagedList and hasDirectory and untrackedCount > 0)
+
         self._contextMenu.exec(listView.mapToGlobal(pos))
 
     def _setupContextMenu(self):
@@ -1793,6 +1895,9 @@ class CommitWindow(StateWindow):
         self._acHideUntrackedFiles = self._contextMenu.addAction(
             self.tr("&Hide this untracked file"),
             self._onHideUntrackedFiles)
+        self._acHideDirectory = self._contextMenu.addAction(
+            self.tr("&Hide this directory"),
+            self._onHideDirectory)
         self._contextMenu.addSeparator()
         self._contextMenu.addAction(self.tr("External &diff"),
                                     self._onExternalDiff)
@@ -1833,6 +1938,30 @@ class CommitWindow(StateWindow):
         """Get list of hidden untracked files sorted for display in menu."""
         files = self._getIgnoredUntrackedFiles()
         return sorted(files, key=lambda f: f.lower())
+
+    def _ignoredDirectoriesSet(self):
+        """Get the set of hidden directories for the top repo."""
+        directories = self._getIgnoredDirectories()
+        return set(directories)
+
+    def _getIgnoredDirectories(self):
+        """Get list of hidden directories for the top repo."""
+        settings = ApplicationBase.instance().settings()
+        directories = settings.ignoredDirectories(self._repoName())
+        normalized = [os.path.normpath(directory)
+                      for directory in directories if directory]
+        return sorted(normalized, key=lambda d: d.lower())
+
+    def _saveIgnoredDirectories(self, directories: set):
+        """Save hidden directories for the top repo."""
+        settings = ApplicationBase.instance().settings()
+        sortedDirectories = sorted(directories, key=lambda path: path.lower())
+        settings.setIgnoredDirectories(self._repoName(), sortedDirectories)
+
+    def _getHiddenDirectoryEntries(self):
+        """Get list of hidden directories sorted for display in menu."""
+        directories = self._getIgnoredDirectories()
+        return sorted(directories, key=lambda d: d.lower())
 
     def _onRestoreFiles(self):
         ApplicationBase.instance().trackFeatureUsage("commit.restore_files")
