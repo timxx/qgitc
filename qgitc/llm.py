@@ -480,12 +480,17 @@ class AiModelBase(QObject):
             logger.debug("_handleStreamResponseChat: received [DONE]")
             return
 
-        data: dict = json.loads(line[5:].decode("utf-8"))
+        lineContent = line[5:].decode("utf-8")
+        data: dict = json.loads(lineContent)
         choices: list = data.get("choices")
         if not choices:
             logger.debug("_handleStreamResponseChat: no choices in response")
+            error = data.get("error", {})
+            if error:
+                self.networkError.emit(lineContent)
             return
 
+        del lineContent
         # OpenAI can stream multiple choices concurrently.
         for choice in choices:
             choiceIndex = choice.get("index", 0)
