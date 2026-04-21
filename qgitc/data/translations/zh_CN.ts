@@ -3567,7 +3567,7 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
     <message>
         <location filename="../../preferences.ui" line="1059"/>
         <source>Max Tokens:</source>
-        <translation>最大令牌数：</translation>
+        <translation>最大词元数：</translation>
     </message>
     <message>
         <location filename="../../preferences.ui" line="1079"/>
