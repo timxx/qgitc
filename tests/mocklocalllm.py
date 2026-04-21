@@ -2,10 +2,9 @@
 
 from unittest.mock import MagicMock, patch
 
-from PySide6.QtCore import QByteArray, QCoreApplication
+from PySide6.QtCore import QByteArray
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 
-from qgitc.settings import Settings
 from tests.mockqnetworkreply import MockQNetworkReply
 
 MOCK_SUCCESS = True
@@ -36,9 +35,8 @@ data: [DONE]\n
 class MockLocalLLM:
 
     def __init__(self, mockSuccess: bool = True):
-        settings: Settings = QCoreApplication.instance().settings()
         global LOCAL_LLM_URL
-        LOCAL_LLM_URL = settings.localLlmServer()
+        LOCAL_LLM_URL = "http://127.0.0.1:11434/v1"
 
         global MOCK_SUCCESS
         MOCK_SUCCESS = mockSuccess
