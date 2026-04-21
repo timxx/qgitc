@@ -142,6 +142,7 @@ class AiChatWidget(QWidget):
             settings.toolExecutionStrategy())
         settings.toolExecutionStrategyChanged.connect(
             self._onToolExecutionStrategyChanged)
+        settings.llmProvidersChanged.connect(self._onLlmProvidersChanged)
         self._firstTextDelta = True
         self._firstReasoningDelta = True
 
@@ -994,6 +995,9 @@ class AiChatWidget(QWidget):
     def _onToolExecutionStrategyChanged(self, strategyValue: int):
         """Handle tool execution strategy change."""
         self._permissionEngine = createPermissionEngine(strategyValue)
+
+    def _onLlmProvidersChanged(self):
+        self._setupModels()
 
     def _updateStatus(self):
         self._contextPanel.btnSend.setVisible(True)

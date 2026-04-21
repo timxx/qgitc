@@ -114,16 +114,29 @@ class LocalLLM(AiModelBase):
 
     _models = {}
 
-    def __init__(self, model: str = None, parent=None):
+    def __init__(self, model: str = None, providerConfig: dict = None, parent=None):
         settings = ApplicationBase.instance().settings()
-        url = settings.localLlmServer()
+        if providerConfig is None:
+            providers = settings.localLlmProviders()
+            providerConfig = providers[0] if providers else None
+
+        providerConfig = providerConfig or {}
+        self.providerConfig = providerConfig
+        self.providerId = providerConfig.get("id", "")
+
+        url = providerConfig.get("url", "")
         model = model or settings.defaultLlmModelId(self.__class__.__name__)
         super().__init__(url, model, parent)
         self.url = f"{self.url_base}/chat/completions"
 
-        if url not in LocalLLM._models:
-            LocalLLM._models[url] = []
-            authToken = settings.localLlmAuth()
+        cacheKey = self.providerId or self.url_base
+        self._cacheKey = cacheKey
+        if cacheKey not in LocalLLM._models:
+            LocalLLM._models[cacheKey] = []
+            headers = providerConfig.get("headers", {})
+            authToken = ""
+            if isinstance(headers, dict):
+                authToken = headers.get("Authorization", "")
             self.nameFetcher = OpenAICompatModelsFetcher(
                 self.url_base, authToken)
             self.nameFetcher.finished.connect(self._onFetchFinished)
@@ -146,13 +159,13 @@ class LocalLLM(AiModelBase):
         )
 
     def _onFetchFinished(self):
-        LocalLLM._models[self.url_base] = self.nameFetcher.models
+        LocalLLM._models[self._cacheKey] = self.nameFetcher.models
         self.nameFetcher.deleteLater()
         self.nameFetcher = None
         self.modelsReady.emit()
 
     def models(self):
-        return LocalLLM._models.get(self.url_base, [])
+        return LocalLLM._models.get(self._cacheKey, [])
 
     def cleanup(self):
         if self.nameFetcher and self.nameFetcher.isRunning():
@@ -162,13 +175,12 @@ class LocalLLM(AiModelBase):
 
     @property
     def authorization(self):
-        settings = ApplicationBase.instance().settings()
-        # Check custom headers first for Authorization
-        headers = settings.customLlmHeaders()
+        headers = self.providerConfig.get("headers", {})
+        if not isinstance(headers, dict):
+            return ""
         if "Authorization" in headers:
             return headers["Authorization"]
-        # Fallback to legacy localLlmAuth for backward compatibility
-        return settings.localLlmAuth()
+        return ""
 
     def queryAsync(self, params: AiParameters):
         payload = {
@@ -205,15 +217,17 @@ class LocalLLM(AiModelBase):
         self._doQuery(payload, params.stream)
 
     def _doQuery(self, payload, stream=True):
-        headers = {
+        requestHeaders = {
             b"Content-Type": b"application/json; charset=utf-8"
         }
 
         if self.authorization:
-            headers[b"Authorization"] = self.authorization.encode()
+            requestHeaders[b"Authorization"] = self.authorization.encode()
 
-        settings = ApplicationBase.instance().settings()
-        for key, value in settings.customLlmHeaders().items():
-            headers[key.encode()] = value.encode()
+        rawHeaders = self.providerConfig.get("headers", {})
+        if not isinstance(rawHeaders, dict):
+            rawHeaders = {}
+        for key, value in rawHeaders.items():
+            requestHeaders[key.encode()] = value.encode()
 
-        self.post(self.url, headers=headers, data=payload, stream=stream)
+        self.post(self.url, headers=requestHeaders, data=payload, stream=stream)

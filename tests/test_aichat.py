@@ -35,9 +35,17 @@ class TestAiChat(TestBase):
         pass
 
     def testBots(self):
-        self.assertEqual(2, self.chatWidget._contextPanel.cbBots.count())
+        self.assertEqual(1, self.chatWidget._contextPanel.cbBots.count())
 
     def testLocalLLM(self):
+        self.app.settings().setLocalLlmProviders([{
+            "id": "local-1",
+            "name": "Ollama",
+            "url": "http://127.0.0.1:11434/v1",
+            "headers": {},
+        }])
+        self.chatWidget._setupModels()
+
         self.assertIsNotNone(self.chatWidget._historyPanel.currentHistory())
 
         for i in range(self.chatWidget._contextPanel.cbBots.count()):

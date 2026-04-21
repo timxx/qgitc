@@ -24,6 +24,7 @@ from qgitc.gitutils import Git, GitProcess
 from qgitc.linkeditdialog import LinkEditDialog
 from qgitc.llm import AiModelBase, AiModelFactory
 from qgitc.llmprovider import AiModelDescriptor, AiModelProvider
+from qgitc.llmproviderdialog import LlmProviderDialog
 from qgitc.settings import Settings
 from qgitc.tooltablemodel import ToolTableModel
 from qgitc.ui_preferences import *
@@ -86,10 +87,8 @@ class Preferences(QDialog):
         self.ui.btnGithubCopilot.clicked.connect(
             self._onGithubCopilotClicked)
 
-        self.ui.btnAddHeader.clicked.connect(
-            self._onBtnAddHeaderClicked)
-        self.ui.btnRemoveHeader.clicked.connect(
-            self._onBtnRemoveHeaderClicked)
+        self.ui.btnManageProviders.clicked.connect(
+            self._onManageProvidersClicked)
 
         self._initedTabs = set()
         # FIXME: we'd better use interface to implement tabs
@@ -121,20 +120,6 @@ class Preferences(QDialog):
 
     def _onBtnDeleteClicked(self, checked=False):
         self._tableViewAddItem(self.ui.tableView)
-
-    def _onBtnAddHeaderClicked(self, checked=False):
-        table = self.ui.twCustomHeaders
-        row = table.rowCount()
-        table.insertRow(row)
-        table.edit(table.model().index(row, 0))
-
-    def _onBtnRemoveHeaderClicked(self, checked=False):
-        table = self.ui.twCustomHeaders
-        rows = set()
-        for index in table.selectionModel().selectedRows():
-            rows.add(index.row())
-        for row in sorted(rows, reverse=True):
-            table.removeRow(row)
 
     def _tableViewDeleteItem(self, tableView: QTableView):
         indexes = tableView.selectionModel().selectedRows()
@@ -523,24 +508,11 @@ class Preferences(QDialog):
                 error)
 
     def _initLLMTab(self):
-        self.ui.leServerUrl.setText(self.settings.localLlmServer())
-
         token = self.settings.githubCopilotAccessToken()
         text = self.tr("Logout") if token else self.tr("Login")
         self.ui.btnGithubCopilot.setText(text)
 
-        prefer = self.settings.defaultLlmModel()
-        self.ui.cbModels.clear()
-
-        entries = AiModelProvider.models()
-        currentIndex = -1
-        for i, desc in enumerate(entries):
-            self.ui.cbModels.addItem(desc.name, desc)
-            if desc.modelKey == prefer:
-                currentIndex = i
-
-        if currentIndex != -1:
-            self.ui.cbModels.setCurrentIndex(currentIndex)
+        self._refreshLlmModelEntries()
 
         # Ensure selected model is instantiated for model-id list population.
         self._ensurePreferencesModelInstantiated()
@@ -571,27 +543,39 @@ class Preferences(QDialog):
         self.ui.cbToolExecutionStrategy.setCurrentIndex(
             self.ui.cbToolExecutionStrategy.findData(strategy))
 
-        table = self.ui.twCustomHeaders
-        table.setRowCount(0)
+    def _refreshLlmModelEntries(self):
+        prefer = self.settings.defaultLlmModel()
+        cachedModels = {}
+        for i in range(self.ui.cbModels.count()):
+            itemData = self.ui.cbModels.itemData(i)
+            if isinstance(itemData, AiModelBase):
+                cachedModels[AiModelFactory.modelKey(itemData)] = itemData
 
-        # Migrate legacy localLlmAuth to custom headers if needed
-        legacyAuth = self.settings.localLlmAuth()
-        headers = self.settings.customLlmHeaders()
-        if legacyAuth:
-            if "Authorization" not in headers:
-                headers["Authorization"] = legacyAuth
-                self.settings.setCustomLlmHeaders(headers)
-            self.settings.setLocalLlmAuth("")
+        self.ui.cbModels.blockSignals(True)
+        self.ui.cbModels.clear()
 
-        for key, value in headers.items():
-            row = table.rowCount()
-            table.insertRow(row)
-            table.setItem(row, 0, QTableWidgetItem(key))
-            table.setItem(row, 1, QTableWidgetItem(value))
-        table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch)
-        table.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.ResizeMode.Stretch)
+        entries = AiModelProvider.models()
+        currentIndex = -1
+        for i, desc in enumerate(entries):
+            modelData = cachedModels.get(desc.modelKey, desc)
+            self.ui.cbModels.addItem(desc.name, modelData)
+            if desc.modelKey == prefer:
+                currentIndex = i
+
+        if currentIndex == -1 and self.ui.cbModels.count() > 0:
+            currentIndex = 0
+        if currentIndex != -1:
+            self.ui.cbModels.setCurrentIndex(currentIndex)
+        self.ui.cbModels.blockSignals(False)
+
+    def _onManageProvidersClicked(self):
+        dialog = LlmProviderDialog(self.settings.localLlmProviders(), self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        self.settings.setLocalLlmProviders(dialog.providers())
+        self._refreshLlmModelEntries()
+        self._onModelChanged(self.ui.cbModels.currentIndex())
 
     def _onModelsReady(self):
         model: AiModelBase = self.sender()
@@ -642,11 +626,11 @@ class Preferences(QDialog):
         self.ui.sbMaxTokens.setEnabled(model.isLocal())
 
     def _saveLLMTab(self):
-        self.settings.setLocalLlmServer(self.ui.leServerUrl.text().strip())
-
         model = self.ui.cbModels.currentData()
         if not isinstance(model, AiModelBase):
             model = self._ensurePreferencesModelInstantiated()
+        if not model:
+            return
         modelKey = AiModelFactory.modelKey(model)
         self.settings.setDefaultLlmModel(modelKey)
 
@@ -676,27 +660,6 @@ class Preferences(QDialog):
         # Save tool execution strategy
         strategy = self.ui.cbToolExecutionStrategy.currentData()
         self.settings.setToolExecutionStrategy(strategy)
-
-        headers = {}
-        table = self.ui.twCustomHeaders
-        incomplete = []
-        for row in range(table.rowCount()):
-            keyItem = table.item(row, 0)
-            valueItem = table.item(row, 1)
-            key = keyItem.text().strip() if keyItem else ""
-            value = valueItem.text().strip() if valueItem else ""
-            if not key and not value:
-                continue
-            if not key:
-                incomplete.append(row + 1)
-                continue
-            headers[key] = value
-        if incomplete:
-            QMessageBox.warning(
-                self, self.window().windowTitle(),
-                self.tr("Header rows %s have empty key and will be skipped.") % ", ".join(
-                    str(r) for r in incomplete))
-        self.settings.setCustomLlmHeaders(headers)
 
     def _initCommitMessageTab(self):
         self.ui.cbIgnoreComment.setChecked(self.settings.ignoreCommentLine())

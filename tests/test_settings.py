@@ -51,3 +51,28 @@ class TestSettings(TestBase):
         # Test setting back to default
         self.settings.setToolExecutionStrategy(0)
         self.assertEqual(self.settings.toolExecutionStrategy(), 0)
+
+    def testLocalLlmProviders_DefaultEmpty(self):
+        self.assertEqual(self.settings.localLlmProviders(), [])
+
+    def testLocalLlmProviders_MigratesLegacySettings(self):
+        self.settings.beginGroup("llm")
+        self.settings.setValue("localServer", "http://127.0.0.1:11434/v1")
+        self.settings.setValue("localAuth", "Bearer abc")
+        self.settings.setValue("customHeaders", {"X-Test": "1"})
+        self.settings.endGroup()
+
+        providers = self.settings.localLlmProviders()
+        self.assertEqual(len(providers), 1)
+        provider = providers[0]
+        self.assertEqual(provider.get("name"), "OpenAI Compatible")
+        self.assertEqual(provider.get("url"), "http://127.0.0.1:11434/v1")
+        self.assertEqual(provider.get("headers", {}).get("X-Test"), "1")
+        self.assertEqual(
+            provider.get("headers", {}).get("Authorization"), "Bearer abc")
+
+        self.settings.beginGroup("llm")
+        self.assertFalse(self.settings.contains("localServer"))
+        self.assertFalse(self.settings.contains("localAuth"))
+        self.assertFalse(self.settings.contains("customHeaders"))
+        self.settings.endGroup()

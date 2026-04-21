@@ -67,6 +67,7 @@ class Settings(QSettings):
     ignoreCommentLineChanged = Signal(bool)
     useNtpTimeChanged = Signal(bool)
     toolExecutionStrategyChanged = Signal(int)
+    llmProvidersChanged = Signal()
 
     def __init__(self, parent=None, testing=False):
         super().__init__(
@@ -308,39 +309,207 @@ class Settings(QSettings):
         self.setValue("fullCommitMsg", full)
 
     def localLlmServer(self):
-        self.beginGroup("llm")
-        value = self.value("localServer", "http://127.0.0.1:11434/v1")
-        self.endGroup()
-        return value
+        providers = self.localLlmProviders()
+        if providers:
+            return providers[0].get("url", "")
+        return ""
 
     def setLocalLlmServer(self, server):
-        self.beginGroup("llm")
-        self.setValue("localServer", server)
-        self.endGroup()
+        providers = self.localLlmProviders()
+        if providers:
+            providers[0]["url"] = server
+        elif server:
+            providers = [{
+                "id": str(uuid.uuid4()),
+                "name": "OpenAI Compatible",
+                "url": server,
+                "headers": {},
+            }]
+        self.setLocalLlmProviders(providers)
 
     def localLlmAuth(self):
-        self.beginGroup("llm")
-        value = self.value("localAuth", "")
-        self.endGroup()
-        return value
+        providers = self.localLlmProviders()
+        if not providers:
+            return ""
+        headers = providers[0].get("headers", {})
+        if not isinstance(headers, dict):
+            return ""
+        return headers.get("Authorization", "")
 
     def setLocalLlmAuth(self, auth: str):
-        self.beginGroup("llm")
-        self.setValue("localAuth", auth)
-        self.endGroup()
+        providers = self.localLlmProviders()
+        if providers:
+            headers = providers[0].get("headers", {})
+            if not isinstance(headers, dict):
+                headers = {}
+            if auth:
+                headers["Authorization"] = auth
+            else:
+                headers.pop("Authorization", None)
+            providers[0]["headers"] = headers
+        elif auth:
+            providers = [{
+                "id": str(uuid.uuid4()),
+                "name": "OpenAI Compatible",
+                "url": "",
+                "headers": {"Authorization": auth},
+            }]
+        self.setLocalLlmProviders(providers)
 
     def customLlmHeaders(self) -> dict:
-        self.beginGroup("llm")
-        headers = self.value("customHeaders", {})
-        self.endGroup()
+        providers = self.localLlmProviders()
+        if not providers:
+            return {}
+        headers = providers[0].get("headers", {})
         if not isinstance(headers, dict):
             return {}
         return headers
 
     def setCustomLlmHeaders(self, headers: dict):
+        if not isinstance(headers, dict):
+            headers = {}
+
+        providers = self.localLlmProviders()
+        if providers:
+            providers[0]["headers"] = headers
+        elif headers:
+            providers = [{
+                "id": str(uuid.uuid4()),
+                "name": "OpenAI Compatible",
+                "url": "",
+                "headers": headers,
+            }]
+        self.setLocalLlmProviders(providers)
+
+    def _normalizeLlmProvider(self, item):
+        if not isinstance(item, dict):
+            return None
+
+        providerId = item.get("id")
+        if not isinstance(providerId, str) or not providerId:
+            providerId = str(uuid.uuid4())
+
+        name = item.get("name", "")
+        if not isinstance(name, str):
+            name = str(name)
+        name = name.strip()
+        if not name:
+            name = "OpenAI Compatible"
+
+        url = item.get("url", "")
+        if not isinstance(url, str):
+            url = str(url)
+        url = url.strip()
+
+        headers = item.get("headers", {})
+        if not isinstance(headers, dict):
+            headers = {}
+        headers = {
+            str(k).strip(): str(v)
+            for k, v in headers.items()
+            if str(k).strip()
+        }
+
+        return {
+            "id": providerId,
+            "name": name,
+            "url": url,
+            "headers": headers,
+        }
+
+    def _migrateLegacyLlmProvider(self):
         self.beginGroup("llm")
-        self.setValue("customHeaders", headers)
+        hasLocalServer = self.contains("localServer")
+        hasLocalAuth = self.contains("localAuth")
+        hasCustomHeaders = self.contains("customHeaders")
+
+        if not (hasLocalServer or hasLocalAuth or hasCustomHeaders):
+            self.endGroup()
+            return []
+
+        localServer = self.value("localServer", "")
+        localAuth = self.value("localAuth", "")
+        customHeaders = self.value("customHeaders", {})
+
+        self.remove("localServer")
+        self.remove("localAuth")
+        self.remove("customHeaders")
         self.endGroup()
+
+        if not isinstance(localServer, str):
+            localServer = str(localServer)
+        if not isinstance(localAuth, str):
+            localAuth = str(localAuth)
+        if not isinstance(customHeaders, dict):
+            customHeaders = {}
+
+        headers = {
+            str(k).strip(): str(v)
+            for k, v in customHeaders.items()
+            if str(k).strip()
+        }
+        if localAuth and "Authorization" not in headers:
+            headers["Authorization"] = localAuth
+
+        if not localServer and not headers:
+            return []
+
+        provider = {
+            "id": str(uuid.uuid4()),
+            "name": "OpenAI Compatible",
+            "url": localServer.strip(),
+            "headers": headers,
+        }
+        return [provider]
+
+    def localLlmProviders(self) -> List[dict]:
+        self.beginGroup("llm")
+        providers = self.value("providers", [])
+        self.endGroup()
+
+        normalized = []
+        if isinstance(providers, list):
+            seenIds = set()
+            for item in providers:
+                provider = self._normalizeLlmProvider(item)
+                if not provider:
+                    continue
+                if provider["id"] in seenIds:
+                    provider["id"] = str(uuid.uuid4())
+                seenIds.add(provider["id"])
+                normalized.append(provider)
+
+        if normalized:
+            return normalized
+
+        migrated = self._migrateLegacyLlmProvider()
+        if migrated:
+            self.setLocalLlmProviders(migrated)
+            return migrated
+
+        return []
+
+    def setLocalLlmProviders(self, providers: List[dict]):
+        normalized = []
+        seenIds = set()
+        if isinstance(providers, list):
+            for item in providers:
+                provider = self._normalizeLlmProvider(item)
+                if not provider:
+                    continue
+                if provider["id"] in seenIds:
+                    provider["id"] = str(uuid.uuid4())
+                seenIds.add(provider["id"])
+                normalized.append(provider)
+
+        oldProviders = self.localLlmProviders()
+
+        self.beginGroup("llm")
+        self.setValue("providers", normalized)
+        self.endGroup()
+
+        if oldProviders != normalized:
+            self.llmProvidersChanged.emit()
 
     def defaultLlmModel(self):
         self.beginGroup("llm")
