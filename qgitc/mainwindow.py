@@ -670,6 +670,7 @@ class MainWindow(StateWindow):
             self.ui.gitViewA.setBranchDesc(self.tr("Branch"))
 
             if self.gitViewB:
+                self.gitViewB.queryClose()
                 self.gitViewB.deleteLater()
                 self.gitViewB = None
 
