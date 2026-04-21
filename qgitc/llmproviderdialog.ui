@@ -93,7 +93,7 @@
    <item>
     <widget class="QLabel" name="labelHeaders">
      <property name="text">
-      <string>Headers</string>
+      <string>Custom Headers</string>
      </property>
     </widget>
    </item>
@@ -122,12 +122,12 @@
      </attribute>
      <column>
       <property name="text">
-       <string>Header Name</string>
+       <string>Key</string>
       </property>
      </column>
      <column>
       <property name="text">
-       <string>Header Value</string>
+       <string>Value</string>
       </property>
      </column>
     </widget>
