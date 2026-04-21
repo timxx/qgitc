@@ -1964,12 +1964,12 @@ To avoid interrupting it, you can run the review in the standalone window instea
     <message>
         <location filename="../../llmproviderdialog.ui" line="96"/>
         <source>Custom Headers</source>
-        <translation>自定义头信息</translation>
+        <translation>自定义请求头</translation>
     </message>
     <message>
         <location filename="../../llmproviderdialog.ui" line="125"/>
         <source>Key</source>
-        <translation>键</translation>
+        <translation>名称</translation>
     </message>
     <message>
         <location filename="../../llmproviderdialog.ui" line="130"/>
@@ -1979,12 +1979,12 @@ To avoid interrupting it, you can run the review in the standalone window instea
     <message>
         <location filename="../../llmproviderdialog.ui" line="140"/>
         <source>Add Header</source>
-        <translation>添加头信息</translation>
+        <translation>添加请求头</translation>
     </message>
     <message>
         <location filename="../../llmproviderdialog.ui" line="147"/>
         <source>Remove Header</source>
-        <translation>删除头信息</translation>
+        <translation>删除请求头</translation>
     </message>
 </context>
 <context>
