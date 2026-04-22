@@ -214,6 +214,11 @@ class LocalLLM(AiModelBase):
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
+        if params.stream:
+            payload["stream_options"] = {
+                "include_usage": True
+            }
+
         self._doQuery(payload, params.stream)
 
     def _doQuery(self, payload, stream=True):

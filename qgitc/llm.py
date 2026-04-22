@@ -43,6 +43,12 @@ class AiChatMessage:
 
 
 @dataclass
+class AiUsage:
+    inputTokens: int = 0
+    outputTokens: int = 0
+
+
+@dataclass
 class AiResponse:
     role: AiRole = AiRole.Assistant
     message: str = None
@@ -54,6 +60,7 @@ class AiResponse:
     # OpenAI-compatible tool calls (Chat Completions).
     # Each item is a dict like: {"id": str, "type": "function", "function": {"name": str, "arguments": str}}
     tool_calls: Optional[List[Dict[str, Any]]] = None
+    usage: Optional[AiUsage] = None
 
 
 class AiParameters:
@@ -483,7 +490,7 @@ class AiModelBase(QObject):
         lineContent = line[5:].decode("utf-8")
         data: dict = json.loads(lineContent)
         choices: list = data.get("choices")
-        if not choices:
+        if choices is None:
             logger.debug("_handleStreamResponseChat: no choices in response")
             error = data.get("error", {})
             if error:
@@ -491,6 +498,9 @@ class AiModelBase(QObject):
             return
 
         del lineContent
+
+        usage = self._parseUsage(data)
+
         # OpenAI can stream multiple choices concurrently.
         for choice in choices:
             choiceIndex = choice.get("index", 0)
@@ -574,6 +584,9 @@ class AiModelBase(QObject):
                     self.addHistory(
                         role, fullContent, reasoning=fullReasoning, toolCalls=toolCalls)
 
+        if usage:
+            self._emitResponse(isDelta=False, usage=usage)
+
     def _emitReasoningFinishedIfNeeded(self, choiceIndex: int):
         if not self._isReasoningFinishedEmitted and self._choiceReasonings.get(choiceIndex):
             self._firstDelta = True
@@ -652,8 +665,9 @@ class AiModelBase(QObject):
     def _emitResponse(self, text: str = None, reasoning: str = None,
                       isDelta=True, role=AiRole.Assistant,
                       toolCalls: Optional[List[Dict[str, Any]]] = None,
-                      reasoningData: Dict[str, Any] = None):
-        if not text and not reasoning and not toolCalls and not reasoningData:
+                      reasoningData: Dict[str, Any] = None,
+                      usage: Optional[AiUsage] = None):
+        if not text and not reasoning and not toolCalls and not reasoningData and not usage:
             return
 
         aiResponse = AiResponse()
@@ -664,6 +678,7 @@ class AiModelBase(QObject):
         aiResponse.reasoningData = reasoningData
         aiResponse.tool_calls = toolCalls
         aiResponse.first_delta = self._firstDelta
+        aiResponse.usage = usage
         self.responseAvailable.emit(aiResponse)
         self._firstDelta = False
 
@@ -814,6 +829,10 @@ class AiModelBase(QObject):
                     self._emitResponse(
                         isDelta=False, toolCalls=self._responsesToolCalls)
 
+                usage = self._parseResponsesUsage(evt.get("response", {}))
+                if usage:
+                    self._emitResponse(isDelta=False, usage=usage)
+
                 self._responsesText = ""
                 self._responsesReasoning = ""
                 self._responsesReasoningData = {}
@@ -842,9 +861,10 @@ class AiModelBase(QObject):
             self.addHistory(role, message, reasoning=reasoning,
                             toolCalls=toolCalls)
 
+            usage = self._parseResponsesUsage(data)
             self._emitResponse(isDelta=False, role=role,
                                text=message, reasoning=reasoning,
-                               toolCalls=toolCalls)
+                               toolCalls=toolCalls, usage=usage)
 
     def _parseResponsesMessage(self, item: dict):
         content: List[Dict[str, any]] = item.get("content", [])
@@ -903,6 +923,25 @@ class AiModelBase(QObject):
     @property
     def history(self) -> List[AiChatMessage]:
         return self._history
+
+    def _parseUsage(self, data: Dict[str, Any]):
+        usageDict: Dict[str, str] = data.get("usage")
+        if usageDict:
+            return AiUsage(
+                inputTokens=usageDict.get("prompt_tokens", 0),
+                outputTokens=usageDict.get("completion_tokens", 0),
+            )
+        return None
+
+
+    def _parseResponsesUsage(self, data: Dict[str, Any]):
+        usageDict: Dict[str, str] = data.get("usage")
+        if usageDict:
+            return AiUsage(
+                inputTokens=usageDict.get("input_tokens", 0),
+                outputTokens=usageDict.get("output_tokens", 0),
+            )
+        return None
 
 
 class AiModelFactory:

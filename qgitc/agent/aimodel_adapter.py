@@ -22,6 +22,7 @@ from qgitc.agent.types import (
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
+    Usage,
     UserMessage,
 )
 from qgitc.llm import AiChatMode, AiModelBase, AiParameters, AiResponse, AiRole
@@ -65,6 +66,7 @@ class AiModelBaseAdapter(ModelProvider):
         finished_flag = [False]
         has_tool_calls = [False]
         network_error = [None]  # type: List[Optional[str]]
+        usage = Usage()
 
         def _on_response(response):
             # type: (AiResponse) -> None
@@ -84,6 +86,9 @@ class AiModelBaseAdapter(ModelProvider):
                         name=func.get("name", ""),
                         arguments_delta=func.get("arguments", ""),
                     ))
+            if response.usage:
+                usage.input_tokens += response.usage.inputTokens
+                usage.output_tokens += response.usage.outputTokens
 
         def _on_finished():
             # type: () -> None
@@ -182,7 +187,7 @@ class AiModelBaseAdapter(ModelProvider):
 
             # Yield final completion event
             stop_reason = "tool_use" if has_tool_calls[0] else "end_turn"
-            yield MessageComplete(stop_reason=stop_reason)
+            yield MessageComplete(stop_reason=stop_reason, usage=usage)
 
         finally:
             self._model.responseAvailable.disconnect(_on_response)
