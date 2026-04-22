@@ -403,6 +403,9 @@
    <property name="text">
     <string>Copy Plain &amp;Text</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+C</string>
+   </property>
   </action>
   <action name="acCompositeMode">
    <property name="checkable">

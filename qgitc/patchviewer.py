@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QMimeData, QPointF, QRectF, QUrl, Signal
+from PySide6.QtCore import QMimeData, QPointF, QRectF, Qt, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QBrush,
     QDesktopServices,
     QFont,
     QFontMetricsF,
+    QKeyEvent,
+    QKeySequence,
     QPainter,
     QPen,
     QTextCharFormat,
@@ -263,7 +265,8 @@ class PatchViewer(SourceViewer):
 
     def createContextMenu(self):
         menu = super().createContextMenu()
-        action = QAction(self.tr("Copy Plain &Text"), self)
+        action = QAction(self.tr("Copy Plain &Text"), self,
+                         shortcut=QKeySequence("Ctrl+Shift+C"))
         action.triggered.connect(self.copyPlainText)
         menu.insertAction(self._acCopy, action)
         menu.removeAction(self._acCopy)
@@ -408,3 +411,9 @@ class PatchViewer(SourceViewer):
 
         app = ApplicationBase.instance()
         app.trackFeatureUsage("viwer.copy_plain_text")
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier) and event.key() == Qt.Key_C:
+            self.copyPlainText()
+        else:
+            super().keyPressEvent(event)
