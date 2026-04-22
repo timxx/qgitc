@@ -368,6 +368,7 @@ class TestAgentMode(TestBase):
         fakeLoop = MagicMock()
         fakeLoop.messages.return_value = []
         fakeLoop.submit = MagicMock()
+        fakeLoop.getSystemPrompt.return_value = None
 
         params = QueryParams(provider=MagicMock())
 
@@ -381,6 +382,56 @@ class TestAgentMode(TestBase):
         self.chatWidget._doRequest("hello", AiChatMode.Agent, collapsed=True)
 
         fakeLoop.submit.assert_called_once_with("hello", params)
+
+    def test_do_request_does_not_inject_context_in_chat_mode(self):
+        fakeLoop = MagicMock()
+        fakeLoop.messages.return_value = []
+        fakeLoop.submit = MagicMock()
+        fakeLoop.getSystemPrompt.return_value = None
+
+        params = QueryParams(provider=MagicMock())
+        contextProvider = MagicMock()
+        contextProvider.buildContextText.return_value = "repo: .\nfiles_changed:\n- qgitc/aichatwidget.py"
+
+        self.chatWidget._ensureAgentLoop = MagicMock(return_value=fakeLoop)
+        self.chatWidget._buildQueryParams = MagicMock(return_value=params)
+        self.chatWidget._setGenerating = MagicMock()
+        self.chatWidget._updateChatHistoryModel = MagicMock()
+        self.chatWidget._setEmbeddedRecentListVisible = MagicMock()
+        self.chatWidget._chatBot.appendResponse = MagicMock()
+        self.chatWidget.contextPanel.selectedContextIds = MagicMock(return_value=["selection-1"])
+        self.chatWidget.setContextProvider(contextProvider)
+
+        self.chatWidget._doRequest("hello", AiChatMode.Chat)
+
+        fakeLoop.submit.assert_called_once_with("hello", params)
+
+    def test_do_request_injects_context_in_agent_mode(self):
+        fakeLoop = MagicMock()
+        fakeLoop.messages.return_value = []
+        fakeLoop.submit = MagicMock()
+        fakeLoop.getSystemPrompt.return_value = None
+
+        params = QueryParams(provider=MagicMock())
+        contextText = "repo: .\nfiles_changed:\n- qgitc/aichatwidget.py"
+        contextProvider = MagicMock()
+        contextProvider.buildContextText.return_value = contextText
+
+        self.chatWidget._ensureAgentLoop = MagicMock(return_value=fakeLoop)
+        self.chatWidget._buildQueryParams = MagicMock(return_value=params)
+        self.chatWidget._setGenerating = MagicMock()
+        self.chatWidget._updateChatHistoryModel = MagicMock()
+        self.chatWidget._setEmbeddedRecentListVisible = MagicMock()
+        self.chatWidget._chatBot.appendResponse = MagicMock()
+        self.chatWidget.contextPanel.selectedContextIds = MagicMock(return_value=["selection-1"])
+        self.chatWidget.setContextProvider(contextProvider)
+
+        self.chatWidget._doRequest("hello", AiChatMode.Agent)
+
+        fakeLoop.submit.assert_called_once_with(
+            f"<context>\n{contextText}\n</context>\n\nhello",
+            params,
+        )
 
     def test_build_system_prompt_injects_skills_reminder_for_agent_mode(self):
         from qgitc.agent.skills.registry import SkillRegistry

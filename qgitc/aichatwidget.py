@@ -560,7 +560,7 @@ class AiChatWidget(QWidget):
 
         self._onButtonStop()
 
-        loop = self._ensureAgentLoop(sysPrompt)
+        loop = self._ensureAgentLoop(sysPrompt, chatMode=chatMode)
         params = self._buildQueryParams(chatMode)
 
         isNewConversation = len(loop.messages()) == 0
@@ -569,7 +569,8 @@ class AiChatWidget(QWidget):
 
         # Build context
         fullPrompt = prompt
-        if not collapsed:
+        shouldInjectContext = (chatMode != AiChatMode.Chat)
+        if not collapsed and shouldInjectContext:
             provider = self.contextProvider()
             selectedIds = self._contextPanel.selectedContextIds() if provider is not None else []
             contextText = provider.buildContextText(
@@ -794,11 +795,11 @@ class AiChatWidget(QWidget):
             return False, "No context provider"
         return provider.executeUiTool(toolName, params)
 
-    def _ensureAgentLoop(self, systemPrompt: Optional[str] = None) -> AgentLoop:
+    def _ensureAgentLoop(self, systemPrompt: Optional[str] = None, chatMode: AiChatMode = None) -> AgentLoop:
         if self._agentLoop is not None:
             return self._agentLoop
         self._toolRegistry = self._buildToolRegistry()
-        system_prompt = self._buildSystemPrompt(systemPrompt)
+        system_prompt = self._buildSystemPrompt(systemPrompt, chatMode=chatMode)
         loop = AgentLoop(
             tool_registry=self._toolRegistry,
             permission_engine=self._permissionEngine,
@@ -816,7 +817,9 @@ class AiChatWidget(QWidget):
         modelId = model.modelId or model.name
         return model.getModelCapabilities(modelId)
 
-    def _buildSystemPrompt(self, systemPrompt: Optional[str] = None):
+    def _buildSystemPrompt(self, systemPrompt: Optional[str] = None, chatMode: AiChatMode = None):
+        if chatMode == AiChatMode.Chat:
+            return None
         provider = self.contextProvider()
         overridePrompt = provider.agentSystemPrompt() if provider is not None else None
         effectiveSysPrompt = systemPrompt or overridePrompt or AGENT_SYS_PROMPT
