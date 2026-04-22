@@ -12,7 +12,10 @@ from qgitc.agent.skills.types import SkillDefinition
 logger = logging.getLogger(__name__)
 
 
-def parseSkillFrontmatter(content):
+def parseSkillFrontmatter(skillFile):
+    with open(skillFile, encoding="utf-8") as f:
+        content = f.read()
+
     # type: (str) -> Tuple[Dict[str, Any], str]
     match = re.match(r"\A---\s*\n(.*?)\n?---\s*\n?(.*)", content, re.DOTALL)
     if not match:
@@ -27,7 +30,7 @@ def parseSkillFrontmatter(content):
             return {}, body
         return metadata, body
     except yaml.YAMLError:
-        logger.warning("Failed to parse skill frontmatter")
+        logger.info("Failed to parse skill frontmatter: %s", skillFile)
         return {}, content
 
 
@@ -158,9 +161,7 @@ def loadSkillsFromDirectory(directory):
             continue
 
         try:
-            with open(skill_file, encoding="utf-8") as f:
-                content = f.read()
-            frontmatter, body = parseSkillFrontmatter(content)
+            frontmatter, body = parseSkillFrontmatter(skill_file)
             skills.append(createSkillDefinition(frontmatter, body, skill_file))
         except OSError as e:
             logger.warning("Failed to read skill file %s: %s", skill_file, e)
