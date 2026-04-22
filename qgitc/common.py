@@ -191,7 +191,11 @@ def decodeFileData(data, preferEncoding="utf-8"):
             pass
 
     # try the buggy chardet
-    encoding = chardet.detect(data)["encoding"]
+    try:
+        encoding = chardet.detect(data)["encoding"]
+    except:
+        encoding = None
+
     if encoding and encoding not in encodings:
         try:
             return data.decode(encoding), encoding
