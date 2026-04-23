@@ -2,11 +2,7 @@
 
 from qgitc.agent.agent_loop import AgentLoop, QueryParams
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
-from qgitc.agent.compaction import (
-    CompactionResult,
-    ConversationCompactor,
-    estimateTokens,
-)
+from qgitc.agent.compaction import CompactionResult, ConversationCompactor
 from qgitc.agent.message_convert import historyDictsToMessages, messagesToHistoryDicts
 from qgitc.agent.permission_presets import createPermissionEngine
 from qgitc.agent.permissions import (
@@ -83,7 +79,6 @@ __all__ = [
     "Usage",
     "UserMessage",
     "createPermissionEngine",
-    "estimateTokens",
     "historyDictsToMessages",
     "messagesToHistoryDicts",
     "loadSkillRegistry",

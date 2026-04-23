@@ -37,15 +37,6 @@ def _message_text(msg):
     return "".join(parts)
 
 
-def estimateTokens(messages):
-    # type: (List[Message]) -> int
-    """Heuristic token estimation: ~4 chars per token."""
-    total = 0
-    for msg in messages:
-        total += len(_message_text(msg))
-    return total // 4
-
-
 def _build_summarization_prompt(messages):
     # type: (List[Message]) -> str
     """Build a prompt asking the LLM to summarize the conversation."""
@@ -91,7 +82,7 @@ class ConversationCompactor:
         threshold = (self._context_window
                      - self._max_output_tokens
                      - self.BUFFER_TOKENS)
-        return estimateTokens(messages) > threshold
+        return self._provider.countTokens(messages) > threshold
 
     def compact(self, messages):
         # type: (List[Message]) -> CompactionResult
@@ -99,7 +90,7 @@ class ConversationCompactor:
         if not messages:
             raise ValueError("Cannot compact an empty message list")
 
-        pre_tokens = estimateTokens(messages)
+        pre_tokens = self._provider.countTokens(messages)
 
         prompt_text = _build_summarization_prompt(messages)
         prompt_msg = UserMessage(content=[TextBlock(text=prompt_text)])
@@ -121,7 +112,7 @@ class ConversationCompactor:
             )],
         )
 
-        post_tokens = estimateTokens([boundary, summary])
+        post_tokens = self._provider.countTokens([boundary, summary])
 
         return CompactionResult(
             boundary=boundary,

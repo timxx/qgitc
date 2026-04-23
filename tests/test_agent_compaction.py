@@ -8,7 +8,6 @@ from qgitc.agent.compaction import (
     ConversationCompactor,
     _build_summarization_prompt,
     _message_text,
-    estimateTokens,
 )
 from qgitc.agent.provider import (
     ContentDelta,
@@ -91,31 +90,6 @@ class TestMessageText(unittest.TestCase):
     def test_empty_content(self):
         msg = UserMessage(content=[])
         self.assertEqual(_message_text(msg), "")
-
-
-# ── estimateTokens ─────────────────────────────────────────────────
-
-class TestEstimateTokens(unittest.TestCase):
-    def test_empty_list_returns_zero(self):
-        self.assertEqual(estimateTokens([]), 0)
-
-    def test_single_message(self):
-        # "abcdefgh" = 8 chars -> 8 // 4 = 2 tokens
-        msg = UserMessage(content=[TextBlock(text="abcdefgh")])
-        self.assertEqual(estimateTokens([msg]), 2)
-
-    def test_multiple_messages_sum_correctly(self):
-        # "aaaa" = 4 chars, "bbbbbbbb" = 8 chars -> total 12 // 4 = 3
-        msgs = [
-            UserMessage(content=[TextBlock(text="aaaa")]),
-            AssistantMessage(content=[TextBlock(text="bbbbbbbb")]),
-        ]  # type: List[Message]
-        self.assertEqual(estimateTokens(msgs), 3)
-
-    def test_integer_division(self):
-        # "abc" = 3 chars -> 3 // 4 = 0
-        msg = UserMessage(content=[TextBlock(text="abc")])
-        self.assertEqual(estimateTokens([msg]), 0)
 
 
 # ── _build_summarization_prompt ──────────────────────────────────────

@@ -187,6 +187,9 @@ class AiModelBaseAdapter(ModelProvider):
 
             # Yield final completion event
             stop_reason = "tool_use" if has_tool_calls[0] else "end_turn"
+            if usage.input_tokens == 0 and usage.output_tokens == 0:
+                # If the model didn't provide usage info, estimate it based on the input messages.
+                usage.input_tokens = self.countTokens(messages, tools=tools)
             yield MessageComplete(stop_reason=stop_reason, usage=usage)
 
         finally:
@@ -203,13 +206,23 @@ class AiModelBaseAdapter(ModelProvider):
     ):
         # type: (...) -> int
         total_chars = 0
+        tokens = 0
         for msg in messages:
+            if (isinstance(msg, AssistantMessage) and msg.usage and
+                    (msg.usage.input_tokens > 0 or msg.usage.output_tokens > 0)):
+                tokens += msg.usage.input_tokens + msg.usage.output_tokens
+                continue
+
             if isinstance(msg, (UserMessage, AssistantMessage)):
                 for block in msg.content:
                     if isinstance(block, TextBlock):
                         total_chars += len(block.text)
                     elif isinstance(block, ToolResultBlock):
                         total_chars += len(block.content)
+            elif isinstance(msg, SystemMessage):
+                total_chars += len(msg.content)
+
         if system_prompt:
             total_chars += len(system_prompt)
-        return total_chars // 4
+
+        return tokens if tokens > 0 else total_chars // 4
