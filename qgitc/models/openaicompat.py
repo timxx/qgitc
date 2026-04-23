@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import json
-from types import MappingProxyType
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
+from qgitc import settings
 from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import (
     AiModelBase,
@@ -15,23 +15,131 @@ from qgitc.llm import (
     AiRole,
 )
 
-_knownContextWindows = {
-    "llama3": 8192,
-    "llama3.1": 131072,
-    "mistral": 32768,
-    "qwen2.5": 131072,
-    "gpt-4": 128000,
-    "gpt-5": 200000,
-    "claude-3": 200000,
+_knownModelCapabilities = {
+    "glm-4.5": AiModelCapabilities(
+        context_window=131072, max_output_tokens=98304, tool_calls=True
+    ),
+    "glm-4.6": AiModelCapabilities(
+        context_window=204800, max_output_tokens=131072, tool_calls=True
+    ),
+    "glm-4.7": AiModelCapabilities(
+        context_window=204800, max_output_tokens=131072, tool_calls=True
+    ),
+    "glm-4.7-flash": AiModelCapabilities(
+        context_window=202752, max_output_tokens=131072, tool_calls=True
+    ),
+    "glm-5": AiModelCapabilities(
+        context_window=202752, max_output_tokens=202752, tool_calls=True
+    ),
+    "glm-5.1": AiModelCapabilities(
+        context_window=204800, max_output_tokens=131072, tool_calls=True
+    ),
+    "glm-5v-turbo": AiModelCapabilities(
+        context_window=200000, max_output_tokens=131072, tool_calls=True
+    ),
+    "gemma4:31b": AiModelCapabilities(
+        context_window=262144, max_output_tokens=8192, tool_calls=True
+    ),
+    "gemma4:26b": AiModelCapabilities(
+        context_window=262144, max_output_tokens=262144, tool_calls=True
+    ),
+    "qwen3.5:27b": AiModelCapabilities(
+        context_window=262144, max_output_tokens=65536, tool_calls=True
+    ),
+    "qwen3.5:9b": AiModelCapabilities(
+        context_window=262144, max_output_tokens=65536, tool_calls=True
+    ),
+    "qwen3.5-flash": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=64000, tool_calls=True
+    ),
+    "qwen3.5-plus": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=64000, tool_calls=True
+    ),
+    "qwen3.6-plus": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=65536, tool_calls=True
+    ),
+    "deepseek-chat": AiModelCapabilities(
+        context_window=163840, max_output_tokens=163840, tool_calls=True
+    ),
+    "deepseek-reasoner": AiModelCapabilities(
+        context_window=128000, max_output_tokens=64000, tool_calls=True
+    ),
+    "kimi-k2-0905": AiModelCapabilities(
+        context_window=262144, max_output_tokens=16384, tool_calls=True
+    ),
+    "kimi-k2.5": AiModelCapabilities(
+        context_window=262144, max_output_tokens=262144, tool_calls=True
+    ),
+    "kimi-k2-thinking": AiModelCapabilities(
+        context_window=262144, max_output_tokens=262144, tool_calls=True
+    ),
+    "kimi-k2-thinking-turbo": AiModelCapabilities(
+        context_window=262144, max_output_tokens=262144, tool_calls=True
+    ),
+    "llama3.1": AiModelCapabilities(
+        context_window=131072, max_output_tokens=131072, tool_calls=True
+    ),
+    "claude-opus-4.6": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=128000, tool_calls=True
+    ),
+    "claude-sonnet-4.6": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=128000, tool_calls=True
+    ),
+    "gemini-2.5-flash-lite": AiModelCapabilities(
+        context_window=1048576, max_output_tokens=65536, tool_calls=True
+    ),
+    "gemini-3.1-flash-image-preview": AiModelCapabilities(
+        context_window=131072, max_output_tokens=32768, tool_calls=True
+    ),
+    "gemini-2.5-flash-lite": AiModelCapabilities(
+        context_window=1048576, max_output_tokens=65536, tool_calls=True
+    ),
+    "gemini-3-flash-preview": AiModelCapabilities(
+        context_window=1048576, max_output_tokens=65536, tool_calls=True
+    ),
+    "gemini-3-pro-image-preview": AiModelCapabilities(
+        context_window=1048756, max_output_tokens=65536, tool_calls=True
+    ),
+    "gemini-3-pro-preview": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=64000, tool_calls=True
+    ),
+    "gpt-4o": AiModelCapabilities(
+        context_window=128000, max_output_tokens=16384, tool_calls=True
+    ),
+    "gpt-4o-mini": AiModelCapabilities(
+        context_window=128000, max_output_tokens=16384, tool_calls=True
+    ),
+    "gpt-5.2": AiModelCapabilities(
+        context_window=400000, max_output_tokens=128000, tool_calls=True
+    ),
+    "gpt-5.4": AiModelCapabilities(
+        context_window=400000, max_output_tokens=128000, tool_calls=True
+    ),
+    "gpt-5.4-mini": AiModelCapabilities(
+        context_window=400000, max_output_tokens=128000, tool_calls=True
+    ),
+    "gpt-5-mini": AiModelCapabilities(
+        context_window=400000, max_output_tokens=128000, tool_calls=True
+    ),
+    "doubao-seed-1-6": AiModelCapabilities(
+        context_window=256000, max_output_tokens=16384, tool_calls=True
+    ),
+    "doubao-seed-1-8": AiModelCapabilities(
+        context_window=128000, max_output_tokens=8192, tool_calls=True
+    ),
+    "doubao-seed-2-0": AiModelCapabilities(
+        context_window=256000, max_output_tokens=128000, tool_calls=True
+    ),
+    "mimo-v2-omni": AiModelCapabilities(
+        context_window=262144, max_output_tokens=65536, tool_calls=True
+    ),
+    "mimo-v2-pro": AiModelCapabilities(
+        context_window=1048576, max_output_tokens=65536, tool_calls=True
+    )
 }
 
-KNOWN_CONTEXT_WINDOWS = MappingProxyType(_knownContextWindows)
 
-DEFAULT_CONTEXT_WINDOW = 8192
-DEFAULT_MAX_OUTPUT_TOKENS = 4096
-
-
-def _matches_model_prefix(modelId: str, prefix: str) -> bool:
+def _matchesModelPrefix(modelId: str, prefix: str) -> bool:
     if not modelId.startswith(prefix):
         return False
     if len(modelId) == len(prefix):
@@ -39,15 +147,17 @@ def _matches_model_prefix(modelId: str, prefix: str) -> bool:
     return modelId[len(prefix)] in ":-/_"
 
 
-def lookup_context_window(model_id: str) -> int:
-    modelId = (model_id or "").lower()
-    for prefix, window in sorted(
-            _knownContextWindows.items(),
-            key=lambda item: len(item[0]),
-            reverse=True):
-        if _matches_model_prefix(modelId, prefix):
-            return window
-    return DEFAULT_CONTEXT_WINDOW
+def lookupModelCapabilities(modelId: str) -> AiModelCapabilities:
+    modelId = (modelId or "").lower()
+    cap = _knownModelCapabilities.get(modelId)
+    if cap:
+        return cap
+
+    for prefix, cap in _knownModelCapabilities.items():
+        if _matchesModelPrefix(modelId, prefix):
+            return cap
+
+    return None
 
 
 class OpenAICompatModelsFetcher(QObject):
@@ -153,10 +263,14 @@ class LocalLLM(AiModelBase):
 
     def getModelCapabilities(self, modelId: str = None) -> AiModelCapabilities:
         targetModelId = modelId or self.modelId or ""
-        return AiModelCapabilities(
-            context_window=lookup_context_window(targetModelId),
-            max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
-        )
+        caps = lookupModelCapabilities(targetModelId)
+        if caps is None:
+            settings = ApplicationBase.instance().settings()
+            maxTokens = settings.llmMaxTokens()
+            caps = AiModelCapabilities(
+                context_window=maxTokens, max_output_tokens=maxTokens,
+                tool_calls=True)
+        return caps
 
     def _onFetchFinished(self):
         LocalLLM._models[self._cacheKey] = self.nameFetcher.models
@@ -235,4 +349,5 @@ class LocalLLM(AiModelBase):
         for key, value in rawHeaders.items():
             requestHeaders[key.encode()] = value.encode()
 
-        self.post(self.url, headers=requestHeaders, data=payload, stream=stream)
+        self.post(self.url, headers=requestHeaders,
+                  data=payload, stream=stream)
