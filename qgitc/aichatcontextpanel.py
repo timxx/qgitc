@@ -362,8 +362,8 @@ class AiChatContextPanel(QFrame):
         self.cbMode.setCurrentIndex(0)
         self.cbMode.setEnabled(len(modes) > 0)
 
-    def setupModelNames(self, model: AiModelBase):
-        prevSelectedId = self.cbModelNames.currentData()
+    def setupModelNames(self, model: AiModelBase, preferredId: str = None):
+        prevSelectedId = preferredId if preferredId is not None else self.cbModelNames.currentData()
         self.cbModelNames.clear()
 
         defaultId = model.modelId

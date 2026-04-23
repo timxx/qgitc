@@ -1233,8 +1233,16 @@ class AiChatWidget(QWidget):
     def _onModelsReady(self):
         model: AiModelBase = self.sender()
         if model == self.currentChatModel():
-            self._contextPanel.setupModelNames(model)
-            self._updateChatHistoryModel(model)
+            # For loaded histories (with messages), restore the recorded modelId
+            # in the model-name combobox instead of keeping whatever was there.
+            curHistory = self._historyPanel.currentHistory()
+            preferredId = (curHistory.modelId or None) if (curHistory and curHistory.messages) else None
+            self._contextPanel.setupModelNames(model, preferredId=preferredId)
+            # Only update the history modelId for new (empty) conversations.
+            # If a history was loaded from storage, we must not overwrite its
+            # recorded modelId with whatever model happens to become ready.
+            if not curHistory or not curHistory.messages:
+                self._updateChatHistoryModel(model)
 
     def _updateChatHistoryModel(self, model: AiModelBase):
         modelId = self._activeRequestModelId or model.modelId
