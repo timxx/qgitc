@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Iterator, List
 
+from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.compaction import (
     CompactionResult,
     ConversationCompactor,
     _build_summarization_prompt,
     _message_text,
 )
-from qgitc.agent.provider import (
-    ContentDelta,
-    MessageComplete,
-    ModelProvider,
-    StreamEvent,
-)
+from qgitc.agent.provider import ContentDelta, MessageComplete, StreamEvent
 from qgitc.agent.types import (
     AssistantMessage,
     Message,
@@ -28,7 +24,7 @@ from qgitc.agent.types import (
 )
 
 
-class FakeSummaryProvider(ModelProvider):
+class FakeSummaryProvider(AiModelBaseAdapter):
     """Provider that yields a fixed summary text as ContentDelta chunks."""
 
     def __init__(self, summary_text="This is the summary."):
@@ -42,10 +38,6 @@ class FakeSummaryProvider(ModelProvider):
         yield MessageComplete(stop_reason="end_turn",
                               usage=Usage(input_tokens=10,
                                           output_tokens=5))
-
-    def countTokens(self, messages, system_prompt=None, tools=None):
-        # type: (...) -> int
-        return 0
 
 
 # ── _message_text ────────────────────────────────────────────────────
