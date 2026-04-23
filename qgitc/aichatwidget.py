@@ -151,6 +151,7 @@ class AiChatWidget(QWidget):
         self._codeReviewDiffs: List[str] = []
         self._injectedContext: str = None
         self._restrictedToolNames: Optional[List[str]] = None
+        self._activeRequestModelId: Optional[str] = None
 
         self._isInitialized = False
         QTimer.singleShot(100, self._onDelayInit)
@@ -515,15 +516,15 @@ class AiChatWidget(QWidget):
         if not prompt:
             return
 
-        model = self.currentChatModel()
         chatMode: AiChatMode = self._contextPanel.currentMode()
         self._doRequest(prompt, chatMode)
 
-        app = ApplicationBase.instance()
-        app.trackFeatureUsage("aichat_send", {
-            "chat_mode": chatMode.name,
-            "model": model.modelId or model.name,
-        })
+        if self._activeRequestModelId:
+            app = ApplicationBase.instance()
+            app.trackFeatureUsage("aichat_send", {
+                "chat_mode": chatMode.name,
+                "model": self._activeRequestModelId,
+            })
 
         # Clear input after sending
         self._contextPanel.clear()
@@ -558,6 +559,7 @@ class AiChatWidget(QWidget):
         if model is None:
             return
 
+        self._activeRequestModelId = self._contextPanel.currentModelId() or model.modelId
         self._onButtonStop()
 
         loop = self._ensureAgentLoop(sysPrompt, chatMode=chatMode)
@@ -814,7 +816,7 @@ class AiChatWidget(QWidget):
         if model is None:
             return AiModelCapabilities()
 
-        modelId = model.modelId or model.name
+        modelId = self._activeRequestModelId or model.modelId or model.name
         return model.getModelCapabilities(modelId)
 
     def _buildSystemPrompt(self, systemPrompt: Optional[str] = None, chatMode: AiChatMode = None):
@@ -897,6 +899,7 @@ class AiChatWidget(QWidget):
             self._disconnectAgentLoop()
             self._agentLoop = None
             self._toolRegistry = None
+        self._activeRequestModelId = None
 
     def _onAgentTextDelta(self, text):
         response = AiResponse(AiRole.Assistant, text)
@@ -948,6 +951,7 @@ class AiChatWidget(QWidget):
 
     def _onAgentFinished(self):
         self._saveChatHistoryFromLoop()
+        self._activeRequestModelId = None
         self._updateStatus()
         self._chatBot.collapseLatestReasoningBlock()
 
@@ -985,7 +989,7 @@ class AiChatWidget(QWidget):
         store = ApplicationBase.instance().aiChatHistoryStore()
         model = self.currentChatModel()
         modelKey = AiModelFactory.modelKey(model) if model else None
-        modelId = (model.modelId or model.name) if model else None
+        modelId = self._activeRequestModelId or ((model.modelId or model.name) if model else None)
         updated = store.updateFromMessages(
             chatHistory.historyId,
             self._agentLoop.messages(),
@@ -1233,7 +1237,8 @@ class AiChatWidget(QWidget):
             self._updateChatHistoryModel(model)
 
     def _updateChatHistoryModel(self, model: AiModelBase):
-        self._historyPanel.updateCurrentModelId(model.modelId)
+        modelId = self._activeRequestModelId or model.modelId
+        self._historyPanel.updateCurrentModelId(modelId)
 
     def _onDelayInit(self):
         # Load chat histories once via the shared store.
