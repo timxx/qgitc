@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+from unittest.mock import patch
 
+from qgitc.llm import AiParameters
+from qgitc.models.githubcopilot import GithubCopilot
 from qgitc.models.openaicompat import lookupModelCapabilities
+from tests.base import TestBase
 
 
 class TestModelCapabilities(unittest.TestCase):
@@ -22,6 +26,30 @@ class TestModelCapabilities(unittest.TestCase):
 
     def test_lookup_non_match_boundary_returns_default(self):
         self.assertIsNone(lookupModelCapabilities("llama3x"))
+
+
+class TestGithubCopilotModelIdImmutability(TestBase):
+
+    def doCreateRepo(self):
+        pass  # No repo needed
+
+    def test_queryAsync_does_not_mutate_modelId(self):
+        model = GithubCopilot(model="default-model", parent=self.app)
+        # Explicitly set to our sentinel to override any _ensureDefaultModel side-effect
+        model.modelId = "default-model"
+
+        params = AiParameters()
+        params.model = "other-model"
+
+        with patch.object(GithubCopilot, 'isTokenValid', return_value=True), \
+             patch.object(model, '_updateModels'), \
+             patch.object(model, '_waitForModelsReady'), \
+             patch.object(model, '_doQuery'):
+            model._token = "fake-token"
+            model.queryAsync(params)
+
+        self.assertEqual(model.modelId, "default-model")
+
 
 if __name__ == "__main__":
     unittest.main()

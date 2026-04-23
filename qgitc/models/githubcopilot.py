@@ -182,10 +182,9 @@ class GithubCopilot(AiModelBase):
         self._updateModels()
         self._waitForModelsReady()
 
-        id = params.model or self.modelId or "gpt-4.1"
-        self.modelId = id
+        effectiveId = params.model or self.modelId or "gpt-4.1"
         caps: AiModelCapabilities = GithubCopilot._capabilities.get(
-            id, AiModelCapabilities())
+            effectiveId, AiModelCapabilities())
 
         stream = params.stream
         if stream and not caps.streaming:
@@ -193,12 +192,12 @@ class GithubCopilot(AiModelBase):
 
         if params.max_tokens is None or params.max_tokens > caps.max_output_tokens:
             params.max_tokens = caps.max_output_tokens
-        elif id.startswith("claude-") and "thought" in id:
+        elif effectiveId.startswith("claude-") and "thought" in effectiveId:
             # claude-3.7-sonnet-thought seems cannot be 4096
             params.max_tokens = caps.max_output_tokens
 
         # Decide which endpoint to use for this model.
-        self._isResponsesApiEnabled = self._shouldUseResponsesApi(id)
+        self._isResponsesApiEnabled = self._shouldUseResponsesApi(effectiveId)
         if self._isResponsesApiEnabled:
             if not params.continue_only:
                 prompt = params.prompt
@@ -207,7 +206,7 @@ class GithubCopilot(AiModelBase):
                 self.addHistory(AiRole.User, prompt)
 
             payload = {
-                "model": id,
+                "model": effectiveId,
                 "stream": stream,
                 "store": False,
                 "input": self.toResponsesInput(),
@@ -239,7 +238,7 @@ class GithubCopilot(AiModelBase):
             return
 
         payload = {
-            "model": id,
+            "model": effectiveId,
             "temperature": params.temperature,
             "top_p": 1,
             "max_tokens": params.max_tokens,
