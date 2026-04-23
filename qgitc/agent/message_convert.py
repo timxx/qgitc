@@ -14,6 +14,7 @@ from qgitc.agent.types import (
     ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
+    Usage,
     UserMessage,
 )
 
@@ -89,6 +90,11 @@ def messagesToHistoryDicts(messages):
                 entry["reasoning_data"] = reasoning_data
             if tool_calls:
                 entry["tool_calls"] = tool_calls
+            if msg.usage:
+                entry["usage"] = {
+                    "input_tokens": msg.usage.input_tokens,
+                    "output_tokens": msg.usage.output_tokens,
+                }
             result.append(entry)
 
     return result
@@ -124,6 +130,7 @@ def historyDictsToMessages(dicts):
 
         elif role == "assistant":
             content = []
+            usage = None
             reasoning = d.get("reasoning")
             if reasoning:
                 reasoning_data = d.get("reasoning_data")
@@ -150,7 +157,13 @@ def historyDictsToMessages(dicts):
                         name=func.get("name", ""),
                         input=args,
                     ))
-            messages.append(AssistantMessage(content=content))
+            usage = d.get("usage")
+            if isinstance(usage, dict):
+                input_tokens = usage.get("input_tokens", 0)
+                output_tokens = usage.get("output_tokens", 0)
+                if input_tokens > 0 or output_tokens > 0:
+                    usage = Usage(input_tokens=input_tokens, output_tokens=output_tokens)
+            messages.append(AssistantMessage(content=content, usage=usage))
             i += 1
 
         elif role == "tool":
