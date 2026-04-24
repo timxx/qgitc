@@ -483,11 +483,12 @@ class AiModelBase(QObject):
                 logger.warning(b"Corrupted chunk: %s", line)
             return
 
-        if line == b"data: [DONE]":
+        lineData = line[5:].strip()
+        if lineData == b"[DONE]":
             logger.debug("_handleStreamResponseChat: received [DONE]")
             return
 
-        lineContent = line[5:].decode("utf-8")
+        lineContent = lineData.decode("utf-8")
         data: dict = json.loads(lineContent)
         choices: list = data.get("choices")
         if choices is None:
