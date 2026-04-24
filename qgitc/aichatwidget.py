@@ -297,6 +297,8 @@ class AiChatWidget(QWidget):
 
         if self._embedded:
             layout.addSpacing(4)
+        else:
+            self._contextPanel.cbMode.setCurrentIndex(1)
 
         layout.addWidget(self._contextPanel)
         self._contextPanel.setFocus()
