@@ -153,11 +153,15 @@ def lookupModelCapabilities(modelId: str) -> AiModelCapabilities:
     if cap:
         return cap
 
+    bestPrefix = None
+    bestCap = None
     for prefix, cap in _knownModelCapabilities.items():
         if _matchesModelPrefix(modelId, prefix):
-            return cap
+            if bestPrefix is None or len(prefix) > len(bestPrefix):
+                bestPrefix = prefix
+                bestCap = cap
 
-    return None
+    return bestCap
 
 
 class OpenAICompatModelsFetcher(QObject):

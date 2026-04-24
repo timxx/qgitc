@@ -27,6 +27,12 @@ class TestModelCapabilities(unittest.TestCase):
     def test_lookup_non_match_boundary_returns_default(self):
         self.assertIsNone(lookupModelCapabilities("llama3x"))
 
+    def test_longer_prefix_wins_over_shorter(self):
+        # glm-4.7-flash:latest should match glm-4.7-flash, not glm-4.7
+        caps = lookupModelCapabilities("glm-4.7-flash:latest")
+        self.assertIsNotNone(caps)
+        self.assertEqual(caps.context_window, 202752)  # glm-4.7-flash has context_window=202752
+
 
 class TestGithubCopilotModelIdImmutability(TestBase):
 
