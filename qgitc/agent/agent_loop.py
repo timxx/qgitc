@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from PySide6.QtCore import QMutex, QThread, QWaitCondition, Signal
 
-from qgitc.agent.compaction import ConversationCompactor
+from qgitc.agent.compaction import ConversationCompactor, microcompactMessages
 from qgitc.agent.permissions import PermissionEngine
 from qgitc.agent.provider import (
     ContentDelta,
@@ -173,6 +173,8 @@ class AgentLoop(QThread):
         for _ in range(self._max_turns):
             if self._abort_flag:
                 return
+
+            self._messages = microcompactMessages(self._messages)
 
             # Check compaction
             if compactor.shouldCompact(self._messages):
