@@ -43,7 +43,7 @@
 - If validation fails, report the exact failing command/output and keep fixes scoped to the requested change.
 
 ## Coding conventions for this repo
-- Match existing Python style: `camelCase` names are common across UI/controllers/tools.
+- **Always use `camelCase` for all Python identifiers** (variables, functions, methods, parameters, local variables). This applies to all new and modified code throughout the project.
 - Keep patches surgical in Qt-heavy code: avoid broad refactors across window classes.
 - If changing `qgitc/*.ui`, regenerate with build step; do not hand-edit generated UI modules.
 - When adding/changing agent tools: implement tool in `qgitc/agent/tools/`, register in `qgitc/agent/tool_registration.py`, and add/update tests under `tests/test_agent_*.py`.
