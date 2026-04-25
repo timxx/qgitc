@@ -265,8 +265,9 @@ class PatchViewer(SourceViewer):
 
     def createContextMenu(self):
         menu = super().createContextMenu()
+        self._acCopy.setShortcut(QKeySequence(Qt.ControlModifier | Qt.ShiftModifier | Qt.Key_C))
         action = QAction(self.tr("Copy Plain &Text"), self,
-                         shortcut=QKeySequence("Ctrl+Shift+C"))
+                         shortcut=QKeySequence.Copy)
         action.triggered.connect(self.copyPlainText)
         menu.insertAction(self._acCopy, action)
         menu.removeAction(self._acCopy)
@@ -413,7 +414,9 @@ class PatchViewer(SourceViewer):
         app.trackFeatureUsage("viwer.copy_plain_text")
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier) and event.key() == Qt.Key_C:
+        if event.matches(QKeySequence.Copy):
             self.copyPlainText()
+        elif event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier) and event.key() == Qt.Key_C:
+            self.copy()
         else:
             super().keyPressEvent(event)
