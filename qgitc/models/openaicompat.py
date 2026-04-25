@@ -5,7 +5,6 @@ import json
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
-from qgitc import settings
 from qgitc.applicationbase import ApplicationBase
 from qgitc.llm import (
     AiModelBase,
@@ -64,6 +63,12 @@ _knownModelCapabilities = {
     "deepseek-reasoner": AiModelCapabilities(
         context_window=128000, max_output_tokens=64000, tool_calls=True
     ),
+    "deepseek-v4-flash": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=384000, tool_calls=True
+    ),
+    "deepseek-v4-pro": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=384000, tool_calls=True
+    ),
     "kimi-k2-0905": AiModelCapabilities(
         context_window=262144, max_output_tokens=16384, tool_calls=True
     ),
@@ -83,6 +88,9 @@ _knownModelCapabilities = {
         context_window=1000000, max_output_tokens=128000, tool_calls=True
     ),
     "claude-sonnet-4.6": AiModelCapabilities(
+        context_window=1000000, max_output_tokens=128000, tool_calls=True
+    ),
+    "claude-opus-4-7": AiModelCapabilities(
         context_window=1000000, max_output_tokens=128000, tool_calls=True
     ),
     "gemini-2.5-flash-lite": AiModelCapabilities(
@@ -120,6 +128,9 @@ _knownModelCapabilities = {
     ),
     "gpt-5-mini": AiModelCapabilities(
         context_window=400000, max_output_tokens=128000, tool_calls=True
+    ),
+    "gpt-5.5": AiModelCapabilities(
+        context_window=1050000, max_output_tokens=130000, tool_calls=True
     ),
     "doubao-seed-1-6": AiModelCapabilities(
         context_window=256000, max_output_tokens=16384, tool_calls=True
