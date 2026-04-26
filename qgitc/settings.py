@@ -705,6 +705,17 @@ class Settings(QSettings):
         self.setValue("useTemplateForAi", use)
         self.endGroup()
 
+    def useSkillForCommitMessage(self):
+        self.beginGroup("commit")
+        use = self.value("useSkillForCommitMessage", False, type=bool)
+        self.endGroup()
+        return use
+
+    def setUseSkillForCommitMessage(self, use):
+        self.beginGroup("commit")
+        self.setValue("useSkillForCommitMessage", use)
+        self.endGroup()
+
     def defaultTemplateFile(self):
         self.beginGroup("commit")
         path = self.value("defaultTemplateFile", "", type=str)
