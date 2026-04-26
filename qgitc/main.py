@@ -285,7 +285,13 @@ def _do_commit_ai(app: Application, args):
     import itertools
     import time
 
-    from qgitc.aicommitmessage import AiCommitMessage
+    from qgitc.applicationbase import ApplicationBase
+
+    settings = ApplicationBase.instance().settings()
+    if settings.useSkillForCommitMessage():
+        from qgitc.commitMessageAgent import CommitMessageAgent as _AiClass
+    else:
+        from qgitc.aicommitmessage import AiCommitMessage as _AiClass
 
     if not Git.REPO_DIR:
         print(QCoreApplication.translate("AiCommit", "Not in a git repository"))
@@ -323,7 +329,7 @@ def _do_commit_ai(app: Application, args):
     print(QCoreApplication.translate("AiCommit",
           "\nGenerating commit message using AI..."))
 
-    ai_message = AiCommitMessage()
+    ai_message = _AiClass()
     message_received = [None]
     error_received = [None]
     finished = [False]

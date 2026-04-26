@@ -51,6 +51,7 @@ from qgitc.colorediconlabel import ColoredIconLabel
 from qgitc.coloredlabel import ColoredLabel
 from qgitc.commitactiontablemodel import ActionCondition, CommitAction
 from qgitc.commitcontextprovider import CommitContextProvider
+from qgitc.commitMessageAgent import CommitMessageAgent
 from qgitc.common import dataDirPath, fullRepoDir, logger, pathsEqual, toSubmodulePath
 from qgitc.difffetcher import DiffFetcher
 from qgitc.diffview import DiffView
@@ -372,6 +373,12 @@ class CommitWindow(StateWindow):
         self._aiMessage.messageAvailable.connect(
             self._onAiMessageAvailable)
         self._aiMessage.errorOccurred.connect(
+            self._onAiMessageError)
+
+        self._commitMsgAgent = CommitMessageAgent(self)
+        self._commitMsgAgent.messageAvailable.connect(
+            self._onAiMessageAvailable)
+        self._commitMsgAgent.errorOccurred.connect(
             self._onAiMessageError)
 
         icon = QIcon(iconsPath + "/reviews.svg")
@@ -1270,10 +1277,15 @@ class CommitWindow(StateWindow):
     def _updateTemplateMenuItems(self):
         """Populate template menu with available templates and management options"""
         self._templateMenu.clear()
+        settings = ApplicationBase.instance().settings()
+        useSkillAction = self._templateMenu.addAction(self.tr("Use Skill"))
+        useSkillAction.setCheckable(True)
+        useSkillAction.setChecked(settings.useSkillForCommitMessage())
+        useSkillAction.toggled.connect(self._onUseSkillForCommitMessageToggled)
+        self._templateMenu.addSeparator()
         useTemplateAction = self._templateMenu.addAction(
             self.tr("Generate using Template"))
         useTemplateAction.setCheckable(True)
-        settings = ApplicationBase.instance().settings()
         useTemplateAction.setChecked(settings.useTemplateForAi())
         useTemplateAction.toggled.connect(self._onUseTemplateForAiToggled)
         self._templateMenu.addSeparator()
@@ -1325,6 +1337,10 @@ class CommitWindow(StateWindow):
                 self,
                 self.tr("Error"),
                 self.tr("Error selecting template: {}").format(str(e)))
+
+    def _onUseSkillForCommitMessageToggled(self, checked: bool):
+        app = ApplicationBase.instance()
+        app.settings().setUseSkillForCommitMessage(checked)
 
     def _onUseTemplateForAiToggled(self, checked: bool):
         app = ApplicationBase.instance()
@@ -1663,14 +1679,15 @@ class CommitWindow(StateWindow):
         self.ui.btnGenMessage.hide()
         self.ui.btnCancelGen.show()
         self.ui.btnRefineMsg.setEnabled(False)
+        aiAgent = self._commitMsgAgent if settings.useSkillForCommitMessage() else self._aiMessage
         if settings.useTemplateForAi():
             template = self._loadSelectedTemplateForAi()
             if template is None:
                 self._restoreAiMessageButtons()
                 return
-            self._aiMessage.generate(submoduleFiles, template, True)
+            aiAgent.generate(submoduleFiles, template, True)
         else:
-            self._aiMessage.generate(submoduleFiles)
+            aiAgent.generate(submoduleFiles)
         logger.debug("Begin generate commit message")
 
     def _loadSelectedTemplateForAi(self):
@@ -1764,6 +1781,7 @@ class CommitWindow(StateWindow):
 
     def _onCancelGenMessageClicked(self):
         self._aiMessage.cancel()
+        self._commitMsgAgent.cancel()
         self._restoreAiMessageButtons()
 
     def _onShowCommitClicked(self):
