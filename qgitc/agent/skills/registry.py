@@ -11,8 +11,19 @@ class SkillRegistry:
         self._skills = {}  # type: Dict[str, SkillDefinition]
         self._aliases = {}  # type: Dict[str, str]
 
+    _SOURCE_PRIORITY = {
+        "projectSettings": 10,
+        "builtinSkills": 0,
+    }
+
     def register(self, skill):
         # type: (SkillDefinition) -> None
+        existing = self._skills.get(skill.name)
+        if existing is not None:
+            existingPriority = self._SOURCE_PRIORITY.get(existing.source, 5)
+            newPriority = self._SOURCE_PRIORITY.get(skill.source, 5)
+            if newPriority < existingPriority:
+                return
         self._skills[skill.name] = skill
         for alias in skill.aliases:
             self._aliases[alias] = skill.name
