@@ -42,7 +42,11 @@ class CommitMessageAgent(QObject):
         skill = skillRegistry.get("commit-message")
         systemPrompt = skill.content.replace("$ARGUMENTS", "").strip() if skill else None
 
-        self._model = AiModelProvider.createModel(self)
+        try:
+            self._model = AiModelProvider.createModel(self)
+        except Exception as e:
+            self.errorOccurred.emit(str(e))
+            return
         settings = ApplicationBase.instance().settings()
         modelKey = settings.defaultLlmModel()
         modelId = settings.defaultLlmModelId(modelKey)
@@ -76,11 +80,20 @@ class CommitMessageAgent(QObject):
         self._agentLoop.submit(prompt, queryParams)
 
     def cancel(self):
-        if self._agentLoop is not None and self._agentLoop.isRunning():
-            self._agentLoop.abort()
-            self._agentLoop.wait(3000)
+        if self._agentLoop is not None:
+            if self._agentLoop.isRunning():
+                self._agentLoop.abort()
+                self._agentLoop.wait(3000)
+            self._disconnectAgentLoop()
         self._agentLoop = None
         self._model = None
+
+    def _disconnectAgentLoop(self):
+        if self._agentLoop is None:
+            return
+        self._agentLoop.textDelta.disconnect(self._onTextDelta)
+        self._agentLoop.agentFinished.disconnect(self._onAgentFinished)
+        self._agentLoop.errorOccurred.disconnect(self._onAgentError)
 
     def _buildToolRegistry(self):
         # type: () -> ToolRegistry
@@ -108,12 +121,14 @@ class CommitMessageAgent(QObject):
 
     def _onAgentFinished(self):
         message = "".join(self._textBuffer).strip()
+        self._disconnectAgentLoop()
         self._agentLoop = None
         self._model = None
         self.messageAvailable.emit(message)
 
     def _onAgentError(self, errorMsg):
         # type: (str) -> None
+        self._disconnectAgentLoop()
         self._agentLoop = None
         self._model = None
         self.errorOccurred.emit(errorMsg)
