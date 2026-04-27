@@ -8,6 +8,7 @@ from qgitc.agent.agent_loop import AgentLoop, QueryParams
 from qgitc.agent.aimodel_adapter import AiModelBaseAdapter
 from qgitc.agent.permissions import PermissionEngine
 from qgitc.agent.skills.discovery import loadSkillRegistry
+from qgitc.agent.skills.prompt import renderSkillsReminder
 from qgitc.agent.tool_registry import ToolRegistry
 from qgitc.agent.tools.git_diff_staged import GitDiffStagedTool
 from qgitc.agent.tools.git_log import GitLogTool
@@ -39,8 +40,11 @@ class CommitMessageAgent(QObject):
             cwd=Git.REPO_DIR or ".",
             additional_directories=[dataDirPath() + "/skills"],
         )
-        skill = skillRegistry.get("commit-message")
-        systemPrompt = skill.content.replace("$ARGUMENTS", "").strip() if skill else None
+
+        systemPrompt = "You are a helpful assistant that generates commit messages based on git status and diffs. Try use the skills available to gather necessary information before generating the commit message. Prefer project's commit generation skills if they exist, otherwise use commit-message skill."
+        reminder = renderSkillsReminder(skillRegistry.getModelVisibleSkills())
+        if reminder:
+            systemPrompt += "\n\n" + reminder
 
         try:
             self._model = AiModelProvider.createModel(self)
