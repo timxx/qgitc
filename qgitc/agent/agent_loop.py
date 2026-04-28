@@ -153,7 +153,7 @@ class AgentLoop(QThread):
         try:
             self._run_loop()
         except Exception as e:
-            logger.exception("Agent loop error")
+            logger.debug("Agent loop error")
             self.errorOccurred.emit(str(e))
         finally:
             self.agentFinished.emit()
