@@ -98,3 +98,4 @@ qgitc/version.py
 
 otelenv.py
 .worktrees/
+docs/releases/
