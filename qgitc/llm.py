@@ -377,6 +377,7 @@ class AiModelBase(QObject):
         data = self._reply.readAll()
         if not data:
             return
+        logger.debug("_onDataReady: received data chunk, size=%d", len(data))
         self._handleData(data.data())
 
     def _onError(self, code: QNetworkReply.NetworkError):
