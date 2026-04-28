@@ -256,6 +256,12 @@ class ConversationCompactor:
         """Check whether the conversation should be compacted."""
         if not messages:
             return False
+
+        if self._context_window < MAX_OUTPUT_TOKENS_FOR_SUMMARY:
+            return False
+        if self._context_window < AUTOCOMPACT_BUFFER_TOKENS:
+            return False
+
         reserved = min(self._max_output_tokens, MAX_OUTPUT_TOKENS_FOR_SUMMARY)
         effectiveWindow = self._context_window - reserved
         threshold = effectiveWindow - AUTOCOMPACT_BUFFER_TOKENS

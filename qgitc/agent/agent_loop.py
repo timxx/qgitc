@@ -170,20 +170,21 @@ class AgentLoop(QThread):
             params.max_output_tokens,
         )
 
-        for _ in range(self._max_turns):
+        for i in range(self._max_turns):
             if self._abort_flag:
                 return
 
-            self._messages = microcompactMessages(self._messages)
+            if i > 0:
+                self._messages = microcompactMessages(self._messages)
 
-            # Check compaction
-            if compactor.shouldCompact(self._messages):
-                result = compactor.compact(self._messages)
-                self._messages = [result.boundary, result.summary]
-                self.conversationCompacted.emit(
-                    result.pre_token_estimate,
-                    result.post_token_estimate,
-                )
+                # Check compaction
+                if compactor.shouldCompact(self._messages):
+                    result = compactor.compact(self._messages)
+                    self._messages = [result.boundary, result.summary]
+                    self.conversationCompacted.emit(
+                        result.pre_token_estimate,
+                        result.post_token_estimate,
+                    )
 
             if self._abort_flag:
                 return
