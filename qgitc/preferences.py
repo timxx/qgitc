@@ -612,16 +612,32 @@ class Preferences(QDialog):
             AiModelFactory.modelKey(model))
         if not defaultId:
             defaultId = model.modelId
+
+        modelsList = list(model.models())
+        hasModels = bool(modelsList)
+
         matched = False
-        for id, name in model.models():
+        for id, name in modelsList:
             self.ui.cbModelIds.addItem(name, id)
             if id == defaultId:
-                self.ui.cbModelIds.setCurrentText(name)
                 matched = True
 
-        self.ui.cbModelIds.setEditable(model.isLocal())
-        if not matched and model.isLocal() and defaultId:
-            self.ui.cbModelIds.setCurrentText(defaultId)
+        if hasModels:
+            # Server returned a model list — combobox is read-only.
+            # If the saved model isn't in the list, auto-select first item.
+            self.ui.cbModelIds.setEditable(False)
+            if matched:
+                idx = self.ui.cbModelIds.findData(defaultId)
+                if idx >= 0:
+                    self.ui.cbModelIds.setCurrentIndex(idx)
+            else:
+                self.ui.cbModelIds.setCurrentIndex(0)
+        else:
+            # No models available yet (e.g. server fetch pending).
+            # Keep editable to allow manual entry.
+            self.ui.cbModelIds.setEditable(model.isLocal())
+            if defaultId:
+                self.ui.cbModelIds.setCurrentText(defaultId)
 
         self.ui.sbMaxTokens.setEnabled(model.isLocal())
 
