@@ -1028,6 +1028,12 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
             </item>
             <item>
              <widget class="QComboBox" name="cbModelIds">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
               <property name="sizeAdjustPolicy">
                <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
               </property>
