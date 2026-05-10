@@ -2,6 +2,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QLineEdit
 
 from qgitc.agent.slash_commands import CommandRegistry
 from qgitc.aichatedit import AiChatEdit
@@ -83,3 +84,20 @@ class TestAiChatEditSlashCommands(TestBase):
         self.processEvents()
 
         self.assertEqual(self.widget.toPlainText(), "/r")
+
+    def test_popup_hides_on_focus_lost(self):
+        self.widget.edit.setPlainText("/")
+        self.processEvents()
+
+        self.assertIsNotNone(self.widget._slashCommandPopup)
+        self.assertTrue(self.widget._slashCommandPopup.isVisible())
+
+        # Move focus to a different widget
+        other = QLineEdit()
+        other.show()
+        self.processEvents()
+        other.setFocus()
+        self.processEvents()
+
+        self.assertFalse(self.widget._slashCommandPopup.isVisible())
+        other.close()

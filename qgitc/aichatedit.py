@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtCore import QEvent, Qt, QTimer, Signal
 from PySide6.QtWidgets import QHBoxLayout, QPlainTextEdit, QSizePolicy, QWidget
 
 from qgitc.agent.slash_commands import CommandRegistry, SlashCommand
@@ -146,7 +146,13 @@ class AiChatEdit(QWidget):
             self.edit.setMinimumHeight(maxHeight + margin * 2)
             self.setFixedHeight(maxHeight + margin * 2 + verticalMargin)
 
+    def _checkHidePopupOnFocusLost(self):
+        if self._slashCommandPopup is not None and not self.edit.hasFocus():
+            self._slashCommandPopup.hide()
+
     def eventFilter(self, watched, event: QEvent):
+        if watched == self.edit and event.type() == QEvent.FocusOut:
+            QTimer.singleShot(0, self._checkHidePopupOnFocusLost)
         if watched == self.edit and event.type() == QEvent.KeyPress:
             if self._slashCommandPopup is not None and self._slashCommandPopup.isVisible():
                 if event.key() == Qt.Key_Escape:
