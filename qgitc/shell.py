@@ -39,7 +39,7 @@ def _dataDir():
 
 def _shell_usage(args):
     print("Usage:\n"
-          "\tqgitc shell regitser\n"
+          "\tqgitc shell register\n"
           "\tqgitc shell unregister")
 
 
