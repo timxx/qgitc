@@ -14,6 +14,7 @@ class AiChatTitleGenerator(QObject):
         super().__init__(parent)
         self._model = None
         self._historyId = ""
+        self._response = ""
 
     def startGenerate(self, historyId: str, firstMessage: str):
         self.cancel()
@@ -32,18 +33,22 @@ class AiChatTitleGenerator(QObject):
         params.stream = False
         params.reasoning = False
 
+        self._response = ""
         self._model.responseAvailable.connect(self._onResponse)
         self._model.finished.connect(self._onFinished)
         self._model.queryAsync(params)
 
     def _onResponse(self, response: AiResponse):
         if response.message:
-            title = response.message.strip().strip('"\'').strip()
-            if title and len(title) > 3:
-                self.titleReady.emit(self._historyId, title)
+            self._response += response.message
 
     def _onFinished(self):
         self._model = None
+
+        title = self._response.strip().strip('"\'').strip()
+        self._response = ""
+        if len(title) > 3:
+            self.titleReady.emit(self._historyId, title)
 
     def cancel(self):
         if self._model:

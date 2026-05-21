@@ -179,13 +179,20 @@ class LocalLLM(AiModelBase):
         return ""
 
     def queryAsync(self, params: AiParameters):
+        model = params.model or self.modelId or "unknown"
+        stream = params.stream
+
+        # FIXME: some buggy providers only support streaming mode
+        if model == "zhipu/glm-5":
+            stream = True
+
         payload = {
             "frequency_penalty": 0,
             "max_tokens": params.max_tokens or 4096,
-            "model": params.model or self.modelId or "gpt-4.1",
+            "model": model,
             "presence_penalty": 0,
             "temperature": params.temperature,
-            "stream": params.stream
+            "stream": stream
         }
 
         if params.tools:
@@ -210,12 +217,12 @@ class LocalLLM(AiModelBase):
         if params.top_p is not None:
             payload["top_p"] = params.top_p
 
-        if params.stream:
+        if stream:
             payload["stream_options"] = {
                 "include_usage": True
             }
 
-        self._doQuery(payload, params.stream)
+        self._doQuery(payload, stream)
 
     def _doQuery(self, payload, stream=True):
         requestHeaders = {
