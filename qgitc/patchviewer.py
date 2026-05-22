@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import QMimeData, QPointF, QRectF, Qt, QUrl, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QBrush,
@@ -397,18 +397,22 @@ class PatchViewer(SourceViewer):
         if not text:
             return
 
+        hasTrailingNewline = text.endswith('\n')
         lines = text.split('\n')
-        newText = ""
+        if hasTrailingNewline and lines and lines[-1] == '':
+            lines = lines[:-1]
+        result = []
         for line in lines:
             if line and line[0] in ['+', '-', ' ']:
-                newText += line[1:] + '\n'
+                result.append(line[1:])
             else:
-                newText += line + '\n'
+                result.append(line)
+        newText = '\n'.join(result)
+        if hasTrailingNewline:
+            newText += '\n'
 
         clipboard = ApplicationBase.instance().clipboard()
-        mimeData = QMimeData()
-        mimeData.setText(newText)
-        clipboard.setMimeData(mimeData)
+        clipboard.setText(newText)
 
         app = ApplicationBase.instance()
         app.trackFeatureUsage("viwer.copy_plain_text")
