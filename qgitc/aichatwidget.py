@@ -946,6 +946,8 @@ class AiChatWidget(QWidget):
 
         response = AiResponse(AiRole.Tool, content, description=desc)
         self._chatBot.appendResponse(response, collapsed=True)
+        if not self._disableAutoScroll:
+            self._scrollToBottom()
 
     def _onAgentTurnComplete(self, assistantMsg):
         self._saveChatHistoryFromLoop()
