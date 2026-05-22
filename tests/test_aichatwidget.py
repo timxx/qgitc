@@ -198,5 +198,47 @@ class TestModelsReadyModelIdUpdate(TestBase):
         )
 
 
+class TestReasoningDeltaAutoScroll(TestBase):
+    """Regression: _onAgentReasoningDelta must auto-scroll when _disableAutoScroll is False."""
+
+    def doCreateRepo(self):
+        pass
+
+    def _makeWidget(self) -> AiChatWidget:
+        widget = AiChatWidget(parent=None, embedded=False, hideHistoryPanel=True)
+        self.processEvents()
+        return widget
+
+    def test_reasoningDelta_scrolls_to_bottom_when_auto_scroll_enabled(self):
+        """_onAgentReasoningDelta should call _scrollToBottom() when _disableAutoScroll is False."""
+        widget = self._makeWidget()
+        widget._disableAutoScroll = False
+
+        scrollCalls = []
+        with patch.object(widget, '_scrollToBottom',
+                          side_effect=lambda: scrollCalls.append(1)):
+            widget._onAgentReasoningDelta("Thinking...")
+
+        self.assertEqual(
+            1, len(scrollCalls),
+            "_scrollToBottom should be called once during a reasoning delta",
+        )
+
+    def test_reasoningDelta_does_not_scroll_when_auto_scroll_disabled(self):
+        """_onAgentReasoningDelta must NOT scroll when _disableAutoScroll is True."""
+        widget = self._makeWidget()
+        widget._disableAutoScroll = True
+
+        scrollCalls = []
+        with patch.object(widget, '_scrollToBottom',
+                          side_effect=lambda: scrollCalls.append(1)):
+            widget._onAgentReasoningDelta("Thinking...")
+
+        self.assertEqual(
+            0, len(scrollCalls),
+            "_scrollToBottom should NOT be called when auto-scroll is disabled",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -923,6 +923,8 @@ class AiChatWidget(QWidget):
         self._firstReasoningDelta = False
         self._chatBot.appendResponse(response)
         self._firstTextDelta = True
+        if not self._disableAutoScroll:
+            self._scrollToBottom()
 
     def _onAgentToolCallStart(self, toolCallId, toolName, params):
         uiResponse = self._makeUiToolCallResponse(toolName, params)
