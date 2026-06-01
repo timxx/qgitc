@@ -161,6 +161,9 @@ def _log_bad_timer_frame():
 
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
     if type == QtMsgType.QtWarningMsg:
+        if msg.startswith("OpenType support missing for"):
+            return
+
         if msg.startswith("QBasicTimer::stop: Failed") or msg.startswith("QObject::killTimer"):
             _log_bad_timer_frame()
         logger.warning(msg)
