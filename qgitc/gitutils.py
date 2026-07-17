@@ -9,7 +9,7 @@ import time
 from collections import defaultdict
 from typing import Dict, List, Union
 
-from PySide6.QtCore import QCoreApplication, QEventLoop, QProcess, QThread
+from PySide6.QtCore import QCoreApplication, QProcess, QThread
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class QGitProcess():
         logger.debug(f"run {args} in {repoDir}")
 
         self._text = text
-        self._eventLoop = None
+        self._cancelled = False
 
         process = QProcess()
         process.setWorkingDirectory(repoDir)
@@ -82,20 +82,17 @@ class QGitProcess():
             self._process.waitForStarted(1000)
 
         if self._process.state() == QProcess.Running:
-            # QEventLoop seems not working in ThreadPoolExecutor
+            # Wait without connecting finished (avoid PySide crash)
             if QCoreApplication.instance() is None or QCoreApplication.instance().thread() != QThread.currentThread():
                 self._process.waitForFinished()
             else:
-                assert (self._eventLoop is None)
-                self._eventLoop = QEventLoop()
-                self._process.finished.connect(self._eventLoop.quit)
-                self._eventLoop.exec()
+                while not self._process.waitForFinished(50):
+                    if self._cancelled:
+                        return None, None
+                    QCoreApplication.instance().processEvents()
 
-                # user cancelled
-                if self._eventLoop is None:
+                if self._cancelled:
                     return None, None
-
-                self._eventLoop = None
 
         output = self._process.readAllStandardOutput().data()
         error = self._process.readAllStandardError().data()
@@ -105,15 +102,15 @@ class QGitProcess():
         return output, error
 
     def terminate(self):
-        if not self._eventLoop:
+        if self._cancelled:
             return
 
-        self._eventLoop.quit()
-        self._eventLoop = None
+        self._cancelled = True
 
         self._process.close()
         self._process.waitForFinished(50)
-        self._process.kill()
+        if self._process.state() == QProcess.Running:
+            self._process.kill()
         logger.warning("Git process killed")
 
 

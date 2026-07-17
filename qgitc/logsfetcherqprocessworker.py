@@ -27,6 +27,8 @@ class LocalChangesFetcher(QObject):
         self._repoDir = repoDir
         self._lccProcess: QProcess = None
         self._lucProcess: QProcess = None
+        self._lccProcessObj: QProcess = None
+        self._lucProcessObj: QProcess = None
         self._failedStart = set()
         self.isComposite = isComposite
 
@@ -39,13 +41,22 @@ class LocalChangesFetcher(QObject):
         self._lucProcess = self._startProcess(False)
 
     def cancel(self):
-        self._cancelProcess(self._lccProcess)
-        self._cancelProcess(self._lucProcess)
-
+        # Clear active markers first so finished during wait is ignored
+        lccProcess = self._lccProcess
+        lucProcess = self._lucProcess
+        self._lccProcess = None
+        self._lucProcess = None
         self.hasLCC = False
         self.hasLUC = False
-        self._lucProcess = None
-        self._lccProcess = None
+
+        self._cancelProcess(lccProcess)
+        self._cancelProcess(lucProcess)
+
+    def _createProcess(self):
+        process = QProcess(self)
+        process.finished.connect(self._onFinished)
+        process.errorOccurred.connect(self._onError)
+        return process
 
     def _startProcess(self, cached: bool):
         args = ["diff", "--quiet", "-s"]
@@ -54,10 +65,16 @@ class LocalChangesFetcher(QObject):
         if Git.versionGE(1, 7, 2):
             args.append("--ignore-submodules=dirty")
 
-        process = QProcess()
+        if cached:
+            if self._lccProcessObj is None:
+                self._lccProcessObj = self._createProcess()
+            process = self._lccProcessObj
+        else:
+            if self._lucProcessObj is None:
+                self._lucProcessObj = self._createProcess()
+            process = self._lucProcessObj
+
         process.setWorkingDirectory(self._repoDir or Git.REPO_DIR)
-        process.finished.connect(self._onFinished)
-        process.errorOccurred.connect(self._onError)
 
         process.start(GitProcess.GIT_BIN, args)
         if process in self._failedStart:
@@ -69,30 +86,23 @@ class LocalChangesFetcher(QObject):
         if not process:
             return
 
-        LocalChangesFetcher._cleanupProcess(process, delete=False)
-        process.waitForFinished(50)
-        if process.state() == QProcess.Running:
-            logger.warning("Kill git process")
-            process.kill()
-
-    @staticmethod
-    def _cleanupProcess(process: QProcess, delete=True):
-        process.finished.disconnect()
-        process.errorOccurred.disconnect()
-        process.close()
-        if delete:
-            process.deleteLater()
+        if process.state() != QProcess.NotRunning:
+            process.close()
+            process.waitForFinished(50)
+            if process.state() == QProcess.Running:
+                logger.warning("Kill git process")
+                process.kill()
 
     def _onFinished(self, exitCode, exitStatus):
         process: QProcess = self.sender()
         if process == self._lccProcess:
             self.hasLCC = exitCode == 1
             self._lccProcess = None
-        else:
+        elif process == self._lucProcess:
             self.hasLUC = exitCode == 1
             self._lucProcess = None
-
-        LocalChangesFetcher._cleanupProcess(process)
+        else:
+            return
 
         if not self._lccProcess and not self._lucProcess:
             self.finished.emit()

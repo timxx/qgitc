@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide6.QtCore import SIGNAL, QObject, QProcess, QProcessEnvironment, Signal
+from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, Signal
 
 from qgitc.common import logger
 from qgitc.gitutils import Git, GitProcess
@@ -18,10 +18,11 @@ class DataFetcher(QObject):
         self._errorData = b''
         self._cwd = None
         self._exitCode = 0
+        self._active = False
 
     @property
     def process(self):
-        return self._process
+        return self._process if self._active else None
 
     @property
     def dataChunk(self):
@@ -51,7 +52,19 @@ class DataFetcher(QObject):
         """Implement in subclass"""
         pass
 
+    def _ensureProcess(self):
+        if self._process is not None:
+            return
+
+        # Reuse one QProcess; deleteLater after finished crashes PySide
+        self._process = QProcess(self)
+        self._process.readyReadStandardOutput.connect(self.onDataAvailable)
+        self._process.readyReadStandardError.connect(self.onProcessError)
+        self._process.finished.connect(self.onDataFinished)
+
     def onDataAvailable(self):
+        if not self._active or not self._process:
+            return
         data = self._process.readAllStandardOutput().data()
         if self._dataChunk:
             data = self._dataChunk + data
@@ -72,43 +85,36 @@ class DataFetcher(QObject):
             self.parse(data)
 
     def onProcessError(self):
-        if not self._process:
+        if not self._active or not self._process:
             return
         data = self._process.readAllStandardError().data()
         self._errorData += data
 
     def onDataFinished(self, exitCode, exitStatus):
+        if not self._active:
+            return
+        # Stale finished from cancel/kill after the next start()
+        if self._process.state() != QProcess.NotRunning:
+            return
+
+        self._active = False
         if self._dataChunk:
             self.parse(self._dataChunk)
+            self._dataChunk = None
 
-        if self._process:
-            self._cleanup()
-            self._process.deleteLater()
-        self._process = None
         self._exitCode = exitCode
         self.fetchFinished.emit(exitCode)
-
-    def _cleanup(self):
-        QObject.disconnect(self._process,
-                            SIGNAL("readyReadStandardOutput()"),
-                            self.onDataAvailable)
-        QObject.disconnect(self._process,
-                            SIGNAL("finished(int, QProcess::ExitStatus)"),
-                            self.onDataFinished)
-        QObject.disconnect(self._process, SIGNAL("readyReadStandardError()"),
-                            self.onProcessError)
-        self._process.close()
 
     def cancel(self):
         if self._process:
             logger.info("Cancel git process")
-            # self._process.disconnect(self)
-            self._cleanup()
-            self._process.waitForFinished(100)
-            if self._process.state() == QProcess.Running:
-                logger.warning("Kill git process")
-                self._process.kill()
-            self._process = None
+            self._active = False
+            if self._process.state() != QProcess.NotRunning:
+                self._process.close()
+                self._process.waitForFinished(100)
+                if self._process.state() == QProcess.Running:
+                    logger.warning("Kill git process")
+                    self._process.kill()
 
         self._dataChunk = None
 
@@ -125,15 +131,13 @@ class DataFetcher(QObject):
 
         git_args = self.makeArgs(args)
 
-        self._process = QProcess()
+        self._ensureProcess()
         cwd = self._cwd if self._cwd else Git.REPO_DIR
         self._process.setWorkingDirectory(cwd)
-        self._process.readyReadStandardOutput.connect(self.onDataAvailable)
-        self._process.readyReadStandardError.connect(self.onProcessError)
-        self._process.finished.connect(self.onDataFinished)
 
         env = QProcessEnvironment.systemEnvironment()
         env.insert("LANGUAGE", "en_US")
         self._process.setProcessEnvironment(env)
 
         self._process.start(GitProcess.GIT_BIN, git_args)
+        self._active = True
