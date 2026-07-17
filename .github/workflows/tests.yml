@@ -63,6 +63,8 @@ jobs:
         run: |
           git checkout -- pyproject.toml requirements.txt
 
+      # Fork PRs cannot push badges to the base repo (403). Only update on
+      # push to master where GITHUB_TOKEN has write access.
       - name: Update Coverage Badge
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.11' && github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: we-cli/coverage-badge-action@main
