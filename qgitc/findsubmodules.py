@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import QProcess, QThread
+from PySide6.QtCore import QEventLoop, QProcess, QThread
 
 from qgitc.common import logger
 from qgitc.gitutils import Git, GitProcess
@@ -16,7 +16,7 @@ class FindSubmoduleThread(QThread):
 
         self.setRepoDir(repoDir)
         self._submodules = []
-        self._process = None
+        self._eventLoop = None
 
     def setRepoDir(self, repoDir):
         self._repoDir = os.path.normcase(os.path.normpath(repoDir))
@@ -69,21 +69,22 @@ class FindSubmoduleThread(QThread):
             return
 
         # try git submodule first
+        self._eventLoop = QEventLoop()
         process = QProcess()
-        self._process = process
         process.setWorkingDirectory(self._repoDir)
+        process.finished.connect(self._eventLoop.quit)
         args = ["submodule", "foreach", "--quiet", "echo $name"]
         process.start(GitProcess.GIT_BIN, args)
-        while not process.waitForFinished(100):
-            if self.isInterruptionRequested():
+        self._eventLoop.exec()
+
+        if self.isInterruptionRequested():
+            if process.state() == QProcess.ProcessState.Running:
                 process.close()
                 process.waitForFinished(50)
                 if process.state() == QProcess.ProcessState.Running:
                     process.kill()
                     logger.warning("Kill find submodule process")
-                self._process = None
-                return
-        self._process = None
+            return
 
         if process.exitCode() == 0:
             data = process.readAll().data()
@@ -119,5 +120,5 @@ class FindSubmoduleThread(QThread):
 
     def requestInterruption(self):
         super().requestInterruption()
-        if self._process and self._process.state() == QProcess.ProcessState.Running:
-            self._process.close()
+        if self._eventLoop:
+            self._eventLoop.quit()
