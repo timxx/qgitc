@@ -6,6 +6,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.common import logger
 from qgitc.llm import (
     AiModelBase,
     AiModelCapabilities,
@@ -74,7 +75,14 @@ class OpenAICompatModelsFetcher(QObject):
         if reply.error() != QNetworkReply.NoError:
             return
 
-        modelList = json.loads(reply.readAll().data())
+        modelList = None
+        try:
+            data = reply.readAll().data()
+            modelList = json.loads(data)
+        except json.JSONDecodeError:
+            logger.debug("Failed to parse model list from %s", reply.url().toString())
+            return
+
         if not modelList:
             return
 
