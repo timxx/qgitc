@@ -132,6 +132,9 @@ class MainWindowContextProvider(AiChatContextProvider):
         if not self._emitTimer.isActive():
             self._emitTimer.start(0)
 
+    def _onSubmoduleAvailable(self, submodules, fromCache):
+        self._scheduleChanged()
+
     def _installHooks(self):
         gitView = self._mainWindow.ui.gitViewA
         if not gitView:
@@ -147,14 +150,16 @@ class MainWindowContextProvider(AiChatContextProvider):
 
         cbSub = self._mainWindow.ui.cbSubmodule
         cbSub.currentIndexChanged.connect(self._scheduleChanged)
+
+        # submoduleAvailable lives on the Application singleton and outlives us.
         ApplicationBase.instance().submoduleAvailable.connect(
-            lambda *_: self._scheduleChanged())
+            self._onSubmoduleAvailable)
 
         # File list selection
         selModel = gitView.ui.diffView.fileListView.selectionModel()
         if selModel:
             selModel.selectionChanged.connect(
-                lambda *_: self._scheduleChanged())
+                self._scheduleChanged)
 
         # Diff text selection.
         gitView.ui.diffView.viewer.selectionChanged.connect(
