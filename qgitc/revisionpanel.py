@@ -182,7 +182,7 @@ class RevisionPanel(TextViewer):
             return
 
         rev = self._revs[self._hoveredLine]
-        event = ShowCommitEvent(rev.sha1)
+        event = ShowCommitEvent(rev.sha1, self._viewer.repoDir)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def _onMenuBlamePrevCommit(self):

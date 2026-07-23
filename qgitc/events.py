@@ -23,9 +23,10 @@ class ShowCommitEvent(QEvent):
 
     Type = QEvent.User + 2
 
-    def __init__(self, sha1):
+    def __init__(self, sha1, repoDir=None):
         super().__init__(QEvent.Type(ShowCommitEvent.Type))
         self.sha1 = sha1
+        self.repoDir = repoDir
 
 
 class OpenLinkEvent(QEvent):

@@ -211,7 +211,7 @@ class Application(ApplicationBase):
 
         if type == ShowCommitEvent.Type:
             window = self.getWindow(WindowType.LogWindow)
-            window.showCommit(event.sha1)
+            window.showCommit(event.sha1, event.repoDir)
             self._ensureVisible(window)
             return True
 

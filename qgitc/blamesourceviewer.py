@@ -92,7 +92,7 @@ class BlameSourceViewer(SourceViewer):
             return
 
         rev = self._panel.revisions[self._curIndexForMenu]
-        event = ShowCommitEvent(rev.sha1)
+        event = ShowCommitEvent(rev.sha1, self.repoDir)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def _onMenuBlamePrevCommit(self):

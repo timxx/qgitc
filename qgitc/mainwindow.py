@@ -714,11 +714,40 @@ class MainWindow(StateWindow):
             hasMergeMenu = True
         self.ui.menu_Merge.menuAction().setVisible(hasMergeMenu)
 
-    def showCommit(self, sha1):
+    def showCommit(self, sha1, repoDir=None):
         if not sha1:
             return
 
-        # Ugly code
+        if repoDir and Git.REPO_DIR:
+            # Try to find the commit in the current log data first — no delay,
+            # just check if it's already loaded.  Only switch repos / disable
+            # composite mode if the commit isn't found AND the target repo differs.
+            foundA = self.ui.gitViewA.ui.logView.switchToCommit(sha1, False)
+            foundB = self.gitViewB and self.gitViewB.ui.logView.switchToCommit(sha1, False)
+            if foundA or foundB:
+                return
+
+            normTarget = os.path.normcase(os.path.normpath(repoDir))
+            normCurrent = os.path.normcase(os.path.normpath(Git.REPO_DIR))
+            if normTarget != normCurrent:
+                for i in range(self.ui.cbSubmodule.count()):
+                    subPath = os.path.join(
+                        self._repoTopDir, self.ui.cbSubmodule.itemText(i))
+                    if os.path.normcase(os.path.normpath(subPath)) == normTarget:
+                        self.ui.gitViewA.ui.logView.preferSha1 = sha1
+                        if self.gitViewB:
+                            self.gitViewB.ui.logView.preferSha1 = sha1
+
+                        settings = ApplicationBase.instance().settings()
+                        if settings.isCompositeMode():
+                            self.ui.cbSubmodule.blockSignals(True)
+                        self.ui.cbSubmodule.setCurrentIndex(i)
+                        if settings.isCompositeMode():
+                            self.ui.cbSubmodule.blockSignals(False)
+                            self.ui.acCompositeMode.trigger()
+                        return
+
+        # Ugly code — fallback with delay
         self.ui.gitViewA.ui.logView.switchToCommit(sha1, True)
         if self.gitViewB:
             self.gitViewB.ui.logView.switchToCommit(sha1, True)
