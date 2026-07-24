@@ -228,6 +228,12 @@ class Application(ApplicationBase):
             return True
 
         if type == GitBinChanged.Type:
+            # Cancel active log/diff fetchers *before* _initGit() so that
+            # the processEvents() loops inside QGitProcess.communicate() don't
+            # deliver stale logsAvailable / fetchFinished signals while the UI
+            # is being torn down and rebuilt.
+            if self._logWindow:
+                self._logWindow.cancel()
             self._initGit(self._settings.gitBinPath())
             if self._logWindow:
                 self._logWindow.reloadRepo()

@@ -105,6 +105,15 @@ class DataFetcher(QObject):
         self._exitCode = exitCode
         self.fetchFinished.emit(exitCode)
 
+    def deactivate(self):
+        """Mark the fetcher inactive without waiting for the process to stop.
+        The running process (if any) will be terminated on the next fetch() call.
+        Use this from the GUI thread to avoid blocking; use cancel() when you need
+        the process fully stopped before proceeding.
+        """
+        self._active = False
+        self._dataChunk = None
+
     def cancel(self):
         if self._process:
             logger.info("Cancel git process")

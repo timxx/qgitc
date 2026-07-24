@@ -800,6 +800,9 @@ class MainWindow(StateWindow):
 
     def cancel(self, force=False):
         self._delayTimer.stop()
+        self.ui.gitViewA.logView.fetcher.cancel(force)
+        if self.gitViewB:
+            self.gitViewB.logView.fetcher.cancel(force)
 
     def _setupRepoPathInput(self):
         # Load recent repositories from settings

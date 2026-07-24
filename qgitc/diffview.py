@@ -748,6 +748,11 @@ class DiffView(QWidget):
         self.commit = None
         self._delayCommit = None
         self._delayShowTimer.stop()
+        # Deactivate (not cancel) so onDataFinished returns early and never emits
+        # fetchFinished.  This stops the sub-commit cascade without blocking the
+        # GUI thread — the running process is killed lazily on the next fetch().
+        self._commitList = []
+        self.fetcher.deactivate()
 
     def setFilterPath(self, path):
         # no need update
