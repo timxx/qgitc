@@ -194,4 +194,6 @@ class SubmoduleExecutor(QObject):
         if ApplicationBase.instance().terminateThread(thread):
             handler = thread.actionHandler()
             handlerName = handler.__name__ if handler else "<None>"
-            logger.warning("Terminated submodule thread (%s)", handlerName)
+            logger.warning(
+                "Submodule thread orphaned for async cleanup (%s)",
+                handlerName)

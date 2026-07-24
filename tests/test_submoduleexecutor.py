@@ -119,8 +119,13 @@ class TestSubmoduleExecutor(TestBase):
             self.wait(100)
             self.assertFalse(executor.isRunning())
 
-            warning.assert_called_once_with(
-                "Terminated submodule thread (%s)", "_blockAction")
+            self.assertEqual(warning.call_count, 2)
+            warning.assert_any_call(
+                "Thread did not stop within %d ms; orphaning for async cleanup",
+                3000)
+            warning.assert_any_call(
+                "Submodule thread orphaned for async cleanup (%s)",
+                "_blockAction")
 
         with patch("logging.Logger.warning") as warning:
             spyStarted = QSignalSpy(executor.started)

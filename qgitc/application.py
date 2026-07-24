@@ -504,6 +504,9 @@ class Application(ApplicationBase):
     def _orphanThread(self, thread: QThread):
         if thread in self._orphanedThreads:
             return
+        # Detach from the original QObject parent (e.g. SubmoduleExecutor) so
+        # destroying that parent cannot tear down a still-running QThread.
+        thread.setParent(self)
         self._orphanedThreads.append(thread)
         thread.finished.connect(self._onOrphanedThreadFinished)
         # It may have finished between the wait loop above and connecting here.
