@@ -53,7 +53,12 @@ from qgitc.cherrypicksession import CherryPickItem
 from qgitc.commitsource import CommitSource
 from qgitc.common import *
 from qgitc.difffinder import DiffFinder
-from qgitc.events import CodeReviewEvent, CopyConflictCommit, DockCodeReviewEvent
+from qgitc.events import (
+    CodeReviewEvent,
+    CopyConflictCommit,
+    DockCodeReviewEvent,
+    ShowCommitEvent,
+)
 from qgitc.gitutils import *
 from qgitc.logsfetcher import LogsFetcher
 from qgitc.windowtype import WindowType
@@ -781,6 +786,12 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.acCodeReview = self.menu.addAction(
             self.tr("&Code Review"), self.__onCodeReview)
 
+        if not self._standalone:
+            self.menu.addSeparator()
+            self.acShowCommitLog = self.menu.addAction(
+                self.tr("Show commit &log"),
+                self.__onShowCommitLog)
+
     def setBranchB(self):
         self.branchA = False
 
@@ -977,6 +988,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # Code review only works for single selection
         self.acCodeReview.setEnabled(allCommitted and not multipleSelected)
+
+        if not self._standalone:
+            self.acShowCommitLog.setEnabled(allCommitted and not multipleSelected)
 
         hasMark = self.marker.hasMark()
         self.acClearMarks.setVisible(hasMark)
@@ -1420,6 +1434,17 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         # Fallback: standalone window via application event.
         event = CodeReviewEvent(commit)
+        ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
+
+    def __onShowCommitLog(self):
+        if self.curIdx == -1:
+            return
+        commit = self.data[self.curIdx]
+        if not commit:
+            return
+
+        repoDir = commitRepoDir(commit)
+        event = ShowCommitEvent(commit.sha1, repoDir)
         ApplicationBase.instance().postEvent(ApplicationBase.instance(), event)
 
     def __onFindResultAvailable(self):
