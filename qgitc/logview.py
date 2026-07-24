@@ -1510,12 +1510,14 @@ class LogView(QAbstractScrollArea, CommitSource):
             lccCommit.parents = [parent_sha1] if parent_sha1 else []
             lccCommit.children = [lucCommit] if hasLUC else []
 
+            shiftIndices = False
             if len(self.data) > 0 and self.data[0].sha1 == Git.LCC_SHA1:
                 self.data[0] = lccCommit
             elif len(self.data) > 1 and self.data[1].sha1 == Git.LCC_SHA1:
                 self.data[1] = lccCommit
             else:
                 self.data.insert(0, lccCommit)
+                shiftIndices = True
             parent_sha1 = lccCommit.sha1
             self.delayUpdateParents = len(lccCommit.parents) == 0
 
@@ -1527,6 +1529,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
             if self.curIdx > 0:
                 self.curIdx += 1
+                if shiftIndices:
+                    self.selectedIndices = {
+                        i + 1 for i in self.selectedIndices}
 
         if hasLUC:
             lucCommit.comments = self.tr(
@@ -1534,10 +1539,12 @@ class LogView(QAbstractScrollArea, CommitSource):
             lucCommit.parents = [parent_sha1] if parent_sha1 else []
             lucCommit.children = []
 
+            shiftIndices = False
             if len(self.data) > 0 and self.data[0].sha1 == Git.LUC_SHA1:
                 self.data[0] = lucCommit
             else:
                 self.data.insert(0, lucCommit)
+                shiftIndices = True
             self.delayUpdateParents = self.delayUpdateParents or len(
                 lucCommit.parents) == 0
 
@@ -1548,6 +1555,9 @@ class LogView(QAbstractScrollArea, CommitSource):
 
             if self.curIdx > 0:
                 self.curIdx += 1
+                if shiftIndices:
+                    self.selectedIndices = {
+                        i + 1 for i in self.selectedIndices}
 
         # FIXME: modified the graphs directly
         if self.graphs and (hasLUC or hasLCC) and not self.delayUpdateParents:
