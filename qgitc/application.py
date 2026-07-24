@@ -89,6 +89,10 @@ class Application(ApplicationBase):
         self._pickBranchWindow = None
 
         self._threads: List[QThread] = []
+        # Threads that could not stop within their shutdown budget. Ownership is
+        # transferred here so they can finish and delete themselves without
+        # blocking the UI and without QThread.terminate().
+        self._orphanedThreads: List[QThread] = []
         self._findSubmoduleThread: FindSubmoduleThread = None
         self._submodules: List[str] = []
 
@@ -464,10 +468,21 @@ class Application(ApplicationBase):
         return locale.languageToString(locale.language())
 
     def terminateThread(self, thread: QThread, waitTime=3000):
+        """Cooperatively stop a worker thread.
+
+        QThread.terminate() is never used: it can abort a thread while it is
+        executing Python, leaving CPython's thread state active after Qt reports
+        the QThread as stopped, which causes timer/TLS warnings and eventual
+        access violations. There is no safe forced termination for Python code.
+
+        The thread is asked to stop and given ``waitTime`` ms to do so. If it is
+        still running afterwards, ownership is transferred to the application so
+        it can finish and delete itself asynchronously instead of blocking the
+        caller. Returns True when the thread had to be orphaned this way.
+        """
         if not thread.isRunning():
             return False
 
-        # Ask worker code and event-loop based threads to exit gracefully first.
         thread.requestInterruption()
         thread.quit()
 
@@ -476,10 +491,46 @@ class Application(ApplicationBase):
         while thread.isRunning() and timer.elapsed() <= waitTime:
             thread.wait(10)
             self.processEvents()
+
         if thread.isRunning():
-            thread.terminate()
+            logger.warning(
+                "Thread did not stop within %d ms; orphaning for async cleanup",
+                waitTime,
+            )
+            self._orphanThread(thread)
             return True
         return False
+
+    def _orphanThread(self, thread: QThread):
+        if thread in self._orphanedThreads:
+            return
+        self._orphanedThreads.append(thread)
+        thread.finished.connect(self._onOrphanedThreadFinished)
+        # It may have finished between the wait loop above and connecting here.
+        if thread.isFinished():
+            self._onOrphanedThreadFinished(thread)
+
+    def _onOrphanedThreadFinished(self, thread: QThread = None):
+        if thread is None:
+            thread = self.sender()
+        if thread in self._orphanedThreads:
+            self._orphanedThreads.remove(thread)
+            thread.deleteLater()
+
+    def _waitForOrphanedThreads(self, waitTime=10000):
+        """Block until orphaned threads finish, only used at process exit so the
+        interpreter is not torn down while a thread still executes Python."""
+        if not self._orphanedThreads:
+            return
+
+        timer = QElapsedTimer()
+        timer.start()
+        while self._orphanedThreads and timer.elapsed() <= waitTime:
+            for thread in self._orphanedThreads[:]:
+                thread.requestInterruption()
+                thread.quit()
+                thread.wait(10)
+            self.processEvents()
 
     def telemetry(self):
         return self._telemetry
@@ -605,7 +656,8 @@ class Application(ApplicationBase):
             self._threads.remove(self._findSubmoduleThread)
             self._findSubmoduleThread.finished.disconnect(
                 self._onThreadFinished)
-            logger.warning("Terminate find submodule thread")
+            logger.warning(
+                "Find-submodule thread orphaned for async cleanup")
         self._findSubmoduleThread = None
 
     def _onFindSubmoduleFinished(self):
@@ -643,6 +695,8 @@ class Application(ApplicationBase):
 
         for thread in self._threads[:]:
             self.terminateThread(thread)
+
+        self._waitForOrphanedThreads()
 
     def _loadOtelSecrets(self):
         try:
