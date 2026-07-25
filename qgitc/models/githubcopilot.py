@@ -31,6 +31,10 @@ def _makeHeaders(token: str, intent: bytes = b"conversation-other"):
     }
 
 
+class ModelStep:
+    Session = 0
+    Models = 1
+
 class ModelsFetcher(QObject):
 
     finished = Signal()
@@ -44,9 +48,16 @@ class ModelsFetcher(QObject):
         self._token = token
         self._reply: QNetworkReply = None
         self._url_prefix = url_prefix
+        self._isIndividual = GithubCopilot.isIndividualToken(token)
+        self._step = ModelStep.Session if self._isIndividual else ModelStep.Models
+
+        self._availableModels = []
+        self._selectedModel = None
 
     def start(self):
         url = f"{self._url_prefix}/models"
+        if self._step == ModelStep.Session:
+            url += f"/session"
         headers = _makeHeaders(self._token, b"model-access")
 
         mgr = ApplicationBase.instance().networkManager
@@ -56,13 +67,21 @@ class ModelsFetcher(QObject):
         for key, value in headers.items():
             request.setRawHeader(key, value)
 
-        self._reply = mgr.get(request)
+        if self._step == ModelStep.Models:
+            self._reply = mgr.get(request)
+        else:
+            data = b'{"auto_mode":{"model_hints":["auto"]}}'
+            self._reply = mgr.post(request, data)
         self._reply.finished.connect(self._onReplyFinished)
         logger.debug(f"Fetching GitHub Copilot models...")
 
     def _onReplyFinished(self):
         try:
-            self._onFinished()
+            if self._step == ModelStep.Session:
+                self._onSessionFinished()
+                return
+            else:
+                self._onFinished()
         except Exception as e:
             logger.exception("Error processing GitHub Copilot models reply: %s", e)
         self.finished.emit()
@@ -93,7 +112,7 @@ class ModelsFetcher(QObject):
             id = model.get("id")
             if not id:
                 continue
-            if not model.get("model_picker_enabled", True):
+            if not model.get("model_picker_enabled", True) and id not in self._availableModels:
                 continue
 
             caps: dict = model.get("capabilities", {})
@@ -117,11 +136,39 @@ class ModelsFetcher(QObject):
             name = model.get("name")
             self.models.append((id, name or id))
 
-            if model.get("is_chat_default", False):
+            if model.get("is_chat_default", False) or id == self._selectedModel:
                 self.defaultModel = id
 
             endpoints = model.get("supported_endpoints", [])
             self.endPoints[id] = endpoints
+
+    def _onSessionFinished(self):
+        reply = self._reply
+        self._reply = None
+
+        # always fetch models after session
+        self._step = ModelStep.Models
+        self.start()
+
+        if reply is None:
+            return
+
+        reply.deleteLater()
+        logger.debug(
+            f"GitHub Copilot models session fetch finished with error code {reply.error()}")
+        if reply.error() != QNetworkReply.NoError:
+            return
+
+        # {"available_models":["gpt-5-mini","oswe-vscode-prime","claude-haiku-4.5","mai-code-1-flash"],"selected_model":"gpt-5-mini","session_token":"xxxx","expires_at":1784990308}
+
+        try:
+            models = json.loads(reply.readAll().data())
+            self._availableModels = models.get("available_models", [])
+            self._selectedModel = models.get("selected_model")
+        except Exception as e:
+            logger.exception("Error parsing GitHub Copilot session reply: %s", e)
+            self._availableModels = []
+            self._selectedModel = None
 
     def requestInterruption(self):
         if self._reply and self._reply.isRunning():
