@@ -23,11 +23,11 @@ def _makeHeaders(token: str, intent: bytes = b"conversation-other"):
     return {
         b"authorization": f"Bearer {token}".encode("utf-8"),
         b"copilot-integration-id": b"vscode-chat",
-        b"editor-plugin-version": b"copilot-chat/0.27.2",
-        b"editor-version": b"vscode/1.97.2",
+        b"editor-plugin-version": b"copilot-chat/0.58.0",
+        b"editor-version": b"vscode/1.130.0",
         b"openai-intent": intent,
-        b"user-agent": b"GithubCopilotChat/0.27.2",
-        b"x-github-api-version": b"2025-05-01",
+        b"user-agent": b"GithubCopilotChat/0.58.0",
+        b"x-github-api-version": b"2026-06-01",
     }
 
 
