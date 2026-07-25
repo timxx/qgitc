@@ -42,3 +42,11 @@
 - If a UI change touches [qgitc](qgitc) `.ui` files, regenerate the corresponding Python bindings rather than editing them by hand.
 - When adding or changing agent tools, add or update tests under [tests](tests) with names matching the existing agent test patterns.
 - For UI-related tests that need a `QApplication`, inherit from `TestBase` in [tests/base.py](tests/base.py). If a test does not need a repo, override `doCreateRepo()` with `pass`.
+
+## Commit style
+- Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages.
+- Format: `<type>[optional scope]: <description>`
+- Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`, `build`.
+- Keep the description lowercase, imperative, and under 72 characters.
+- Use `!` before the colon for breaking changes: `feat!: ...` or `feat(scope)!: ...`.
+- For multi-line commits, leave a blank line after the summary, then add body and/or footer text.
