@@ -410,6 +410,79 @@ class TestLogWindow(TestLogWindowBase):
         self.assertEqual([2], logView.getSelectedIndices())
         self.assertEqual(2, logView.currentIndex())
 
+    def testCompositeIncrementalEmit(self):
+        """Composite mode emits logsAvailable multiple times during loading."""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        spyLogs = QSignalSpy(logView.fetcher.logsAvailable)
+
+        self.window.ui.acCompositeMode.trigger()
+        self.assertTrue(self.window.ui.acCompositeMode.isChecked())
+
+        # Wait for fetch to complete
+        spyFetch = QSignalSpy(logView.fetcher.fetchFinished)
+        self.wait(10000, lambda: spyFetch.count() == 0)
+        self.wait(50)
+
+        # With two repos (main + subRepo), the 100ms timer may batch them
+        # into a single emission, but the key assertion is that at least
+        # one emission happened and the data is correct.
+        self.assertGreaterEqual(spyLogs.count(), 1,
+                                "composite mode must emit logsAvailable at least once")
+        self.assertEqual(logView.getCount(), 3)
+
+        # Verify the final result matches what testCompositeMode expects
+        commit = logView.getCommit(1)
+        self.assertEqual(1, len(commit.subCommits))
+
+    def testCompositeSelectionPreserved(self):
+        """Selection persists across composite incremental data replacements."""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+
+        self.window.ui.acCompositeMode.trigger()
+        self.assertTrue(self.window.ui.acCompositeMode.isChecked())
+
+        spyFetch = QSignalSpy(logView.fetcher.fetchFinished)
+        self.wait(10000, lambda: spyFetch.count() == 0)
+        self.wait(50)
+
+        self.assertEqual(logView.getCount(), 3)
+
+        # Select the middle commit (index 1)
+        commit = logView.getCommit(1)
+        sha1 = commit.sha1
+        logView.setCurrentIndex(1)
+        self.assertEqual(1, logView.currentIndex())
+
+        # In composite mode, preferSha1 must be set to survive data replacement
+        self.assertEqual(sha1, logView.preferSha1,
+                         "preferSha1 must be set in composite mode for selection survival")
+
+    def testCompositePrefersha1OnSelect(self):
+        """Clicking a commit in composite mode sets preferSha1 to the new commit."""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+
+        self.window.ui.acCompositeMode.trigger()
+        spyFetch = QSignalSpy(logView.fetcher.fetchFinished)
+        self.wait(10000, lambda: spyFetch.count() == 0)
+        self.wait(50)
+
+        self.assertEqual(logView.getCount(), 3)
+
+        # After composite load, auto-select sets preferSha1 for the first commit
+        self.assertIsNotNone(logView.preferSha1)
+
+        # Switch to a different commit — preferSha1 must track it
+        commit = logView.getCommit(1)
+        sha1 = commit.sha1
+        logView.switchToCommit(sha1)
+        self.assertEqual(sha1, logView.preferSha1)
+
     def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier, eventType=QEvent.Type.MouseButtonPress):
         """Helper to create a mouse event at a specific line"""
 

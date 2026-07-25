@@ -195,8 +195,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             fetcher.commits, repoDir, fetcher._branch,
             fetcher._exitCode, fetcher.errorData)
 
-        if Git.RUN_SLOW and self._fetchers and isinstance(self._fetchers[0], LocalChangesFetcher):
-            self._emitCompositeLogsAvailable()
+        self._scheduleCompositeEmit()
 
     def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
         hasLCC = fetcher.hasLCC
@@ -306,9 +305,8 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             self._eventLoop = None
             return
 
+        self._flushCompositeEmit()
         self.localChangesAvailable.emit(self._lccCommit, self._lucCommit)
-
-        self._emitCompositeLogsAvailable()
 
         for error, _ in self._errors.items():
             self._errorData += error + b'\n'
@@ -341,3 +339,4 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         for fetcher in self._fetchers:
             fetcher.cancel()
         self._fetchers.clear()
+        self._cleanupCompositeEmit()

@@ -2,7 +2,7 @@
 
 from typing import Dict, List
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from qgitc.common import Commit
 from qgitc.gitutils import Git
@@ -13,6 +13,8 @@ class LogsFetcherWorkerBase(QObject):
     localChangesAvailable = Signal(Commit, Commit)
     logsAvailable = Signal(list)
     fetchFinished = Signal(int)
+
+    _COMPOSITE_EMIT_INTERVAL_MS = 100
 
     def __init__(self, submodules: List[str], branchDir: str, noLocalChanges: bool, *args):
         super().__init__()
@@ -29,6 +31,11 @@ class LogsFetcherWorkerBase(QObject):
         self._interruptionRequested = False
 
         self._mergedLogs: Dict[any, Commit] = {}
+
+        self._compositeEmitTimer = QTimer(self)
+        self._compositeEmitTimer.setSingleShot(True)
+        self._compositeEmitTimer.timeout.connect(self._onCompositeEmitTimeout)
+        self._pendingCompositeEmit = False
 
     def run(self):
         """Override this method in subclasses to implement the fetching logic."""
@@ -89,11 +96,45 @@ class LogsFetcherWorkerBase(QObject):
         return False
 
     def _emitCompositeLogsAvailable(self):
-        if self._mergedLogs:
-            sortedLogs = sorted(self._mergedLogs.values(),
-                                key=lambda x: x.committerDateTime, reverse=True)
-            self.logsAvailable.emit(sortedLogs)
-            self._mergedLogs.clear()
+        if not self._mergedLogs:
+            return
+        sortedLogs = sorted(self._mergedLogs.values(),
+                            key=lambda x: x.committerDateTime, reverse=True)
+        self.logsAvailable.emit(sortedLogs)
+
+    def _scheduleCompositeEmit(self):
+        """Schedule a batched incremental emission after _COMPOSITE_EMIT_INTERVAL_MS.
+
+        Call this after each submodule's logs have been merged.  The emission is
+        deferred so that fast completions are batched together, reducing UI churn.
+        """
+        self._pendingCompositeEmit = True
+        if not self._compositeEmitTimer.isActive():
+            self._compositeEmitTimer.start(self._COMPOSITE_EMIT_INTERVAL_MS)
+
+    def _onCompositeEmitTimeout(self):
+        if not self._pendingCompositeEmit:
+            return
+        self._pendingCompositeEmit = False
+        if self.isInterruptionRequested():
+            return
+        self._emitCompositeLogsAvailable()
+
+    def _flushCompositeEmit(self):
+        """Flush any pending batched emission immediately (used on fetch completion)."""
+        self._compositeEmitTimer.stop()
+        if not self._pendingCompositeEmit:
+            return
+        self._pendingCompositeEmit = False
+        if self.isInterruptionRequested():
+            return
+        self._emitCompositeLogsAvailable()
+
+    def _cleanupCompositeEmit(self):
+        """Cancel pending emission and clear accumulated state."""
+        self._compositeEmitTimer.stop()
+        self._pendingCompositeEmit = False
+        self._mergedLogs.clear()
 
     @property
     def errorData(self):
