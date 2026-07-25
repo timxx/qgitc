@@ -877,7 +877,6 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.verticalScrollBar().setValue(startLine + 1)
 
     def setCurrentIndex(self, index, clearSelection=True):
-        self.preferSha1 = None
         if index == self.curIdx and not clearSelection:
             return
 
@@ -889,9 +888,17 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.selectedIndices.add(index)
             self.selectionAnchor = -1  # Reset anchor on new selection
 
+        # In composite mode, remember the selected SHA so it survives data replacement
         if index >= 0 and index < len(self.data):
+            commit = self.data[index]
+            if self._isCompositeMode():
+                self.preferSha1 = commit.sha1
+            else:
+                self.preferSha1 = None
             self.ensureVisible(self.curIdx)
             self.__ensureChildren(index)
+        else:
+            self.preferSha1 = None
 
         self.viewport().update()
         self.currentIndexChanged.emit(index)
@@ -1458,6 +1465,12 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.findFinished.emit(state)
 
     def __onLogsAvailable(self, logs):
+        if self._isCompositeMode():
+            self.__onCompositeLogsAvailable(logs)
+        else:
+            self.__onNormalLogsAvailable(logs)
+
+    def __onNormalLogsAvailable(self, logs):
         self.data.extend(logs)
 
         if self.delayUpdateParents and len(self.data) > 2:
@@ -1482,6 +1495,48 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.setCurrentIndex(0)
 
         self.updateGeometries()
+
+    def __onCompositeLogsAvailable(self, logs):
+        # Snapshot subCommits length of the currently selected commit
+        # so we can detect if it changed and refresh the diff.
+        oldSubCommitsLen = -1
+        prevCommit = None
+        if self.curIdx >= 0 and self.curIdx < len(self.data):
+            prevCommit = self.data[self.curIdx]
+            oldSubCommitsLen = len(prevCommit.subCommits)
+
+        self.data = logs
+
+        if self.currentIndex() == -1:
+            # First emission: try preferSha1, then auto-select
+            if self.preferSha1:
+                idx = self.findCommitIndex(self.preferSha1)
+                if idx != -1:
+                    self.curIdx = idx
+                    self.selectedIndices.clear()
+                    self.selectedIndices.add(idx)
+            elif self._selectOnFetch:
+                self.setCurrentIndex(0)
+        elif self.preferSha1:
+            # Subsequent emission: restore selection by SHA
+            idx = self.findCommitIndex(self.preferSha1)
+            if idx != -1:
+                self.curIdx = idx
+                self.selectedIndices.clear()
+                self.selectedIndices.add(idx)
+                # Refresh diff if subCommits changed
+                if prevCommit is not None and len(prevCommit.subCommits) != oldSubCommitsLen:
+                    self.currentIndexChanged.emit(idx)
+            else:
+                # Previously selected commit disappeared — fall back to first
+                self.setCurrentIndex(0)
+
+        self.updateGeometries()
+        self.viewport().update()
+
+    def _isCompositeMode(self):
+        app = ApplicationBase.instance()
+        return self._standalone and app.settings().isCompositeMode() and bool(app.submodules)
 
     def __onFetchFinished(self, exitCode):
         if self.delayVisible:

@@ -235,6 +235,7 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
 
         if not done:
             logger.debug("Fetch logs cancelled")
+            self._cleanupCompositeEmit()
             span.setStatus(False, "cancelled")
             span.end()
             return
@@ -282,14 +283,15 @@ class LogsFetcherGitWorker(LogsFetcherWorkerBase):
                         commits, submodule, branch, exitCode, error)
                     self._makeLocalCommits(
                         lccCommit, lucCommit, hasLCC, hasLUC, submodule)
+                    self._scheduleCompositeEmit()
             except Exception:
                 pass
 
         if self.isInterruptionRequested():
             return False
 
+        self._flushCompositeEmit()
         self.localChangesAvailable.emit(lccCommit, lucCommit)
-        self._emitCompositeLogsAvailable()
 
         return True
 
