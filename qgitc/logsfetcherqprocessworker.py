@@ -4,7 +4,7 @@ import os
 import time
 from typing import List
 
-from PySide6.QtCore import QEventLoop, QObject, QProcess, Qt, QThread, Signal, Slot
+from PySide6.QtCore import QEventLoop, QObject, QProcess, Qt, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import (
