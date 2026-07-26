@@ -239,20 +239,31 @@ class TestLogsFetcherWorkerCleanupDeferred(TestBase):
         thread.quit.assert_called_once()
         delete(fetcher)
 
-    def test_cancel_keeps_worker_alive(self):
-        """cancel() must not drop _worker or call deleteLater prematurely."""
+    def test_cancel_clears_worker_but_not_deleteLater(self):
+        """cancel(force=False) clears _worker so fetch() knows a new worker is
+        needed, but _pendingWorkers keeps the ref alive and deleteLater is not
+        called prematurely."""
         from qgitc.logsfetcher import LogsFetcher
 
         fetcher = LogsFetcher()
         worker = MagicMock()
+        thread = MagicMock()
         fetcher._worker = worker
+        fetcher._thread = thread
+        fetcher._pendingWorkers[thread] = worker
 
         fetcher.cancel(force=False)
 
-        # Worker must NOT be None — its thread may still be running
-        self.assertIsNotNone(
+        # _worker is cleared so that the next fetch() knows to create
+        # a new worker, but _pendingWorkers still holds the ref until
+        # the thread finishes.
+        self.assertIsNone(
             fetcher._worker,
-            "_worker must not be dropped during cancel() — thread may still be alive")
+            "_worker should be None after cancel() to allow a new fetch()")
+        # Worker must still be in _pendingWorkers — ref is not lost
+        self.assertIn(
+            worker, fetcher._pendingWorkers.values(),
+            "_pendingWorkers must keep worker alive until thread finishes")
         # Worker must NOT have deleteLater called
         worker.deleteLater.assert_not_called()
         delete(fetcher)
