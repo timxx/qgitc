@@ -407,5 +407,6 @@ class GitView(QWidget):
         self._logWidgetSizes = self.ui.logWidget.sizes()
         if len(self._logWidgetSizes) != 2 or (self._logWidgetSizes[0] == 0 and self._logWidgetSizes[1] == 0):
             self._logWidgetSizes = [25, 75]
-        if ApplicationBase.instance().settings().isCompositeMode():
+        app = ApplicationBase.instance()
+        if app.settings().isCompositeMode(app.repoName()):
             self.ui.logWidget.setSizes([0, 100])

@@ -447,6 +447,19 @@ class Preferences(QDialog):
         self.ui.cbDetectLocalChanges.setChecked(
             self.settings.detectLocalChanges())
 
+        # Per-repo composite mode controls
+        self.ui.lbCompositeModeRepo.setText(
+            self.tr("Composite Mode ({0}):").format(self._repoName))
+        self.ui.cbCompositeMode.setChecked(
+            self.settings.isCompositeMode())
+        perRepoValue = self.settings.compositeModePerRepo(self._repoName)
+        if perRepoValue is None:
+            self.ui.cbCompositeModeRepo.setCurrentIndex(0)  # Follow Global
+        elif perRepoValue:
+            self.ui.cbCompositeModeRepo.setCurrentIndex(1)  # Enable
+        else:
+            self.ui.cbCompositeModeRepo.setCurrentIndex(2)  # Disable
+
     def _saveSummaryTab(self):
         color = self.ui.colorA.getColor()
         self.settings.setCommitColorA(color)
@@ -468,6 +481,16 @@ class Preferences(QDialog):
 
         value = self.ui.cbDetectLocalChanges.isChecked()
         self.settings.setDetectLocalChanges(value)
+
+        # Save composite mode settings
+        self.settings.setCompositeMode(self.ui.cbCompositeMode.isChecked())
+        index = self.ui.cbCompositeModeRepo.currentIndex()
+        if index == 0:  # Follow Global
+            self.settings.setCompositeModePerRepo(self._repoName, None)
+        elif index == 1:  # Enable
+            self.settings.setCompositeModePerRepo(self._repoName, True)
+        else:  # Disable
+            self.settings.setCompositeModePerRepo(self._repoName, False)
 
     def _initToolsTab(self):
         tools = self.settings.mergeToolList()

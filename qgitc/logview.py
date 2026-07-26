@@ -812,7 +812,8 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         submodules = []
         app = ApplicationBase.instance()
-        if self._standalone and app.settings().isCompositeMode():
+        if self._standalone and app.settings().isCompositeMode(
+                app.repoName()):
             submodules = app.submodules
         self.fetcher.setSubmodules(submodules)
 
@@ -977,7 +978,8 @@ class LogView(QAbstractScrollArea, CommitSource):
             enabled = enabled and not multipleSelected
             # to avoid bad reset on each repo
             app = ApplicationBase.instance()
-            if enabled and app.settings().isCompositeMode():
+            if enabled and app.settings().isCompositeMode(
+                    app.repoName()):
                 # disable only if have submodules
                 enabled = not app.submodules
             self.resetMenu.setEnabled(enabled)
@@ -2220,7 +2222,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         elif self.args:
             tips = self.tr(
                 "No commits found for the current filter. Try adjusting your filter criteria.")
-        elif settings.isCompositeMode() and \
+        elif settings.isCompositeMode(
+                ApplicationBase.instance().repoName()) and \
                 settings.maxCompositeCommitsSince() != 0 and \
                 self.fetcher._submodules:
             tips = self.tr(
@@ -2725,7 +2728,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         if isCache:
             return
 
-        if ApplicationBase.instance().settings().isCompositeMode():
+        if ApplicationBase.instance().settings().isCompositeMode(
+                ApplicationBase.instance().repoName()):
             self.__onCompositeModeChanged()
 
     def reloadLogs(self):

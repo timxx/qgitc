@@ -413,7 +413,16 @@ class MainWindow(StateWindow):
             Git.REV_HEAD = Git.revHead()
 
         self.ui.cbSubmodule.setEnabled(not checked)
-        ApplicationBase.instance().settings().setCompositeMode(checked)
+
+        # Toggle global or repo-specific composite mode
+        settings = ApplicationBase.instance().settings()
+        repoName = ApplicationBase.instance().repoName()
+        if settings.compositeModePerRepo(repoName) is None:
+            # Follows global → toggle global
+            settings.setCompositeMode(checked)
+        else:
+            # Has per-repo override → toggle per-repo
+            settings.setCompositeModePerRepo(repoName, checked)
 
     def __onOptsReturnPressed(self):
         opts = self.ui.leOpts.text().strip()
@@ -537,13 +546,15 @@ class MainWindow(StateWindow):
         self.ui.lbSubmodule.setVisible(hasSubmodule)
 
         settings = ApplicationBase.instance().settings()
-        if settings.isCompositeMode() and not hasSubmodule and not Git.REF_MAP:
+        repoName = ApplicationBase.instance().repoName()
+        if settings.isCompositeMode(repoName) and not hasSubmodule and not Git.REF_MAP:
             Git.REF_MAP = Git.refs()
             Git.REV_HEAD = Git.revHead()
             self.ui.gitViewA.logView.update()
             if self.gitViewB:
                 self.gitViewB.logView.update()
-        elif settings.isCompositeMode() and hasSubmodule and Git.REF_MAP:
+        elif settings.isCompositeMode(
+                ApplicationBase.instance().repoName()) and hasSubmodule and Git.REF_MAP:
             # Clear REF_MAP that may have been populated by __onRepoChanged
             # before submodules were discovered (race on Windows where the
             # FindSubmoduleThread finishes after the delay-timer fires).
@@ -588,7 +599,8 @@ class MainWindow(StateWindow):
         self.ui.acFullCommitMsg.setChecked(
             sett.isFullCommitMessage())
 
-        isCompositeMode = sett.isCompositeMode()
+        isCompositeMode = sett.isCompositeMode(
+            ApplicationBase.instance().repoName())
         self.ui.acCompositeMode.setChecked(isCompositeMode)
         self.ui.cbSubmodule.setEnabled(not isCompositeMode)
 
@@ -739,10 +751,11 @@ class MainWindow(StateWindow):
                             self.gitViewB.ui.logView.preferSha1 = sha1
 
                         settings = ApplicationBase.instance().settings()
-                        if settings.isCompositeMode():
+                        repoName = ApplicationBase.instance().repoName()
+                        if settings.isCompositeMode(repoName):
                             self.ui.cbSubmodule.blockSignals(True)
                         self.ui.cbSubmodule.setCurrentIndex(i)
-                        if settings.isCompositeMode():
+                        if settings.isCompositeMode(repoName):
                             self.ui.cbSubmodule.blockSignals(False)
                             self.ui.acCompositeMode.trigger()
                         return

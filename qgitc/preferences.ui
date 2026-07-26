@@ -505,6 +505,43 @@
            </layout>
           </item>
           <item>
+           <widget class="QCheckBox" name="cbCompositeMode">
+            <property name="text">
+             <string>Composite Mode (Global)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_compositeMode">
+            <item>
+             <widget class="QLabel" name="lbCompositeModeRepo">
+              <property name="text">
+               <string>Composite Mode (%1):</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="cbCompositeModeRepo">
+              <item>
+               <property name="text">
+                <string>Follow Global</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Enable</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Disable</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
            <widget class="QCheckBox" name="cbDetectLocalChanges">
             <property name="text">
              <string>Detect Local Changes</string>

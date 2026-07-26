@@ -91,3 +91,79 @@ class TestSettings(TestBase):
         self.assertFalse(self.settings.contains("localAuth"))
         self.assertFalse(self.settings.contains("customHeaders"))
         self.settings.endGroup()
+
+    def testCompositeModePerRepoDefault(self):
+        """Per-repo composite mode should be None by default (use global)"""
+        repoName = "test/repo1"
+        self.assertIsNone(self.settings.compositeModePerRepo(repoName))
+
+    def testCompositeModePerRepoSet(self):
+        """Should be able to set per-repo composite mode"""
+        repoName = "test/repo1"
+        
+        # Set to True
+        self.settings.setCompositeModePerRepo(repoName, True)
+        self.assertTrue(self.settings.compositeModePerRepo(repoName))
+        
+        # Set to False
+        self.settings.setCompositeModePerRepo(repoName, False)
+        self.assertFalse(self.settings.compositeModePerRepo(repoName))
+
+    def testCompositeModePerRepoClearOverride(self):
+        """Setting per-repo to None should clear the override"""
+        repoName = "test/repo1"
+        
+        # Set to True
+        self.settings.setCompositeModePerRepo(repoName, True)
+        self.assertTrue(self.settings.compositeModePerRepo(repoName))
+        
+        # Clear by setting to None
+        self.settings.setCompositeModePerRepo(repoName, None)
+        self.assertIsNone(self.settings.compositeModePerRepo(repoName))
+
+    def testCompositeModeUsesPerRepoWhenSet(self):
+        """isCompositeMode(repoName) should use per-repo value when set"""
+        repoName = "test/repo1"
+        
+        # Set global to False
+        self.settings.setCompositeMode(False)
+        
+        # Per-repo override to True
+        self.settings.setCompositeModePerRepo(repoName, True)
+        
+        # Effective should be True (per-repo override)
+        self.assertTrue(self.settings.isCompositeMode(repoName))
+
+    def testCompositeModeUsesGlobalWhenNotSet(self):
+        """isCompositeMode(repoName) should use global when per-repo not set"""
+        repoName = "test/repo1"
+        
+        # Set global to True
+        self.settings.setCompositeMode(True)
+        
+        # Per-repo override not set (None)
+        self.assertIsNone(self.settings.compositeModePerRepo(repoName))
+        
+        # Effective should be True (global)
+        self.assertTrue(self.settings.isCompositeMode(repoName))
+
+    def testCompositeModePerRepoIndependent(self):
+        """Different repos should have independent per-repo settings"""
+        repo1 = "test/repo1"
+        repo2 = "test/repo2"
+        
+        self.settings.setCompositeModePerRepo(repo1, True)
+        self.settings.setCompositeModePerRepo(repo2, False)
+        
+        self.assertTrue(self.settings.compositeModePerRepo(repo1))
+        self.assertFalse(self.settings.compositeModePerRepo(repo2))
+
+    def testCompositeModePerRepoIgnoresEmpty(self):
+        """Setting per-repo with empty repoName should be ignored"""
+        # Should not crash with empty string
+        self.settings.setCompositeModePerRepo("", True)
+        self.assertIsNone(self.settings.compositeModePerRepo(""))
+        
+        # Should not crash with None
+        self.settings.setCompositeModePerRepo(None, True)
+        self.assertIsNone(self.settings.compositeModePerRepo(None))

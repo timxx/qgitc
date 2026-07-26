@@ -505,12 +505,51 @@ class Settings(QSettings):
         self.setValue("reasoningEnabled", enabled)
         self.endGroup()
 
-    def isCompositeMode(self):
+    def isCompositeMode(self, repoName: str = None):
+        """Get effective composite mode for a repository.
+        
+        With no repoName: returns the global setting.
+        With a repoName: returns per-repo override if set, otherwise global.
+        """
+        if repoName:
+            self.beginGroup(repoName)
+            exists = self.contains("compositeMode")
+            if exists:
+                value = self.value("compositeMode", None, type=bool)
+            else:
+                value = None
+            self.endGroup()
+            if value is not None:
+                return value
         return self.value("compositeMode", False, type=bool)
 
     def setCompositeMode(self, composite):
         self.setValue("compositeMode", composite)
         self.compositeModeChanged.emit(composite)
+
+    def compositeModePerRepo(self, repoName: str):
+        """Get per-repository composite mode override, or None if not set"""
+        if not repoName:
+            return None
+        self.beginGroup(repoName)
+        exists = self.contains("compositeMode")
+        if exists:
+            value = self.value("compositeMode", None, type=bool)
+        else:
+            value = None
+        self.endGroup()
+        return value
+
+    def setCompositeModePerRepo(self, repoName: str, composite):
+        """Set per-repository composite mode override, or None to use global default"""
+        if not repoName:
+            return
+        self.beginGroup(repoName)
+        if composite is None:
+            self.remove("compositeMode")
+        else:
+            self.setValue("compositeMode", composite)
+        self.endGroup()
 
     def maxCompositeCommitsSince(self):
         return self.value("maxCompositeCommitsSince", 365, type=int)
