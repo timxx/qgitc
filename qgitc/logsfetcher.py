@@ -71,11 +71,11 @@ class LogsFetcher(QObject):
             self._worker.localChangesAvailable.disconnect(
                 self._onLocalChangesAvailable)
             self._worker.requestInterruption()
-            # Do NOT set _worker=None or call deleteLater() here — the
-            # worker thread is still alive and holds QProcess children
-            # with internal QBasicTimers.  Releasing the Python reference
-            # now would let GC destroy those C++ objects cross-thread,
-            # producing "QBasicTimer::stop: Failed" warnings.
+            # Defer _worker cleanup to _onThreadFinished to avoid
+            # QBasicTimer cross-thread warnings, but clear the
+            # attribute now so fetch() knows a new worker is needed.
+            # _pendingWorkers keeps the ref alive until the thread stops.
+            self._worker = None
 
         if self._thread and self._thread.isRunning():
             self._thread.quit()
@@ -88,7 +88,6 @@ class LogsFetcher(QObject):
                     worker.deleteLater()
                 logger.warning("Terminating logs fetcher thread")
                 self._thread = None
-                self._worker = None
 
         if not force:
             return
