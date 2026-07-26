@@ -196,8 +196,6 @@ class Git():
     VERSION_MINOR = 0
     VERSION_PATCH = 0
 
-    RUN_SLOW = False
-
     @staticmethod
     def available():
         return GitProcess.GIT_BIN is not None
@@ -901,13 +899,7 @@ class Git():
     def initGit(gitBin: str):
         GitProcess.GIT_BIN = gitBin
 
-        begin = time.time()
         version: bytes = Git.checkOutput(["version"], useQProcess=True)
-        ms = int((time.time() - begin) * 1000)
-
-        # only latest Win11 takes more than 60ms
-        Git.RUN_SLOW = ms >= 60
-
         if not version:
             return
 

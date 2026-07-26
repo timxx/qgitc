@@ -42,8 +42,7 @@ dependencies = [
     "packaging",
     "opentelemetry-api",
     "opentelemetry-sdk",
-    "opentelemetry-exporter-otlp-proto-http",
-    "pygit2; sys_platform == 'win32'"
+    "opentelemetry-exporter-otlp-proto-http"
 ]
 
 [project.gui-scripts]

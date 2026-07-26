@@ -61,65 +61,6 @@ def _fetchStatusGit(submodule, cancelEvent: CancelEvent, showUntrackedFiles=True
     return submodule, result
 
 
-def _fetchStatusGit2(submodule, userData, cancelEvent: CancelEvent):
-    import pygit2
-
-    try:
-        repoDir = fullRepoDir(submodule)
-        repo = pygit2.Repository(repoDir)
-
-        showUntrackedFiles, showIgnoredFiles = userData or (True, False)
-        status = repo.status(untracked_files="all" if showUntrackedFiles else "no",
-                            ignored=showIgnoredFiles)
-    except Exception:
-        return submodule, []
-
-    result = []
-    for file, flags in status.items():
-        # bug in libgit2
-        if flags == pygit2.GIT_STATUS_WT_DELETED and os.path.exists(os.path.join(repoDir, file)):
-            continue
-
-        repoFile = os.path.normpath(os.path.join(
-            submodule, file) if submodule and submodule != '.' else file)
-
-        status = ''
-        # TODO: support renamed (repo.status doesn't support it, but libgit2 do support it)
-        oldRepoFile = None
-
-        if flags & pygit2.GIT_STATUS_INDEX_NEW:
-            status = 'A'
-        elif flags & pygit2.GIT_STATUS_INDEX_MODIFIED:
-            status = 'M'
-        elif flags & pygit2.GIT_STATUS_INDEX_DELETED:
-            status = 'D'
-        elif flags & pygit2.GIT_STATUS_INDEX_TYPECHANGE:
-            status = 'T'
-        elif flags & pygit2.GIT_STATUS_INDEX_RENAMED:
-            status = 'R'
-        else:
-            status = ' '
-
-        if flags & pygit2.GIT_STATUS_WT_NEW:
-            # not add to index yet
-            if status == ' ':
-                status = '??'
-            else:
-                status += 'A'
-        elif flags & pygit2.GIT_STATUS_WT_MODIFIED:
-            status += 'M'
-        elif flags & pygit2.GIT_STATUS_WT_DELETED:
-            status += 'D'
-        elif flags & pygit2.GIT_STATUS_WT_TYPECHANGE:
-            status += 'T'
-        else:
-            status += ' '
-
-        result.append((status, repoFile, oldRepoFile))
-
-    return submodule, result
-
-
 class StatusFetcher(SubmoduleExecutor):
     resultAvailable = Signal(str, list)
     branchInfoAvailable = Signal(str, str)
@@ -134,13 +75,7 @@ class StatusFetcher(SubmoduleExecutor):
 
     def fetch(self, submodules):
         self._needCheckBranch = len(submodules) > 1
-        if Git.RUN_SLOW and len(submodules) > 50 and os.name == "nt":
-            submoduleData = {}
-            for submodule in submodules or [None]:
-                submoduleData[submodule] = (self._showUntrackedFiles, self._showIgnoredFiles)
-            self.submit(submoduleData, _fetchStatusGit2, self._onResultAvailable, False)
-        else:
-            self.submit(submodules, self._fetchStatus, self._onResultAvailable)
+        self.submit(submodules, self._fetchStatus, self._onResultAvailable)
         logger.debug("Begin fetch submodules: %s", ",".join(
             submodules) if submodules else "None")
 
