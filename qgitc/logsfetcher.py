@@ -28,6 +28,7 @@ class LogsFetcher(QObject):
         self._errorData = b''
         self._threads: List[QThread] = []
         self._beginTime = None
+        self._pendingWorkers: dict = {}  # thread → worker, keeps ref alive until thread.finished
 
     def setSubmodules(self, submodules: List[str]):
         self._submodules = submodules
@@ -59,6 +60,7 @@ class LogsFetcher(QObject):
         self._thread.start()
 
         self._threads.append(self._thread)
+        self._pendingWorkers[self._thread] = self._worker
         if self._worker.needReportSlowFetch():
             self._beginTime = time.time()
 
@@ -69,8 +71,11 @@ class LogsFetcher(QObject):
             self._worker.localChangesAvailable.disconnect(
                 self._onLocalChangesAvailable)
             self._worker.requestInterruption()
-            self._worker.deleteLater()
-            self._worker = None
+            # Do NOT set _worker=None or call deleteLater() here — the
+            # worker thread is still alive and holds QProcess children
+            # with internal QBasicTimers.  Releasing the Python reference
+            # now would let GC destroy those C++ objects cross-thread,
+            # producing "QBasicTimer::stop: Failed" warnings.
 
         if self._thread and self._thread.isRunning():
             self._thread.quit()
@@ -78,8 +83,12 @@ class LogsFetcher(QObject):
             if force and ApplicationBase.instance().terminateThread(self._thread):
                 self._threads.remove(self._thread)
                 self._thread.finished.disconnect(self._onThreadFinished)
+                worker = self._pendingWorkers.pop(self._thread, None)
+                if worker:
+                    worker.deleteLater()
                 logger.warning("Terminating logs fetcher thread")
                 self._thread = None
+                self._worker = None
 
         if not force:
             return
@@ -107,10 +116,14 @@ class LogsFetcher(QObject):
 
         if worker == self._worker:
             report = worker.needReportSlowFetch()
-            self._thread.quit()
             self._errorData = self._worker.errorData
-            self._worker = None
             self.fetchFinished.emit(exitCode)
+            # Defer _worker cleanup until thread.finished fires —
+            # setting _worker=None here would release the Python
+            # reference while the thread is still alive, letting GC
+            # destroy QProcess children (with QBasicTimer internals)
+            # cross-thread.
+            self._thread.quit()
             if report:
                 seconds = int(time.time() - self._beginTime)
                 if seconds > 15:
@@ -129,6 +142,15 @@ class LogsFetcher(QObject):
         thread = self.sender()
         if thread in self._threads:
             self._threads.remove(thread)
+        # Clean up the worker now that its thread has fully stopped.
+        # This avoids releasing Python wrappers for QProcess children
+        # (with internal QBasicTimer) while the thread is still running.
+        worker = self._pendingWorkers.pop(thread, None)
+        if worker:
+            worker.deleteLater()
+        if thread is self._thread:
+            self._worker = None
+            self._thread = None
 
     @property
     def errorData(self):

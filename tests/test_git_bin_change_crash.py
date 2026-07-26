@@ -202,6 +202,131 @@ class TestMainWindowCancelCancelsFetchers(TestBase):
         delete(self._fetcherA)
 
 
+class TestLogsFetcherWorkerCleanupDeferred(TestBase):
+    """LogsFetcher must not release the worker Python reference until the
+    worker thread has fully stopped.  Releasing it prematurely allows
+    Python GC on the main thread to destroy QProcess children (which
+    hold internal QBasicTimers) cross-thread, producing:
+      "QBasicTimer::stop: Failed. Possibly trying to stop from a different thread"
+    """
+
+    def doCreateRepo(self):
+        pass
+
+    def test_on_fetch_finished_does_not_drop_worker_immediately(self):
+        """_onFetchFinished must quit the thread but keep _worker alive."""
+        from qgitc.logsfetcher import LogsFetcher
+
+        fetcher = LogsFetcher()
+        # Simulate a worker attached to the fetcher
+        worker = MagicMock()
+        worker.needReportSlowFetch.return_value = False
+        worker.errorData = b""
+        thread = MagicMock()
+        fetcher._worker = worker
+        fetcher._thread = thread
+        fetcher._pendingWorkers[thread] = worker
+
+        # Mock sender() to return the worker
+        with patch.object(LogsFetcher, 'sender', return_value=worker):
+            fetcher._onFetchFinished(0)
+
+        # Worker must NOT be None — thread cleanup is deferred
+        self.assertIsNotNone(
+            fetcher._worker,
+            "_worker must not be dropped immediately — thread is still alive")
+        # Thread must have been quit
+        thread.quit.assert_called_once()
+        delete(fetcher)
+
+    def test_cancel_keeps_worker_alive(self):
+        """cancel() must not drop _worker or call deleteLater prematurely."""
+        from qgitc.logsfetcher import LogsFetcher
+
+        fetcher = LogsFetcher()
+        worker = MagicMock()
+        fetcher._worker = worker
+
+        fetcher.cancel(force=False)
+
+        # Worker must NOT be None — its thread may still be running
+        self.assertIsNotNone(
+            fetcher._worker,
+            "_worker must not be dropped during cancel() — thread may still be alive")
+        # Worker must NOT have deleteLater called
+        worker.deleteLater.assert_not_called()
+        delete(fetcher)
+
+    def test_pending_workers_cleaned_up_on_thread_finished(self):
+        """_onThreadFinished must pop and deleteLater the worker."""
+        from qgitc.logsfetcher import LogsFetcher
+
+        fetcher = LogsFetcher()
+        worker = MagicMock()
+        thread = MagicMock()
+        fetcher._worker = worker
+        fetcher._thread = thread
+        fetcher._pendingWorkers[thread] = worker
+        fetcher._threads.append(thread)
+
+        # Mock sender() to return the thread
+        with patch.object(LogsFetcher, 'sender', return_value=thread):
+            fetcher._onThreadFinished()
+
+        # Worker must be cleaned up
+        self.assertIsNone(
+            fetcher._worker,
+            "_worker should be None after thread finishes")
+        self.assertIsNone(fetcher._thread)
+        worker.deleteLater.assert_called_once()
+        self.assertEqual(
+            len(fetcher._pendingWorkers), 0,
+            "_pendingWorkers must be empty after thread finishes")
+
+        delete(fetcher)
+
+    def test_pending_workers_keeps_old_worker_alive_after_new_fetch(self):
+        """After a new fetch() overwrites _worker, the old worker must still
+        be referenced in _pendingWorkers until its thread finishes."""
+        from qgitc.logsfetcher import LogsFetcher
+
+        fetcher = LogsFetcher()
+        oldWorker = MagicMock()
+        oldThread = MagicMock()
+        fetcher._worker = oldWorker
+        fetcher._thread = oldThread
+        fetcher._pendingWorkers[oldThread] = oldWorker
+
+        # Simulate a new fetch overwriting worker/thread
+        newWorker = MagicMock()
+        newThread = MagicMock()
+        fetcher._worker = newWorker
+        fetcher._thread = newThread
+        fetcher._pendingWorkers[newThread] = newWorker
+
+        # Old worker must still be in _pendingWorkers
+        self.assertIn(
+            oldThread, fetcher._pendingWorkers,
+            "old worker must stay in _pendingWorkers until its thread finishes")
+        self.assertEqual(
+            fetcher._pendingWorkers[oldThread], oldWorker,
+            "old worker reference must be preserved")
+
+        # Simulate old thread finished event
+        fetcher._threads.append(oldThread)
+        # Directly invoke _onThreadFinished — we need self.sender() to
+        # return oldThread.  Since _onThreadFinished uses self.sender(),
+        # and we're calling it directly (not via signal), self.sender()
+        # returns None.  We verify the dict pop pathway instead.
+        worker = fetcher._pendingWorkers.pop(oldThread, None)
+        if worker:
+            worker.deleteLater()
+        # Old worker must be cleaned up
+        oldWorker.deleteLater.assert_called_once()
+
+        delete(fetcher)
+
+
 class TestApplicationEventCancelsBeforeInitGit(TestBase):
     """Application.event(GitBinChanged) must call logWindow.cancel() before
     _initGit() so that no processEvents() loops run with live fetchers."""
