@@ -123,6 +123,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         super().__init__(submodules, branchDir, noLocalChanges, *args)
 
         self._fetchers: List[LogsFetcherImpl] = []
+        self._finishedFetchers: list = []  # keep fetchers alive until explicit cleanup
         self._eventLoop = None
 
         self._lccCommit = Commit()
@@ -142,6 +143,8 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
     def _onFetchNormalLogsFinished(self):
         fetcher = self.sender()
         self._fetchers.remove(fetcher)
+        fetcher.deleteLater()
+        self._finishedFetchers.append(fetcher)
         if not self._fetchers and self._eventLoop:
             self._eventLoop.quit()
 
@@ -187,6 +190,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             self._errorData.rstrip(b'\n')
 
         self.fetchFinished.emit(fetcher._exitCode)
+        self._finishedFetchers.clear()
 
     def _onFetchLogsFinished(self, fetcher: LogsFetcherImpl):
         repoDir = fetcher.repoDir
@@ -219,6 +223,8 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         fetcher = self.sender()
         self._fetchers.remove(fetcher)
+        fetcher.deleteLater()
+        self._finishedFetchers.append(fetcher)
 
         if self._queueTasks:
             nextFetcher = self._queueTasks.pop(0)
@@ -317,6 +323,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         self._eventLoop = None
         self.fetchFinished.emit(self._exitCode)
+        self._finishedFetchers.clear()
 
     def requestInterruption(self):
         self._interruptionRequested = True
@@ -339,4 +346,5 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         for fetcher in self._fetchers:
             fetcher.cancel()
         self._fetchers.clear()
+        self._finishedFetchers.clear()
         self._cleanupCompositeEmit()
