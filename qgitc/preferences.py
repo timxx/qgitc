@@ -107,6 +107,19 @@ class Preferences(QDialog):
         self.ui.btnEditGlobalActions.clicked.connect(
             self._onEditGlobalActionsClicked)
 
+    def exec(self):
+        try:
+            return super().exec()
+        finally:
+            # PySide hands ownership back to Python for exec() and never
+            # returns it, so the parent no longer keeps the dialog alive and
+            # the reference cycles inside it make it cyclic garbage. The
+            # collector runs in whichever thread crosses the allocation
+            # threshold, and destroying widgets outside the GUI thread leaves
+            # their timers registered in the GUI event dispatcher, which
+            # crashes on the next tick.
+            self.deleteLater()
+
     def _onBtnAddClicked(self, checked=False):
         self._tableViewAddItem(self.ui.tableView, ToolTableModel.Col_Suffix)
 

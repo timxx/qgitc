@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QDialog, QDialogButtonBox
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QWidget
+from shiboken6 import Shiboken
 
 from qgitc.preferences import Preferences
 from tests.base import TestBase
@@ -39,3 +40,23 @@ class TestPreferences(TestBase):
 
         QTest.mouseClick(self.preferences.ui.buttonBox.button(
             QDialogButtonBox.Ok), Qt.LeftButton)
+
+    def testExecDestroysDialogInGuiThread(self):
+        # exec() leaves the dialog owned by Python even when it has a parent,
+        # so anything left to the cyclic collector is destroyed by whichever
+        # thread happens to run the collection.
+        parent = QWidget()
+        preferences = Preferences(self.app.settings(), parent)
+
+        QTimer.singleShot(0, preferences.reject)
+        preferences.exec()
+        # processEvents() never delivers deferred deletions
+        self.app.sendPostedEvents(None, QEvent.DeferredDelete)
+
+        self.assertFalse(Shiboken.isValid(preferences))
+
+    def testBugPatternModelOwnedByWidget(self):
+        model = self.preferences.ui.linkEditWidget.tableView.model()
+
+        self.assertIsNotNone(model.parent())
+        self.assertFalse(Shiboken.ownedByPython(model))

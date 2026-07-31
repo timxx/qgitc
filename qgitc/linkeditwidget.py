@@ -179,7 +179,7 @@ class LinkEditWidget(QWidget):
         self._setupUi()
 
     def _setupUi(self):
-        model = BugPatternModel()
+        model = BugPatternModel(self)
         self.tableView = QTableView(self)
         self.tableView.setModel(model)
         self.tableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)

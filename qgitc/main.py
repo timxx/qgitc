@@ -23,6 +23,7 @@ from qgitc.application import Application
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import attachConsole, logger
 from qgitc.excepthandler import ExceptHandler
+from qgitc.gcdiag import install as installGcDiag
 from qgitc.gitutils import Git, GitProcess
 from qgitc.mainwindow import MainWindow
 from qgitc.shell import setup_shell_args
@@ -185,6 +186,7 @@ def _init_gui(cmd: str):
 
     sys.excepthook = ExceptHandler
     _setup_logging()
+    installGcDiag()
 
     styleName = app.settings().styleName()
     if styleName and styleName.lower() != app.style().name().lower():

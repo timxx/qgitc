@@ -48,6 +48,17 @@ class LlmProviderDialog(QDialog):
 
         self._reloadProvidersTable(selectRow=0)
 
+    def exec(self):
+        try:
+            return super().exec()
+        finally:
+            # exec() leaves the dialog owned by Python even though it has a
+            # parent, and the lambdas connected above keep it in a reference
+            # cycle. Without this the cyclic collector reclaims it, and it
+            # runs in whichever thread crosses the allocation threshold, which
+            # destroys the widget tree outside the GUI thread.
+            self.deleteLater()
+
     def providers(self) -> List[dict]:
         self._saveCurrentHeaders()
         result = []
