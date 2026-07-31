@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from datetime import timedelta
 from unittest.mock import patch
 
 from PySide6.QtCore import QEvent, QPointF, Qt
@@ -7,6 +8,7 @@ from PySide6.QtGui import QMouseEvent
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QMainWindow
 
+from qgitc.common import Commit
 from qgitc.events import CodeReviewEvent
 from qgitc.gitutils import Git
 from qgitc.windowtype import WindowType
@@ -436,8 +438,25 @@ class TestLogWindow(TestLogWindowBase):
         commit = logView.getCommit(1)
         self.assertEqual(1, len(commit.subCommits))
 
-    def testCompositeSelectionPreserved(self):
-        """Selection persists across composite incremental data replacements."""
+    def testCompositeBatchesAreIncremental(self):
+        """Each composite batch only carries the rows merged since the last one."""
+        self.waitForLoaded()
+
+        logView = self.window.ui.gitViewA.ui.logView
+        batches = []
+        logView.fetcher.logsAvailable.connect(lambda logs: batches.append(logs))
+
+        self.window.ui.acCompositeMode.trigger()
+        spyFetch = QSignalSpy(logView.fetcher.fetchFinished)
+        self.wait(10000, lambda: spyFetch.count() == 0)
+        self.wait(50)
+
+        self.assertEqual(logView.getCount(), 3)
+        self.assertEqual(3, sum(len(batch) for batch in batches),
+                         "batches must partition the rows, not repeat them")
+
+    def testCompositeSelectionFollowsCommit(self):
+        """Selection tracks its commit while later batches insert newer rows."""
         self.waitForLoaded()
 
         logView = self.window.ui.gitViewA.ui.logView
@@ -451,37 +470,24 @@ class TestLogWindow(TestLogWindowBase):
 
         self.assertEqual(logView.getCount(), 3)
 
-        # Select the middle commit (index 1)
+        # Select the middle commit
         commit = logView.getCommit(1)
-        sha1 = commit.sha1
         logView.setCurrentIndex(1)
         self.assertEqual(1, logView.currentIndex())
 
-        # In composite mode, preferSha1 must be set to survive data replacement
-        self.assertEqual(sha1, logView.preferSha1,
-                         "preferSha1 must be set in composite mode for selection survival")
+        # A late batch of newer commits must push the selection down with it
+        newer = Commit()
+        newer.sha1 = "f" * 40
+        newer.comments = "newer"
+        newer.author = "author"
+        newer.repoDir = "."
+        newer.committerDateTime = logView.getCommit(
+            0).committerDateTime + timedelta(minutes=5)
+        logView.fetcher.logsAvailable.emit([newer])
 
-    def testCompositePrefersha1OnSelect(self):
-        """Clicking a commit in composite mode sets preferSha1 to the new commit."""
-        self.waitForLoaded()
-
-        logView = self.window.ui.gitViewA.ui.logView
-
-        self.window.ui.acCompositeMode.trigger()
-        spyFetch = QSignalSpy(logView.fetcher.fetchFinished)
-        self.wait(10000, lambda: spyFetch.count() == 0)
-        self.wait(50)
-
-        self.assertEqual(logView.getCount(), 3)
-
-        # After composite load, auto-select sets preferSha1 for the first commit
-        self.assertIsNotNone(logView.preferSha1)
-
-        # Switch to a different commit — preferSha1 must track it
-        commit = logView.getCommit(1)
-        sha1 = commit.sha1
-        logView.switchToCommit(sha1)
-        self.assertEqual(sha1, logView.preferSha1)
+        self.assertEqual(2, logView.currentIndex())
+        self.assertIs(commit, logView.getCommit(logView.currentIndex()))
+        self.assertEqual([2], logView.getSelectedIndices())
 
     def _createMouseEvent(self, widget, line, modifiers=Qt.NoModifier, eventType=QEvent.Type.MouseButtonPress):
         """Helper to create a mouse event at a specific line"""

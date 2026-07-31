@@ -254,7 +254,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         submodules = filterSubmoduleByPath(self._submodules, paths)
 
         self._exitCode = 0
-        self._mergedLogs.clear()
+        self._cleanupCompositeEmit()
 
         self._eventLoop = QEventLoop()
         MAX_QUEUE_SIZE = 32

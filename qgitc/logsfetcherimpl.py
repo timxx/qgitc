@@ -22,7 +22,8 @@ log_fmt = "%H%x01%B%x01%an <%ae>%x01%ai%x01%cn <%ce>%x01%ci%x01%P"
 
 class LogsFetcherImpl(DataFetcher):
 
-    logsAvailable = Signal(list)
+    # see LogsFetcherWorkerBase.logsAvailable for why this is `object`
+    logsAvailable = Signal(object)
 
     def __init__(self, repoDir=None, parent=None):
         super().__init__(parent)

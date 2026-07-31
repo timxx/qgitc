@@ -4,6 +4,7 @@ import json
 import os
 import re
 import tempfile
+from bisect import bisect_right
 from typing import List
 
 from PySide6.QtCore import (
@@ -585,6 +586,8 @@ class LogView(QAbstractScrollArea, CommitSource):
     beginFetch = Signal()
     endFetch = Signal()
 
+    _MAX_REPO_TAGS = 5
+
     def __init__(self, parent=None):
         QAbstractScrollArea.__init__(self, parent)
         CommitSource.__init__(self)
@@ -609,6 +612,11 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.preferSha1 = None
         self.delayVisible = False
         self.delayUpdateParents = False
+
+        # composite mode keeps merging sub-repo commits into the selected row,
+        # remember what we last showed so the diff can be refreshed once
+        self._compositeSelCommit: Commit = None
+        self._compositeSelSubCount = -1
 
         # Drag and drop state
         self._dragStartPos = None
@@ -824,6 +832,8 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.data.clear()
         self.curIdx = -1
         self.selectedIndices.clear()
+        self._compositeSelCommit = None
+        self._compositeSelSubCount = -1
         self.__resetGraphs()
         self.marker.clear()
         self.delayVisible = False
@@ -877,6 +887,7 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.verticalScrollBar().setValue(startLine + 1)
 
     def setCurrentIndex(self, index, clearSelection=True):
+        self.preferSha1 = None
         if index == self.curIdx and not clearSelection:
             return
 
@@ -888,17 +899,9 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.selectedIndices.add(index)
             self.selectionAnchor = -1  # Reset anchor on new selection
 
-        # In composite mode, remember the selected SHA so it survives data replacement
         if index >= 0 and index < len(self.data):
-            commit = self.data[index]
-            if self._isCompositeMode():
-                self.preferSha1 = commit.sha1
-            else:
-                self.preferSha1 = None
             self.ensureVisible(self.curIdx)
             self.__ensureChildren(index)
-        else:
-            self.preferSha1 = None
 
         self.viewport().update()
         self.currentIndexChanged.emit(index)
@@ -1496,19 +1499,29 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.updateGeometries()
 
-    def __onCompositeLogsAvailable(self, logs):
-        # Snapshot subCommits length of the currently selected commit
-        # so we can detect if it changed and refresh the diff.
-        oldSubCommitsLen = -1
-        prevCommit = None
-        if self.curIdx >= 0 and self.curIdx < len(self.data):
-            prevCommit = self.data[self.curIdx]
-            oldSubCommitsLen = len(prevCommit.subCommits)
+    def __onCompositeLogsAvailable(self, logs: List[Commit]):
+        if not logs:
+            return
 
-        self.data = logs
+        scrollBar = self.verticalScrollBar()
+        firstVisible = scrollBar.value()
+        insertPositions = None
 
-        if self.currentIndex() == -1:
-            # First emission: try preferSha1, then auto-select
+        if not self.data:
+            # own the list, clear() mutates it in place
+            self.data = list(logs)
+        else:
+            insertPositions = self._mergeCompositeLogs(logs)
+            if self.curIdx != -1:
+                self.curIdx = LogView._remapIndex(
+                    self.curIdx, insertPositions)
+                self.selectedIndices = {
+                    LogView._remapIndex(i, insertPositions)
+                    for i in self.selectedIndices}
+                self.selectionAnchor = LogView._remapIndex(
+                    self.selectionAnchor, insertPositions)
+
+        if self.curIdx == -1:
             if self.preferSha1:
                 idx = self.findCommitIndex(self.preferSha1)
                 if idx != -1:
@@ -1517,22 +1530,93 @@ class LogView(QAbstractScrollArea, CommitSource):
                     self.selectedIndices.add(idx)
             elif self._selectOnFetch:
                 self.setCurrentIndex(0)
-        elif self.preferSha1:
-            # Subsequent emission: restore selection by SHA
-            idx = self.findCommitIndex(self.preferSha1)
-            if idx != -1:
-                self.curIdx = idx
-                self.selectedIndices.clear()
-                self.selectedIndices.add(idx)
-                # Refresh diff if subCommits changed
-                if prevCommit is not None and len(prevCommit.subCommits) != oldSubCommitsLen:
-                    self.currentIndexChanged.emit(idx)
-            else:
-                # Previously selected commit disappeared — fall back to first
-                self.setCurrentIndex(0)
+
+        if self.curIdx >= 0 and self.curIdx < len(self.data):
+            commit = self.data[self.curIdx]
+            if commit is not self._compositeSelCommit:
+                self._compositeSelCommit = commit
+                self._compositeSelSubCount = len(commit.subCommits)
 
         self.updateGeometries()
+
+        # keep the viewport anchored to the same commit while rows stream in
+        if insertPositions and firstVisible > 0:
+            scrollBar.setValue(
+                LogView._remapIndex(firstVisible, insertPositions))
+
         self.viewport().update()
+
+    def _mergeCompositeLogs(self, newLogs: List[Commit]):
+        """Merge a newest-first batch into self.data, keeping the list ordered.
+
+        `newLogs` must be newest first, which is what logsAvailable delivers.
+        Returns the old-list positions the new rows were inserted in front of,
+        which _remapIndex uses to move stored indices along with their commits.
+        """
+        old = self.data
+        oldCount = len(old)
+
+        # local change rows carry no date and always stay on top
+        pinned = 0
+        while pinned < oldCount and old[pinned].committerDateTime is None:
+            pinned += 1
+
+        # a batch is tiny next to the accumulated log, so binary search each
+        # row instead of walking the whole list, and splice with slices
+        insertPositions = []
+        pos = pinned
+        for commit in newLogs:
+            pos = max(pos, LogView._findInsertPos(
+                old, commit.committerDateTime, pos, oldCount))
+            insertPositions.append(pos)
+
+        merged = []
+        prev = 0
+        for pos, commit in zip(insertPositions, newLogs):
+            if pos > prev:
+                merged += old[prev:pos]
+                prev = pos
+            merged.append(commit)
+        merged += old[prev:]
+
+        self.data = merged
+        return insertPositions
+
+    @staticmethod
+    def _findInsertPos(data: List[Commit], dateTime, lo: int, hi: int):
+        """First index in the newest-first range [lo, hi) that is older than dateTime."""
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if data[mid].committerDateTime < dateTime:
+                hi = mid
+            else:
+                lo = mid + 1
+        return lo
+
+    @staticmethod
+    def _remapIndex(index: int, insertPositions: List[int]):
+        """Where `index` ended up after rows were inserted at insertPositions."""
+        if index < 0:
+            return index
+        return index + bisect_right(insertPositions, index)
+
+    @staticmethod
+    def _repoTagTexts(commit: Commit):
+        """Repo tag labels for a row, folding the overflow into a '+N' tag.
+
+        A row can merge one commit per repo, so without a cap the paint cost
+        per visible line grows with the number of submodules.
+        """
+        texts = [makeRepoName(commit.repoDir)]
+        subCommits = commit.subCommits
+        limit = LogView._MAX_REPO_TAGS
+        if len(subCommits) + 1 <= limit:
+            texts.extend(makeRepoName(c.repoDir) for c in subCommits)
+        else:
+            texts.extend(makeRepoName(c.repoDir)
+                         for c in subCommits[:limit - 2])
+            texts.append("+%d" % (len(subCommits) - (limit - 2)))
+        return texts
 
     def _isCompositeMode(self):
         app = ApplicationBase.instance()
@@ -1545,12 +1629,30 @@ class LogView(QAbstractScrollArea, CommitSource):
         elif self.curIdx == -1 and self.data and self._selectOnFetch:
             self.setCurrentIndex(0)
 
+        self.__refreshCompositeSelection()
+
         self.endFetch.emit()
         self.viewport().update()
 
         if exitCode != 0 and self.fetcher.errorData:
             QMessageBox.critical(self, self.window().windowTitle(),
                                  self.fetcher.errorData.decode("utf-8"))
+
+    def __refreshCompositeSelection(self):
+        """Reload the diff once if the selected row gained sub-repo commits."""
+        commit = self._compositeSelCommit
+        self._compositeSelCommit = None
+        subCount = self._compositeSelSubCount
+        self._compositeSelSubCount = -1
+
+        if commit is None or self.curIdx == -1:
+            return
+        if len(commit.subCommits) == subCount:
+            return
+        if self.curIdx >= len(self.data) or self.data[self.curIdx] is not commit:
+            return
+
+        self.currentIndexChanged.emit(self.curIdx)
 
     def __onLocalChangesAvailable(self, lccCommit: Commit, lucCommit: Commit):
         parent_sha1 = self.data[0].sha1 if self.data else None
@@ -1757,6 +1859,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         return rect
 
     def __drawTag(self, painter: QPainter, rect, color, text, bold=False, textColor=Qt.black):
+        if rect.width() <= 0:
+            return
+
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, False)
 
@@ -2358,12 +2463,11 @@ class LogView(QAbstractScrollArea, CommitSource):
             # sub-repo name
             needMargin = False
             if commit.repoDir:
-                text = makeRepoName(commit.repoDir)
                 color = colorSchema.RepoTagBg
                 textColor = colorSchema.RepoTagFg
-                self.__drawTag(painter, rect, color, text, textColor=textColor)
-                for subCommit in commit.subCommits:
-                    text = makeRepoName(subCommit.repoDir)
+                for text in LogView._repoTagTexts(commit):
+                    if rect.width() <= 0:
+                        break
                     self.__drawTag(painter, rect, color,
                                    text, textColor=textColor)
                 needMargin = True

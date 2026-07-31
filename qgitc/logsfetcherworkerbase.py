@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List
+from typing import Dict, List, Set
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from qgitc.common import Commit
 from qgitc.gitutils import Git
@@ -11,7 +11,10 @@ from qgitc.gitutils import Git
 class LogsFetcherWorkerBase(QObject):
 
     localChangesAvailable = Signal(Commit, Commit)
-    logsAvailable = Signal(list)
+    # object rather than list: PySide maps `list` to QVariantList, which boxes
+    # every element into a QVariant on emit and unboxes it again on delivery.
+    # For composite logs that is a per-emit cost proportional to the payload.
+    logsAvailable = Signal(object)
     fetchFinished = Signal(int)
 
     _COMPOSITE_EMIT_INTERVAL_MS = 100
@@ -31,11 +34,17 @@ class LogsFetcherWorkerBase(QObject):
         self._interruptionRequested = False
 
         self._mergedLogs: Dict[any, Commit] = {}
+        # repos already represented by each merged row, so merging stays O(1)
+        # instead of rescanning subCommits
+        self._mergedRepoDirs: Dict[any, Set[str]] = {}
+        # rows added since the last emission; only these get sent downstream
+        self._newLogs: List[Commit] = []
 
         self._compositeEmitTimer = QTimer(self)
         self._compositeEmitTimer.setSingleShot(True)
         self._compositeEmitTimer.timeout.connect(self._onCompositeEmitTimeout)
         self._pendingCompositeEmit = False
+        self._awaitingConsumer = False
 
     def run(self):
         """Override this method in subclasses to implement the fetching logic."""
@@ -69,18 +78,25 @@ class LogsFetcherWorkerBase(QObject):
             # require same day at least
             key = (log.committerDateTime.date(),
                    log.comments, log.author)
-            if key in self._mergedLogs.keys():
-                main_commit: Commit = self._mergedLogs[key]
+            repoDirs = self._mergedRepoDirs.get(key)
+            if repoDirs is None:
+                self._addMergedLog(key, log, repoDir)
+            elif repoDir in repoDirs:
                 # don't merge commits in same repo
-                if LogsFetcherWorkerBase._isSameRepoCommit(main_commit, repoDir):
-                    self._mergedLogs[log.sha1] = log
-                else:
-                    main_commit.subCommits.append(log)
+                self._addMergedLog(log.sha1, log, repoDir)
             else:
-                self._mergedLogs[key] = log
+                self._mergedLogs[key].subCommits.append(log)
+                repoDirs.add(repoDir)
 
         self._exitCode |= exitCode
         self._handleError(errorData, branch, repoDir)
+
+    def _addMergedLog(self, key, log: Commit, repoDir: str):
+        if key in self._mergedLogs:
+            return
+        self._mergedLogs[key] = log
+        self._mergedRepoDirs[key] = {repoDir}
+        self._newLogs.append(log)
 
     def _handleError(self, errorData, branch, repoDir):
         if errorData and errorData not in self._errors:
@@ -96,20 +112,34 @@ class LogsFetcherWorkerBase(QObject):
         return False
 
     def _emitCompositeLogsAvailable(self):
-        if not self._mergedLogs:
+        """Emit the rows merged since the last emission, newest first."""
+        if not self._newLogs:
             return
-        sortedLogs = sorted(self._mergedLogs.values(),
-                            key=lambda x: x.committerDateTime, reverse=True)
-        self.logsAvailable.emit(sortedLogs)
+        batch = self._newLogs
+        self._newLogs = []
+        batch.sort(key=lambda x: x.committerDateTime, reverse=True)
+        self._awaitingConsumer = True
+        self.logsAvailable.emit(batch)
 
     def _scheduleCompositeEmit(self):
         """Schedule a batched incremental emission after _COMPOSITE_EMIT_INTERVAL_MS.
 
         Call this after each submodule's logs have been merged.  The emission is
         deferred so that fast completions are batched together, reducing UI churn.
+        Nothing is queued while a previous batch is still unacknowledged, which
+        keeps the consumer from falling behind and piling up events.
         """
         self._pendingCompositeEmit = True
+        if self._awaitingConsumer:
+            return
         if not self._compositeEmitTimer.isActive():
+            self._compositeEmitTimer.start(self._COMPOSITE_EMIT_INTERVAL_MS)
+
+    @Slot()
+    def logsConsumed(self):
+        """Acknowledgement from the consumer that the last batch was handled."""
+        self._awaitingConsumer = False
+        if self._pendingCompositeEmit and not self._compositeEmitTimer.isActive():
             self._compositeEmitTimer.start(self._COMPOSITE_EMIT_INTERVAL_MS)
 
     def _onCompositeEmitTimeout(self):
@@ -134,20 +164,14 @@ class LogsFetcherWorkerBase(QObject):
         """Cancel pending emission and clear accumulated state."""
         self._compositeEmitTimer.stop()
         self._pendingCompositeEmit = False
+        self._awaitingConsumer = False
         self._mergedLogs.clear()
+        self._mergedRepoDirs.clear()
+        self._newLogs.clear()
 
     @property
     def errorData(self):
         return self._errorData
-
-    @staticmethod
-    def _isSameRepoCommit(commit: Commit, repoDir: str):
-        if commit.repoDir == repoDir:
-            return True
-        for commit in commit.subCommits:
-            if commit.repoDir == repoDir:
-                return True
-        return False
 
     @staticmethod
     def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):

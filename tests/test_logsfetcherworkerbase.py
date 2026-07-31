@@ -18,7 +18,7 @@ class _TestWorker(LogsFetcherWorkerBase):
 
 
 class TestLogsFetcherWorkerBaseComposite(TestBase):
-    """Tests focused on the new incremental emission primitives."""
+    """Tests focused on the incremental emission primitives."""
 
     def doCreateRepo(self):
         """No repo needed for these unit-level tests."""
@@ -32,6 +32,21 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         self._worker.deleteLater()
         self.processEvents()
         super().tearDown()
+
+    def _makeCommit(self, sha1, dateTime, comments="msg", author="author", repoDir="repo"):
+        commit = Commit()
+        commit.sha1 = sha1
+        commit.comments = comments
+        commit.author = author
+        commit.repoDir = repoDir
+        commit.committerDateTime = dateTime
+        commit.subCommits = []
+        return commit
+
+    def _merge(self, key, commit):
+        """Record a commit the same way _handleCompositeLogs does."""
+        self._worker._mergedLogs[key] = commit
+        self._worker._newLogs.append(commit)
 
     # ------------------------------------------------------------------
     #  _scheduleCompositeEmit
@@ -57,17 +72,10 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
 
     def testScheduleCompositeEmit_emitsLogsOnTimeout(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key",)] = c1
+        self._merge(("key",), self._makeCommit("a" * 40, now))
 
         captured = []
-
-        def _capture(logs):
-            captured.append(logs)
-
-        self._worker.logsAvailable.connect(_capture)
+        self._worker.logsAvailable.connect(captured.append)
         self._worker._scheduleCompositeEmit()
         spy = QSignalSpy(self._worker.logsAvailable)
         spy.wait(200)
@@ -76,75 +84,146 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         self.assertEqual(1, len(captured[0]))
 
     # ------------------------------------------------------------------
-    #  _mergedLogs persistence across incremental emits
+    #  Incremental payload: only newly merged commits are emitted
     # ------------------------------------------------------------------
-    def testEmitDoesNotClearMergedLogs(self):
+    def testEmitOnlyCarriesNewLogs(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key1",)] = c1
+        c1 = self._makeCommit("a" * 40, now)
+        self._merge(("key1",), c1)
+
+        captured = []
+        self._worker.logsAvailable.connect(captured.append)
+
+        self._worker._emitCompositeLogsAvailable()
+        self.assertEqual([[c1]], captured)
+
+        self._worker.logsConsumed()
+        c2 = self._makeCommit("b" * 40, now - timedelta(hours=1))
+        self._merge(("key2",), c2)
+
+        self._worker._emitCompositeLogsAvailable()
+        self.assertEqual(2, len(captured))
+        self.assertEqual([c2], captured[1],
+                         "second batch must only carry the newly merged commit")
+
+    def testEmitClearsNewLogsButKeepsMergedLogs(self):
+        now = datetime.now()
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
 
         self._worker._emitCompositeLogsAvailable()
         self.assertEqual(1, len(self._worker._mergedLogs),
                          "_mergedLogs must survive _emitCompositeLogsAvailable")
+        self.assertEqual(0, len(self._worker._newLogs),
+                         "_newLogs must be drained by the emission")
 
-        c2 = Commit()
-        c2.sha1 = "b" * 40
-        c2.committerDateTime = now - timedelta(hours=1)
-        self._worker._mergedLogs[("key2",)] = c2
+    def testEmitNoNewLogs_noEmit(self):
+        now = datetime.now()
+        # _mergedLogs is non-empty but nothing is new since the last emit
+        self._worker._mergedLogs[("key1",)] = self._makeCommit("a" * 40, now)
 
-        self._worker._emitCompositeLogsAvailable()
-        self.assertEqual(2, len(self._worker._mergedLogs),
-                         "second emit must still carry both entries")
-
-    def testEmitEmptyMergedLogs_noEmit(self):
         spy = QSignalSpy(self._worker.logsAvailable)
         self._worker._emitCompositeLogsAvailable()
         self.assertEqual(0, spy.count())
 
-    def testMergedLogsAccumulatesAcrossScheduleEmits(self):
+    def testEmitPassesSameListObject(self):
+        """logsAvailable uses Signal(object) so the payload must not be copied."""
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key1",)] = c1
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
 
         captured = []
+        self._worker.logsAvailable.connect(captured.append)
+        self._worker._emitCompositeLogsAvailable()
 
-        def _capture(logs):
-            captured.append(logs)
-
-        self._worker.logsAvailable.connect(_capture)
-        self._worker._scheduleCompositeEmit()
-        spy = QSignalSpy(self._worker.logsAvailable)
-        spy.wait(200)
         self.assertEqual(1, len(captured))
-        self.assertEqual(1, len(captured[0]))
-        self.assertEqual(1, len(self._worker._mergedLogs),
-                         "mergedLogs must persist")
+        self.assertIsInstance(captured[0], list)
+        self.assertIsNot(captured[0], self._worker._newLogs,
+                         "the drained batch must not alias the pending buffer")
 
-        c2 = Commit()
-        c2.sha1 = "b" * 40
-        c2.committerDateTime = now - timedelta(hours=1)
-        self._worker._mergedLogs[("key2",)] = c2
+    def testEmitSortsBatchDescendingByCommitterDateTime(self):
+        now = datetime.now()
+        c1 = self._makeCommit("a" * 40, now)
+        c2 = self._makeCommit("b" * 40, now - timedelta(hours=2))
+        c3 = self._makeCommit("c" * 40, now - timedelta(hours=1))
 
+        self._merge(("k1",), c1)
+        self._merge(("k2",), c2)
+        self._merge(("k3",), c3)
+
+        captured = []
+        self._worker.logsAvailable.connect(captured.append)
+        self._worker._emitCompositeLogsAvailable()
+
+        self.assertEqual(1, len(captured))
+        self.assertEqual([c1, c3, c2], captured[0],
+                         "batch sorted newest-first by committerDateTime")
+
+    # ------------------------------------------------------------------
+    #  Backpressure handshake
+    # ------------------------------------------------------------------
+    def testEmitMarksAwaitingConsumer(self):
+        now = datetime.now()
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
+
+        self.assertFalse(self._worker._awaitingConsumer)
+        self._worker._emitCompositeLogsAvailable()
+        self.assertTrue(self._worker._awaitingConsumer)
+
+    def testScheduleDoesNotArmTimerWhileAwaitingConsumer(self):
+        now = datetime.now()
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
+        self._worker._emitCompositeLogsAvailable()
+        self.assertTrue(self._worker._awaitingConsumer)
+
+        self._merge(("key2",), self._makeCommit(
+            "b" * 40, now - timedelta(hours=1)))
         self._worker._scheduleCompositeEmit()
-        spy.wait(200)
-        self.assertEqual(2, len(captured))
-        self.assertEqual(2, len(captured[1]),
-                         "second batch must include both commits")
-        self.assertEqual(2, len(self._worker._mergedLogs))
+
+        self.assertTrue(self._worker._pendingCompositeEmit)
+        self.assertFalse(self._worker._compositeEmitTimer.isActive(),
+                         "must not queue more batches until the consumer acks")
+
+    def testLogsConsumedReleasesBackpressure(self):
+        now = datetime.now()
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
+        self._worker._emitCompositeLogsAvailable()
+
+        self._merge(("key2",), self._makeCommit(
+            "b" * 40, now - timedelta(hours=1)))
+        self._worker._scheduleCompositeEmit()
+        self.assertFalse(self._worker._compositeEmitTimer.isActive())
+
+        self._worker.logsConsumed()
+        self.assertFalse(self._worker._awaitingConsumer)
+        self.assertTrue(self._worker._compositeEmitTimer.isActive(),
+                        "ack must re-arm the timer when a batch is pending")
+
+    def testLogsConsumedWithoutPending_doesNotArmTimer(self):
+        self._worker._awaitingConsumer = True
+        self._worker.logsConsumed()
+        self.assertFalse(self._worker._awaitingConsumer)
+        self.assertFalse(self._worker._compositeEmitTimer.isActive())
+
+    def testFlushIgnoresBackpressure(self):
+        now = datetime.now()
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
+        self._worker._emitCompositeLogsAvailable()
+        self.assertTrue(self._worker._awaitingConsumer)
+
+        self._merge(("key2",), self._makeCommit(
+            "b" * 40, now - timedelta(hours=1)))
+        self._worker._pendingCompositeEmit = True
+
+        spy = QSignalSpy(self._worker.logsAvailable)
+        self._worker._flushCompositeEmit()
+        self.assertEqual(1, spy.count(),
+                         "final flush must deliver even while awaiting an ack")
 
     # ------------------------------------------------------------------
     #  Interruption guards
     # ------------------------------------------------------------------
     def testScheduleEmit_skipsWhenInterrupted(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key1",)] = c1
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
 
         spy = QSignalSpy(self._worker.logsAvailable)
         self._worker._scheduleCompositeEmit()
@@ -155,10 +234,7 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
 
     def testFlushEmit_skipsWhenInterrupted(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key1",)] = c1
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
 
         spy = QSignalSpy(self._worker.logsAvailable)
         self._worker._pendingCompositeEmit = True
@@ -172,10 +248,7 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
     # ------------------------------------------------------------------
     def testFlushEmitsImmediately(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key1",)] = c1
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
 
         spy = QSignalSpy(self._worker.logsAvailable)
         self._worker._pendingCompositeEmit = True
@@ -201,37 +274,26 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
     # ------------------------------------------------------------------
     def testCleanupClearsEverything(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
-        self._worker._mergedLogs[("key1",)] = c1
+        self._merge(("key1",), self._makeCommit("a" * 40, now))
         self._worker._scheduleCompositeEmit()
+        self._worker._awaitingConsumer = True
 
         self._worker._cleanupCompositeEmit()
         self.assertFalse(self._worker._compositeEmitTimer.isActive())
         self.assertFalse(self._worker._pendingCompositeEmit)
+        self.assertFalse(self._worker._awaitingConsumer)
         self.assertEqual(0, len(self._worker._mergedLogs))
+        self.assertEqual(0, len(self._worker._newLogs))
 
     # ------------------------------------------------------------------
     #  _handleCompositeLogs merge / deduplication
     # ------------------------------------------------------------------
     def testHandleCompositeLogs_mergeByKey(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.comments = "same message"
-        c1.author = "same author"
-        c1.repoDir = "repoA"
-        c1.committerDateTime = now
-        c1.subCommits = []
-
-        c2 = Commit()
-        c2.sha1 = "b" * 40
-        c2.comments = "same message"
-        c2.author = "same author"
-        c2.repoDir = "repoB"
-        c2.committerDateTime = now
-        c2.subCommits = []
+        c1 = self._makeCommit("a" * 40, now, "same message",
+                              "same author", "repoA")
+        c2 = self._makeCommit("b" * 40, now, "same message",
+                              "same author", "repoB")
 
         self._worker._handleCompositeLogs([c1], "repoA", b"main", 0, b"")
         self.assertEqual(1, len(self._worker._mergedLogs))
@@ -243,23 +305,36 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         merged = self._worker._mergedLogs[key]
         self.assertEqual(1, len(merged.subCommits))
 
+    def testHandleCompositeLogs_mergedCommitIsNotReportedAsNew(self):
+        """A commit folded into an existing row must not be emitted separately."""
+        now = datetime.now()
+        c1 = self._makeCommit("a" * 40, now, "same message",
+                              "same author", "repoA")
+        c2 = self._makeCommit("b" * 40, now, "same message",
+                              "same author", "repoB")
+
+        self._worker._handleCompositeLogs([c1], "repoA", b"main", 0, b"")
+        self._worker._newLogs.clear()
+
+        self._worker._handleCompositeLogs([c2], "repoB", b"main", 0, b"")
+        self.assertEqual(0, len(self._worker._newLogs),
+                         "sub-commit merges add no new rows")
+
+    def testHandleCompositeLogs_newCommitIsReportedAsNew(self):
+        now = datetime.now()
+        c1 = self._makeCommit("a" * 40, now, "msg one", "author", "repoA")
+        c2 = self._makeCommit("b" * 40, now, "msg two", "author", "repoB")
+
+        self._worker._handleCompositeLogs([c1], "repoA", b"main", 0, b"")
+        self._worker._newLogs.clear()
+
+        self._worker._handleCompositeLogs([c2], "repoB", b"main", 0, b"")
+        self.assertEqual([c2], self._worker._newLogs)
+
     def testHandleCompositeLogs_noMergeSameRepo(self):
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.comments = "msg"
-        c1.author = "author"
-        c1.repoDir = "repoA"
-        c1.committerDateTime = now
-        c1.subCommits = []
-
-        c2 = Commit()
-        c2.sha1 = "b" * 40
-        c2.comments = "msg"
-        c2.author = "author"
-        c2.repoDir = "repoA"
-        c2.committerDateTime = now
-        c2.subCommits = []
+        c1 = self._makeCommit("a" * 40, now, "msg", "author", "repoA")
+        c2 = self._makeCommit("b" * 40, now, "msg", "author", "repoA")
 
         self._worker._handleCompositeLogs([c1], "repoA", b"main", 0, b"")
         self._worker._handleCompositeLogs([c2], "repoA", b"main", 0, b"")
@@ -270,36 +345,21 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         key = (c1.committerDateTime.date(), c1.comments, c1.author)
         self.assertEqual(self._worker._mergedLogs[key].sha1, c1.sha1)
         self.assertEqual(0, len(self._worker._mergedLogs[key].subCommits))
+        self.assertEqual([c1, c2], self._worker._newLogs,
+                         "a same-repo duplicate is a new row of its own")
 
-    # ------------------------------------------------------------------
-    #  Sort order
-    # ------------------------------------------------------------------
-    def testEmitSortsDescendingByCommitterDateTime(self):
+    def testHandleCompositeLogs_thirdRepoMergesAfterSameRepoSplit(self):
+        """The repoDir bookkeeping must track sub-commits, not just the main row."""
         now = datetime.now()
-        c1 = Commit()
-        c1.sha1 = "a" * 40
-        c1.committerDateTime = now
+        c1 = self._makeCommit("a" * 40, now, "msg", "author", "repoA")
+        c2 = self._makeCommit("b" * 40, now, "msg", "author", "repoB")
+        c3 = self._makeCommit("c" * 40, now, "msg", "author", "repoB")
 
-        c2 = Commit()
-        c2.sha1 = "b" * 40
-        c2.committerDateTime = now - timedelta(hours=2)
+        self._worker._handleCompositeLogs([c1], "repoA", b"main", 0, b"")
+        self._worker._handleCompositeLogs([c2], "repoB", b"main", 0, b"")
+        self._worker._handleCompositeLogs([c3], "repoB", b"main", 0, b"")
 
-        c3 = Commit()
-        c3.sha1 = "c" * 40
-        c3.committerDateTime = now - timedelta(hours=1)
-
-        self._worker._mergedLogs = {
-            ("k1",): c1, ("k2",): c2, ("k3",): c3,
-        }
-
-        captured = []
-
-        def _capture(logs):
-            captured.append(logs)
-
-        self._worker.logsAvailable.connect(_capture)
-        self._worker._emitCompositeLogsAvailable()
-        self.assertEqual(1, len(captured))
-        result = captured[0]
-        self.assertEqual([c1, c3, c2], result,
-                         "sorted newest-first by committerDateTime")
+        key = (c1.committerDateTime.date(), c1.comments, c1.author)
+        self.assertEqual([c2], self._worker._mergedLogs[key].subCommits)
+        self.assertIn(c3.sha1, self._worker._mergedLogs,
+                      "repoB already contributed, so c3 becomes its own row")

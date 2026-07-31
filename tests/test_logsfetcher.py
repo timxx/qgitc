@@ -8,6 +8,7 @@ from PySide6.QtCore import QThread
 
 from qgitc.logsfetcher import LogsFetcher
 from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
+from tests.base import TestBase
 
 
 class _MockWorker(LogsFetcherWorkerBase):
@@ -110,3 +111,45 @@ class TestLogsFetcherCancel(unittest.TestCase):
 
         self.assertIsNotNone(fetcher._worker)
         self.assertIsNot(fetcher._worker, oldWorker)
+
+
+class TestLogsFetcherBackpressure(TestBase):
+    """The worker must learn when a delivered batch has been consumed."""
+
+    def doCreateRepo(self):
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self._fetcher = LogsFetcher()
+        self._worker = _MockWorker([], None, True)
+        self._fetcher._worker = self._worker
+        self._worker.logsAvailable.connect(self._fetcher._onLogsAvailable)
+
+    def tearDown(self):
+        self._worker.deleteLater()
+        self.processEvents()
+        super().tearDown()
+
+    def testDeliveredBatchIsAcknowledged(self):
+        forwarded = []
+        self._fetcher.logsAvailable.connect(forwarded.append)
+
+        self._worker._awaitingConsumer = True
+        self._worker.logsAvailable.emit([])
+        self.assertEqual([[]], forwarded)
+
+        self.assertTrue(self._worker._awaitingConsumer,
+                        "the ack is queued, not immediate")
+        self.processEvents()
+        self.assertFalse(self._worker._awaitingConsumer)
+
+    def testStaleWorkerIsNotAcknowledged(self):
+        self._fetcher._worker = None
+        self._worker._awaitingConsumer = True
+
+        self._worker.logsAvailable.emit([])
+        self.processEvents()
+
+        self.assertTrue(self._worker._awaitingConsumer,
+                        "batches from a replaced worker must be dropped")

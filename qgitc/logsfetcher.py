@@ -3,7 +3,7 @@
 import time
 from typing import List
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QMetaObject, QObject, Qt, QThread, Signal
 
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit, logger
@@ -14,7 +14,8 @@ from qgitc.logsfetcherworkerbase import LogsFetcherWorkerBase
 class LogsFetcher(QObject):
 
     localChangesAvailable = Signal(Commit, Commit)
-    logsAvailable = Signal(list)
+    # see LogsFetcherWorkerBase.logsAvailable for why this is `object`
+    logsAvailable = Signal(object)
     fetchFinished = Signal(int)
     fetchTooSlow = Signal(int)
 
@@ -97,6 +98,10 @@ class LogsFetcher(QObject):
         worker = self.sender()
         if worker == self._worker:
             self.logsAvailable.emit(logs)
+            # receivers are called synchronously, so the batch is done by now;
+            # let the worker queue the next one
+            QMetaObject.invokeMethod(
+                worker, "logsConsumed", Qt.QueuedConnection)
         else:
             logger.info("_onLogsAvailable but thread changed")
 
