@@ -618,6 +618,9 @@ class LogView(QAbstractScrollArea, CommitSource):
         self._compositeSelCommit: Commit = None
         self._compositeSelSubCount = -1
 
+        # the row we selected for the user while logs were still streaming in
+        self._provisionalSelCommit: Commit = None
+
         # Drag and drop state
         self._dragStartPos = None
         self._dropIndicatorLine = -1
@@ -834,6 +837,7 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.selectedIndices.clear()
         self._compositeSelCommit = None
         self._compositeSelSubCount = -1
+        self._provisionalSelCommit = None
         self.__resetGraphs()
         self.marker.clear()
         self.delayVisible = False
@@ -888,6 +892,7 @@ class LogView(QAbstractScrollArea, CommitSource):
 
     def setCurrentIndex(self, index, clearSelection=True):
         self.preferSha1 = None
+        self._provisionalSelCommit = None
         if index == self.curIdx and not clearSelection:
             return
 
@@ -1486,7 +1491,7 @@ class LogView(QAbstractScrollArea, CommitSource):
             self.viewport().update()
             self.delayUpdateParents = False
 
-        if self.currentIndex() == -1:
+        if self.curIdx == -1 or self.__isSelectionProvisional():
             if self.preferSha1:
                 begin = len(self.data) - len(logs)
                 idx = self.findCommitIndex(self.preferSha1, begin)
@@ -1494,8 +1499,8 @@ class LogView(QAbstractScrollArea, CommitSource):
                     self.setCurrentIndex(idx)
                     # might not visible at the time
                     self.delayVisible = True
-            elif self._selectOnFetch:
-                self.setCurrentIndex(0)
+            elif self.curIdx == -1 and self._selectOnFetch:
+                self.__selectNewestRow()
 
         self.updateGeometries()
 
@@ -1521,15 +1526,15 @@ class LogView(QAbstractScrollArea, CommitSource):
                 self.selectionAnchor = LogView._remapIndex(
                     self.selectionAnchor, insertPositions)
 
-        if self.curIdx == -1:
+        if self.curIdx == -1 or self.__isSelectionProvisional():
             if self.preferSha1:
                 idx = self.findCommitIndex(self.preferSha1)
                 if idx != -1:
-                    self.curIdx = idx
-                    self.selectedIndices.clear()
-                    self.selectedIndices.add(idx)
-            elif self._selectOnFetch:
-                self.setCurrentIndex(0)
+                    self.setCurrentIndex(idx)
+                    # might not visible at the time
+                    self.delayVisible = True
+            elif self.curIdx == -1 and self._selectOnFetch:
+                self.__selectNewestRow()
 
         if self.curIdx >= 0 and self.curIdx < len(self.data):
             commit = self.data[self.curIdx]
@@ -1622,13 +1627,44 @@ class LogView(QAbstractScrollArea, CommitSource):
         app = ApplicationBase.instance()
         return self._standalone and app.settings().isCompositeMode() and bool(app.submodules)
 
-    def __onFetchFinished(self, exitCode):
+    def __selectNewestRow(self):
+        """Select the newest row on the user's behalf while logs stream in.
+
+        Composite mode merges later batches above this row, so the selection
+        stays provisional until the fetch ends.
+        """
+        if not self.data:
+            return
+
+        self.setCurrentIndex(0)
+        self._provisionalSelCommit = self.data[0]
+
+    def __isSelectionProvisional(self):
+        """Whether the selected row is still the one we picked for the user."""
+        if self._provisionalSelCommit is None or self.curIdx == -1:
+            return False
+        return self.curIdx < len(self.data) and \
+            self.data[self.curIdx] is self._provisionalSelCommit
+
+    def __settleSelection(self):
+        """Move a provisional selection to the newest row, now that it is known.
+
+        Only a selection the user made themselves, or a commit someone asked
+        for, survives here.
+        """
+        provisional = self.__isSelectionProvisional()
+        self._provisionalSelCommit = None
+
         if self.delayVisible:
             self.ensureVisible(self.curIdx)
             self.delayVisible = False
+        elif provisional and self.curIdx != 0:
+            self.setCurrentIndex(0)
         elif self.curIdx == -1 and self.data and self._selectOnFetch:
             self.setCurrentIndex(0)
 
+    def __onFetchFinished(self, exitCode):
+        self.__settleSelection()
         self.__refreshCompositeSelection()
 
         self.endFetch.emit()

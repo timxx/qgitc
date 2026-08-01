@@ -3,6 +3,9 @@
 
 from datetime import datetime, timedelta
 
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QKeyEvent
+
 from qgitc.common import Commit
 from qgitc.gitutils import Git
 from qgitc.logview import LogView
@@ -45,6 +48,9 @@ class TestLogViewCompositeMerge(TestBase):
 
     def _emit(self, commits):
         self._logView._LogView__onLogsAvailable(commits)
+
+    def _finishFetch(self):
+        self._logView._LogView__onFetchFinished(0)
 
     # ------------------------------------------------------------------
     #  Merge ordering
@@ -169,6 +175,100 @@ class TestLogViewCompositeMerge(TestBase):
         self._emit([c1, c2])
 
         self.assertEqual(1, self._logView.currentIndex())
+
+    # ------------------------------------------------------------------
+    #  The auto selection is provisional until the fetch ends
+    # ------------------------------------------------------------------
+    def testAutoSelectionMovesToNewestRowOnFetchFinished(self):
+        self._emit([self._commit("a", 10)])
+        self.assertEqual(0, self._logView.currentIndex())
+
+        newest = self._commit("b", 0)
+        self._emit([newest])
+        self.assertEqual(1, self._logView.currentIndex())
+
+        self._finishFetch()
+
+        self.assertEqual(0, self._logView.currentIndex())
+        self.assertIs(newest, self._logView.data[0])
+        self.assertEqual([0], self._logView.getSelectedIndices())
+
+    def testNewestRowNotReselectedWhenAlreadyCurrent(self):
+        self._emit([self._commit("a", 0)])
+
+        emitted = []
+        self._logView.currentIndexChanged.connect(emitted.append)
+        self._finishFetch()
+
+        self.assertEqual([], emitted)
+
+    def testClickedRowKeptOnFetchFinished(self):
+        c1 = self._commit("a", 10)
+        c2 = self._commit("b", 20)
+        self._emit([c1, c2])
+
+        self._logView.setCurrentIndex(1)
+        self._emit([self._commit("c", 0)])
+        self._finishFetch()
+
+        self.assertIs(c2, self._logView.data[self._logView.currentIndex()])
+
+    def testClickedNewestRowKeptOnFetchFinished(self):
+        """Clicking the row we auto selected must make the selection the user's."""
+        c1 = self._commit("a", 10)
+        self._emit([c1])
+
+        self._logView.setCurrentIndex(0)
+        self._emit([self._commit("b", 0)])
+        self._finishFetch()
+
+        self.assertIs(c1, self._logView.data[self._logView.currentIndex()])
+
+    def testKeyboardSelectionKeptOnFetchFinished(self):
+        c1 = self._commit("a", 10)
+        c2 = self._commit("b", 20)
+        self._emit([c1, c2])
+        self.assertEqual(0, self._logView.currentIndex())
+
+        self._logView.keyPressEvent(
+            QKeyEvent(QEvent.KeyPress, Qt.Key_Down, Qt.NoModifier))
+        self.assertIs(c2, self._logView.data[self._logView.currentIndex()])
+
+        self._emit([self._commit("c", 0)])
+        self._finishFetch()
+
+        self.assertIs(c2, self._logView.data[self._logView.currentIndex()])
+
+    def testPreferSha1RowKeptOnFetchFinished(self):
+        c1 = self._commit("a", 10)
+        c2 = self._commit("b", 20)
+        self._logView.preferSha1 = c2.sha1
+        self._emit([c1, c2])
+
+        self._emit([self._commit("c", 0)])
+        self._finishFetch()
+
+        self.assertIs(c2, self._logView.data[self._logView.currentIndex()])
+
+    def testPreferSha1WinsOverAutoSelection(self):
+        self._emit([self._commit("a", 10)])
+        self.assertEqual(0, self._logView.currentIndex())
+
+        wanted = self._commit("b", 20)
+        self._logView.switchToCommit(wanted.sha1, delay=True)
+        self._emit([wanted])
+        self.assertIs(wanted, self._logView.data[self._logView.currentIndex()])
+
+        self._finishFetch()
+
+        self.assertIs(wanted, self._logView.data[self._logView.currentIndex()])
+
+    def testEmptyNormalBatchSelectsNothing(self):
+        """A parse that yielded no commit must not select a row that isn't there."""
+        self._logView._isCompositeMode = lambda: False
+        self._emit([])
+
+        self.assertEqual(-1, self._logView.currentIndex())
 
     # ------------------------------------------------------------------
     #  Local change rows stay pinned on top
