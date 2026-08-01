@@ -28,6 +28,8 @@ class DiffFetcher(DataFetcher):
         # Track current file being processed (for metadata in next chunk)
         self._currentFileA = None
         self._currentFileB = None
+        # Flag set by makeArgs when sha1 is None (untracked file diff)
+        self._isUntrackedDiff = False
 
     def parse(self, data: bytes):
         lineItems = []
@@ -143,7 +145,7 @@ class DiffFetcher(DataFetcher):
                         fileToUpdate, FileState.Normal)
 
                 if line.startswith(b"new file mode "):
-                    fileState = FileState.Added
+                    fileState = FileState.Untracked if self._isUntrackedDiff else FileState.Added
                 elif line.startswith(b"deleted file mode "):
                     fileState = FileState.Deleted
                 elif line.startswith(b"new mode "):
@@ -197,6 +199,7 @@ class DiffFetcher(DataFetcher):
         self._fileStates.clear()
         self._currentFileA = None
         self._currentFileB = None
+        self._isUntrackedDiff = False
 
     def cancel(self):
         self._isDiffContent = False
@@ -216,8 +219,10 @@ class DiffFetcher(DataFetcher):
         elif sha1 == None:  # untracked files
             assert len(filePaths) == 1
             git_args.extend(["diff", "-p", "--no-index", "/dev/null"])
+            self._isUntrackedDiff = True
         else:
             git_args.extend(["diff-tree", "-r", "--root", sha1])
+            self._isUntrackedDiff = False
 
         if sha1 is not None:
             git_args.extend(["-p", "--textconv", "--submodule",

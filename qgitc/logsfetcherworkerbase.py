@@ -174,7 +174,8 @@ class LogsFetcherWorkerBase(QObject):
         return self._errorData
 
     @staticmethod
-    def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None):
+    def _makeLocalCommits(lccCommit: Commit, lucCommit: Commit, hasLCC, hasLUC, repoDir=None,
+                          untrackedFiles=None):
         if hasLCC:
             lccCommit.sha1 = Git.LCC_SHA1
             if not lccCommit.repoDir:
@@ -194,3 +195,8 @@ class LogsFetcherWorkerBase(QObject):
                 subCommit.sha1 = Git.LUC_SHA1
                 subCommit.repoDir = repoDir
                 lucCommit.subCommits.append(subCommit)
+
+        if untrackedFiles and lucCommit.isValid():
+            if not lucCommit.untrackedFiles:
+                lucCommit.untrackedFiles = []
+            lucCommit.untrackedFiles.extend(untrackedFiles)

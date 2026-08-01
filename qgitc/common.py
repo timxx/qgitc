@@ -36,7 +36,8 @@ class Commit():
 
     __slots__ = ("sha1", "comments", "author", "authorDate",
                  "committer", "committerDate", "committerDateTime",
-                 "parents", "children", "repoDir", "subCommits")
+                 "parents", "children", "repoDir", "subCommits",
+                 "untrackedFiles")
 
     def __init__(self, sha1="", comments="",
                  author="", authorDate="",
@@ -54,6 +55,7 @@ class Commit():
         self.children: List[Commit] = None
         self.repoDir: str = None
         self.subCommits: List[Commit] = []
+        self.untrackedFiles: List[str] = []
 
     def __str__(self):
         return "Commit: {0}\n"  \

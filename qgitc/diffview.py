@@ -71,19 +71,22 @@ class FileListModel(QAbstractListModel):
 
         font: QFont = ApplicationBase.instance().font()
         font.setBold(True)
+        colorSchema = ApplicationBase.instance().colorSchema()
         self._icons = [
             None,  # normal
             _makeTextIcon(
-                "A", ApplicationBase.instance().colorSchema().Adding, font),
+                "A", colorSchema.Adding, font),
             _makeTextIcon(
-                "M", ApplicationBase.instance().colorSchema().Modified, font),
+                "M", colorSchema.Modified, font),
             _makeTextIcon(
-                "D", ApplicationBase.instance().colorSchema().Deletion, font),
+                "D", colorSchema.Deletion, font),
             _makeTextIcon(
-                "R", ApplicationBase.instance().colorSchema().Renamed, font),
-            _makeTextIcon("R", ApplicationBase.instance(
-            ).colorSchema().RenamedModified, font),
+                "R", colorSchema.Renamed, font),
+            _makeTextIcon("R", colorSchema.RenamedModified, font),
+            _makeTextIcon("?", colorSchema.Untracked, font),
         ]
+
+        self._untrackedFiles: set = set()  # track which files are untracked
 
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
@@ -569,21 +572,43 @@ class DiffView(QWidget):
         if self._commitList:
             commit = self._commitList.pop(0)
             self.fetcher.resetRow(self.viewer.textLineCount())
-            if commit.repoDir != ".":
+            if commit.repoDir and commit.repoDir != ".":
                 self.fetcher.cwd = os.path.join(
                     self.branchDir or Git.REPO_DIR, commit.repoDir)
                 self.fetcher.repoDir = commit.repoDir
             else:
                 self.fetcher.cwd = self.branchDir or Git.REPO_DIR
-            self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
-        else:
-            self.fetcher.cwd = self.branchDir or Git.REPO_DIR
-            self.viewer.endReading()
-            self.endFetch.emit()
+
+            if commit.sha1 is None:
+                # Untracked file: sha1=None triggers git diff --no-index /dev/null
+                self.fetcher.fetch(None, [commit.comments], self.gitArgs)
+            else:
+                self.fetcher.fetch(commit.sha1, self.filterPath, self.gitArgs)
+            return
+
+        self.fetcher.cwd = self.branchDir or Git.REPO_DIR
+        self.viewer.endReading()
+        self.endFetch.emit()
 
         if exitCode != 0 and self.fetcher.errorData:
             QMessageBox.critical(self, self.window().windowTitle(),
                                  self.fetcher.errorData.decode("utf-8"))
+
+    def _addUntrackedEntries(self, commit: Commit):
+        untrackedFiles = commit.untrackedFiles
+        if not untrackedFiles:
+            return
+
+        repoDir = commit.repoDir
+        for file in untrackedFiles:
+            # Queue via _commitList: sha1=None triggers git diff --no-index.
+            # Difffetcher.parse() will add the file to the list automatically,
+            # and __onDiffAvailable will fix the icon from Added→Untracked.
+            fakeCommit = Commit()
+            fakeCommit.sha1 = None
+            fakeCommit.comments = file
+            fakeCommit.repoDir = repoDir
+            self._commitList.append(fakeCommit)
 
     def __addToFileListView(self, *args):
         """specify the @row number of the file in the viewer"""
@@ -740,6 +765,10 @@ class DiffView(QWidget):
         self.beginFetch.emit()
 
         self._commitList = commit.subCommits.copy()
+
+        # Queue untracked file fetches after sub-commits
+        if commit.sha1 == Git.LUC_SHA1:
+            self._addUntrackedEntries(commit)
 
     def clear(self):
         self.fileListModel.clear()

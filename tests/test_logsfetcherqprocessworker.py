@@ -112,6 +112,27 @@ class TestLogsFetcherQProcessWorker(TestBase):
         self.assertEqual(lccCommit.sha1, '')
         self.assertEqual(lucCommit.sha1, '')
 
+    def testFetchWithUntrackedFiles(self):
+        with open(os.path.join(self.gitDir.name, "untracked.py"), "w") as f:
+            f.write("print('untracked')")
+
+        submodules = [".", "subRepo"]
+        worker = LogsFetcherQProcessWorker(
+            submodules, self.gitDir.name, False, "main", None)
+        spyFinished = QSignalSpy(worker.fetchFinished)
+        spyLocalChangesAvailable = QSignalSpy(worker.localChangesAvailable)
+        worker.run()
+
+        self.wait(100, lambda: spyFinished.count() == 0)
+        self.assertEqual(spyFinished.count(), 1)
+
+        self.assertEqual(spyLocalChangesAvailable.count(), 1)
+        lccCommit: Commit = spyLocalChangesAvailable.at(0)[0]
+        lucCommit: Commit = spyLocalChangesAvailable.at(0)[1]
+        self.assertEqual(lccCommit.sha1, '')
+        self.assertEqual(lucCommit.sha1, Git.LUC_SHA1)
+        self.assertIn("untracked.py", lucCommit.untrackedFiles)
+
     def testRequestInterruptionQuitsEventLoopOnWorkerThread(self):
         class StrictEventLoop:
             def __init__(self, ownerThread):

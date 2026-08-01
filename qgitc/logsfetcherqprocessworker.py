@@ -25,32 +25,28 @@ class LocalChangesFetcher(QObject):
     def __init__(self, repoDir: str = None, isComposite=False, parent=None):
         super().__init__(parent)
         self._repoDir = repoDir
-        self._lccProcess: QProcess = None
-        self._lucProcess: QProcess = None
-        self._lccProcessObj: QProcess = None
-        self._lucProcessObj: QProcess = None
-        self._failedStart = set()
+        self._process: QProcess = None
+        self._processObj: QProcess = None
+        self._failedStart = False
         self.isComposite = isComposite
 
         self.hasLCC = False
         self.hasLUC = False
+        self.untrackedFiles: List[str] = []
 
     def fetch(self):
-        self._failedStart.clear()
-        self._lccProcess = self._startProcess(True)
-        self._lucProcess = self._startProcess(False)
+        self._failedStart = False
+        self._process = self._startProcess()
 
     def cancel(self):
         # Clear active markers first so finished during wait is ignored
-        lccProcess = self._lccProcess
-        lucProcess = self._lucProcess
-        self._lccProcess = None
-        self._lucProcess = None
+        process = self._process
+        self._process = None
         self.hasLCC = False
         self.hasLUC = False
+        self.untrackedFiles = []
 
-        self._cancelProcess(lccProcess)
-        self._cancelProcess(lucProcess)
+        self._cancelProcess(process)
 
     def _createProcess(self):
         process = QProcess(self)
@@ -58,26 +54,20 @@ class LocalChangesFetcher(QObject):
         process.errorOccurred.connect(self._onError)
         return process
 
-    def _startProcess(self, cached: bool):
-        args = ["diff", "--quiet", "-s"]
-        if cached:
-            args.append("--cached")
+    def _startProcess(self):
+        args = ["status", "--porcelain"]
+        args.append("--untracked-files=all")
         if Git.versionGE(1, 7, 2):
             args.append("--ignore-submodules=dirty")
+        args.append("-z")
 
-        if cached:
-            if self._lccProcessObj is None:
-                self._lccProcessObj = self._createProcess()
-            process = self._lccProcessObj
-        else:
-            if self._lucProcessObj is None:
-                self._lucProcessObj = self._createProcess()
-            process = self._lucProcessObj
+        if self._processObj is None:
+            self._processObj = self._createProcess()
+        process = self._processObj
 
         process.setWorkingDirectory(self._repoDir or Git.REPO_DIR)
-
         process.start(GitProcess.GIT_BIN, args)
-        if process in self._failedStart:
+        if self._failedStart:
             return None
 
         return process
@@ -95,24 +85,59 @@ class LocalChangesFetcher(QObject):
 
     def _onFinished(self, exitCode, exitStatus):
         process: QProcess = self.sender()
-        if process == self._lccProcess:
-            self.hasLCC = exitCode == 1
-            self._lccProcess = None
-        elif process == self._lucProcess:
-            self.hasLUC = exitCode == 1
-            self._lucProcess = None
-        else:
+        if process != self._process:
+            return
+        self._process = None
+
+        if exitCode == 0 and process.bytesAvailable():
+            data = bytes(process.readAllStandardOutput())
+            self._parseStatus(data)
+
+        self.finished.emit()
+
+    def _parseStatus(self, data: bytes):
+        if data and data[-1] == 0:
+            data = data[:-1]
+        if not data:
             return
 
-        if not self._lccProcess and not self._lucProcess:
-            self.finished.emit()
+        lines = data.split(b'\0')
+        self.untrackedFiles = []
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            i += 1
+            if not line:
+                continue
+
+            status = line[:2].decode("utf-8", errors="replace")
+
+            # Untracked files
+            if status == "??":
+                file = line[3:].decode("utf-8", errors="replace")
+                self.untrackedFiles.append(file)
+                continue
+
+            # Staged change (index status column)
+            if status[0] != " ":
+                self.hasLCC = True
+            # Unstaged change (worktree status column)
+            if status[1] != " ":
+                self.hasLUC = True
+
+            # Renames have old name on the next line
+            if status[0] == "R" and i < len(lines):
+                i += 1
+
+        # Untracked files count as unstaged changes too
+        if self.untrackedFiles:
+            self.hasLUC = True
 
     def _onError(self, error: QProcess.ProcessError):
         process: QProcess = self.sender()
         if error == QProcess.FailedToStart:
-            self._failedStart.add(process)
-            if len(self._failedStart) == 2:
-                self.finished.emit()
+            self._failedStart = True
+            self.finished.emit()
 
 
 class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
@@ -204,6 +229,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
     def _onFetchLocalChangesFinished(self, fetcher: LocalChangesFetcher):
         hasLCC = fetcher.hasLCC
         hasLUC = fetcher.hasLUC
+        untracked = fetcher.untrackedFiles if fetcher.untrackedFiles else None
 
         if hasLCC or hasLUC:
             repoDir = None
@@ -213,7 +239,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
                     if not repoDir:
                         repoDir = "."
             LogsFetcherWorkerBase._makeLocalCommits(
-                self._lccCommit, self._lucCommit, hasLCC, hasLUC, repoDir)
+                self._lccCommit, self._lucCommit, hasLCC, hasLUC, repoDir, untracked)
 
     def _onFetchFinished(self):
         if self.isInterruptionRequested():

@@ -25,6 +25,7 @@ class FileState:
     Deleted = 3
     Renamed = 4
     RenamedModified = 5
+    Untracked = 6
 
 
 class FileInfo:
