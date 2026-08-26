@@ -39,6 +39,9 @@ class LogsFetcherWorkerBase(QObject):
         self._mergedRepoDirs: Dict[any, Set[str]] = {}
         # rows added since the last emission; only these get sent downstream
         self._newLogs: List[Commit] = []
+        # Full sorted list of all merged commits, maintained in the worker
+        # thread so the main thread never has to merge.
+        self._allLogs: List[Commit] = []
 
         self._compositeEmitTimer = QTimer(self)
         self._compositeEmitTimer.setSingleShot(True)
@@ -112,14 +115,55 @@ class LogsFetcherWorkerBase(QObject):
         return False
 
     def _emitCompositeLogsAvailable(self):
-        """Emit the rows merged since the last emission, newest first."""
+        """Emit the rows merged since the last emission, newest first.
+
+        Performs the merge into _allLogs in the worker thread so the main
+        thread only needs to swap in the new list and remap indices.
+        """
         if not self._newLogs:
             return
         batch = self._newLogs
         self._newLogs = []
         batch.sort(key=lambda x: x.committerDateTime, reverse=True)
+
+        insertPositions = self._mergeIntoAllLogs(batch)
         self._awaitingConsumer = True
-        self.logsAvailable.emit(batch)
+        self.logsAvailable.emit((self._allLogs, insertPositions))
+
+    def _mergeIntoAllLogs(self, batch: List[Commit]):
+        """Merge a newest-first batch into _allLogs (two-pointer, O(n+m)).
+
+        Returns insert positions (indices into the old list) for remapping.
+        """
+        old = self._allLogs
+        oldCount = len(old)
+        insertPositions = []
+        merged = []
+        i = 0   # index into old
+        j = 0   # index into batch
+        newCount = len(batch)
+        runStart = i
+        while i < oldCount and j < newCount:
+            if batch[j].committerDateTime > old[i].committerDateTime:
+                if i > runStart:
+                    merged.extend(old[runStart:i])
+                insertPositions.append(i)
+                merged.append(batch[j])
+                j += 1
+                runStart = i
+            else:
+                i += 1
+        if i > runStart:
+            merged.extend(old[runStart:i])
+        while j < newCount:
+            insertPositions.append(i)
+            merged.append(batch[j])
+            j += 1
+        if i < oldCount:
+            merged.extend(old[i:])
+
+        self._allLogs = merged
+        return insertPositions
 
     def _scheduleCompositeEmit(self):
         """Schedule a batched incremental emission after _COMPOSITE_EMIT_INTERVAL_MS.
@@ -168,6 +212,7 @@ class LogsFetcherWorkerBase(QObject):
         self._mergedLogs.clear()
         self._mergedRepoDirs.clear()
         self._newLogs.clear()
+        self._allLogs.clear()
 
     @property
     def errorData(self):

@@ -1504,27 +1504,41 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         self.updateGeometries()
 
-    def __onCompositeLogsAvailable(self, logs: List[Commit]):
-        if not logs:
-            return
+    def __onCompositeLogsAvailable(self, logs):
+        # logs is (allLogs, insertPositions) from the worker thread, or a
+        # plain list for the first batch / non-composite mode.
+        firstVisible = self.verticalScrollBar().value()
+        shifted = None
+        pinned = 0
 
-        scrollBar = self.verticalScrollBar()
-        firstVisible = scrollBar.value()
-        insertPositions = None
+        if isinstance(logs, tuple):
+            allLogs, insertPositions = logs
 
-        if not self.data:
-            # own the list, clear() mutates it in place
-            self.data = list(logs)
-        else:
-            insertPositions = self._mergeCompositeLogs(logs)
-            if self.curIdx != -1:
+            # Preserve local-change rows (pinned at top, no committerDateTime)
+            # that the worker thread doesn't know about.
+            while pinned < len(self.data) and \
+                    self.data[pinned].committerDateTime is None:
+                pinned += 1
+            if pinned > 0:
+                self.data = self.data[:pinned] + allLogs
+            else:
+                self.data = allLogs
+
+            # insertPositions are indices into allLogs (without pinned);
+            # shift by pinned to match self.data which has pinned prepended
+            shifted = [p + pinned for p in insertPositions] if insertPositions else None
+
+            if shifted and self.curIdx != -1:
                 self.curIdx = LogView._remapIndex(
-                    self.curIdx, insertPositions)
+                    self.curIdx, shifted)
                 self.selectedIndices = {
-                    LogView._remapIndex(i, insertPositions)
+                    LogView._remapIndex(i, shifted)
                     for i in self.selectedIndices}
                 self.selectionAnchor = LogView._remapIndex(
-                    self.selectionAnchor, insertPositions)
+                    self.selectionAnchor, shifted)
+        else:
+            # First batch or non-composite: just take the list as-is
+            self.data = list(logs) if not self.data else self.data + logs
 
         if self.curIdx == -1 or self.__isSelectionProvisional():
             if self.preferSha1:
@@ -1545,58 +1559,14 @@ class LogView(QAbstractScrollArea, CommitSource):
         self.updateGeometries()
 
         # keep the viewport anchored to the same commit while rows stream in
-        if insertPositions and firstVisible > 0:
-            scrollBar.setValue(
-                LogView._remapIndex(firstVisible, insertPositions))
+        if shifted and firstVisible > 0:
+            if firstVisible >= pinned:
+                shiftedFv = LogView._remapIndex(firstVisible, shifted)
+            else:
+                shiftedFv = firstVisible
+            self.verticalScrollBar().setValue(shiftedFv)
 
         self.viewport().update()
-
-    def _mergeCompositeLogs(self, newLogs: List[Commit]):
-        """Merge a newest-first batch into self.data, keeping the list ordered.
-
-        `newLogs` must be newest first, which is what logsAvailable delivers.
-        Returns the old-list positions the new rows were inserted in front of,
-        which _remapIndex uses to move stored indices along with their commits.
-        """
-        old = self.data
-        oldCount = len(old)
-
-        # local change rows carry no date and always stay on top
-        pinned = 0
-        while pinned < oldCount and old[pinned].committerDateTime is None:
-            pinned += 1
-
-        # a batch is tiny next to the accumulated log, so binary search each
-        # row instead of walking the whole list, and splice with slices
-        insertPositions = []
-        pos = pinned
-        for commit in newLogs:
-            pos = max(pos, LogView._findInsertPos(
-                old, commit.committerDateTime, pos, oldCount))
-            insertPositions.append(pos)
-
-        merged = []
-        prev = 0
-        for pos, commit in zip(insertPositions, newLogs):
-            if pos > prev:
-                merged += old[prev:pos]
-                prev = pos
-            merged.append(commit)
-        merged += old[prev:]
-
-        self.data = merged
-        return insertPositions
-
-    @staticmethod
-    def _findInsertPos(data: List[Commit], dateTime, lo: int, hi: int):
-        """First index in the newest-first range [lo, hi) that is older than dateTime."""
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if data[mid].committerDateTime < dateTime:
-                hi = mid
-            else:
-                lo = mid + 1
-        return lo
 
     @staticmethod
     def _remapIndex(index: int, insertPositions: List[int]):

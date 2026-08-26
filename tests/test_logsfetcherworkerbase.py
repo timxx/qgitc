@@ -82,7 +82,8 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         spy.wait(200)
 
         self.assertEqual(1, len(captured))
-        self.assertEqual(1, len(captured[0]))
+        allLogs, insertPositions = captured[0]
+        self.assertEqual(1, len(allLogs))
 
     # ------------------------------------------------------------------
     #  Incremental payload: only newly merged commits are emitted
@@ -96,7 +97,9 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         self._worker.logsAvailable.connect(captured.append)
 
         self._worker._emitCompositeLogsAvailable()
-        self.assertEqual([[c1]], captured)
+        self.assertEqual(1, len(captured))
+        allLogs, insertPositions = captured[0]
+        self.assertEqual([c1], allLogs)
 
         self._worker.logsConsumed()
         c2 = self._makeCommit("b" * 40, now - timedelta(hours=1))
@@ -104,8 +107,9 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
 
         self._worker._emitCompositeLogsAvailable()
         self.assertEqual(2, len(captured))
-        self.assertEqual([c2], captured[1],
-                         "second batch must only carry the newly merged commit")
+        allLogs2, insertPositions2 = captured[1]
+        self.assertIn(c2, allLogs2,
+                      "second batch must carry the newly merged commit")
 
     def testEmitClearsNewLogsButKeepsMergedLogs(self):
         now = datetime.now()
@@ -136,9 +140,10 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         self._worker._emitCompositeLogsAvailable()
 
         self.assertEqual(1, len(captured))
-        self.assertIsInstance(captured[0], list)
-        self.assertIsNot(captured[0], self._worker._newLogs,
-                         "the drained batch must not alias the pending buffer")
+        allLogs, insertPositions = captured[0]
+        self.assertIsInstance(allLogs, list)
+        self.assertIs(allLogs, self._worker._allLogs,
+                     "the allLogs list must be the worker's own list object")
 
     def testEmitSortsBatchDescendingByCommitterDateTime(self):
         now = datetime.now()
@@ -155,7 +160,8 @@ class TestLogsFetcherWorkerBaseComposite(TestBase):
         self._worker._emitCompositeLogsAvailable()
 
         self.assertEqual(1, len(captured))
-        self.assertEqual([c1, c3, c2], captured[0],
+        allLogs, insertPositions = captured[0]
+        self.assertEqual([c1, c3, c2], allLogs,
                          "batch sorted newest-first by committerDateTime")
 
     # ------------------------------------------------------------------

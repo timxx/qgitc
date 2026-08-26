@@ -47,7 +47,44 @@ class TestLogViewCompositeMerge(TestBase):
         return commit
 
     def _emit(self, commits):
-        self._logView._LogView__onLogsAvailable(commits)
+        """Simulate the worker thread: merge into _allLogs and emit tuple."""
+        if not hasattr(self, '_allLogs'):
+            self._allLogs = []
+        if not self._allLogs:
+            # First batch: emit as plain list
+            self._allLogs = list(commits)
+            self._logView._LogView__onLogsAvailable(commits)
+        else:
+            # Subsequent batches: merge and emit (allLogs, insertPositions)
+            batch = sorted(commits, key=lambda c: c.committerDateTime, reverse=True)
+            old = self._allLogs
+            oldCount = len(old)
+            insertPositions = []
+            merged = []
+            i = 0
+            j = 0
+            newCount = len(batch)
+            runStart = i
+            while i < oldCount and j < newCount:
+                if batch[j].committerDateTime > old[i].committerDateTime:
+                    if i > runStart:
+                        merged.extend(old[runStart:i])
+                    insertPositions.append(i)
+                    merged.append(batch[j])
+                    j += 1
+                    runStart = i
+                else:
+                    i += 1
+            if i > runStart:
+                merged.extend(old[runStart:i])
+            while j < newCount:
+                insertPositions.append(i)
+                merged.append(batch[j])
+                j += 1
+            if i < oldCount:
+                merged.extend(old[i:])
+            self._allLogs = merged
+            self._logView._LogView__onLogsAvailable((merged, insertPositions))
 
     def _finishFetch(self):
         self._logView._LogView__onFetchFinished(0)
@@ -112,6 +149,42 @@ class TestLogViewCompositeMerge(TestBase):
         for i in range(len(data) - 1):
             self.assertGreaterEqual(data[i].committerDateTime,
                                     data[i + 1].committerDateTime)
+
+    def testMergeBatchWithDuplicateTimestamps(self):
+        """A batch containing ties must interleave correctly with old rows."""
+        # minutesAgo: larger = older
+        old = [self._commit("a", 10), self._commit("b", 20), self._commit("c", 30)]
+        self._emit(old)
+
+        # ties with existing rows at 10 and 30, plus newer and older rows;
+        # batches arrive newest-first (sorted by the worker)
+        batch = [self._commit("d", 5), self._commit("e", 10),
+                 self._commit("f", 30), self._commit("g", 40)]
+        self._emit(batch)
+
+        # ties keep the existing row first
+        self.assertEqual(
+            ["d", "a", "e", "b", "c", "f", "g"],
+            [c.sha1[0] for c in self._logView.data])
+
+    def testMergeAllNewOlderThanExisting(self):
+        """A fully-older batch appends at the end."""
+        self._emit([self._commit("a", 5), self._commit("b", 10)])
+        self._emit([self._commit("c", 30), self._commit("d", 40)])
+
+        self.assertEqual(
+            ["a", "b", "c", "d"],
+            [c.sha1[0] for c in self._logView.data])
+
+    def testMergeAllNewNewerThanExisting(self):
+        """A fully-newer batch prepends at the front."""
+        self._emit([self._commit("c", 30), self._commit("d", 40)])
+        # newest-first batch
+        self._emit([self._commit("a", 5), self._commit("b", 10)])
+
+        self.assertEqual(
+            ["a", "b", "c", "d"],
+            [c.sha1[0] for c in self._logView.data])
 
     def testEmptyBatchIsIgnored(self):
         c1 = self._commit("a", 0)

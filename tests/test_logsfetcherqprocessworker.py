@@ -31,9 +31,10 @@ class TestLogsFetcherQProcessWorker(TestBase):
         self.assertEqual(spyFinished.at(0)[0], 0)
 
         self.assertEqual(spyLogsAvailable.count(), 1)
-        logs = spyLogsAvailable.at(0)[0]
-        self.assertIsInstance(logs, list)
-        self.assertEqual(len(logs), 3)
+        payload = spyLogsAvailable.at(0)[0]
+        allLogs, insertPositions = payload
+        self.assertIsInstance(allLogs, list)
+        self.assertEqual(len(allLogs), 3)
 
         self.assertEqual(spyLocalChangesAvailable.count(), 1)
         lccCommit: Commit = spyLocalChangesAvailable.at(0)[0]
@@ -58,9 +59,10 @@ class TestLogsFetcherQProcessWorker(TestBase):
         self.assertEqual(spyFinished.at(0)[0], 0)
 
         self.assertEqual(spyLogsAvailable.count(), 1)
-        logs = spyLogsAvailable.at(0)[0]
-        self.assertIsInstance(logs, list)
-        self.assertEqual(len(logs), 3)
+        payload = spyLogsAvailable.at(0)[0]
+        allLogs, insertPositions = payload
+        self.assertIsInstance(allLogs, list)
+        self.assertEqual(len(allLogs), 3)
 
         self.assertEqual(spyLocalChangesAvailable.count(), 1)
         lccCommit: Commit = spyLocalChangesAvailable.at(0)[0]
@@ -99,7 +101,12 @@ class TestLogsFetcherQProcessWorker(TestBase):
 
         logs: List[Commit] = []
         for i in range(spyLogsAvailable.count()):
-            logs.extend(spyLogsAvailable.at(i)[0])
+            payload = spyLogsAvailable.at(i)[0]
+            if isinstance(payload, tuple):
+                allLogs, _ = payload
+                logs.extend(allLogs)
+            else:
+                logs.extend(payload)
 
         self.assertEqual(len(logs), 3)
         self.assertEqual(logs[0].comments, "Add .gitignore")
