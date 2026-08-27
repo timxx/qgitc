@@ -42,6 +42,9 @@ class LogsFetcherWorkerBase(QObject):
         # Full sorted list of all merged commits, maintained in the worker
         # thread so the main thread never has to merge.
         self._allLogs: List[Commit] = []
+        # Commits with future dates (e.g. clock skew) are kept separate and
+        # appended to the end of _allLogs after each emission.
+        self._futureLogs: List[Commit] = []
 
         self._compositeEmitTimer = QTimer(self)
         self._compositeEmitTimer.setSingleShot(True)
@@ -72,12 +75,19 @@ class LogsFetcherWorkerBase(QObject):
 
     def _handleCompositeLogs(self, commits: List[Commit], repoDir: str, branch: bytes,
                              exitCode: int, errorData: bytes):
+        from datetime import datetime as _dt
+        now = _dt.now().timestamp()
         handleCount = 0
 
         for log in commits:
             handleCount += 1
             if handleCount % 100 == 0 and self.isInterruptionRequested():
                 return
+            # Future-dated commits (e.g. clock skew, 2050) are set aside
+            # and appended to the end of the list later.
+            if log.committerDateTime.timestamp() > now:
+                self._futureLogs.append(log)
+                continue
             # require same day at least
             key = (log.committerDateTime.date(),
                    log.comments, log.author)
@@ -127,6 +137,16 @@ class LogsFetcherWorkerBase(QObject):
         batch.sort(key=lambda x: x.committerDateTime, reverse=True)
 
         insertPositions = self._mergeIntoAllLogs(batch)
+
+        # Append future-dated commits at the end
+        if self._futureLogs:
+            oldCount = len(self._allLogs)
+            for c in self._futureLogs:
+                insertPositions.append(oldCount)
+                self._allLogs.append(c)
+                oldCount += 1
+            self._futureLogs.clear()
+
         self._awaitingConsumer = True
         self.logsAvailable.emit((self._allLogs, insertPositions))
 
@@ -213,6 +233,7 @@ class LogsFetcherWorkerBase(QObject):
         self._mergedRepoDirs.clear()
         self._newLogs.clear()
         self._allLogs.clear()
+        self._futureLogs.clear()
 
     @property
     def errorData(self):
