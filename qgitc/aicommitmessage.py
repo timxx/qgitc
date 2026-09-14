@@ -335,6 +335,31 @@ class AiCommitMessage(QObject):
     def _onAiNetworkError(self, errorMsg: str):
         self.errorOccurred.emit(errorMsg)
 
+    @staticmethod
+    def _extractFencedBlock(message: str):
+        """ Extract the payload of the fenced block holding the commit message.
+
+        The response is expected to be a single ```text code block, but some
+        providers are not OpenAI-compatible: the reasoning may leak into the
+        message (sometimes without the leading `<think>` tag), so the block is
+        not necessarily the first one and text may follow the closing fence.
+        """
+        message = "\n".join(message.splitlines())
+
+        # The trailing newline anchors the marker to a whole line, so a ```text
+        # mentioned inline in prose is not mistaken for the fence. The last one
+        # is the real block when the reasoning holds a fenced draft.
+        pos = message.rfind("```text\n")
+        if pos < 0:
+            return message
+
+        body = message[pos + 8:]
+        endPos = body.rfind("\n```")
+        if endPos >= 0:
+            body = body[:endPos]
+
+        return body
+
     def _onAiResponseFinished(self):
         stripMessage = ""
         if self._message:
@@ -344,10 +369,7 @@ class AiCommitMessage(QObject):
                 if pos >= 0:
                     message = message[pos + 9:].strip()
 
-            if message.startswith("```text"):
-                message = message[7:]
-            if message.endswith("```"):
-                message = message[:-3]
+            message = AiCommitMessage._extractFencedBlock(message)
             message = message.strip()
             for line in message.splitlines():
                 if stripMessage:
