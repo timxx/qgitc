@@ -189,17 +189,25 @@ class DiffView(QWidget):
         self.fetcher = DiffFetcher(self)
         # sub commit to fetch
         self._commitList: List[Commit] = []
-        # Diff blocks keyed by file name, collected during fetch and flushed
-        # in sorted order when all fetches complete.
+        # Diff blocks keyed by file name, collected during fetch and flushed in
+        # sorted order when all fetches complete. Only used when sorting files
+        # by name is enabled.
         self._pendingDiffs: dict = {}
         # Per-file split state persisting across incremental parse() chunks:
         # QProcess delivers stdout in several readyRead chunks, so a single
         # file's diff commonly spans multiple __onDiffAvailable calls, and
         # continuation chunks carry no DiffType.File marker for the file they
-        # belong to.
+        # belong to. Only used when sorting files by name is enabled.
         self._splitFile: str = None
         self._splitInfo: FileInfo = None
         self._splitLines: list = []
+        # Sort state captured at fetch time (the user may toggle the preference
+        # while a fetch is running):
+        # - off: git's output order is already the display order, so every
+        #   block is rendered as it arrives and the diff shows up while git is
+        #   still producing output.
+        # - on: files are buffered in _pendingDiffs and sorted on completion.
+        self._sortByFile: bool = False
 
         self._commitSource: CommitSource = None
         self._showingCommit = False
@@ -572,10 +580,25 @@ class DiffView(QWidget):
         self.twMenu.exec(self.fileListView.mapToGlobal(pos))
 
     def __onDiffAvailable(self, lineItems, fileItems):
-        # Accumulate per-file chunks. A single file's diff may span several
-        # parse() calls (QProcess delivers output in chunks); continuation
-        # chunks contain no DiffType.File marker, so the split state must
-        # persist across calls.
+        # With sorting off, git's output order is already the display order, so
+        # render the block as it arrives: the diff shows up while git is still
+        # producing output (and the file list entry keeps the right row, since
+        # row numbers only ever grow). This is how it worked before per-file
+        # sorting was added.
+        if not self._sortByFile:
+            # A file's diff may still span several parse() calls; __addToFile-
+            # ListView only registers the file markers present in this block.
+            self.__addToFileListView(fileItems)
+            self.viewer.appendLines(lineItems)
+            return
+
+        # Sorting on: split the block into per-file chunks keyed by file name.
+        # Each chunk starts at a DiffType.File marker and includes all lines
+        # until the next File marker; chunks are buffered in _pendingDiffs and
+        # sorted once the whole fetch has been read. A file's diff may span
+        # several parse() calls, so the split state persists across calls
+        # (_splitFile/_splitInfo/_splitLines) — continuation chunks carry no
+        # marker for the file they belong to.
         for diffType, data in lineItems:
             if diffType == DiffType.File:
                 self._flushSplitFile()
@@ -592,7 +615,11 @@ class DiffView(QWidget):
             # else: skip leading separator lines before the first file marker
 
     def _flushSplitFile(self):
-        """Move the accumulated split state into _pendingDiffs."""
+        """Buffer the file currently being split into _pendingDiffs.
+
+        Only meaningful when sorting files by name is enabled; with sorting off
+        the blocks are rendered as they arrive and no split state accumulates.
+        """
         if self._splitFile is not None and self._splitInfo is not None:
             self._pendingDiffs[self._splitFile] = (
                 self._splitLines, self._splitInfo)
@@ -601,9 +628,11 @@ class DiffView(QWidget):
         self._splitLines = []
 
     def __onDiffFileStateChanged(self, filePath: str, newState: FileState):
-        # The file is not in the file list until _flushPendingDiffs, so also
-        # apply the state to the pending FileInfo (state lines arrive right
-        # after the marker, i.e. while the file is still being split).
+        # When sorting by file name is enabled the file is not in the list yet
+        # (it only enters at _flushPendingDiffs), so also apply the state to
+        # the FileInfo being split; state lines arrive right after the marker.
+        # With sorting off it is already in the list and updateFileState below
+        # is enough.
         if filePath == self._splitFile and self._splitInfo is not None:
             self._splitInfo.state = newState
         self.fileListModel.updateFileState(filePath, newState)
@@ -638,25 +667,20 @@ class DiffView(QWidget):
                                  self.fetcher.errorData.decode("utf-8"))
 
     def _flushPendingDiffs(self):
-        """Flush pending diff blocks to viewer + file list.
+        """Render the buffered diff blocks sorted by file name.
 
-        Sorted by file name when the user enabled it; otherwise the original
-        git output order (dict insertion order) is kept.
+        Only used when sorting files by name is enabled; with sorting off the
+        blocks were already rendered as they arrived, so _pendingDiffs is empty.
         """
-        # The last file's diff has no following marker; flush it too.
+        # The last file's diff has no following marker; buffer it too.
         self._flushSplitFile()
         diffs = self._pendingDiffs
         self._pendingDiffs = {}
         if not diffs:
             return
 
-        if ApplicationBase.instance().settings().sortDiffByFile():
-            names = sorted(diffs, key=str.lower)
-        else:
-            names = list(diffs)
-
         row = self.viewer.textLineCount()
-        for fileName in names:
+        for fileName in sorted(diffs, key=str.lower):
             lineItems, info = diffs[fileName]
             info.row = row
             self.fileListModel.addFile(fileName, info)
@@ -820,6 +844,10 @@ class DiffView(QWidget):
     def _doShowCommit(self, commit: Commit):
         self.clear()
         self.commit = commit
+        # Capture the setting for this fetch. With sorting off the diff can be
+        # rendered block by block as it arrives; with sorting on it must be
+        # buffered and sorted (see _flushPendingDiffs).
+        self._sortByFile = ApplicationBase.instance().settings().sortDiffByFile()
 
         self.__addToFileListView(self.tr("Comments"), 0)
 
@@ -859,6 +887,7 @@ class DiffView(QWidget):
         self._splitFile = None
         self._splitInfo = None
         self._splitLines = []
+        self._sortByFile = False
         self._updateFilterStatus()
         self.commit = None
         self._delayCommit = None
