@@ -32,7 +32,11 @@ class GitProcess():
         self._process = subprocess.Popen(
             [GitProcess.GIT_BIN] + args,
             cwd=repoDir,
-            stdin=(subprocess.PIPE if stdinPipe else None),
+            # Use DEVNULL instead of None for stdin: with stdin=None,
+            # subprocess inherits the parent's console stdin handle and
+            # duplicates it. In console-less GUI processes that handle can
+            # be stale, making Popen fail with WinError 6 (句柄无效).
+            stdin=(subprocess.PIPE if stdinPipe else subprocess.DEVNULL),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             creationflags=creationflags,

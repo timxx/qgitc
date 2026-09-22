@@ -48,6 +48,10 @@ class RunCommandTool(Tool):
                 command,
                 shell=True,
                 cwd=working_dir,
+                # DEVNULL avoids inheriting the parent's console stdin
+                # handle, which can be stale in console-less GUI processes
+                # and make Popen fail with WinError 6 (句柄无效).
+                stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
