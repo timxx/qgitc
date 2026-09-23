@@ -341,7 +341,7 @@ class PatchViewer(SourceViewer):
             return
 
         # TODO: improve
-        for i in range(value, -1, -1):
+        for i in range(self.firstVisibleLine(), -1, -1):
             textLine = self.textLineAt(i)
             if isinstance(textLine, InfoTextLine) and textLine.isFile():
                 self.fileRowChanged.emit(i)
@@ -380,7 +380,7 @@ class PatchViewer(SourceViewer):
                 ApplicationBase.instance(), OpenLinkEvent(link))
 
     def currentFileRow(self):
-        row = self.verticalScrollBar().value()
+        row = self.firstVisibleLine()
         # TODO: cache the file row to improve performance?
         for i in range(row, -1, -1):
             textLine = self.textLineAt(i)

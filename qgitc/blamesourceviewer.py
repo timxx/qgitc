@@ -117,7 +117,9 @@ class BlameSourceViewer(SourceViewer):
         offset = self.contentOffset()
         offset.setY(offset.y() + (lineNo - firstLine) * self._lineHeight)
 
-        textLine = self.textLineAt(self._cursor.beginLine())
+        textLine = self.textLineAt(lineNo)
+        if textLine is None:
+            return QRect()
         lineRect = textLine.boundingRect()
         lineRect.translate(offset)
         lineRect.setRight(self.viewport().rect().width()

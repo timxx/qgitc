@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import gc
 
+from qgitc.diffutils import DiffType
 from qgitc.patchviewer import PatchViewer
 from qgitc.textline import TextLine
 from tests.base import TestBase
@@ -87,3 +88,47 @@ class TestCopyPlainText(TestBase):
         del viewer
         gc.collect()
         self.assertEqual(result, "@@ -1,2 +1,2 @@\nold\nnew")
+
+
+class TestCurrentFileRow(TestBase):
+    """currentFileRow/fileRowChanged must resolve from the top visible
+    logical line, never from the pixel scrollbar value."""
+
+    def doCreateRepo(self):
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self.viewer = PatchViewer()
+        self.viewer.resize(300, 200)
+        self.viewer.show()
+        self.processEvents()
+
+        self.viewer.addAuthorLine("Author: foo <foo@example.com>")
+        self.viewer.addNormalTextLine("", False)
+        lineItems = [(DiffType.File, b"a.txt")]
+        lineItems += [(DiffType.Diff, b"+a%02d" % i) for i in range(40)]
+        lineItems.append((DiffType.File, b"b.txt"))
+        lineItems.append((DiffType.Diff, b"+b1"))
+        self.viewer.appendLines(lineItems)
+        self.processEvents()
+        self.lineH = self.viewer.lineHeight
+        # a.txt: marker at line 2, body 3..42; b.txt: marker at 43
+
+    def testCurrentFileRowUsesTopVisibleLine(self):
+        # scroll into a.txt's body: 6 * lineH pixels
+        self.viewer.verticalScrollBar().setValue(6 * self.lineH)
+        self.assertEqual(self.viewer.firstVisibleLine(), 6)
+        self.assertEqual(self.viewer.currentFileRow(), 2)
+
+    def testFileRowChangedFollowsPixelScroll(self):
+        rows = []
+        self.viewer.verticalScrollBar().setValue(6 * self.lineH)
+        self.viewer.fileRowChanged.connect(rows.append)
+        self.viewer._onVScollBarValueChanged(
+            self.viewer.verticalScrollBar().value())
+        self.assertEqual(rows, [2])
+
+    def testCurrentFileRowAtCommentsTop(self):
+        self.viewer.verticalScrollBar().setValue(0)
+        self.assertEqual(self.viewer.currentFileRow(), 0)

@@ -484,8 +484,13 @@ class TextViewer(QAbstractScrollArea):
             return QPointF(0, 0)
 
         x = self.horizontalScrollBar().value()
+        # the top line may be scrolled past its start: expose the
+        # fractional offset so followers (revision panel, line
+        # highlight rects) paint on the same pixel grid
+        value = self.verticalScrollBar().value()
+        y = self._blockModel.lineTop(self.firstVisibleLine()) - value
 
-        return QPointF(-x, -0)
+        return QPointF(-x, y)
 
     def mapToContents(self, pos):
         x = pos.x() + self.horizontalScrollBar().value()
@@ -620,7 +625,7 @@ class TextViewer(QAbstractScrollArea):
         x1 = textLine.offsetToX(start)
         x2 = textLine.offsetToX(end)
 
-        viewWidth = self.viewport().width()
+        viewWidth = self.viewport().width() - self._gutterWidth
         offset = hbar.value()
 
         if x1 < offset or x2 > (offset + viewWidth):

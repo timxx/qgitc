@@ -87,6 +87,11 @@ class RevisionPanel(TextViewer):
     def firstVisibleLine(self):
         return self._viewer.firstVisibleLine()
 
+    def textRowForPos(self, pos):
+        # the panel mirrors the main viewer line for line: reuse its
+        # geometry so clicks land on the same logical line it paints
+        return self._viewer.textRowForPos(pos)
+
     @property
     def revisions(self):
         return self._revs
@@ -205,7 +210,7 @@ class RevisionPanel(TextViewer):
         painter.setClipRect(eventRect)
         painter.setFont(self._font)
 
-        y = 0
+        y = int(self._viewer.contentOffset().y())
         width = self.width()
         margin = self.textMargins()
 
