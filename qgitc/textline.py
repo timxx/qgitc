@@ -4,7 +4,13 @@ import bisect
 import re
 from typing import List, Tuple
 
-from PySide6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, QRectF, Qt
+from PySide6.QtCore import (
+    QT_TRANSLATE_NOOP,
+    QCoreApplication,
+    QPointF,
+    QRectF,
+    Qt,
+)
 from PySide6.QtGui import (
     QFont,
     QFontMetrics,
@@ -80,15 +86,77 @@ class TextLine():
             self._defOption = QTextOption()
         self._defOption.setWrapMode(QTextOption.NoWrap)
 
+        # word wrap: opt-in per line, width supplied by the viewer
+        self._wrap = False
+        self._wrapWidth = None
+
         self._utf16Len = None
         self._indices = None
         # Truncate display to avoid QTextLayout being slow on very long lines
         self._displayLen = min(len(text), _MAX_DISPLAY_CHARS)
 
     def _relayout(self):
+        wrap = bool(self._wrap and self._wrapWidth)
         self._layout.beginLayout()
-        self._layout.createLine()
+        if wrap:
+            y = 0
+            while True:
+                line = self._layout.createLine()
+                if not line.isValid():
+                    break
+                line.setLineWidth(self._wrapWidth)
+                line.setPosition(QPointF(0, y))
+                y += line.height()
+        else:
+            self._layout.createLine()
         self._layout.endLayout()
+
+    def wrap(self):
+        return self._wrap
+
+    def setWrap(self, wrap):
+        """Enable/disable word wrap for this line (default: disabled)."""
+        wrap = bool(wrap)
+        if wrap == self._wrap:
+            return
+        self._wrap = wrap
+        if self._layout:
+            self._layout.setTextOption(self._effectiveOption())
+            self._invalidated = True
+
+    def setWrapWidth(self, width):
+        """Wrap width in pixels; only used while wrap is enabled."""
+        if not width or width == self._wrapWidth:
+            return
+        self._wrapWidth = width
+        if self._wrap and self._layout:
+            self._invalidated = True
+
+    def _effectiveOption(self):
+        if not self._wrap:
+            return self._defOption
+        # _defOption may be shared between lines: never mutate it
+        option = QTextOption(self._defOption)
+        option.setWrapMode(QTextOption.WordWrap)
+        return option
+
+    def visualLineCount(self):
+        """Number of visual rows this logical line occupies (>= 1)."""
+        self.ensureLayout()
+        return max(1, self._layout.lineCount())
+
+    def rowAtOffset(self, offset):
+        """Visual row containing the character offset."""
+        self.ensureLayout()
+        count = self._layout.lineCount()
+        if not count:
+            return 0
+        utf16 = self.mapToUtf16(offset)
+        for i in range(count):
+            line = self._layout.lineAt(i)
+            if utf16 < line.textStart() + line.textLength():
+                return i
+        return count - 1
 
     def _findLinks(self, patterns):
         links = TextLine.findLinks(
@@ -244,10 +312,12 @@ class TextLine():
         self._defOption = option
 
         if self._layout:
-            self._layout.setTextOption(option)
+            self._layout.setTextOption(self._effectiveOption())
             if self._rehighlight:
                 self.rehighlight()
                 self._rehighlight = False
+            if self._wrap:
+                self._invalidated = True
 
     def setFont(self, font):
         self._font = font
@@ -269,7 +339,7 @@ class TextLine():
                 else self._text[:self._displayLen] + suffix
             self._layout = QTextLayout(layoutText, self._font)
             if self._defOption:
-                self._layout.setTextOption(self._defOption)
+                self._layout.setTextOption(self._effectiveOption())
 
             builtinPatterns = TextLine.builtinPatterns() if \
                 self._useBuiltinPatterns else {}
@@ -292,19 +362,27 @@ class TextLine():
         self.ensureLayout()
         return self._layout.boundingRect()
 
-    def offsetForPos(self, pos):
+    def offsetForPos(self, pos, row=0):
         if not self._text:
             return 0
         self.ensureLayout()
-        line = self._layout.lineAt(0)
-        offset = line.xToCursor(pos.x())
+        count = self._layout.lineCount()
+        if not count:
+            return 0
+        row = max(0, min(row, count - 1))
+        offset = self._layout.lineAt(row).xToCursor(pos.x())
         return self.mapFromUtf16(offset)
 
-    def offsetToX(self, offset):
+    def offsetToX(self, offset, row=None):
         self.ensureLayout()
-        line = self._layout.lineAt(0)
+        count = self._layout.lineCount()
+        if not count:
+            return 0
+        if row is None:
+            row = self.rowAtOffset(offset)
+        row = max(0, min(row, count - 1))
         offset = self.mapToUtf16(offset)
-        x, _ = line.cursorToX(offset)
+        x, _ = self._layout.lineAt(row).cursorToX(offset)
         return x
 
     def draw(self, painter, pos, selections=[], clip=QRectF()):
