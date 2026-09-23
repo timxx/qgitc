@@ -114,6 +114,9 @@ class TextLine():
     def wrap(self):
         return self._wrap
 
+    def wrapWidth(self):
+        return self._wrapWidth
+
     def setWrap(self, wrap):
         """Enable/disable word wrap for this line (default: disabled)."""
         wrap = bool(wrap)

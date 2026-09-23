@@ -69,6 +69,8 @@ class TextViewer(QAbstractScrollArea):
         # logical line <-> pixel geometry (wrap + fold aware); created
         # first because reloadSettings() below already feeds it fonts
         self._blockModel = BlockModel()
+        # logical line numbers of opted-in wrapped lines
+        self._wrappedLineNos = set()
 
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
@@ -136,6 +138,28 @@ class TextViewer(QAbstractScrollArea):
         self._lineHeight = fm.height()
         self._blockModel.setDefaultHeight(self._lineHeight)
         self.verticalScrollBar().setSingleStep(self._lineHeight)
+        for lineNo in self._wrappedLineNos:
+            textLine = self._textLines.get(lineNo)
+            if textLine:
+                self._applyWrapHeight(textLine)
+
+    def wrapWidth(self):
+        """Pixel width wrapped lines lay out to."""
+        return max(1, self.viewport().width())
+
+    def _applyWrapHeight(self, textLine):
+        self._blockModel.setLineHeight(
+            textLine.lineNo(),
+            textLine.visualLineCount() * self._lineHeight)
+
+    def _reflowWrappedLines(self):
+        width = self.wrapWidth()
+        for lineNo in self._wrappedLineNos:
+            textLine = self._textLines.get(lineNo)
+            if textLine is None:
+                continue
+            textLine.setWrapWidth(width)
+            self._applyWrapHeight(textLine)
 
     def reloadSettings(self):
         self.updateFont(self.font())
@@ -179,6 +203,10 @@ class TextViewer(QAbstractScrollArea):
         textLine.setLineNo(lineNo)
         if textLine.useBuiltinPatterns and self._bugPatterns:
             textLine.setCustomLinkPatterns(self._bugPatterns)
+        if textLine.wrap():
+            self._wrappedLineNos.add(lineNo)
+            textLine.setWrapWidth(self.wrapWidth())
+            self._applyWrapHeight(textLine)
 
     def appendLine(self, line: str):
         self.appendLines([line])
@@ -235,6 +263,7 @@ class TextViewer(QAbstractScrollArea):
         self._inReading = False
         self._maxWidth = 0
         self._blockModel.clear()
+        self._wrappedLineNos.clear()
         self._highlightLines.clear()
         self._cursor.clear()
         self._maybeEmitSelectionChanged()
@@ -990,7 +1019,16 @@ class TextViewer(QAbstractScrollArea):
             self.drawLinesBorder(painter, borderRect)
 
     def resizeEvent(self, event):
+        self._reflowWrappedLines()
         self._adjustScrollbars()
+
+    def showEvent(self, event):
+        # the viewport only syncs its geometry once shown; wrap width
+        # may be stale if content was appended while hidden
+        super().showEvent(event)
+        self._reflowWrappedLines()
+        self._adjustScrollbars()
+        self.viewport().update()
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() != Qt.LeftButton:
