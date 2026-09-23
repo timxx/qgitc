@@ -117,6 +117,15 @@ class TextLine():
     def wrapWidth(self):
         return self._wrapWidth
 
+    def rowWidth(self, row):
+        """Advance width of one visual row."""
+        self.ensureLayout()
+        count = self._layout.lineCount()
+        if not count:
+            return 0
+        row = max(0, min(row, count - 1))
+        return self._layout.lineAt(row).naturalTextWidth()
+
     def setWrap(self, wrap):
         """Enable/disable word wrap for this line (default: disabled)."""
         wrap = bool(wrap)

@@ -153,6 +153,13 @@ class BlockModel:
                     found = block
         return found
 
+    def foldedBlockCovering(self, lineNo):
+        """Innermost (last registered) folded block hiding lineNo."""
+        for block in reversed(self._blocks):
+            if block.folded and block.coversLines(lineNo):
+                return block
+        return None
+
     def setFolded(self, block, folded):
         block.folded = bool(folded)
         self._dirty = True

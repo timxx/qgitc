@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QMenu,
     QScrollBar,
+    QToolTip,
 )
 
 from qgitc.applicationbase import ApplicationBase
@@ -71,6 +72,13 @@ class TextViewer(QAbstractScrollArea):
         self._blockModel = BlockModel()
         # logical line numbers of opted-in wrapped lines
         self._wrappedLineNos = set()
+        # fold interaction state
+        self._gutterWidth = 0
+        self._openBlockStart = None
+        self._openBlockMeta = None
+        self._pressFoldLine = None
+        self._pressOnGutter = False
+        self._contextLine = -1
 
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
@@ -142,10 +150,24 @@ class TextViewer(QAbstractScrollArea):
             textLine = self._textLines.get(lineNo)
             if textLine:
                 self._applyWrapHeight(textLine)
+        self._syncGutter()
 
     def wrapWidth(self):
         """Pixel width wrapped lines lay out to."""
-        return max(1, self.viewport().width())
+        return max(1, self.viewport().width() - self._gutterWidth)
+
+    def gutterWidth(self):
+        """Reserved left strip for fold indicators; 0 without blocks."""
+        return self._gutterWidth
+
+    def _syncGutter(self):
+        desired = self.lineHeight if self._blockModel.blocks() else 0
+        if desired == self._gutterWidth:
+            return
+        self._gutterWidth = desired
+        self._reflowWrappedLines()
+        self._adjustScrollbars()
+        self.viewport().update()
 
     def _applyWrapHeight(self, textLine):
         self._blockModel.setLineHeight(
@@ -208,6 +230,97 @@ class TextViewer(QAbstractScrollArea):
             textLine.setWrapWidth(self.wrapWidth())
             self._applyWrapHeight(textLine)
 
+    # -- foldable blocks ---------------------------------------------------
+
+    def beginBlock(self, meta=None):
+        """Open a foldable block anchored at the next appended line.
+
+        An unclosed block is closed automatically by the next beginBlock
+        or clear().
+        """
+        self.endBlock()
+        self._openBlockStart = self.textLineCount()
+        self._openBlockMeta = meta
+
+    def endBlock(self):
+        """Close the open block at the last appended line."""
+        if self._openBlockStart is None:
+            return
+        start = self._openBlockStart
+        meta = self._openBlockMeta
+        self._openBlockStart = None
+        self._openBlockMeta = None
+
+        end = self.textLineCount() - 1
+        if end < start:
+            return  # nothing was appended: drop the empty block
+        self._blockModel.addBlock(start, end, meta=meta)
+        self._syncGutter()
+
+    def canFoldAt(self, lineNo):
+        block = self._blockModel.blockAtAnchor(lineNo)
+        return block is not None and block.endLine > block.startLine
+
+    def toggleFoldAt(self, lineNo):
+        block = self._blockModel.toggleFold(lineNo)
+        if block is not None:
+            self._afterFoldChanged()
+        return block
+
+    def foldAllBlocks(self):
+        self._blockModel.foldAll()
+        self._afterFoldChanged()
+
+    def expandAllBlocks(self):
+        self._blockModel.expandAll()
+        self._afterFoldChanged()
+
+    def expandBlocksCovering(self, lineNo):
+        """Unfold every folded block hiding lineNo; True if changed."""
+        changed = False
+        while self._blockModel.isLineHidden(lineNo):
+            block = self._blockModel.foldedBlockCovering(lineNo)
+            if block is None:
+                break
+            self._blockModel.setFolded(block, False)
+            changed = True
+        return changed
+
+    def _afterFoldChanged(self):
+        self._adjustScrollbars()
+        self.viewport().update()
+
+    def foldTipForLine(self, lineNo):
+        """Hover hint for the fold control of an anchor line, or None."""
+        block = self._blockModel.blockAtAnchor(lineNo)
+        if block is None or block.endLine <= block.startLine:
+            return None
+        count = block.endLine - block.startLine
+        if block.folded:
+            return self.tr("Folded %d lines, click to expand") % count
+        return self.tr("%d lines, click to fold") % count
+
+    def _foldChipX(self, textLine):
+        """Viewport X of the folded-content chip on the anchor line."""
+        drawX = self._gutterWidth
+        if not textLine.wrap():
+            drawX -= self.horizontalScrollBar().value()
+        rows = textLine.visualLineCount()
+        return drawX + textLine.rowWidth(rows - 1) + 6
+
+    def _foldBlockAt(self, textLine):
+        block = self._blockModel.blockAtAnchor(textLine.lineNo())
+        if block is None or not block.folded \
+                or block.endLine <= block.startLine:
+            return None
+        return block
+
+    def _isOverFoldChip(self, textLine, viewportPos):
+        if self._foldBlockAt(textLine) is None:
+            return False
+        chipX = self._foldChipX(textLine)
+        return chipX <= viewportPos.x() <= chipX + 14
+
     def appendLine(self, line: str):
         self.appendLines([line])
 
@@ -264,6 +377,11 @@ class TextViewer(QAbstractScrollArea):
         self._maxWidth = 0
         self._blockModel.clear()
         self._wrappedLineNos.clear()
+        self._openBlockStart = None
+        self._openBlockMeta = None
+        self._pressFoldLine = None
+        self._pressOnGutter = False
+        self._gutterWidth = 0
         self._highlightLines.clear()
         self._cursor.clear()
         self._maybeEmitSelectionChanged()
@@ -340,6 +458,12 @@ class TextViewer(QAbstractScrollArea):
         if lineNo < 0 or lineNo >= self.textLineCount():
             return
 
+        # a folded-away target unfolds instead of scrolling to its
+        # anchor
+        if self._blockModel.isLineHidden(lineNo) and \
+                self.expandBlocksCovering(lineNo):
+            self._adjustScrollbars()
+
         self._cursor.moveTo(lineNo, 0)
 
         # central the lineNo in view
@@ -397,11 +521,13 @@ class TextViewer(QAbstractScrollArea):
     def _hitOffsetForPos(self, textLine, viewportPos):
         """Character offset of a viewport position inside textLine."""
         row = self._visualRowForPos(viewportPos, textLine.lineNo())
-        pos = self.mapToContents(viewportPos)
         if textLine.wrap():
             # wrapped rows ignore horizontal scrolling
-            pos.setX(max(0, viewportPos.x()))
-        return textLine.offsetForPos(pos, row)
+            x = viewportPos.x() - self._gutterWidth
+        else:
+            x = self.mapToContents(viewportPos).x() - self._gutterWidth
+        return textLine.offsetForPos(QPoint(int(x), int(viewportPos.y())),
+                                     row)
 
     def highlightLines(self, lines):
         self._highlightLines = lines
@@ -457,6 +583,15 @@ class TextViewer(QAbstractScrollArea):
             return
         if not self._cursor.isValid():
             return
+
+        # targets inside folded blocks unfold first (find results,
+        # programmatic selections)
+        changed = self.expandBlocksCovering(self._cursor.beginLine())
+        if self._cursor.hasSelection():
+            changed = self.expandBlocksCovering(
+                self._cursor.endLine()) or changed
+        if changed:
+            self._adjustScrollbars()
 
         startLine = self.firstVisibleLine()
         endLine = startLine + self._linesPerPage()
@@ -637,6 +772,13 @@ class TextViewer(QAbstractScrollArea):
             self.executeFind,
             QKeySequence(QKeySequence.Find))
         acFind.setIcon(QIcon.fromTheme("edit-find"))
+        menu.addSeparator()
+        self._acFoldBlock = menu.addAction(
+            self.tr("Fold &Block"), self._onFoldBlockTriggered)
+        self._acFoldAll = menu.addAction(
+            self.tr("Fold All B&locks"), self.foldAllBlocks)
+        self._acExpandAll = menu.addAction(
+            self.tr("&Expand All Blocks"), self.expandAllBlocks)
         return menu
 
     @property
@@ -647,6 +789,25 @@ class TextViewer(QAbstractScrollArea):
 
     def updateContextMenu(self, pos):
         self._acCopy.setEnabled(self._cursor.hasSelection())
+
+        blocks = self._blockModel.blocks()
+        block = self._blockModel.blockAtAnchor(self._contextLine) \
+            if self._contextLine >= 0 else None
+        foldable = block is not None and block.endLine > block.startLine
+        self._acFoldBlock.setVisible(foldable)
+        if foldable:
+            self._acFoldBlock.setText(
+                self.tr("&Unfold Block") if block.folded
+                else self.tr("Fold &Block"))
+
+        hasTopLevel = any(b.isTopLevel() and b.endLine > b.startLine
+                          for b in blocks)
+        self._acFoldAll.setVisible(hasTopLevel)
+        self._acExpandAll.setVisible(hasTopLevel)
+
+    def _onFoldBlockTriggered(self):
+        if self._contextLine >= 0:
+            self.toggleFoldAt(self._contextLine)
 
     def drawLineBackground(self, painter, textLine, lineRect):
         pass
@@ -941,10 +1102,18 @@ class TextViewer(QAbstractScrollArea):
         offset = self.contentOffset()
         y = model.lineTop(startLine) - scrollValue
         viewportRect = self.viewport().rect()
+        gutter = self._gutterWidth
 
         painter.setClipRect(eventRect)
+        painter.setFont(self._font)
+
+        # content must not slide under the fold-indicator strip
+        clipRg = QRectF(eventRect)
+        if gutter:
+            clipRg.setLeft(max(clipRg.left(), gutter))
 
         highlightLineBg = ApplicationBase.instance().colorSchema().HighlightLineBg
+        foldColor = ApplicationBase.instance().colorSchema().Whitespace
 
         borderStartLine = -1
         borderRect = QRectF()
@@ -956,8 +1125,9 @@ class TextViewer(QAbstractScrollArea):
 
             textLine = self.textLineAt(i)
             # wrapped rows are laid out to the viewport width and must
-            # not drift with horizontal scrolling
-            drawX = 0.0 if textLine.wrap() else offset.x()
+            # not drift with horizontal scrolling; everything starts
+            # right of the fold gutter
+            drawX = gutter + (0.0 if textLine.wrap() else offset.x())
 
             br = textLine.boundingRect()
             r = br.translated(drawX, y)
@@ -965,8 +1135,8 @@ class TextViewer(QAbstractScrollArea):
             def lineRect():
                 fr = QRectF(br)
                 fr.moveTop(fr.top() + r.top())
-                fr.setLeft(0)
-                fr.setRight(viewportRect.width() - offset.x())
+                fr.setLeft(gutter)
+                fr.setRight(viewportRect.width())
                 return fr
 
             if i in self._highlightLines:
@@ -1007,8 +1177,26 @@ class TextViewer(QAbstractScrollArea):
             if selectionRg:
                 formats.append(selectionRg)
 
-            textLine.draw(painter, QPointF(drawX, y), formats,
-                          QRectF(eventRect))
+            textLine.draw(painter, QPointF(drawX, y), formats, clipRg)
+
+            # fold affordances on block anchor lines
+            if gutter:
+                block = model.blockAtAnchor(i)
+                if block is not None and block.endLine > block.startLine:
+                    glyph = "\u25b8" if block.folded else "\u25be"
+                    painter.setPen(foldColor)
+                    painter.drawText(
+                        QRectF(0, y, gutter, height),
+                        int(Qt.AlignHCenter | Qt.AlignVCenter), glyph)
+                    if block.folded:
+                        rows = textLine.visualLineCount()
+                        chipX = drawX + textLine.rowWidth(rows - 1) + 6
+                        chipY = y + (rows - 1) * self._lineHeight
+                        if chipX + 12 <= viewportRect.width():
+                            painter.drawText(
+                                QRectF(chipX, chipY, 12, self._lineHeight),
+                                int(Qt.AlignLeft | Qt.AlignVCenter),
+                                "\u2026")
 
             y += height
 
@@ -1049,6 +1237,15 @@ class TextViewer(QAbstractScrollArea):
         if not textLine:
             return
 
+        if event.position().x() < self._gutterWidth:
+            # fold strip: only anchor lines respond, and only on release
+            self._clickOnLink = False
+            lineNo = textLine.lineNo()
+            self._pressOnGutter = True
+            self._pressFoldLine = lineNo if self.canFoldAt(lineNo) \
+                else None
+            return
+
         tripleClick = False
         if self._clickTimer.isValid():
             tripleClick = not self._clickTimer.hasExpired(
@@ -1073,6 +1270,21 @@ class TextViewer(QAbstractScrollArea):
         if event.button() != Qt.LeftButton:
             return
 
+        if self._pressOnGutter:
+            # gutter press/drag: toggle only on a clean click on the
+            # same anchor line, never after a drag; other gutter clicks
+            # are swallowed
+            lineNo = self._pressFoldLine
+            self._pressFoldLine = None
+            self._pressOnGutter = False
+            textLine = self.textLineForPos(event.position())
+            if lineNo is not None and textLine is not None and \
+                    textLine.lineNo() == lineNo:
+                self.toggleFoldAt(lineNo)
+                self._maybeEmitSelectionChanged()
+                self.textLineClicked.emit(textLine)
+            return
+
         if self._link and self._clickOnLink:
             self.linkActivated.emit(self._link)
 
@@ -1086,6 +1298,11 @@ class TextViewer(QAbstractScrollArea):
         if not textLine:
             return
 
+        if not self._cursor.hasSelection() and \
+                self._isOverFoldChip(textLine, event.position()):
+            # chip click expands the folded block
+            self.toggleFoldAt(textLine.lineNo())
+
         self.textLineClicked.emit(textLine)
         self._maybeEmitSelectionChanged()
 
@@ -1093,6 +1310,8 @@ class TextViewer(QAbstractScrollArea):
         if event.button() != Qt.LeftButton:
             return
         if not self.hasTextLines():
+            return
+        if event.position().x() < self._gutterWidth:
             return
 
         self._clickTimer.restart()
@@ -1150,6 +1369,9 @@ class TextViewer(QAbstractScrollArea):
         self._link = None
         if not self.hasTextLines():
             return
+        if self._pressOnGutter:
+            # press started in the fold strip: no caret, no drag select
+            return
 
         pos = event.position().toPoint()
         textLine = self.textLineForPos(pos)
@@ -1174,7 +1396,7 @@ class TextViewer(QAbstractScrollArea):
                 elif not self._autoScrollTimer.isActive():
                     self._autoScrollTimer.start(100, self)
         elif event.buttons() == Qt.NoButton:
-            x = pos.x()
+            x = pos.x() - self._gutterWidth
             if not textLine.wrap():
                 x += self.horizontalScrollBar().value()
             if textLine.boundingRect().right() >= x:
@@ -1182,11 +1404,23 @@ class TextViewer(QAbstractScrollArea):
                 if self._link:
                     self.updateLinkData(self._link, textLine.lineNo())
 
-        cursorShape = Qt.PointingHandCursor if self._link \
-            else Qt.IBeamCursor
+        foldTip = None
+        if self.canFoldAt(textLine.lineNo()) and (
+                pos.x() < self._gutterWidth
+                or self._isOverFoldChip(textLine, pos)):
+            foldTip = self.foldTipForLine(textLine.lineNo())
+        if foldTip:
+            QToolTip.showText(event.globalPosition().toPoint(), foldTip)
+        else:
+            QToolTip.hideText()
+
+        cursorShape = Qt.PointingHandCursor if (
+            self._link or foldTip) else Qt.IBeamCursor
         self.viewport().setCursor(cursorShape)
 
     def contextMenuEvent(self, event):
+        viewportPos = self.viewport().mapFromParent(event.pos())
+        self._contextLine = self.textRowForPos(viewportPos)
         menu = self.contextMenu
         self.updateContextMenu(event.pos())
         menu.exec(event.globalPos())
