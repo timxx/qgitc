@@ -113,6 +113,15 @@ class BlockModel:
     def isLineVisible(self, lineNo):
         return not self.isLineHidden(lineNo)
 
+    def _isPlain(self):
+        """No height overrides and nothing folded: O(1) arithmetic."""
+        if self._lineHeights:
+            return False
+        for block in self._blocks:
+            if block.folded:
+                return False
+        return True
+
     # -- blocks -----------------------------------------------------------
 
     def blocks(self):
@@ -181,31 +190,51 @@ class BlockModel:
     def _rebuild(self):
         if not self._dirty:
             return
-        heights = []
-        visible = [self.isLineVisible(i) for i in range(self._lineCount)]
-        for i in range(self._lineCount):
-            if visible[i]:
-                heights.append(self._lineHeights.get(
-                    i, self._defaultHeight))
-            else:
-                heights.append(0)
+        if self._isPlain():
+            # degenerate case: keep tops empty, geometry falls back to
+            # i * defaultHeight without allocating prefix arrays
+            self._tops = []
+            self._dirty = False
+            return
+
+        hidden = [False] * self._lineCount
+        for block in self._blocks:
+            if not block.folded:
+                continue
+            for i in range(block.startLine + 1, min(
+                    block.endLine, self._lineCount - 1) + 1):
+                hidden[i] = True
+
         tops = [0] * (self._lineCount + 1)
-        for i, h in enumerate(heights):
-            tops[i + 1] = tops[i] + h
+        for i in range(self._lineCount):
+            height = 0 if hidden[i] else self._lineHeights.get(
+                i, self._defaultHeight)
+            tops[i + 1] = tops[i] + height
         self._tops = tops
         self._dirty = False
 
+    def _usesPrefix(self):
+        return bool(self._tops)
+
     def contentHeight(self):
         self._rebuild()
-        return self._tops[-1] if self._tops else 0
+        if not self._usesPrefix():
+            return self._lineCount * self._defaultHeight
+        return self._tops[-1]
 
     def lineTop(self, lineNo):
         """Pixel Y of the line top; hidden lines report their position."""
         self._rebuild()
-        if not self._tops:
+        if self._lineCount == 0:
             return 0
         lineNo = max(0, min(lineNo, self._lineCount - 1))
+        if not self._usesPrefix():
+            return lineNo * self._defaultHeight
         return self._tops[lineNo]
+
+    def lineBottom(self, lineNo):
+        """Pixel Y of the line bottom; 0-height for hidden lines."""
+        return self.lineTop(lineNo) + self.lineHeight(lineNo)
 
     def lineAt(self, y):
         """Logical line occupying pixel Y (hidden lines are skipped).
@@ -217,6 +246,17 @@ class BlockModel:
             return -1
         if y <= 0:
             return 0
+        if not self._usesPrefix():
+            return max(0, min(y // self._defaultHeight,
+                              self._lineCount - 1))
         # tops is non-decreasing; find rightmost line whose top <= y
         idx = bisect.bisect_right(self._tops, y) - 1
-        return max(0, min(idx, self._lineCount - 1))
+        idx = max(0, min(idx, self._lineCount - 1))
+        # a plateau of equal tops ends on a folded-away line: step to
+        # the first visible line
+        while idx + 1 < self._lineCount and self.isLineHidden(idx):
+            idx += 1
+        if self.isLineHidden(idx):
+            while idx > 0 and self.isLineHidden(idx):
+                idx -= 1
+        return idx

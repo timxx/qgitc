@@ -54,6 +54,19 @@ class TestBlockModelMapping(unittest.TestCase):
         self.assertEqual(self.model.lineAt(39), 1)
         self.assertEqual(self.model.lineAt(40), 2)
 
+    def testLineBottom(self):
+        self.assertEqual(self.model.lineBottom(0), 10)
+        self.assertEqual(self.model.lineBottom(4), 50)
+
+    def testPlainFastPathMatchesExplicitHeights(self):
+        # no overrides, no folds: O(1) arithmetic must equal prefix sums
+        for i in range(5):
+            self.assertEqual(self.model.lineTop(i), i * 10)
+            self.assertEqual(self.model.lineBottom(i), (i + 1) * 10)
+        self.assertEqual(self.model.contentHeight(), 50)
+        self.assertEqual(self.model.lineAt(49), 4)
+        self.assertEqual(self.model.lineAt(50), 4)  # clamped to last
+
 
 class TestBlockModelFold(unittest.TestCase):
     def setUp(self):
@@ -86,6 +99,16 @@ class TestBlockModelFold(unittest.TestCase):
         self.assertEqual(self.model.lineTop(0), 0)
         self.assertEqual(self.model.lineTop(1), 10)  # zero-height hidden line
         self.assertEqual(self.model.lineTop(5), 10)
+        # hidden lines collapse to zero height
+        self.assertEqual(self.model.lineBottom(2), self.model.lineTop(2))
+        self.assertEqual(self.model.lineBottom(5), 20)
+
+    def testLineAtSkipsHiddenLinesAtPlateauEdge(self):
+        # fold to the very end: lineAt must not report a hidden line
+        tail = self.model.addBlock(5, 9)
+        self.model.setFolded(tail, True)
+        self.assertTrue(self.model.isLineHidden(9))
+        self.assertEqual(self.model.lineAt(999), 5)
 
     def testFoldDoesNotChangeLineNumbers(self):
         self.model.setFolded(self.block, True)
