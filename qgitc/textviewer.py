@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
 )
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.blockmodel import BlockModel
 from qgitc.findconstants import FindFlags, FindPart
 from qgitc.findwidget import FindWidget
 from qgitc.textcursor import TextCursor
@@ -64,6 +65,10 @@ class TextViewer(QAbstractScrollArea):
 
         self._convertIndex = 0
         self._convertTimerId = None
+
+        # logical line <-> pixel geometry (wrap + fold aware); created
+        # first because reloadSettings() below already feeds it fonts
+        self._blockModel = BlockModel()
 
         self._option = QTextOption()
         self._option.setWrapMode(QTextOption.NoWrap)
@@ -105,7 +110,6 @@ class TextViewer(QAbstractScrollArea):
         self._findWidget: FindWidget = None
 
         self.horizontalScrollBar().setSingleStep(20)
-        self.verticalScrollBar().setSingleStep(1)
 
         self.findResultAvailable.connect(self._onFindResultAvailable)
 
@@ -130,6 +134,8 @@ class TextViewer(QAbstractScrollArea):
         self._font = font
         fm = QFontMetrics(self._font)
         self._lineHeight = fm.height()
+        self._blockModel.setDefaultHeight(self._lineHeight)
+        self.verticalScrollBar().setSingleStep(self._lineHeight)
 
     def reloadSettings(self):
         self.updateFont(self.font())
@@ -187,6 +193,8 @@ class TextViewer(QAbstractScrollArea):
                 textLine = self.toTextLine(line)
                 self.appendTextLine(textLine)
 
+        self._blockModel.setLineCount(self.textLineCount())
+
         if self._convertTimerId is None:
             self._convertTimerId = self.startTimer(0)
 
@@ -199,6 +207,7 @@ class TextViewer(QAbstractScrollArea):
             self._lines = []
         self._lines.append(None)
         self._textLines[lineNo] = textLine
+        self._blockModel.setLineCount(self.textLineCount())
 
         if self._convertTimerId is None:
             self._convertTimerId = self.startTimer(0)
@@ -225,6 +234,7 @@ class TextViewer(QAbstractScrollArea):
         self._textLines.clear()
         self._inReading = False
         self._maxWidth = 0
+        self._blockModel.clear()
         self._highlightLines.clear()
         self._cursor.clear()
         self._maybeEmitSelectionChanged()
@@ -291,7 +301,7 @@ class TextViewer(QAbstractScrollArea):
         return textLine
 
     def firstVisibleLine(self):
-        return self.verticalScrollBar().value()
+        return self._blockModel.lineAt(self.verticalScrollBar().value())
 
     @property
     def currentLineNo(self):
@@ -304,14 +314,16 @@ class TextViewer(QAbstractScrollArea):
         self._cursor.moveTo(lineNo, 0)
 
         # central the lineNo in view
+        target = lineNo
         if centralOnView:
             halfOfPage = self._linesPerPage() // 2
-            if lineNo > halfOfPage:
-                lineNo -= halfOfPage
+            if target > halfOfPage:
+                target -= halfOfPage
 
         vScrollBar = self.verticalScrollBar()
-        if vScrollBar.value() != lineNo:
-            vScrollBar.setValue(lineNo)
+        newValue = self._blockModel.lineTop(target)
+        if vScrollBar.value() != newValue:
+            vScrollBar.setValue(newValue)
             self.viewport().update()
 
     def contentOffset(self):
@@ -336,12 +348,9 @@ class TextViewer(QAbstractScrollArea):
             return -1
 
         y = max(0, pos.y())
-        n = int(y / self.lineHeight)
-        n += self.firstVisibleLine()
-
-        if n >= self.textLineCount():
-            n = self.textLineCount() - 1
-
+        n = self._blockModel.lineAt(
+            self.verticalScrollBar().value() + y)
+        n = max(0, min(n, self.textLineCount() - 1))
         return n
 
     def textLineForPos(self, pos):
@@ -349,6 +358,21 @@ class TextViewer(QAbstractScrollArea):
         if n == -1:
             return None
         return self.textLineAt(n)
+
+    def _visualRowForPos(self, pos, lineNo):
+        """Visual row of viewport pos within the logical line."""
+        y = self.verticalScrollBar().value() + max(0, pos.y()) - \
+            self._blockModel.lineTop(lineNo)
+        return max(0, int(y / self.lineHeight))
+
+    def _hitOffsetForPos(self, textLine, viewportPos):
+        """Character offset of a viewport position inside textLine."""
+        row = self._visualRowForPos(viewportPos, textLine.lineNo())
+        pos = self.mapToContents(viewportPos)
+        if textLine.wrap():
+            # wrapped rows ignore horizontal scrolling
+            pos.setX(max(0, viewportPos.x()))
+        return textLine.offsetForPos(pos, row)
 
     def highlightLines(self, lines):
         self._highlightLines = lines
@@ -415,7 +439,8 @@ class TextViewer(QAbstractScrollArea):
             newLineNo = lineNo
             if newLineNo > halfOfPage:
                 newLineNo -= halfOfPage
-            self.verticalScrollBar().setValue(newLineNo)
+            self.verticalScrollBar().setValue(
+                self._blockModel.lineTop(newLineNo))
 
         if lineOnly:
             return
@@ -443,16 +468,19 @@ class TextViewer(QAbstractScrollArea):
         if not self._cursor.isValid():
             return
 
-        startLine = self.firstVisibleLine()
-        endLine = startLine + self._linesPerPage()
-        endLine = min(self.textLineCount(), endLine)
+        model = self._blockModel
+        viewHeight = self.viewport().height()
+        endLine = self._cursor._endLine
+        top = model.lineTop(endLine)
+        bottom = model.lineBottom(endLine)
 
-        if self._cursor._endLine > endLine:
-            self.verticalScrollBar().setValue(self._cursor._endLine - endLine + startLine)
-        elif self._cursor._endLine < startLine:
-            self.verticalScrollBar().setValue(self._cursor._endLine)
+        vScrollBar = self.verticalScrollBar()
+        if bottom > vScrollBar.value() + viewHeight:
+            vScrollBar.setValue(bottom - viewHeight)
+        elif top < vScrollBar.value():
+            vScrollBar.setValue(top)
 
-        textLine = self.textLineAt(self._cursor._endLine)
+        textLine = self.textLineAt(endLine)
         x = textLine.offsetToX(self._cursor._endPos)
 
         hbar = self.horizontalScrollBar()
@@ -469,15 +497,17 @@ class TextViewer(QAbstractScrollArea):
             return
 
         # central the lineNo in view
+        target = lineNo
         if centralOnView:
             halfOfPage = self._linesPerPage() // 2
-            if lineNo > halfOfPage:
-                lineNo -= halfOfPage
+            if target > halfOfPage:
+                target -= halfOfPage
 
         needUpdate = False
         vScrollBar = self.verticalScrollBar()
-        if vScrollBar.value() != lineNo:
-            vScrollBar.setValue(lineNo)
+        newValue = self._blockModel.lineTop(target)
+        if vScrollBar.value() != newValue:
+            vScrollBar.setValue(newValue)
             needUpdate = True
 
         hbar = self.horizontalScrollBar()
@@ -626,25 +656,29 @@ class TextViewer(QAbstractScrollArea):
         hScrollBar.setRange(0, self._maxWidth - self.viewport().width())
         hScrollBar.setPageStep(self.viewport().width())
 
-        linesPerPage = self._linesPerPage()
-        totalLines = self.textLineCount()
+        viewHeight = self.viewport().height()
+        contentHeight = self._blockModel.contentHeight()
 
-        vScrollBar.setRange(0, totalLines - linesPerPage)
-        vScrollBar.setPageStep(linesPerPage)
+        vScrollBar.setRange(0, max(0, contentHeight - viewHeight))
+        vScrollBar.setPageStep(viewHeight)
 
     def _invalidateSelection(self):
         if not self._cursor.hasSelection():
             return
 
+        model = self._blockModel
         begin = self._cursor.beginLine()
         end = self._cursor.endLine()
 
-        x = 0
-        y = (begin - self.firstVisibleLine()) * self.lineHeight
-        w = self.viewport().width()
-        h = (end - begin + 1) * self.lineHeight
+        value = self.verticalScrollBar().value()
+        top = model.lineTop(begin) - value
+        height = model.lineBottom(end) - model.lineTop(begin)
+        if height <= 0:
+            # degenerate selection (e.g. hidden lines): repaint all
+            self.viewport().update()
+            return
 
-        rect = QRect(x, y, w, h)
+        rect = QRect(0, int(top), self.viewport().width(), int(height))
         # offset for some odd fonts LoL
         offset = int(self.lineHeight / 2)
         rect.adjust(0, -offset, 0, offset)
@@ -795,8 +829,9 @@ class TextViewer(QAbstractScrollArea):
             self._convertTimerId = None
             self._convertIndex = 0
 
-        maximum = self.textLineCount() - self._linesPerPage()
-        needAdjust = self.verticalScrollBar().maximum() < maximum
+        viewHeight = self.viewport().height()
+        needAdjust = self.verticalScrollBar().maximum() < \
+            max(0, self._blockModel.contentHeight() - viewHeight)
         if textLine:
             width = textLine.boundingRect().width()
             if width > self._maxWidth:
@@ -863,18 +898,19 @@ class TextViewer(QAbstractScrollArea):
 
         painter = QPainter(self.viewport())
         eventRect = event.rect()
+        model = self._blockModel
+        scrollValue = self.verticalScrollBar().value()
 
         if eventRect.isValid():
-            startLine = self.textRowForPos(eventRect.topLeft())
-            endLine = self.textRowForPos(eventRect.bottomRight()) + 1
+            startLine = model.lineAt(scrollValue + eventRect.top())
+            endLine = model.lineAt(scrollValue + eventRect.bottom()) + 1
         else:
             startLine = self.firstVisibleLine()
             endLine = startLine + self._linesPerPage() + 1
         endLine = min(self.textLineCount(), endLine)
 
         offset = self.contentOffset()
-        offset.setY(offset.y() + (startLine -
-                                  self.firstVisibleLine()) * self.lineHeight)
+        y = model.lineTop(startLine) - scrollValue
         viewportRect = self.viewport().rect()
 
         painter.setClipRect(eventRect)
@@ -884,10 +920,18 @@ class TextViewer(QAbstractScrollArea):
         borderStartLine = -1
         borderRect = QRectF()
         for i in range(startLine, endLine):
+            height = model.lineHeight(i)
+            if height <= 0:
+                # folded away: occupies no space
+                continue
+
             textLine = self.textLineAt(i)
+            # wrapped rows are laid out to the viewport width and must
+            # not drift with horizontal scrolling
+            drawX = 0.0 if textLine.wrap() else offset.x()
 
             br = textLine.boundingRect()
-            r = br.translated(offset)
+            r = br.translated(drawX, y)
 
             def lineRect():
                 fr = QRectF(br)
@@ -934,11 +978,12 @@ class TextViewer(QAbstractScrollArea):
             if selectionRg:
                 formats.append(selectionRg)
 
-            textLine.draw(painter, offset, formats, QRectF(eventRect))
+            textLine.draw(painter, QPointF(drawX, y), formats,
+                          QRectF(eventRect))
 
-            offset.setY(offset.y() + self._lineHeight)
+            y += height
 
-            if offset.y() > viewportRect.height():
+            if y > viewportRect.height():
                 break
 
         if borderStartLine != -1:
@@ -978,8 +1023,7 @@ class TextViewer(QAbstractScrollArea):
             self._invalidateSelection()
             self._maybeEmitSelectionChanged()
         else:
-            offset = textLine.offsetForPos(
-                self.mapToContents(event.position()))
+            offset = self._hitOffsetForPos(textLine, event.position())
             self._cursor.moveTo(textLine.lineNo(), offset)
             self._maybeEmitSelectionChanged()
 
@@ -1022,7 +1066,7 @@ class TextViewer(QAbstractScrollArea):
         if not textLine:
             return
 
-        offset = textLine.offsetForPos(self.mapToContents(event.position()))
+        offset = self._hitOffsetForPos(textLine, event.position())
         begin = offset
         end = offset
 
@@ -1074,7 +1118,7 @@ class TextViewer(QAbstractScrollArea):
         if not textLine:
             return
 
-        offset = textLine.offsetForPos(self.mapToContents(pos))
+        offset = self._hitOffsetForPos(textLine, pos)
         if event.buttons() == Qt.LeftButton:
             self._invalidateSelection()
 
@@ -1092,7 +1136,9 @@ class TextViewer(QAbstractScrollArea):
                 elif not self._autoScrollTimer.isActive():
                     self._autoScrollTimer.start(100, self)
         elif event.buttons() == Qt.NoButton:
-            x = pos.x() + self.horizontalScrollBar().value()
+            x = pos.x()
+            if not textLine.wrap():
+                x += self.horizontalScrollBar().value()
             if textLine.boundingRect().right() >= x:
                 self._link = textLine.hitTest(offset)
                 if self._link:
