@@ -10,6 +10,7 @@
 - Cross-window behavior is event-driven through [qgitc/events.py](qgitc/events.py); follow that pattern when adding new UI actions.
 - Window identity is centralized in [qgitc/windowtype.py](qgitc/windowtype.py); prefer using the existing window factory instead of introducing ad hoc window creation.
 - The AI chat experience lives around [qgitc/aichatwidget.py](qgitc/aichatwidget.py) and [qgitc/agent/agent_loop.py](qgitc/agent/agent_loop.py); agent tools are permission-gated and should stay consistent with that model.
+- The text viewer family ([qgitc/textviewer.py](qgitc/textviewer.py), [qgitc/blockmodel.py](qgitc/blockmodel.py), [qgitc/textline.py](qgitc/textline.py), [qgitc/patchviewer.py](qgitc/patchviewer.py), [qgitc/diffview.py](qgitc/diffview.py)) owns its own coordinate, wrap, fold and insertion model; read [docs/superpowers/specs/2026-09-24-textviewer-wrap-fold-insert-design.md](docs/superpowers/specs/2026-09-24-textviewer-wrap-fold-insert-design.md) before changing line geometry, wrapping, folding or anything that indexes lines.
 
 ## Repo-specific conventions
 - Use [qgitc/gitutils.py](qgitc/gitutils.py) for git operations instead of raw subprocess usage; it enforces the project’s process and environment conventions.
