@@ -363,6 +363,87 @@ class TextViewer(QAbstractScrollArea):
 
         self.viewport().update()
 
+    def insertLines(self, index, lines):
+        """Insert raw text lines before logical line `index`.
+
+        Lines from `index` on are renumbered, so everything that keys off
+        a line number (blocks, wrapped lines, cursor, find results) moves
+        down with them. Inserting above the visible area keeps the scroll
+        position anchored to what was on screen.
+        """
+        count = len(lines)
+        if count <= 0:
+            return
+
+        index = max(0, min(index, self.textLineCount()))
+        firstVisible = self.firstVisibleLine()
+        scrollValue = self.verticalScrollBar().value()
+        sweptTo = self._convertIndex
+
+        self._shiftLineNumbers(index, count)
+
+        if self._lines is None:
+            # every line was built already: re-create the raw slots
+            self._lines = [None] * self.textLineCount()
+        self._lines[index:index] = list(lines)
+        self._blockModel.insertLines(index, count)
+
+        if sweptTo >= index:
+            # the inserted lines are new: restart the sweep there so they
+            # still get built and accounted (widths, links, wrap)
+            self._convertIndex = index
+
+        if self._convertTimerId is None:
+            self._convertTimerId = self.startTimer(0)
+
+        self._adjustScrollbars()
+        if scrollValue > 0 and index <= firstVisible:
+            # keep the lines that were on screen where they were
+            self.verticalScrollBar().setValue(
+                scrollValue + count * self._lineHeight)
+
+        self.viewport().update()
+
+    def _shiftLineNumbers(self, index, count):
+        """Move every line-numbered piece of state down by `count`."""
+        if self._textLines:
+            shifted = {}
+            for lineNo, textLine in self._textLines.items():
+                if lineNo >= index:
+                    lineNo += count
+                    textLine.setLineNo(lineNo)
+                shifted[lineNo] = textLine
+            self._textLines = shifted
+
+        if self._wrappedLineNos:
+            self._wrappedLineNos = {
+                lineNo + count if lineNo >= index else lineNo
+                for lineNo in self._wrappedLineNos}
+
+        if self._highlightLines:
+            self._highlightLines = [
+                lineNo + count if lineNo >= index else lineNo
+                for lineNo in self._highlightLines]
+
+        self._cursor.shiftLines(index, count)
+        for cursor in self._highlightFind:
+            cursor.shiftLines(index, count)
+
+        if self._openBlockStart is not None and \
+                self._openBlockStart >= index:
+            self._openBlockStart += count
+        if self._contextLine >= index:
+            self._contextLine += count
+        if self._convertIndex >= index:
+            self._convertIndex += count
+        if self._findIndex >= index:
+            self._findIndex += count
+        if self._findCurPageRange is not None:
+            begin, end = self._findCurPageRange
+            self._findCurPageRange = (
+                begin + count if begin >= index else begin,
+                end + count if end >= index else end)
+
     def beginReading(self):
         """ Call before reading lines to TextViewer """
         self._inReading = True

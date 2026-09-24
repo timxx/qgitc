@@ -91,6 +91,17 @@ class TextCursor():
         self._endLine = line
         self._endPos = pos
 
+    def shiftLines(self, index, count):
+        """Move the cursor down when `count` lines are inserted at `index`.
+
+        The text it points at is what moved, so the position inside the
+        line stays put.
+        """
+        if self._beginLine >= index:
+            self._beginLine += count
+        if self._endLine >= index:
+            self._endLine += count
+
     def selectedText(self):
         if not self._viewer or not self.hasSelection():
             return None
