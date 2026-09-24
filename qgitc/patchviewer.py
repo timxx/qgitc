@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from typing import Dict
+
 from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
@@ -15,6 +17,7 @@ from PySide6.QtGui import (
 )
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.blockmodel import Block
 from qgitc.common import Commit, FindField, decodeFileData, findInlineSpans
 from qgitc.diffutils import *
 from qgitc.events import OpenLinkEvent
@@ -188,7 +191,9 @@ class SummaryTextLine(TextLine):
 
 
 class PatchViewer(SourceViewer):
-    fileRowChanged = Signal(int)
+    # carries the file path owning the top visible line, or None over the
+    # commit header/message region
+    fileChanged = Signal(object)
     requestCommit = Signal(str, bool, bool)
     requestBlame = Signal(str, bool, Commit)
 
@@ -201,6 +206,13 @@ class PatchViewer(SourceViewer):
         self.curIndexFound = False
 
         self._parentCount = 1
+
+        # File sections are the blocks registered around each DiffType.File
+        # marker, so a path and a viewer line each resolve to the other
+        # without scanning the document or the file list. Only file blocks
+        # are indexed; the commit header/message block is not.
+        self._fileBlocks: Dict[str, Block] = {}
+        self._openFilePath: str = None
 
         self.verticalScrollBar().valueChanged.connect(
             self._onVScollBarValueChanged)
@@ -300,6 +312,67 @@ class PatchViewer(SourceViewer):
         if isinstance(path, bytes):
             path = path.decode(diff_encoding, errors="replace")
         return {"kind": "file", "path": path, "title": path}
+
+    @staticmethod
+    def _fileMetaPath(meta):
+        """The file path a block's meta carries, or None for other blocks."""
+        if not isinstance(meta, dict) or meta.get("kind") != "file":
+            return None
+        return meta.get("path")
+
+    # -- file sections -----------------------------------------------------
+
+    def beginBlock(self, meta=None):
+        # every file section ends up here or in insertFileSection, so the
+        # open one is remembered by path to keep it addressable while it
+        # is still streaming and has no block of its own yet
+        super().beginBlock(meta)
+        self._openFilePath = self._fileMetaPath(meta)
+
+    def endBlock(self):
+        super().endBlock()
+        self._openFilePath = None
+
+    def addBlock(self, startLine, endLine, meta=None):
+        block = super().addBlock(startLine, endLine, meta=meta)
+        path = self._fileMetaPath(meta)
+        if block is not None and path is not None:
+            self._fileBlocks[path] = block
+        return block
+
+    def clear(self):
+        self._fileBlocks.clear()
+        self._openFilePath = None
+        super().clear()
+
+    def fileLineForPath(self, path):
+        """Viewer line of `path`'s DiffType.File marker, or None.
+
+        Every line-indexed consumer can ask this instead of keeping its
+        own copy of the line numbers: the block keeps its anchor correct
+        while earlier sections are inserted above it.
+        """
+        block = self._fileBlocks.get(path)
+        if block is not None:
+            return block.startLine
+        if path is not None and path == self._openFilePath:
+            return self._openBlockStart
+        return None
+
+    def filePathAtLine(self, lineNo):
+        """Path of the file section owning `lineNo`, or None.
+
+        None means the line is outside every file section -- the commit
+        header and message, or a gap between sections.
+        """
+        block = self._blockModel.blockAtLine(lineNo)
+        if block is None:
+            return None
+        return self._fileMetaPath(block.meta)
+
+    def currentFilePath(self):
+        """Path of the file section the first visible line is in, or None."""
+        return self.filePathAtLine(self.firstVisibleLine())
 
     def drawLineBackground(self, painter: QPainter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
@@ -416,16 +489,9 @@ class PatchViewer(SourceViewer):
         if not self.hasTextLines():
             return
 
-        # TODO: improve
-        for i in range(self.firstVisibleLine(), -1, -1):
-            textLine = self.textLineAt(i)
-            if isinstance(textLine, InfoTextLine) and textLine.isFile():
-                self.fileRowChanged.emit(i)
-                break
-            elif isinstance(textLine, AuthorTextLine) or \
-                    (isinstance(textLine, Sha1TextLine) and textLine.isParent()):
-                self.fileRowChanged.emit(0)
-                break
+        # the file section owning the top visible line is one block
+        # lookup, not a walk back over the document's text lines
+        self.fileChanged.emit(self.currentFilePath())
 
     def _onOpenCommit(self):
         sett = ApplicationBase.instance().settings()
@@ -454,19 +520,6 @@ class PatchViewer(SourceViewer):
         else:
             ApplicationBase.instance().postEvent(
                 ApplicationBase.instance(), OpenLinkEvent(link))
-
-    def currentFileRow(self):
-        row = self.firstVisibleLine()
-        # TODO: cache the file row to improve performance?
-        for i in range(row, -1, -1):
-            textLine = self.textLineAt(i)
-            if isinstance(textLine, InfoTextLine) and textLine.isFile():
-                return i
-            elif isinstance(textLine, AuthorTextLine) or \
-                    (isinstance(textLine, Sha1TextLine) and textLine.isParent()):
-                return 0
-
-        return 0
 
     def copyPlainText(self):
         text = self._cursor.selectedText()

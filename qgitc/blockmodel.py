@@ -63,8 +63,13 @@ class BlockModel:
         self._lineCount = 0
         self._lineHeights = {}  # lineNo -> height when visible
         self._blocks = []
+        self._foldedBlocks = []  # the subset that is folded, in fold order
         self._dirty = True
         self._tops = []  # prefix sum: _tops[i] = Y of line i
+        self._indexDirty = True
+        self._anchorLines = []  # sorted anchor lines of every block
+        self._innermostByAnchor = {}  # anchor -> innermost nested block
+        self._topByAnchor = {}  # anchor -> top-level section starting there
 
     # -- lines ------------------------------------------------------------
 
@@ -111,7 +116,7 @@ class BlockModel:
                 for lineNo, height in self._lineHeights.items()}
 
         self._lineCount += count
-        self._dirty = True
+        self._invalidate()
 
     def setLineHeight(self, lineNo, height):
         """Override the visible height of one line (word wrap)."""
@@ -128,8 +133,14 @@ class BlockModel:
         return self._lineHeights.get(lineNo, self._defaultHeight)
 
     def isLineHidden(self, lineNo):
-        for block in self._blocks:
-            if block.folded and block.coversLines(lineNo):
+        """True when a folded block covers lineNo.
+
+        Only folded blocks can hide anything, so the few that are folded
+        are walked instead of every block: lineHeight/lineBottom sit in
+        the paint loop, and a document can carry one block per file.
+        """
+        for block in self._foldedBlocks:
+            if block.coversLines(lineNo):
                 # a line is visible again only if some folded ancestor
                 # of the covering block does not cover it -- folded
                 # blocks hide unconditionally, so one hit is enough
@@ -141,14 +152,56 @@ class BlockModel:
 
     def _isPlain(self):
         """No height overrides and nothing folded: O(1) arithmetic."""
-        if self._lineHeights:
-            return False
-        for block in self._blocks:
-            if block.folded:
-                return False
-        return True
+        return not self._lineHeights and not self._foldedBlocks
 
     # -- blocks -----------------------------------------------------------
+
+    def _invalidate(self):
+        """A structural change: the geometry and the block index are stale."""
+        self._dirty = True
+        self._indexDirty = True
+
+    def _rebuildIndex(self):
+        """Index the blocks by their anchor line.
+
+        The geometry, the paint loop and the file list sync all map a
+        line to a block, and a document carries one block per file, so
+        scanning every block per line was the hot path. Two indexes come
+        out of one pass:
+
+        - `_innermostByAnchor`: the block that owns the fold control on
+          an anchor line (the deepest, matching the old linear scan);
+        - `_topByAnchor`: the enclosing top-level section, if any, so a
+          line inside nested ranges still resolves to its section.
+        """
+        if not self._indexDirty:
+            return
+        self._indexDirty = False
+
+        innermost = {}
+        topLevel = {}
+        anchors = []
+        for block in self._blocks:
+            if block.isTopLevel():
+                if block.startLine not in topLevel:
+                    anchors.append(block.startLine)
+                topLevel[block.startLine] = block
+                continue
+
+            if block.startLine not in innermost:
+                anchors.append(block.startLine)
+                innermost[block.startLine] = block
+                continue
+            # deeper in the tree wins, exactly as the linear scan did
+            found = innermost[block.startLine]
+            other = block if block.parent is not None else None
+            cur = found if found.parent is not None else None
+            if other is not None and (cur is None or other.parent is cur):
+                innermost[block.startLine] = block
+
+        self._innermostByAnchor = innermost
+        self._topByAnchor = topLevel
+        self._anchorLines = sorted(anchors)
 
     def blocks(self):
         return list(self._blocks)
@@ -159,35 +212,62 @@ class BlockModel:
                 "endLine {} before startLine {}".format(endLine, startLine))
         block = Block(startLine, endLine, meta=meta, parent=parent)
         self._blocks.append(block)
-        self._dirty = True
+        self._invalidate()
         return block
 
     def blockAtAnchor(self, lineNo):
         """Innermost block whose anchor is lineNo, or None."""
-        found = None
-        for block in self._blocks:
-            if block.startLine != lineNo:
-                continue
-            if found is None:
-                found = block
-            else:
-                # deeper in the tree wins
-                other = block if block.parent is not None else None
-                cur = found if found.parent is not None else None
-                if other is not None and (cur is None
-                                          or other.parent is cur):
-                    found = block
-        return found
+        self._rebuildIndex()
+        found = self._innermostByAnchor.get(lineNo)
+        if found is not None:
+            return found
+        return self._topByAnchor.get(lineNo)
+
+    def blockAtLine(self, lineNo):
+        """The top-level section that owns lineNo, or None.
+
+        Sections start in order, so bisecting the anchors jumps straight
+        to the last one at or before lineNo; only a line a shorter
+        overlapping section does not reach walks one step further back.
+        Anchors carrying only nested blocks are skipped, since the
+        section they belong to starts earlier. A line in a gap -- after a
+        section ends and before the next one starts -- belongs to none.
+
+        Nested ranges are reached through `blockAtAnchor`.
+        """
+        self._rebuildIndex()
+        lines = self._anchorLines
+        if not lines:
+            return None
+
+        idx = bisect.bisect_right(lines, lineNo) - 1
+        while idx >= 0:
+            block = self._topByAnchor.get(lines[idx])
+            if block is not None and block.containsLine(lineNo):
+                return block
+            idx -= 1
+        return None
 
     def foldedBlockCovering(self, lineNo):
-        """Innermost (last registered) folded block hiding lineNo."""
-        for block in reversed(self._blocks):
-            if block.folded and block.coversLines(lineNo):
+        """The last folded block that hides lineNo, or None.
+
+        Callers unfold in a loop, so which covering block is reported
+        first only decides the order the folds open in.
+        """
+        for block in reversed(self._foldedBlocks):
+            if block.coversLines(lineNo):
                 return block
         return None
 
     def setFolded(self, block, folded):
-        block.folded = bool(folded)
+        folded = bool(folded)
+        if folded == block.folded:
+            return
+        block.folded = folded
+        if folded:
+            self._foldedBlocks.append(block)
+        else:
+            self._foldedBlocks.remove(block)
         self._dirty = True
 
     def toggleFold(self, lineNo):
@@ -210,13 +290,15 @@ class BlockModel:
 
     def clearBlocks(self):
         self._blocks.clear()
-        self._dirty = True
+        self._foldedBlocks.clear()
+        self._invalidate()
 
     def clear(self):
         self._blocks.clear()
+        self._foldedBlocks.clear()
         self._lineHeights.clear()
         self._lineCount = 0
-        self._dirty = True
+        self._invalidate()
 
     # -- geometry ---------------------------------------------------------
 
@@ -231,9 +313,7 @@ class BlockModel:
             return
 
         hidden = [False] * self._lineCount
-        for block in self._blocks:
-            if not block.folded:
-                continue
+        for block in self._foldedBlocks:
             for i in range(block.startLine + 1, min(
                     block.endLine, self._lineCount - 1) + 1):
                 hidden[i] = True

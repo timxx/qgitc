@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Unit tests for DiffView's incremental per-file diff accumulation."""
 
+from PySide6.QtCore import Qt
+
 from qgitc.applicationbase import ApplicationBase
 from qgitc.common import Commit
 from qgitc.diffutils import DiffType, FileInfo, FileState
-from qgitc.diffview import DiffView
+from qgitc.diffview import DiffView, FileListModel
 from tests.base import TestBase
 
 
@@ -68,8 +70,9 @@ class TestDiffViewChunkedDiff(TestBase):
         self.assertEqual(5, self._view.viewer.textLineCount(),
                          "no line may be dropped or duplicated")
 
-    def testRowNumbersMatchViewerLines(self):
-        """Each file's row is the viewer line of its DiffType.File marker."""
+    def testFileLinesComeFromTheSectionBlocks(self):
+        """A file's viewer line is its section block's anchor, so nothing in
+        the file list has to be renumbered when a section is inserted."""
         self._emitChunk(
             [(DiffType.File, b"a.txt"),
              (DiffType.Diff, b"+a1"),
@@ -79,12 +82,13 @@ class TestDiffViewChunkedDiff(TestBase):
             [(DiffType.File, b"b.txt"),
              (DiffType.Diff, b"+b1")],
             {"b.txt": FileInfo(3)})
+        self._view.viewer.endReading()
 
-        rows = {f: info.row
-                for f, info in self._view.fileListModel._fileList}
-        self.assertEqual({"a.txt": 0, "b.txt": 3}, rows)
+        viewer = self._view.viewer
+        self.assertEqual(0, viewer.fileLineForPath("a.txt"))
+        self.assertEqual(3, viewer.fileLineForPath("b.txt"))
         # a.txt: marker + 2 lines, b.txt: marker + 1 line
-        self.assertEqual(5, self._view.viewer.textLineCount())
+        self.assertEqual(5, viewer.textLineCount())
 
     def testStateUpdateReachesRenderedFile(self):
         """State lines arrive right after a file's marker, i.e. after the block
@@ -149,8 +153,10 @@ class TestDiffViewSortedMode(TestBase):
                 for i in range(viewer.textLineCount())]
 
     def _rows(self):
-        return {f: info.row
-                for f, info in self._view.fileListModel._fileList}
+        """Viewer line of each listed file, read from its section block."""
+        viewer = self._view.viewer
+        return {f: viewer.fileLineForPath(f)
+                for f, _ in self._view.fileListModel._fileList}
 
     def testFileDiffSpanningChunks(self):
         """Continuation chunks (no DiffType.File marker) must not be dropped."""
@@ -382,3 +388,169 @@ class TestDiffViewCommentsBlock(TestBase):
 
         self.assertTrue(viewer._blockModel.isLineVisible(0))
         self.assertFalse(viewer._blockModel.isLineVisible(1))
+
+
+class TestDiffViewFileNavigation(TestBase):
+    """The file list and the diff view locate each other through the file
+    sections registered as blocks: neither side keeps or scans a copy of
+    the other's line numbers."""
+
+    def doCreateRepo(self):
+        """No repo needed for these unit-level tests."""
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self._view = DiffView()
+        self._view._sortByFile = True
+        # the commit's "Comments" pseudo row is always the first one
+        self._view._DiffView__addToFileListView(
+            self._view.tr("Comments"), 0)
+
+    def tearDown(self):
+        self._view.deleteLater()
+        self.processEvents()
+        super().tearDown()
+
+    def _addFile(self, name, *body):
+        items = [(DiffType.File, name.encode())]
+        items += [(DiffType.Diff, line.encode()) for line in body]
+        self._view._DiffView__onDiffAvailable(items, {name: FileInfo(0)})
+
+    def _listedFiles(self):
+        return [f for f, _ in self._view.fileListModel._fileList]
+
+    def _selectListRow(self, row):
+        self._view._DiffView__onFileListViewCurrentRowChanged(
+            self._view.fileListProxy.index(row, 0), None)
+
+    def testSelectingAFileJumpsToItsSection(self):
+        # zebra arrives first, alpha is inserted above it: alpha's block
+        # anchor moved, and no FileInfo had to be renumbered
+        self._addFile("zebra.txt", "+z")
+        self._addFile("alpha.txt", "+a")
+        self._view._flushSortedFile()
+
+        self.assertEqual(["Comments", "alpha.txt", "zebra.txt"],
+                         self._listedFiles())
+        self.assertEqual(0, self._view.viewer.fileLineForPath("alpha.txt"))
+        self.assertEqual(2, self._view.viewer.fileLineForPath("zebra.txt"))
+
+        self._selectListRow(2)
+        self.assertEqual("zebra.txt",
+                         self._view.viewer.textLineAt(
+                             self._view.viewer.firstVisibleLine()).text())
+
+        self._selectListRow(1)
+        self.assertEqual("alpha.txt",
+                         self._view.viewer.textLineAt(
+                             self._view.viewer.firstVisibleLine()).text())
+
+    def testSelectingTheCommentsRowJumpsToTheHeader(self):
+        self._view._DiffView__commitToTextLines(
+            Commit(sha1="a" * 40, comments="subject",
+                   author="me", authorDate="2020-05-27",
+                   committer="me", committerDate="2020-05-27"))
+        self._addFile("a.txt", "+a")
+        self._view._flushSortedFile()
+
+        self.assertEqual(["Comments", "a.txt"], self._listedFiles())
+
+        self._selectListRow(1)
+        self.assertGreater(self._view.viewer.verticalScrollBar().value(), 0)
+
+        self._selectListRow(0)
+        self.assertEqual(0, self._view.viewer.verticalScrollBar().value())
+
+    def testOnlyTheCommentsRowCarriesTheCommentRole(self):
+        self._addFile("a.txt", "+a")
+        self._view._flushSortedFile()
+
+        model = self._view.fileListModel
+        self.assertTrue(model.index(0, 0).data(FileListModel.CommentRole))
+        self.assertFalse(model.index(1, 0).data(FileListModel.CommentRole))
+
+    def testHeaderRegionHighlightsTheCommentsRow(self):
+        self._addFile("a.txt", "+a")
+        self._view._flushSortedFile()
+        self._selectListRow(1)
+
+        self._view._DiffView__onFileRowChanged(None)
+
+        self.assertEqual(0, self._view.fileListView.currentIndex().row())
+        self.assertTrue(
+            self._view.fileListView.currentIndex().data(
+                FileListModel.CommentRole))
+
+    def testScrollingHighlightsTheOwningFileRow(self):
+        self._addFile("zebra.txt", "+z")
+        self._addFile("alpha.txt", "+a")
+        self._view._flushSortedFile()
+
+        self._view._DiffView__onFileRowChanged("zebra.txt")
+
+        self.assertEqual("zebra.txt",
+                         self._view.fileListView.currentIndex().data())
+
+    def testHighlightingDoesNotReadEveryRow(self):
+        """The old lookup walked the proxy and read a role off every row;
+        the row now comes from the file list's own index."""
+        for i in range(5):
+            self._addFile("f%02d.txt" % i, "+x")
+        self._view._flushSortedFile()
+
+        model = self._view.fileListModel
+        original = model.data
+
+        def counting(index, role=Qt.DisplayRole):
+            raise AssertionError("row %d was read to locate a file"
+                                 % index.row())
+
+        model.data = counting
+        try:
+            self._view._DiffView__onFileRowChanged("f03.txt")
+        finally:
+            model.data = original
+
+        self.assertEqual(
+            "f03.txt", self._view.fileListView.currentIndex().data())
+
+    def testRowIndexIsReusedUntilTheListChanges(self):
+        for i in range(3):
+            self._addFile("f%02d.txt" % i, "+x")
+        self._view._flushSortedFile()
+
+        # row 0 is the "Comments" pseudo entry
+        model = self._view.fileListModel
+        self.assertEqual(3, model.rowForFile("f02.txt"))
+        cached = model._rowByFile
+        self.assertEqual(1, model.rowForFile("f00.txt"))
+        self.assertIs(cached, model._rowByFile,
+                      "a lookup must not rebuild the index")
+
+        model.insertFile(1, "faa.txt", FileInfo(0))
+        self.assertIsNone(model._rowByFile,
+                          "a structural change must invalidate the index")
+        self.assertEqual(3, model.rowForFile("f01.txt"))
+
+    def testRemovingRowsInvalidatesTheRowIndex(self):
+        self._addFile("a.txt", "+a")
+        self._addFile("b.txt", "+b")
+        self._view._flushSortedFile()
+
+        model = self._view.fileListModel
+        self.assertEqual(2, model.rowForFile("b.txt"))
+        model.removeRows(1, 1)
+
+        self.assertEqual(-1, model.rowForFile("a.txt"))
+        self.assertEqual(1, model.rowForFile("b.txt"))
+
+    def testUnknownFileLeavesTheSelectionAlone(self):
+        self._addFile("a.txt", "+a")
+        self._view._flushSortedFile()
+        self._selectListRow(0)
+        current = self._view.fileListView.currentIndex()
+
+        self._view._DiffView__onFileRowChanged("not-listed.txt")
+
+        self.assertEqual(current, self._view.fileListView.currentIndex())

@@ -90,9 +90,10 @@ class TestCopyPlainText(TestBase):
         self.assertEqual(result, "@@ -1,2 +1,2 @@\nold\nnew")
 
 
-class TestCurrentFileRow(TestBase):
-    """currentFileRow/fileRowChanged must resolve from the top visible
-    logical line, never from the pixel scrollbar value."""
+class TestCurrentFile(TestBase):
+    """The file list follows the top visible line, and the line <-> file
+    mapping comes from the file sections registered as blocks -- never
+    from a scan over the document's text lines."""
 
     def doCreateRepo(self):
         pass
@@ -115,26 +116,83 @@ class TestCurrentFileRow(TestBase):
         self.lineH = self.viewer.lineHeight
         # a.txt: marker at line 2, body 3..42; b.txt: marker at 43
 
-    def testCurrentFileRowUsesTopVisibleLine(self):
-        # scroll into a.txt's body; the wrapped author line makes pixel
-        # positions diverge from lineNo * lineHeight, so ask the model
+    def testFileLineForPathIsTheMarkerLine(self):
+        self.viewer.endReading()
+        self.assertEqual(2, self.viewer.fileLineForPath("a.txt"))
+        self.assertEqual(43, self.viewer.fileLineForPath("b.txt"))
+        self.assertIsNone(self.viewer.fileLineForPath("missing.txt"))
+
+    def testFileLineForPathKnowsASectionStillStreaming(self):
+        # b.txt has no closing marker yet, so its block is not registered
+        self.assertIsNone(self.viewer._blockModel.blockAtAnchor(43))
+        self.assertEqual(43, self.viewer.fileLineForPath("b.txt"))
+
+    def testFilePathAtLineNamesTheOwningFile(self):
+        self.viewer.endReading()
+        self.assertEqual("a.txt", self.viewer.filePathAtLine(2))
+        self.assertEqual("a.txt", self.viewer.filePathAtLine(42))
+        self.assertEqual("b.txt", self.viewer.filePathAtLine(43))
+        self.assertIsNone(self.viewer.filePathAtLine(0),
+                          "the commit header belongs to no file")
+
+    def testFilePathAtLineKnowsAFoldedSection(self):
+        self.viewer.endReading()
+        self.viewer.toggleFoldAt(2)
+        # folded away, but still a.txt's line
+        self.assertEqual("a.txt", self.viewer.filePathAtLine(20))
+
+    def testCurrentFilePathUsesTopVisibleLine(self):
+        # the wrapped author line makes pixel positions diverge from
+        # lineNo * lineHeight, so ask the model
         self.viewer.verticalScrollBar().setValue(
             self.viewer._blockModel.lineTop(6))
         self.assertEqual(self.viewer.firstVisibleLine(), 6)
-        self.assertEqual(self.viewer.currentFileRow(), 2)
+        self.assertEqual(self.viewer.currentFilePath(), "a.txt")
 
-    def testFileRowChangedFollowsPixelScroll(self):
-        rows = []
+    def testCurrentFilePathIsNoneAtTheHeader(self):
+        self.viewer.verticalScrollBar().setValue(0)
+        self.assertIsNone(self.viewer.currentFilePath())
+
+    def testFileChangedFollowsPixelScroll(self):
+        paths = []
         self.viewer.verticalScrollBar().setValue(
             self.viewer._blockModel.lineTop(6))
-        self.viewer.fileRowChanged.connect(rows.append)
+        self.viewer.fileChanged.connect(paths.append)
         self.viewer._onVScollBarValueChanged(
             self.viewer.verticalScrollBar().value())
-        self.assertEqual(rows, [2])
+        self.assertEqual(paths, ["a.txt"])
 
-    def testCurrentFileRowAtCommentsTop(self):
+    def testFileChangedReportsNoFileForTheHeader(self):
+        paths = []
+        self.viewer.fileChanged.connect(paths.append)
         self.viewer.verticalScrollBar().setValue(0)
-        self.assertEqual(self.viewer.currentFileRow(), 0)
+        self.viewer._onVScollBarValueChanged(0)
+        self.assertEqual(paths, [None])
+
+    def testFileLookupDoesNotScanTheTextLines(self):
+        """The block index answers the lookup: reading any text line would
+        mean a linear scan back to the file's marker."""
+        self.viewer.endReading()
+        original = self.viewer.textLineAt
+
+        def boom(lineNo):
+            raise AssertionError(
+                "textLineAt(%s) must not be called" % lineNo)
+
+        self.viewer.textLineAt = boom
+        try:
+            self.assertEqual("a.txt", self.viewer.filePathAtLine(20))
+            self.assertEqual("b.txt", self.viewer.filePathAtLine(43))
+            self.assertEqual(43, self.viewer.fileLineForPath("b.txt"))
+        finally:
+            self.viewer.textLineAt = original
+
+    def testClearDropsTheIndex(self):
+        self.viewer.endReading()
+        self.viewer.clear()
+
+        self.assertIsNone(self.viewer.fileLineForPath("a.txt"))
+        self.assertIsNone(self.viewer.filePathAtLine(2))
 
 
 class TestCommentsWrap(TestBase):
@@ -381,3 +439,12 @@ class TestInsertFileSection(TestBase):
         self.assertEqual(1, len(self.blocks()))
         self.assertEqual((1, 2), (self.blockAt(1).startLine,
                                   self.blockAt(1).endLine))
+
+    def testInsertKeepsTheFileIndexInSync(self):
+        self.viewer.insertFileSection(
+            0, self.section("aaa.txt", "+a1", "+a2"))
+
+        self.assertEqual(0, self.viewer.fileLineForPath("aaa.txt"))
+        self.assertEqual(3, self.viewer.fileLineForPath("mid.txt"))
+        self.assertEqual("aaa.txt", self.viewer.filePathAtLine(1))
+        self.assertEqual("mid.txt", self.viewer.filePathAtLine(4))

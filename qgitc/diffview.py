@@ -63,11 +63,17 @@ def _makeTextIcon(text, textColor, font: QFont):
 
 class FileListModel(QAbstractListModel):
 
-    RowRole = Qt.UserRole
+    # Marks the "Comments" pseudo row: it is always the first entry and
+    # anchors the commit header/message block, not a file.
+    CommentRole = Qt.UserRole + 1
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._fileList: List[(str, FileInfo)] = []
+        # file -> row, rebuilt on demand after a structural change. The
+        # viewer asks for a row per file the user scrolls into, so the
+        # lookup must not walk the list.
+        self._rowByFile = None
 
         font: QFont = ApplicationBase.instance().font()
         font.setBold(True)
@@ -97,6 +103,20 @@ class FileListModel(QAbstractListModel):
     def flags(self, index):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
+    def _invalidateRowIndex(self):
+        self._rowByFile = None
+
+    def rowForFile(self, file):
+        """Source row showing `file`, or -1 when it is not listed.
+
+        The index is rebuilt lazily, so a run of lookups between two
+        list changes (a scroll over a finished diff) costs one build.
+        """
+        if self._rowByFile is None:
+            self._rowByFile = {
+                name: row for row, (name, _) in enumerate(self._fileList)}
+        return self._rowByFile.get(file, -1)
+
     def insertRows(self, row, count, parent=QModelIndex()):
         if row < 0 or count < 1 or row > self.rowCount(parent):
             return False
@@ -105,6 +125,7 @@ class FileListModel(QAbstractListModel):
         for i in range(count):
             self._fileList.insert(row, "")
         self.endInsertRows()
+        self._invalidateRowIndex()
 
         return True
 
@@ -115,6 +136,7 @@ class FileListModel(QAbstractListModel):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
         del self._fileList[row: row + count]
         self.endRemoveRows()
+        self._invalidateRowIndex()
 
         return True
 
@@ -125,8 +147,8 @@ class FileListModel(QAbstractListModel):
 
         if role == Qt.DisplayRole:
             return self._fileList[row][0]
-        elif role == FileListModel.RowRole:
-            return self._fileList[row][1].row
+        elif role == FileListModel.CommentRole:
+            return row == 0
         elif role == Qt.DecorationRole:
             return self._icons[self._fileList[row][1].state]
 
@@ -140,9 +162,7 @@ class FileListModel(QAbstractListModel):
         old_value = self._fileList[row]
         if role == Qt.DisplayRole:
             self._fileList[row] = (value, old_value[1])
-            return True
-        elif role == FileListModel.RowRole:
-            self._fileList[row] = (old_value[0], value)
+            self._invalidateRowIndex()
             return True
 
         return False
@@ -152,6 +172,7 @@ class FileListModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), rowCount, rowCount)
         self._fileList.append((file, info))
         self.endInsertRows()
+        self._invalidateRowIndex()
 
     def insertFile(self, row, file, info: FileInfo):
         if row < 0 or row > self.rowCount():
@@ -160,12 +181,9 @@ class FileListModel(QAbstractListModel):
         self.beginInsertRows(QModelIndex(), row, row)
         self._fileList.insert(row, (file, info))
         self.endInsertRows()
+        self._invalidateRowIndex()
 
         return True
-
-    def fileInfos(self):
-        """The FileInfo of every row, in list order."""
-        return [info for _, info in self._fileList]
 
     def updateFileState(self, file: str, newState: FileState):
         for i, (f, info) in enumerate(self._fileList):
@@ -306,7 +324,7 @@ class DiffView(QWidget):
             self.fileListView.doubleClicked.connect(
                 self.__onFileListViewDoubleClicked)
 
-        self.viewer.fileRowChanged.connect(self.__onFileRowChanged)
+        self.viewer.fileChanged.connect(self.__onFileRowChanged)
         self.viewer.requestCommit.connect(self.requestCommit)
         self.viewer.requestBlame.connect(self.requestBlame)
 
@@ -353,21 +371,45 @@ class DiffView(QWidget):
         self.splitter.setSizes(sizes)
 
     def __onFileListViewCurrentRowChanged(self, current, previous):
-        if not self._withinFileRowChanged and current.isValid():
-            row = current.data(FileListModel.RowRole)
-            # do not fire the __onFileRowChanged
-            self.viewer.blockSignals(True)
-            self.viewer.gotoLine(row, False)
-            self.viewer.blockSignals(False)
+        if self._withinFileRowChanged or not current.isValid():
+            return
 
-    def __onFileRowChanged(self, row):
-        for i in range(self.fileListProxy.rowCount()):
-            index = self.fileListProxy.index(i, 0)
-            if index.data(FileListModel.RowRole) == row:
-                self._withinFileRowChanged = True
-                self.fileListView.setCurrentIndex(index)
-                self._withinFileRowChanged = False
-                break
+        if self.__isCommentItem(current):
+            lineNo = 0
+        else:
+            # the file's section block owns the line; the list does not
+            # keep a copy of it
+            lineNo = self.viewer.fileLineForPath(current.data())
+            if lineNo is None:
+                return
+
+        # do not fire the __onFileRowChanged
+        self.viewer.blockSignals(True)
+        self.viewer.gotoLine(lineNo, False)
+        self.viewer.blockSignals(False)
+
+    def __onFileRowChanged(self, filePath):
+        """Highlight the row of the file section now at the top of the view.
+
+        `filePath` is None for the commit header/message region, which is
+        the "Comments" pseudo row.
+        """
+        if filePath is None:
+            row = 0
+        else:
+            row = self.fileListModel.rowForFile(filePath)
+            if row < 0:
+                return
+
+        index = self.fileListProxy.mapFromSource(
+            self.fileListModel.index(row, 0))
+        if not index.isValid():
+            # filtered out of the view: nothing to highlight, as before
+            return
+
+        self._withinFileRowChanged = True
+        self.fileListView.setCurrentIndex(index)
+        self._withinFileRowChanged = False
 
     def __onExternalDiff(self):
         index = self.fileListView.currentIndex()
@@ -483,10 +525,10 @@ class DiffView(QWidget):
         app.trackFeatureUsage("diffview.restore_files")
 
     def __isCommentItem(self, index):
-        if not index.isValid():
-            return False
-        index = self.fileListProxy.mapToSource(index)
-        return index.isValid() and index.row() == 0
+        """True for the "Comments" pseudo row, asked of the model so there
+        is one definition of it."""
+        return index.isValid() and bool(
+            index.data(FileListModel.CommentRole))
 
     def __runDiffTool(self, index):
         if not index.isValid() or not self.commit:
@@ -631,6 +673,10 @@ class DiffView(QWidget):
         fetch, arrives: the lines and their fold block go in together and the
         file list gets the entry at the matching row. No-op when sorting is
         off, since nothing is ever kept back.
+
+        Nothing has to be renumbered here: the viewer line of every other
+        file is its section block's anchor, which the block model moves
+        itself when the new section is spliced in.
         """
         fileName = self._splitFile
         info = self._splitInfo
@@ -644,11 +690,7 @@ class DiffView(QWidget):
 
         row, lineNo = self.__sortedInsertionPoint(fileName)
         self.fileListModel.insertFile(row, fileName, info)
-        info.row = lineNo
         self.viewer.insertFileSection(lineNo, items)
-        # everything after the insertion point moved down by its lines
-        for other in self.fileListModel.fileInfos()[row + 1:]:
-            other.row += len(items)
 
         self._updateFilterStatus()
 
@@ -656,8 +698,10 @@ class DiffView(QWidget):
         """(file list row, viewer line) where `fileName` belongs.
 
         The file list is kept in name order, so the first entry sorting after
-        the new file also gives the viewer line to insert at. The "Comments"
-        pseudo row is always first and never moves.
+        the new file also names the section to insert before: that section's
+        block gives the viewer line. The "Comments" pseudo row is always first
+        and never moves. Every listed file has its block by now -- in sorted
+        mode a section and its list row are always inserted together.
         """
         key = fileName.lower()
         model = self.fileListModel
@@ -665,7 +709,7 @@ class DiffView(QWidget):
             index = model.index(row, 0)
             name = model.data(index, Qt.DisplayRole) or ""
             if name.lower() > key:
-                return row, model.data(index, FileListModel.RowRole)
+                return row, self.viewer.fileLineForPath(name)
 
         return model.rowCount(), self.viewer.textLineCount()
 
@@ -952,8 +996,7 @@ class DiffView(QWidget):
             # restore previus row
             index = self.fileListView.currentIndex()
             if not index.isValid() and self.fileListProxy.rowCount():
-                row = self.viewer.currentFileRow()
-                self.__onFileRowChanged(row)
+                self.__onFileRowChanged(self.viewer.currentFilePath())
         else:
             index = self.fileListProxy.index(0, 0)
             self.fileListView.setCurrentIndex(index)

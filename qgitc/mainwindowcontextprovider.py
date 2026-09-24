@@ -219,8 +219,8 @@ class MainWindowContextProvider(AiChatContextProvider):
         files = []
         commit = self._activeCommit()
         for idx in rows:
-            # Skip the non-file "Comments" entry (RowRole == 0)
-            if idx.data(FileListModel.RowRole) == 0:
+            # Skip the non-file "Comments" entry
+            if idx.data(FileListModel.CommentRole):
                 continue
             p = idx.data()
             if p:

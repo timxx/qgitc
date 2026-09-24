@@ -105,8 +105,8 @@ Data layer (`BlockModel`, `Block`):
 | `contentHeight()` | Total pixel height. |
 | `addBlock(startLine, endLine, meta=None, parent=None)` | Register a block. The anchor (`startLine`) stays visible when folded. |
 | `insertLines(at, count)` | Splice lines in before `at`: later block ranges and height overrides move down, a block the lines land inside grows. |
-| `blockAtAnchor(lineNo)` / `foldedBlockCovering(lineNo)` | Lookup helpers. |
-| `isLineVisible/isLineHidden(lineNo)`, `setFolded`, `toggleFold`, `foldAll`, `expandAll` | Fold state. |
+| `blockAtAnchor(lineNo)` / `blockAtLine(lineNo)` / `foldedBlockCovering(lineNo)` | Lookup helpers. `blockAtAnchor` is the innermost block whose fold control sits on the line; `blockAtLine` is the top-level section that owns it. Both bisect a sorted anchor index, so they cost `O(log n)` on a document with one block per file. |
+| `isLineVisible/isLineHidden(lineNo)`, `setFolded`, `toggleFold`, `foldAll`, `expandAll` | Fold state. Visibility walks only the blocks that are folded, never every block. |
 | `blocks()`, `clearBlocks()`, `clear()` | Introspection and reset. `blocks()` is in **registration order**, not line order. |
 
 View layer (`TextViewer`), the parts that matter to callers:
@@ -128,7 +128,10 @@ Business layer:
 | `PatchViewer.isFileMarker(item)` | True for the `DiffType.File` tuple that opens a file's section. |
 | `PatchViewer.insertFileSection(position, items)` | Insert one complete file section and register its block around it. |
 | `PatchViewer.endReading()` | Closes the still-open file section before the base class re-runs a live find. |
-| `FileListModel.insertFile(row, file, info)` / `fileInfos()` | Insert a file entry at a row; enumerate the `FileInfo` objects to shift their `row`. |
+| `PatchViewer.fileLineForPath(path)` / `filePathAtLine(lineNo)` / `currentFilePath()` | The file sections as a two-way index; `currentFilePath()` is the section owning the top visible line, or None over the commit header. |
+| `PatchViewer.fileChanged(path)` | Emitted on scroll: the section owning the top visible line, or None for the header. |
+| `FileListModel.insertFile(row, file, info)` / `rowForFile(file)` | Insert a file entry at a row, and map a path back to its row. Nothing keeps a viewer line per entry any more: the viewer's block gives the line. |
+| `FileListModel.CommentRole` | True for the `"Comments"` pseudo row (row 0). |
 | `DiffView._flushSortedFile()` | Insert the file that was being split at its sorted position (no-op when sorting is off). |
 
 ### Behaviour contracts (pinned by tests, do not regress)
@@ -140,8 +143,9 @@ Business layer:
 4. The fold affordance does not leak painter state, and the chip is drawn, never inserted into text.
 5. The gutter is reserved only while at least one block exists, and the `…` chip is drawn only on the
    anchor of a folded block.
-6. In sorted mode the viewer order equals the file list order, and every `FileInfo.row` equals the
-   viewer line of that file's `DiffType.File` marker.
+6. In sorted mode the viewer order equals the file list order, and each file's viewer line is the
+   anchor of its section block — `viewer.fileLineForPath(path)` — never a copy kept by the file list.
+   The file list and the diff view locate each other through these blocks: no side scans the other.
 7. Viewers that do not register blocks and do not opt lines into wrap behave exactly as before
    (blame, revision panel).
 
@@ -168,9 +172,12 @@ regions would need display-aware min/max. Physical renumbering keeps one rule an
 
 Plus, outside the viewer:
 
-7. `BlockModel.insertLines` moves block ranges and height overrides, and grows a block the lines land
-   inside;
-8. `DiffView` updates `FileInfo.row` for every file after the insertion point.
+7. `BlockModel.insertLines` moves block ranges, the folded set and height overrides, and grows a block
+   the lines land inside.
+
+Nothing else needs renumbering: the viewer line of a file is its section block's anchor, which step 7
+moves itself. `FileInfo.row` is only what the fetcher happened to think while parsing and is no longer
+read for navigation — see "Sorted Mode" below.
 
 `_textLines` is still a dict keyed by line number (not a list): insertion only happens while the diff
 is streaming, when few lines have been built, so re-keying is cheap. If insertion ever has to happen
@@ -204,9 +211,10 @@ scrollbar is not at the top, the value is bumped by the inserted pixel height.
    continuation chunks carry no marker.
 2. A file is complete when **the next marker or the end of the fetch** arrives. At that moment
    `_flushSortedFile()` asks `__sortedInsertionPoint(fileName)` for the file list row and the viewer
-   line, calls `FileListModel.insertFile`, sets `info.row`, calls
-   `PatchViewer.insertFileSection(lineNo, items)` and finally moves every later `FileInfo.row` down by
-   the inserted line count.
+   line, calls `FileListModel.insertFile` and `PatchViewer.insertFileSection(lineNo, items)`.
+   `__sortedInsertionPoint` takes the viewer line from the block of the section it inserts before, and
+   `insertFileSection` splices that section's block in, which moves every later anchor — so no
+   `FileInfo` has to be renumbered.
 3. The last file of a fetch therefore still waits for the end — that is the price of not being able to
    tell a continuation chunk from a new file, and it is why the improvement is "files appear one by one"
    rather than "immediately".
@@ -307,9 +315,13 @@ To make another viewer wrap or fold:
 2. Register blocks around appended content with `beginBlock(meta)`/`endBlock()` when the end is unknown
    while streaming, or with `addBlock(startLine, endLine, meta)` when it is known up front. Put a
    `"title"` in `meta` if the tooltip should name the block.
-3. For insertion, call `insertLines(index, items)`, or `addBlock` after it. Then keep any **external**
-   line-indexed state in sync yourself — the in-viewer part is handled by `_shiftLineNumbers`, and
-   `FileInfo.row` in diffview is the current example of the external kind.
+3. For insertion, call `insertLines(index, items)`, or `addBlock` after it. The in-viewer part is handled
+   by `_shiftLineNumbers` and `BlockModel.insertLines`. Do not mirror line numbers outside the model:
+   derive them from the block (`fileLineForPath` in diffview is the worked example) or the copy will
+   drift the moment a section is inserted above it.
+
+   Give a block `meta = {"kind": ..., "path": ..., "title": ...}` to make it addressable by name, as the
+   file sections are; `PatchViewer.addBlock` is the single point where they enter the index.
 4. Everything else is inherited: geometry, gutter, chip, tooltip, context menu entries, fold all /
    expand all, find and goto auto-expand, and copying folded lines.
 5. Do nothing at all if the viewer should stay as it was: no wrap opt-in and no blocks means the old

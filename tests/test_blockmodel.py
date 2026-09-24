@@ -166,6 +166,168 @@ class TestBlockModelNestedFold(unittest.TestCase):
         self.assertEqual(self.model.contentHeight(), 100 - 20)
 
 
+class TestBlockModelLookup(unittest.TestCase):
+    """line -> block is answered from a sorted anchor index instead of a scan
+    over every block, and the index follows the blocks as they move."""
+
+    def setUp(self):
+        self.model = BlockModel(defaultHeight=10)
+        self.model.setLineCount(30)
+
+    def testBlockAtAnchorFindsTheBlock(self):
+        block = self.model.addBlock(4, 9)
+        self.assertIs(self.model.blockAtAnchor(4), block)
+        self.assertIsNone(self.model.blockAtAnchor(5))
+        self.assertIsNone(self.model.blockAtAnchor(0))
+
+    def testBlockAtAnchorPrefersTheInnermostBlock(self):
+        parent = self.model.addBlock(0, 9)
+        child = self.model.addBlock(0, 4, parent=parent)
+        self.assertIs(self.model.blockAtAnchor(0), child)
+
+    def testBlockAtLineReturnsTheContainingBlock(self):
+        first = self.model.addBlock(0, 4)
+        second = self.model.addBlock(5, 9)
+        for lineNo, expected in ((0, first), (4, first),
+                                 (5, second), (9, second)):
+            self.assertIs(self.model.blockAtLine(lineNo), expected,
+                          "line %d" % lineNo)
+
+    def testBlockAtLineOwnsNestedRangesThroughTheirSection(self):
+        """Nested blocks resolve to the section that owns the line; the
+        fold control on an anchor line still comes from blockAtAnchor."""
+        parent = self.model.addBlock(0, 9)
+        child = self.model.addBlock(3, 6, parent=parent)
+        self.assertIs(self.model.blockAtLine(1), parent)
+        self.assertIs(self.model.blockAtLine(4), parent)
+        self.assertIs(self.model.blockAtLine(8), parent)
+        self.assertIs(self.model.blockAtAnchor(3), child)
+
+    def testBlockAtLineResolvesASharedAnchorSection(self):
+        # a nested block sharing its parent's anchor must not hide it
+        parent = self.model.addBlock(0, 9)
+        self.model.addBlock(0, 4, parent=parent)
+        self.assertIs(self.model.blockAtLine(8), parent)
+        self.assertIs(self.model.blockAtLine(4), parent)
+
+    def testBlockAtLinePrefersTheLaterOfTwoOverlappingSections(self):
+        first = self.model.addBlock(0, 9)
+        second = self.model.addBlock(4, 6)
+        self.assertIs(self.model.blockAtLine(5), second)
+        self.assertIs(self.model.blockAtLine(8), first)
+        self.assertIs(self.model.blockAtLine(0), first)
+
+    def testBlockAtLineSkipsAGap(self):
+        self.model.addBlock(0, 2)
+        second = self.model.addBlock(6, 9)
+        self.assertIsNone(self.model.blockAtLine(4))
+        self.assertIs(self.model.blockAtLine(6), second)
+
+    def testBlockAtLineWithoutBlocks(self):
+        self.assertIsNone(self.model.blockAtLine(0))
+        self.assertIsNone(self.model.blockAtLine(29))
+
+    def testIndexFollowsAnInsertion(self):
+        block = self.model.addBlock(2, 4)
+        self.assertIs(self.model.blockAtLine(3), block)
+
+        self.model.insertLines(0, 5)
+
+        self.assertIsNone(self.model.blockAtLine(3))
+        self.assertIs(self.model.blockAtLine(8), block)
+        self.assertIs(self.model.blockAtAnchor(7), block)
+
+    def testIndexFollowsAddedAndClearedBlocks(self):
+        first = self.model.addBlock(0, 1)
+        self.assertIsNone(self.model.blockAtLine(5))
+        second = self.model.addBlock(4, 8)
+        self.assertIs(self.model.blockAtLine(5), second)
+        self.assertIs(self.model.blockAtLine(1), first)
+
+        self.model.clearBlocks()
+        self.assertIsNone(self.model.blockAtLine(5))
+        self.assertIsNone(self.model.blockAtAnchor(4))
+
+    def testIndexFollowsClear(self):
+        self.model.addBlock(3, 8)
+        self.model.clear()
+        self.assertIsNone(self.model.blockAtLine(3))
+
+
+class TestBlockModelFoldedIndex(unittest.TestCase):
+    """Only folded blocks can hide a line, so visibility is answered from
+    the folded set instead of a walk over every block."""
+
+    def setUp(self):
+        self.model = BlockModel(defaultHeight=10)
+        self.model.setLineCount(12)
+
+    def testUnfoldingRestoresVisibility(self):
+        block = self.model.addBlock(0, 4)
+        self.model.setFolded(block, True)
+        self.assertTrue(self.model.isLineHidden(2))
+
+        self.model.setFolded(block, False)
+
+        self.assertFalse(self.model.isLineHidden(2))
+        self.assertEqual([], self.model._foldedBlocks)
+
+    def testFoldingTwiceKeepsOneEntry(self):
+        block = self.model.addBlock(0, 4)
+        self.model.setFolded(block, True)
+        self.model.setFolded(block, True)
+
+        self.assertEqual([block], self.model._foldedBlocks)
+
+    def testUnfoldingAnExpandedBlockIsHarmless(self):
+        block = self.model.addBlock(0, 4)
+        self.model.setFolded(block, False)
+
+        self.assertEqual([], self.model._foldedBlocks)
+
+    def testFoldedBlockCoveringReportsAHider(self):
+        outer = self.model.addBlock(0, 8)
+        inner = self.model.addBlock(2, 4)
+        self.model.setFolded(outer, True)
+        self.model.setFolded(inner, True)
+
+        self.assertIs(self.model.foldedBlockCovering(3), inner)
+        self.assertIs(self.model.foldedBlockCovering(6), outer)
+        self.assertIsNone(self.model.foldedBlockCovering(9))
+
+    def testFoldAllAndExpandAllKeepTheSetHonest(self):
+        first = self.model.addBlock(0, 4)
+        child = self.model.addBlock(1, 3, parent=first)
+        second = self.model.addBlock(6, 10)
+
+        self.model.foldAll()
+        # only top-level blocks fold
+        self.assertEqual([first, second], self.model._foldedBlocks)
+
+        self.model.expandAll()
+        self.assertEqual([], self.model._foldedBlocks)
+        self.assertFalse(self.model.isLineHidden(2))
+        self.assertTrue(self.model._isPlain())
+
+    def testClearBlocksDropsTheFoldedSet(self):
+        block = self.model.addBlock(0, 4)
+        self.model.setFolded(block, True)
+
+        self.model.clearBlocks()
+
+        self.assertEqual([], self.model._foldedBlocks)
+        self.assertFalse(self.model.isLineHidden(2))
+
+    def testClearDropsTheFoldedSet(self):
+        block = self.model.addBlock(0, 4)
+        self.model.setFolded(block, True)
+
+        self.model.clear()
+
+        self.assertEqual([], self.model._foldedBlocks)
+        self.assertFalse(self.model.isLineHidden(2))
+
+
 class TestBlockModelClear(unittest.TestCase):
     def testClearResetsBlocksAndHeights(self):
         model = BlockModel(defaultHeight=10)
