@@ -116,14 +116,17 @@ class TestCurrentFileRow(TestBase):
         # a.txt: marker at line 2, body 3..42; b.txt: marker at 43
 
     def testCurrentFileRowUsesTopVisibleLine(self):
-        # scroll into a.txt's body: 6 * lineH pixels
-        self.viewer.verticalScrollBar().setValue(6 * self.lineH)
+        # scroll into a.txt's body; the wrapped author line makes pixel
+        # positions diverge from lineNo * lineHeight, so ask the model
+        self.viewer.verticalScrollBar().setValue(
+            self.viewer._blockModel.lineTop(6))
         self.assertEqual(self.viewer.firstVisibleLine(), 6)
         self.assertEqual(self.viewer.currentFileRow(), 2)
 
     def testFileRowChangedFollowsPixelScroll(self):
         rows = []
-        self.viewer.verticalScrollBar().setValue(6 * self.lineH)
+        self.viewer.verticalScrollBar().setValue(
+            self.viewer._blockModel.lineTop(6))
         self.viewer.fileRowChanged.connect(rows.append)
         self.viewer._onVScollBarValueChanged(
             self.viewer.verticalScrollBar().value())
@@ -132,3 +135,64 @@ class TestCurrentFileRow(TestBase):
     def testCurrentFileRowAtCommentsTop(self):
         self.viewer.verticalScrollBar().setValue(0)
         self.assertEqual(self.viewer.currentFileRow(), 0)
+
+
+class TestCommentsWrap(TestBase):
+    """Comments-region lines opt into word wrap; diff content stays
+    unwrapped so horizontal scrolling keeps diffs byte-faithful."""
+
+    def doCreateRepo(self):
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self.viewer = PatchViewer()
+        self.viewer.resize(300, 200)
+        self.viewer.show()
+        self.processEvents()
+        self.longText = " ".join("word%02d" % i for i in range(60))
+
+    def testCommentLinesOptIntoWrap(self):
+        self.viewer.addAuthorLine("Author: " + self.longText)
+        self.viewer.addSHA1Line("Commit: " + self.longText, False)
+        self.viewer.addNormalTextLine("", False)
+        self.viewer.addSummaryTextLine(self.longText)
+        self.processEvents()
+
+        for i in range(4):
+            line = self.viewer.textLineAt(i)
+            self.assertTrue(line.wrap(), "line %d should wrap" % i)
+            self.assertEqual(line.wrapWidth(), self.viewer.wrapWidth())
+
+    def testSummaryLineWrapsIntoMultipleRows(self):
+        self.viewer.addSummaryTextLine(self.longText)
+        self.processEvents()
+
+        line = self.viewer.textLineAt(0)
+        self.assertGreater(line.visualLineCount(), 1)
+        self.assertEqual(
+            self.viewer._blockModel.lineHeight(0),
+            line.visualLineCount() * self.viewer.lineHeight)
+
+    def testDiffLinesDoNotWrap(self):
+        self.viewer.appendLines([
+            (DiffType.File, b"a.txt"),
+            (DiffType.FileInfo, b"index 9122d00..da719d5 100644"),
+            (DiffType.Diff, b"@@ -1 +1 @@" + b"x" * 400),
+            (DiffType.Diff, ("+" + self.longText).encode()),
+        ])
+        self.processEvents()
+
+        for i in range(4):
+            line = self.viewer.textLineAt(i)
+            self.assertFalse(line.wrap(), "diff line %d must not wrap" % i)
+            self.assertEqual(line.visualLineCount(), 1)
+
+    def testContextMenuUpdatesBaseEntries(self):
+        # the base class owns copy/fold entry state; the subclass must
+        # not swallow it
+        menu = self.viewer.contextMenu
+        self.viewer._contextLine = 0
+        self.viewer.updateContextMenu(None)
+        self.assertFalse(self.viewer._acCopy.isEnabled())
+        self.assertFalse(self.viewer._acFoldBlock.isVisible())

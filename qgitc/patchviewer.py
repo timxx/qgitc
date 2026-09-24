@@ -143,10 +143,25 @@ class SummaryTextLine(TextLine):
         self._indent = indent
 
     def _relayout(self):
+        indent = QFontMetricsF(self._font).averageCharWidth() * \
+            self._indent
+        if self._wrap and self._wrapWidth:
+            # stacked wrapped rows, indented like the single line case
+            self._layout.beginLayout()
+            y = 0
+            while True:
+                line = self._layout.createLine()
+                if not line.isValid():
+                    break
+                line.setLineWidth(max(1, self._wrapWidth - indent))
+                line.setPosition(QPointF(indent, y))
+                y += line.height()
+            self._layout.endLayout()
+            return
+
         self._layout.beginLayout()
         line = self._layout.createLine()
-        width = QFontMetricsF(self._font).averageCharWidth() * self._indent
-        line.setPosition(QPointF(width, 0))
+        line.setPosition(QPointF(indent, 0))
         self._layout.endLayout()
 
     def boundingRect(self):
@@ -212,20 +227,24 @@ class PatchViewer(SourceViewer):
 
     def addAuthorLine(self, name):
         textLine = AuthorTextLine(self, name)
+        textLine.setWrap(True)
         self.appendTextLine(textLine)
 
     def addSHA1Line(self, content, isParent):
         textLine = Sha1TextLine(self, content, isParent)
+        textLine.setWrap(True)
         self.appendTextLine(textLine)
 
     def addNormalTextLine(self, text, useBuiltinPatterns=True):
         textLine = TextLine(text, self._font)
         textLine.useBuiltinPatterns = useBuiltinPatterns
+        textLine.setWrap(True)
         self.appendTextLine(textLine)
 
     def addSummaryTextLine(self, text):
         textLine = SummaryTextLine(text, self._font)
         textLine.useBuiltinPatterns = True
+        textLine.setWrap(True)
         self.appendTextLine(textLine)
 
     def drawLineBackground(self, painter: QPainter, textLine, lineRect):
@@ -281,6 +300,9 @@ class PatchViewer(SourceViewer):
         return menu
 
     def updateContextMenu(self, pos):
+        # keep base state (copy enablement, fold entries) up to date
+        super().updateContextMenu(pos)
+
         enabled = False
         if self._link is not None:
             enabled = self._link.type == Link.Sha1
