@@ -73,3 +73,25 @@ class TestPixelScrollConsumers(TestBase):
         rect = self.viewer._lineRect(3)
         self.assertTrue(rect.isValid())
         self.assertEqual(rect.top(), 3 * self.lineH - value)
+
+    def testLineRectFollowsLineHeights(self):
+        # a line spanning two visual rows must push the following line's
+        # rect down by two rows, not by one
+        self.viewer.clear()
+        longText = " ".join("word%02d" % i for i in range(200))
+        self.viewer.beginReading()
+        self.viewer.appendLines(["short".encode(), longText.encode(),
+                                 "after".encode()])
+        self.viewer.endReading()
+
+        line = self.viewer.textLineAt(1)
+        line.setWrap(True)
+        self.viewer.initTextLine(line, 1)
+        self.processEvents()
+        self.assertGreater(line.visualLineCount(), 1)
+
+        rect = self.viewer._lineRect(2)
+        self.assertTrue(rect.isValid())
+        self.assertEqual(rect.top(), self.viewer._blockModel.lineTop(2))
+        # the stale lineNo * lineHeight arithmetic would land one row early
+        self.assertNotEqual(rect.top(), 2 * self.lineH)

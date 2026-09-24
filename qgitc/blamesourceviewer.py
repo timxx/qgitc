@@ -115,7 +115,10 @@ class BlameSourceViewer(SourceViewer):
             return QRect()
 
         offset = self.contentOffset()
-        offset.setY(offset.y() + (lineNo - firstLine) * self._lineHeight)
+        # the target line's own pixel top: a line may span several
+        # visual rows (word wrap) and folded blocks collapse lines
+        offset.setY(self._blockModel.lineTop(lineNo) -
+                    self.verticalScrollBar().value())
 
         textLine = self.textLineAt(lineNo)
         if textLine is None:
