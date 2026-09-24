@@ -48,7 +48,6 @@ class TestDiffViewChunkedDiff(TestBase):
 
         self.assertEqual(["a.txt"], self._renderedFiles())
         self.assertEqual(4, self._view.viewer.textLineCount())
-        self.assertEqual({}, self._view._pendingDiffs)
 
     def testMultipleChunksRenderedIncrementally(self):
         """Each readyRead chunk appends to the viewer as it is parsed."""
@@ -112,13 +111,14 @@ class TestDiffViewChunkedDiff(TestBase):
         self.assertIsNone(self._view._splitFile)
         self.assertIsNone(self._view._splitInfo)
         self.assertEqual([], self._view._splitLines)
-        self.assertEqual({}, self._view._pendingDiffs)
+        self.assertEqual(0, self._view.fileListModel.rowCount())
         self.assertFalse(self._view._sortByFile)
 
 
 class TestDiffViewSortedMode(TestBase):
-    """With 'sort files by name' on, the sorted order is unknown until every
-    file has been read, so blocks are buffered and rendered on completion."""
+    """With 'sort files by name' on, a finished file is inserted at its
+    sorted position as soon as the next marker arrives, so the diff fills
+    in while the fetch is still running and the file list stays ordered."""
 
     def doCreateRepo(self):
         """No repo needed for these unit-level tests."""
@@ -128,6 +128,9 @@ class TestDiffViewSortedMode(TestBase):
         super().setUp()
         self._view = DiffView()
         self._view._sortByFile = True
+        # the commit's "Comments" pseudo row is always the first one
+        self._view._DiffView__addToFileListView(
+            self._view.tr("Comments"), 0)
 
     def tearDown(self):
         self._view.deleteLater()
@@ -139,6 +142,15 @@ class TestDiffViewSortedMode(TestBase):
 
     def _renderedFiles(self):
         return [f for f, _ in self._view.fileListModel._fileList]
+
+    def _viewerTexts(self):
+        viewer = self._view.viewer
+        return [viewer.textLineAt(i).text()
+                for i in range(viewer.textLineCount())]
+
+    def _rows(self):
+        return {f: info.row
+                for f, info in self._view.fileListModel._fileList}
 
     def testFileDiffSpanningChunks(self):
         """Continuation chunks (no DiffType.File marker) must not be dropped."""
@@ -157,63 +169,91 @@ class TestDiffViewSortedMode(TestBase):
              (DiffType.Diff, b"+};")],
             {})
 
-        self._view._flushSplitFile()
+        self._view._flushSortedFile()
 
-        self.assertIn("include/shell/et.h", self._view._pendingDiffs)
-        lineItems, _ = self._view._pendingDiffs["include/shell/et.h"]
         # marker + info + hunk header + 4 content lines = 7
-        self.assertEqual(7, len(lineItems),
+        self.assertEqual(7, len(self._viewerTexts()),
                          "all lines from both chunks must be kept")
+        self.assertEqual(["Comments", "include/shell/et.h"],
+                         self._renderedFiles())
 
-    def testNextFileMarkerBuffersPrevious(self):
-        """A new file marker must buffer the accumulated previous file."""
+    def testFileIsRenderedAsSoonAsTheNextMarkerArrives(self):
         self._emitChunk(
             [(DiffType.File, b"a.txt"),
              (DiffType.Diff, b"+first")],
             {"a.txt": FileInfo(1)})
-
-        self.assertEqual([], self._renderedFiles(),
-                         "nothing may be rendered before the sort is possible")
+        # a.txt may still be streaming, so nothing is rendered yet
+        self.assertEqual(["Comments"], self._renderedFiles())
+        self.assertEqual([], self._viewerTexts())
 
         self._emitChunk(
-            [(DiffType.Diff, b"+second"),
-             (DiffType.File, b"b.txt"),
-             (DiffType.Diff, b"+other")],
+            [(DiffType.File, b"b.txt"),
+             (DiffType.Diff, b"+second")],
             {"b.txt": FileInfo(3)})
 
-        self.assertIn("a.txt", self._view._pendingDiffs)
-        lineItems, _ = self._view._pendingDiffs["a.txt"]
-        self.assertEqual(3, len(lineItems),
-                         "a.txt must carry its marker line and both diff lines")
-        self.assertEqual([b"+first", b"+second"],
-                         [d for t, d in lineItems if t == DiffType.Diff])
+        self.assertEqual(["a.txt", "+first"], self._viewerTexts())
+        self.assertEqual(0, self._rows()["a.txt"])
 
-        # b.txt is still being split (no following marker yet)
-        self.assertNotIn("b.txt", self._view._pendingDiffs)
-        self.assertEqual("b.txt", self._view._splitFile)
-
-    def testBufferedThenRenderedSorted(self):
+    def testLaterFileIsInsertedBeforeEarlierOnes(self):
         self._emitChunk(
             [(DiffType.File, b"zebra.txt"),
              (DiffType.Diff, b"+z")],
-            {"zebra.txt": FileInfo(0)})
+            {"zebra.txt": FileInfo(1)})
         self._emitChunk(
             [(DiffType.File, b"alpha.txt"),
              (DiffType.Diff, b"+a")],
             {"alpha.txt": FileInfo(2)})
+        # the last file has no following marker yet: the end of the fetch
+        # is what completes it
+        self.assertEqual(["Comments", "zebra.txt"], self._renderedFiles())
 
-        self.assertEqual([], self._renderedFiles())
+        self._view._flushSortedFile()
 
-        self._view._flushPendingDiffs()
+        self.assertEqual(["Comments", "alpha.txt", "zebra.txt"],
+                         self._renderedFiles())
+        self.assertEqual(["alpha.txt", "+a", "zebra.txt", "+z"],
+                         self._viewerTexts())
 
-        self.assertEqual(["alpha.txt", "zebra.txt"], self._renderedFiles())
-        self.assertEqual(0, self._view.fileListModel._fileList[0][1].row)
-        self.assertEqual(2, self._view.fileListModel._fileList[1][1].row)
+    def testRowsFollowTheInsertedLines(self):
+        self._emitChunk(
+            [(DiffType.File, b"zebra.txt"),
+             (DiffType.Diff, b"+z")],
+            {"zebra.txt": FileInfo(1)})
+        self._emitChunk(
+            [(DiffType.File, b"alpha.txt"),
+             (DiffType.Diff, b"+a")],
+            {"alpha.txt": FileInfo(2)})
+        self._view._flushSortedFile()
 
-    def testStateUpdateAppliedToPendingFile(self):
-        """fileStateChanged for the file being split must update its
-        pending FileInfo (state lines arrive right after the marker, while
-        the file is still being split and thus not in the list yet)."""
+        rows = self._rows()
+        self.assertEqual(0, rows["alpha.txt"])
+        self.assertEqual(2, rows["zebra.txt"])
+        viewer = self._view.viewer
+        self.assertEqual("alpha.txt", viewer.textLineAt(0).text())
+        self.assertEqual("zebra.txt",
+                         viewer.textLineAt(rows["zebra.txt"]).text())
+
+    def testInsertedSectionFoldsOnItsOwn(self):
+        self._emitChunk(
+            [(DiffType.File, b"zebra.txt"),
+             (DiffType.Diff, b"+z")],
+            {"zebra.txt": FileInfo(1)})
+        self._emitChunk(
+            [(DiffType.File, b"alpha.txt"),
+             (DiffType.Diff, b"+a")],
+            {"alpha.txt": FileInfo(2)})
+        self._view._flushSortedFile()
+
+        viewer = self._view.viewer
+        viewer.toggleFoldAt(0)
+
+        self.assertTrue(viewer._blockModel.isLineVisible(0))
+        self.assertFalse(viewer._blockModel.isLineVisible(1))
+        self.assertTrue(viewer._blockModel.isLineVisible(2))
+
+    def testStateUpdateAppliedToFileStillStreaming(self):
+        """fileStateChanged arrives right after the marker, while the file
+        is still being split and thus not in the list yet."""
         info = FileInfo(1)
         self._emitChunk(
             [(DiffType.File, b"new.txt"),
@@ -224,9 +264,9 @@ class TestDiffViewSortedMode(TestBase):
 
         self.assertEqual(FileState.Added, info.state)
 
-        self._view._flushPendingDiffs()
+        self._view._flushSortedFile()
         self.assertEqual(FileState.Added,
-                         self._view.fileListModel._fileList[0][1].state)
+                         self._view.fileListModel._fileList[1][1].state)
 
 
 class TestDiffViewFileOrder(TestBase):
@@ -242,6 +282,9 @@ class TestDiffViewFileOrder(TestBase):
         # Mirror _doShowCommit, which captures the setting when the fetch starts
         self._view._sortByFile = \
             ApplicationBase.instance().settings().sortDiffByFile()
+        # ... and which registers the "Comments" pseudo row first
+        self._view._DiffView__addToFileListView(
+            self._view.tr("Comments"), 0)
 
     def tearDown(self):
         self._view.deleteLater()
@@ -265,7 +308,7 @@ class TestDiffViewFileOrder(TestBase):
         self.assertFalse(settings.sortDiffByFile())
 
         self._addFiles("zebra.txt", "alpha.txt", "mid.txt")
-        self.assertEqual(["zebra.txt", "alpha.txt", "mid.txt"],
+        self.assertEqual(["Comments", "zebra.txt", "alpha.txt", "mid.txt"],
                          self._renderedFileOrder())
 
     def testSortedWhenEnabled(self):
@@ -274,10 +317,15 @@ class TestDiffViewFileOrder(TestBase):
         try:
             self._view._sortByFile = True
             self._addFiles("zebra.txt", "alpha.txt", "mid.txt")
-            self.assertEqual([], self._renderedFileOrder())
-            self._view._flushPendingDiffs()
-            self.assertEqual(["alpha.txt", "mid.txt", "zebra.txt"],
+            # every file but the last is complete once the next marker
+            # arrives, so it is already in the list — in name order
+            self.assertEqual(["Comments", "alpha.txt", "zebra.txt"],
                              self._renderedFileOrder())
+
+            self._view._flushSortedFile()
+            self.assertEqual(
+                ["Comments", "alpha.txt", "mid.txt", "zebra.txt"],
+                self._renderedFileOrder())
         finally:
             settings.setSortDiffByFile(False)
 
@@ -286,7 +334,7 @@ class TestDiffViewFileOrder(TestBase):
         instead of waiting for the whole commit."""
         self._addFiles("a.txt")
 
-        self.assertEqual(["a.txt"], self._renderedFileOrder())
+        self.assertEqual(["Comments", "a.txt"], self._renderedFileOrder())
         self.assertEqual(2, self._view.viewer.textLineCount())
 
 

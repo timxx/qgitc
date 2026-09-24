@@ -153,6 +153,20 @@ class FileListModel(QAbstractListModel):
         self._fileList.append((file, info))
         self.endInsertRows()
 
+    def insertFile(self, row, file, info: FileInfo):
+        if row < 0 or row > self.rowCount():
+            return False
+
+        self.beginInsertRows(QModelIndex(), row, row)
+        self._fileList.insert(row, (file, info))
+        self.endInsertRows()
+
+        return True
+
+    def fileInfos(self):
+        """The FileInfo of every row, in list order."""
+        return [info for _, info in self._fileList]
+
     def updateFileState(self, file: str, newState: FileState):
         for i, (f, info) in enumerate(self._fileList):
             if f != file:
@@ -189,10 +203,6 @@ class DiffView(QWidget):
         self.fetcher = DiffFetcher(self)
         # sub commit to fetch
         self._commitList: List[Commit] = []
-        # Diff blocks keyed by file name, collected during fetch and flushed in
-        # sorted order when all fetches complete. Only used when sorting files
-        # by name is enabled.
-        self._pendingDiffs: dict = {}
         # Per-file split state persisting across incremental parse() chunks:
         # QProcess delivers stdout in several readyRead chunks, so a single
         # file's diff commonly spans multiple __onDiffAvailable calls, and
@@ -206,7 +216,8 @@ class DiffView(QWidget):
         # - off: git's output order is already the display order, so every
         #   block is rendered as it arrives and the diff shows up while git is
         #   still producing output.
-        # - on: files are buffered in _pendingDiffs and sorted on completion.
+        # - on: a file is inserted at its sorted position as soon as it is
+        #   complete, so it shows up without waiting for the whole fetch.
         self._sortByFile: bool = False
 
         self._commitSource: CommitSource = None
@@ -592,16 +603,15 @@ class DiffView(QWidget):
             self.viewer.appendLines(lineItems)
             return
 
-        # Sorting on: split the block into per-file chunks keyed by file name.
-        # Each chunk starts at a DiffType.File marker and includes all lines
-        # until the next File marker; chunks are buffered in _pendingDiffs and
-        # sorted once the whole fetch has been read. A file's diff may span
+        # Sorting on: a file is complete as soon as the next File marker shows
+        # up, so it is inserted at its sorted position right away instead of
+        # waiting for the whole fetch to be read. A file's diff may still span
         # several parse() calls, so the split state persists across calls
         # (_splitFile/_splitInfo/_splitLines) — continuation chunks carry no
         # marker for the file they belong to.
         for diffType, data in lineItems:
             if diffType == DiffType.File:
-                self._flushSplitFile()
+                self._flushSortedFile()
                 if isinstance(data, bytes):
                     self._splitFile = data.decode("utf-8", errors="replace")
                 else:
@@ -614,18 +624,50 @@ class DiffView(QWidget):
                 self._splitLines.append((diffType, data))
             # else: skip leading separator lines before the first file marker
 
-    def _flushSplitFile(self):
-        """Buffer the file currently being split into _pendingDiffs.
+    def _flushSortedFile(self):
+        """Insert the file being split at its sorted position.
 
-        Only meaningful when sorting files by name is enabled; with sorting off
-        the blocks are rendered as they arrive and no split state accumulates.
+        Its section is complete once the next File marker, or the end of the
+        fetch, arrives: the lines and their fold block go in together and the
+        file list gets the entry at the matching row. No-op when sorting is
+        off, since nothing is ever kept back.
         """
-        if self._splitFile is not None and self._splitInfo is not None:
-            self._pendingDiffs[self._splitFile] = (
-                self._splitLines, self._splitInfo)
+        fileName = self._splitFile
+        info = self._splitInfo
+        items = self._splitLines
         self._splitFile = None
         self._splitInfo = None
         self._splitLines = []
+
+        if fileName is None or info is None or not items:
+            return
+
+        row, lineNo = self.__sortedInsertionPoint(fileName)
+        self.fileListModel.insertFile(row, fileName, info)
+        info.row = lineNo
+        self.viewer.insertFileSection(lineNo, items)
+        # everything after the insertion point moved down by its lines
+        for other in self.fileListModel.fileInfos()[row + 1:]:
+            other.row += len(items)
+
+        self._updateFilterStatus()
+
+    def __sortedInsertionPoint(self, fileName):
+        """(file list row, viewer line) where `fileName` belongs.
+
+        The file list is kept in name order, so the first entry sorting after
+        the new file also gives the viewer line to insert at. The "Comments"
+        pseudo row is always first and never moves.
+        """
+        key = fileName.lower()
+        model = self.fileListModel
+        for row in range(1, model.rowCount()):
+            index = model.index(row, 0)
+            name = model.data(index, Qt.DisplayRole) or ""
+            if name.lower() > key:
+                return row, model.data(index, FileListModel.RowRole)
+
+        return model.rowCount(), self.viewer.textLineCount()
 
     def __onDiffFileStateChanged(self, filePath: str, newState: FileState):
         # When sorting by file name is enabled the file is not in the list yet
@@ -658,34 +700,13 @@ class DiffView(QWidget):
             return
 
         self.fetcher.cwd = self.branchDir or Git.REPO_DIR
-        self._flushPendingDiffs()
+        self._flushSortedFile()
         self.viewer.endReading()
         self.endFetch.emit()
 
         if exitCode != 0 and self.fetcher.errorData:
             QMessageBox.critical(self, self.window().windowTitle(),
                                  self.fetcher.errorData.decode("utf-8"))
-
-    def _flushPendingDiffs(self):
-        """Render the buffered diff blocks sorted by file name.
-
-        Only used when sorting files by name is enabled; with sorting off the
-        blocks were already rendered as they arrived, so _pendingDiffs is empty.
-        """
-        # The last file's diff has no following marker; buffer it too.
-        self._flushSplitFile()
-        diffs = self._pendingDiffs
-        self._pendingDiffs = {}
-        if not diffs:
-            return
-
-        row = self.viewer.textLineCount()
-        for fileName in sorted(diffs, key=str.lower):
-            lineItems, info = diffs[fileName]
-            info.row = row
-            self.fileListModel.addFile(fileName, info)
-            self.viewer.appendLines(lineItems)
-            row += len(lineItems)
 
     def _addUntrackedEntries(self, commit: Commit):
         # Collect untracked files from the top-level commit and all sub-commits.
@@ -890,7 +911,6 @@ class DiffView(QWidget):
     def clear(self):
         self.fileListModel.clear()
         self.viewer.clear()
-        self._pendingDiffs.clear()
         self._splitFile = None
         self._splitInfo = None
         self._splitLines = []
