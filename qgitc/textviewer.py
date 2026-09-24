@@ -260,8 +260,19 @@ class TextViewer(QAbstractScrollArea):
         end = self.textLineCount() - 1
         if end < start:
             return  # nothing was appended: drop the empty block
-        self._blockModel.addBlock(start, end, meta=meta)
+        self.addBlock(start, end, meta=meta)
+
+    def addBlock(self, startLine, endLine, meta=None):
+        """Register a foldable block over lines that are already there.
+
+        Used when the block boundaries are known up front, e.g. a whole
+        file's diff that is inserted among the existing blocks.
+        """
+        if endLine < startLine:
+            return None
+        block = self._blockModel.addBlock(startLine, endLine, meta=meta)
         self._syncGutter()
+        return block
 
     def canFoldAt(self, lineNo):
         block = self._blockModel.blockAtAnchor(lineNo)

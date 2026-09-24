@@ -258,6 +258,23 @@ class TestViewerFold(TestBase):
         tip = self.viewer.foldTipForLine(2)
         self.assertIn("7", tip)
 
+    def testAddBlockOverExistingLines(self):
+        block = self.viewer.addBlock(2, 5, meta={"title": "middle"})
+
+        self.assertEqual((2, 5), (block.startLine, block.endLine))
+        self.assertEqual(1, len(self.viewer._blockModel.blocks()))
+        self.assertTrue(self.viewer.canFoldAt(2))
+        self.assertGreater(self.viewer.gutterWidth(), 0)
+
+        self.viewer.toggleFoldAt(2)
+        self.assertTrue(self.viewer._blockModel.isLineVisible(2))
+        self.assertFalse(self.viewer._blockModel.isLineVisible(5))
+        self.assertIn("middle", self.viewer.foldTipForLine(2))
+
+    def testAddBlockDropsAnEmptyRange(self):
+        self.assertIsNone(self.viewer.addBlock(4, 3))
+        self.assertEqual([], self.viewer._blockModel.blocks())
+
     def testFoldGlyphDoesNotLeakItsPen(self):
         """The fold affordance must not recolour what follows it: a line
         without an explicit format keeps the widget text colour whether

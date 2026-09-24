@@ -276,6 +276,25 @@ class PatchViewer(SourceViewer):
         self.endBlock()
         super().endReading()
 
+    def insertFileSection(self, position, items):
+        """Insert one file's complete diff at `position`.
+
+        `items` is a whole section: the DiffType.File marker followed by
+        every line of that file's diff. Its foldable block is registered
+        around it, which lets a caller keep the view in name order while
+        the diff is still arriving.
+        """
+        if not items:
+            return
+
+        # a section that was still streaming belongs before the insert
+        self.endBlock()
+        self.insertLines(position, items)
+
+        if self.isFileMarker(items[0]):
+            self.addBlock(position, position + len(items) - 1,
+                          meta=self._fileBlockMeta(items[0]))
+
     def _fileBlockMeta(self, item):
         path = item[1]
         if isinstance(path, bytes):

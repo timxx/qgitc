@@ -298,3 +298,86 @@ class TestFileBlocks(TestBase):
 
         self.viewer.toggleFoldAt(0)
         self.assertIn("a.txt", self.viewer.foldTipForLine(0))
+
+
+class TestInsertFileSection(TestBase):
+    """A complete file section can be inserted among the blocks already
+    there, so a caller can keep the view sorted while it streams."""
+
+    def doCreateRepo(self):
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self.viewer = PatchViewer()
+        self.viewer.resize(400, 300)
+        self.viewer.show()
+        self.processEvents()
+
+        self.viewer.beginReading()
+        self.viewer.appendLines([
+            (DiffType.File, b"mid.txt"),
+            (DiffType.Diff, b"+mid"),
+        ])
+        self.processEvents()
+
+    @staticmethod
+    def section(name, *lines):
+        items = [(DiffType.File, name.encode())]
+        items += [(DiffType.Diff, line.encode()) for line in lines]
+        return items
+
+    def texts(self):
+        return [self.viewer.textLineAt(i).text()
+                for i in range(self.viewer.textLineCount())]
+
+    def blocks(self):
+        return self.viewer._blockModel.blocks()
+
+    def blockAt(self, lineNo):
+        return self.viewer._blockModel.blockAtAnchor(lineNo)
+
+    def testInsertSectionBeforeAnExistingOne(self):
+        self.viewer.insertFileSection(
+            0, self.section("aaa.txt", "+a1", "+a2"))
+
+        self.assertEqual(["aaa.txt", "+a1", "+a2", "mid.txt", "+mid"],
+                         self.texts())
+        self.assertEqual(2, len(self.blocks()))
+        self.assertEqual((0, 2), (self.blockAt(0).startLine,
+                                  self.blockAt(0).endLine))
+        self.assertEqual((3, 4), (self.blockAt(3).startLine,
+                                  self.blockAt(3).endLine))
+        self.assertEqual("aaa.txt", self.blockAt(0).meta["path"])
+
+    def testInsertSectionAtTheEnd(self):
+        self.viewer.insertFileSection(
+            self.viewer.textLineCount(), self.section("zzz.txt", "+z"))
+
+        self.assertEqual(["mid.txt", "+mid", "zzz.txt", "+z"], self.texts())
+        self.assertEqual(2, len(self.blocks()))
+        self.assertEqual((2, 3), (self.blockAt(2).startLine,
+                                  self.blockAt(2).endLine))
+
+    def testFoldingAnInsertedSectionLeavesTheOthersAlone(self):
+        self.viewer.insertFileSection(
+            0, self.section("aaa.txt", "+a1", "+a2"))
+        self.viewer.endReading()
+
+        self.viewer.toggleFoldAt(0)
+
+        self.assertTrue(self.viewer._blockModel.isLineVisible(0))
+        self.assertFalse(self.viewer._blockModel.isLineVisible(1))
+        self.assertFalse(self.viewer._blockModel.isLineVisible(2))
+        self.assertTrue(self.viewer._blockModel.isLineVisible(3))
+        self.assertTrue(self.viewer._blockModel.isLineVisible(4))
+
+    def testItemsWithoutAMarkerAreStillInserted(self):
+        self.viewer.insertFileSection(0, [(DiffType.Diff, b"+orphan")])
+
+        self.assertEqual(["+orphan", "mid.txt", "+mid"], self.texts())
+        # no marker for the new lines, and the section that was still
+        # streaming got closed before them
+        self.assertEqual(1, len(self.blocks()))
+        self.assertEqual((1, 2), (self.blockAt(1).startLine,
+                                  self.blockAt(1).endLine))
