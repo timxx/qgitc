@@ -196,3 +196,105 @@ class TestCommentsWrap(TestBase):
         self.viewer.updateContextMenu(None)
         self.assertFalse(self.viewer._acCopy.isEnabled())
         self.assertFalse(self.viewer._acFoldBlock.isVisible())
+
+
+class TestFileBlocks(TestBase):
+    """Each file section is registered as one foldable block anchored on
+    its DiffType.File marker, so a whole file's diff folds away while the
+    marker line stays visible."""
+
+    def doCreateRepo(self):
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self.viewer = PatchViewer()
+        self.viewer.resize(400, 300)
+        self.viewer.show()
+        self.processEvents()
+        self.lineH = self.viewer.lineHeight
+
+    def appendTwoFiles(self):
+        """a.txt: marker line 0, section 0..3; b.txt: marker 4, 4..5."""
+        self.viewer.beginReading()
+        self.viewer.appendLines([
+            (DiffType.File, b"a.txt"),
+            (DiffType.FileInfo, b"index 9122d00..da719d5 100644"),
+            (DiffType.Diff, b"@@ -1 +1 @@"),
+            (DiffType.Diff, b"+a1"),
+        ])
+        # a continuation chunk carries the next file's marker
+        self.viewer.appendLines([
+            (DiffType.File, b"b.txt"),
+            (DiffType.Diff, b"+b1"),
+        ])
+        self.processEvents()
+
+    def blocks(self):
+        return self.viewer._blockModel.blocks()
+
+    def testSectionStaysOpenUntilTheStreamEnds(self):
+        self.appendTwoFiles()
+
+        # a.txt was closed by b.txt's marker, b.txt is still being read
+        self.assertEqual(1, len(self.blocks()))
+        self.assertEqual((0, 3), (
+            self.blocks()[0].startLine, self.blocks()[0].endLine))
+
+        self.viewer.endReading()
+        self.assertEqual(2, len(self.blocks()))
+
+    def testEveryFileSectionRegistersOneBlock(self):
+        self.appendTwoFiles()
+        self.viewer.endReading()
+
+        blocks = self.blocks()
+        self.assertEqual((0, 3), (blocks[0].startLine, blocks[0].endLine))
+        self.assertEqual((4, 5), (blocks[1].startLine, blocks[1].endLine))
+        self.assertEqual("a.txt", blocks[0].meta["path"])
+        self.assertEqual("b.txt", blocks[1].meta["path"])
+
+    def testContinuationChunkDoesNotStartANewBlock(self):
+        self.appendTwoFiles()
+        self.viewer.appendLines([(DiffType.Diff, b"+b2")])
+        self.viewer.endReading()
+
+        blocks = self.blocks()
+        self.assertEqual(2, len(blocks))
+        self.assertEqual(4, blocks[1].startLine)
+        self.assertEqual(6, blocks[1].endLine)
+
+    def testFoldHidesSectionBodyButKeepsMarker(self):
+        self.appendTwoFiles()
+        self.viewer.endReading()
+
+        self.viewer.toggleFoldAt(0)
+        self.assertTrue(self.viewer._blockModel.isLineVisible(0))
+        for lineNo in (1, 2, 3):
+            self.assertFalse(
+                self.viewer._blockModel.isLineVisible(lineNo),
+                "line %d belongs to the folded section" % lineNo)
+        # the next file is untouched
+        self.assertTrue(self.viewer._blockModel.isLineVisible(4))
+        self.assertEqual(3 * self.lineH,
+                         self.viewer._blockModel.contentHeight())
+
+    def testOnlyFileMarkersAreFoldAnchors(self):
+        self.appendTwoFiles()
+        self.viewer.endReading()
+
+        self.assertTrue(self.viewer.canFoldAt(0))
+        self.assertTrue(self.viewer.canFoldAt(4))
+        for lineNo in (1, 2, 3, 5):
+            self.assertFalse(self.viewer.canFoldAt(lineNo))
+
+    def testFoldTipNamesTheFile(self):
+        self.appendTwoFiles()
+        self.viewer.endReading()
+
+        tip = self.viewer.foldTipForLine(0)
+        self.assertIn("a.txt", tip)
+        self.assertIn("3", tip)  # lines 1..3 hidden
+
+        self.viewer.toggleFoldAt(0)
+        self.assertIn("a.txt", self.viewer.foldTipForLine(0))

@@ -297,8 +297,16 @@ class TextViewer(QAbstractScrollArea):
             return None
         count = block.endLine - block.startLine
         if block.folded:
-            return self.tr("Folded %d lines, click to expand") % count
-        return self.tr("%d lines, click to fold") % count
+            tip = self.tr("Folded %d lines, click to expand") % count
+        else:
+            tip = self.tr("%d lines, click to fold") % count
+
+        # blocks may carry a summary (file path, section name) to tell
+        # apart the fold points of a long document
+        title = block.meta.get("title")
+        if title:
+            tip = "%s: %s" % (title, tip)
+        return tip
 
     def _foldChipX(self, textLine):
         """Viewport X of the folded-content chip on the anchor line."""

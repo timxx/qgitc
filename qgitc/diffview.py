@@ -752,6 +752,11 @@ class DiffView(QWidget):
         return " (" + subject + ")"
 
     def __commitToTextLines(self, commit: Commit):
+        # the commit header and message fold as one block; the file
+        # list's first row ("Comments") is its anchor
+        self.viewer.beginBlock(
+            {"kind": "comments", "title": self.tr("Comments")})
+
         isLocalChanges = commit.sha1 in [Git.LUC_SHA1, Git.LCC_SHA1]
         if not isLocalChanges:
             content = self.tr("Author: ") + commit.author + \
@@ -805,6 +810,8 @@ class DiffView(QWidget):
             self.viewer.addSummaryTextLine(comment)
 
         self.viewer.addNormalTextLine("", False)
+
+        self.viewer.endBlock()
 
     @staticmethod
     def diffToolForFile(filePath):

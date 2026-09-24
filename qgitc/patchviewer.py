@@ -247,6 +247,41 @@ class PatchViewer(SourceViewer):
         textLine.setWrap(True)
         self.appendTextLine(textLine)
 
+    def isFileMarker(self, item):
+        """True for the DiffType.File tuple that opens a file's section."""
+        return isinstance(item, (tuple, list)) and len(item) == 2 and \
+            item[0] == DiffType.File
+
+    def appendLines(self, items):
+        # One foldable block per file section: the marker line anchors the
+        # block and stays visible, the rest of the section folds away.
+        # Done here rather than at the call sites so every PatchViewer
+        # user (commit window, branch compare, diff view) gets it.
+        start = 0
+        for i, item in enumerate(items):
+            if not self.isFileMarker(item):
+                continue
+            if i > start:
+                super().appendLines(items[start:i])
+            self.beginBlock(self._fileBlockMeta(item))
+            start = i
+
+        if start < len(items):
+            super().appendLines(items[start:])
+
+    def endReading(self):
+        # the last file's section has no following marker to close it;
+        # close it before the base class re-runs a live find, so the
+        # results are scrolled against the final geometry
+        self.endBlock()
+        super().endReading()
+
+    def _fileBlockMeta(self, item):
+        path = item[1]
+        if isinstance(path, bytes):
+            path = path.decode(diff_encoding, errors="replace")
+        return {"kind": "file", "path": path, "title": path}
+
     def drawLineBackground(self, painter: QPainter, textLine, lineRect):
         if isinstance(textLine, InfoTextLine):
             painter.fillRect(

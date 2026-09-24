@@ -363,6 +363,8 @@ class BranchCompareWindow(StateWindow):
     def _onDiffFetchFinished(self, exitCode):
         self._diffSpinnerDelayTimer.stop()
         self.ui.spinnerDiff.stop()
+        # the diff is complete: let the viewer close its last file block
+        self.ui.diffViewer.endReading()
 
         if self._isBranchDiff or self.ui.diffViewer.textLineCount() > 0:
             return

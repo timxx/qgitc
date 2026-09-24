@@ -2,6 +2,7 @@
 """Unit tests for DiffView's incremental per-file diff accumulation."""
 
 from qgitc.applicationbase import ApplicationBase
+from qgitc.common import Commit
 from qgitc.diffutils import DiffType, FileInfo, FileState
 from qgitc.diffview import DiffView
 from tests.base import TestBase
@@ -287,3 +288,49 @@ class TestDiffViewFileOrder(TestBase):
 
         self.assertEqual(["a.txt"], self._renderedFileOrder())
         self.assertEqual(2, self._view.viewer.textLineCount())
+
+
+class TestDiffViewCommentsBlock(TestBase):
+    """The commit header and message fold as a single "Comments" block —
+    the file list's first row already anchors there."""
+
+    def doCreateRepo(self):
+        """No repo needed for these unit-level tests."""
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self._view = DiffView()
+
+    def tearDown(self):
+        self._view.deleteLater()
+        self.processEvents()
+        super().tearDown()
+
+    def _commit(self, comments):
+        return Commit(sha1="a" * 40,
+                      comments=comments,
+                      author="me", authorDate="2020-05-27",
+                      committer="me", committerDate="2020-05-27")
+
+    def testCommentsRegionFoldsAsOneBlock(self):
+        self._view._DiffView__commitToTextLines(
+            self._commit("subject\n\nbody line"))
+
+        viewer = self._view.viewer
+        blocks = viewer._blockModel.blocks()
+        self.assertEqual(1, len(blocks))
+        self.assertEqual(0, blocks[0].startLine)
+        self.assertEqual(viewer.textLineCount() - 1, blocks[0].endLine)
+        self.assertEqual("comments", blocks[0].meta["kind"])
+        self.assertTrue(viewer.canFoldAt(0))
+
+    def testFoldHidesTheMessageButKeepsTheHeaderAnchor(self):
+        self._view._DiffView__commitToTextLines(
+            self._commit("subject\n\nbody line"))
+
+        viewer = self._view.viewer
+        viewer.toggleFoldAt(0)
+
+        self.assertTrue(viewer._blockModel.isLineVisible(0))
+        self.assertFalse(viewer._blockModel.isLineVisible(1))
