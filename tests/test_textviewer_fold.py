@@ -257,3 +257,27 @@ class TestViewerFold(TestBase):
         self.viewer.toggleFoldAt(2)
         tip = self.viewer.foldTipForLine(2)
         self.assertIn("7", tip)
+
+    def testFoldGlyphDoesNotLeakItsPen(self):
+        """The fold affordance must not recolour what follows it: a line
+        without an explicit format keeps the widget text colour whether
+        or not a fold glyph was painted earlier in the same pass."""
+        self.addBlockAt(0, 5)
+        self.processEvents()
+        withGlyph = self.viewer.viewport().grab().toImage()
+
+        # same geometry (a block still reserves the gutter), no glyph
+        self.viewer._blockModel.clearBlocks()
+        self.viewer._blockModel.addBlock(0, 0)
+        self.viewer._syncGutter()
+        self.processEvents()
+        noGlyph = self.viewer.viewport().grab().toImage()
+
+        self.assertEqual(withGlyph.size(), noGlyph.size())
+        top = self.viewer._blockModel.lineTop(3)
+        differing = [(x, y)
+                     for y in range(top, top + self.lineH)
+                     for x in range(withGlyph.width())
+                     if withGlyph.pixel(x, y) != noGlyph.pixel(x, y)]
+        self.assertEqual([], differing[:5],
+                         "line 3 was recoloured by the fold glyph")

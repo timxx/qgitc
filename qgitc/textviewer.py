@@ -1192,10 +1192,13 @@ class TextViewer(QAbstractScrollArea):
 
             textLine.draw(painter, QPointF(drawX, y), formats, clipRg)
 
-            # fold affordances on block anchor lines
+            # fold affordances on block anchor lines; the painter state is
+            # restored because drawText's pen would otherwise leak into
+            # every following line that has no explicit text format
             if gutter:
                 block = model.blockAtAnchor(i)
                 if block is not None and block.endLine > block.startLine:
+                    painter.save()
                     glyph = "\u25b8" if block.folded else "\u25be"
                     painter.setPen(foldColor)
                     painter.drawText(
@@ -1210,6 +1213,7 @@ class TextViewer(QAbstractScrollArea):
                                 QRectF(chipX, chipY, 12, self._lineHeight),
                                 int(Qt.AlignLeft | Qt.AlignVCenter),
                                 "\u2026")
+                    painter.restore()
 
             y += height
 
