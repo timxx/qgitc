@@ -47,6 +47,9 @@ from qgitc.textline import Link, TextLine, createFormatRange
 
 __all__ = ["TextViewer"]
 
+#: already built lines one conversion event may re-scan
+_MAX_RESCAN_PER_EVENT = 500
+
 
 class TextViewer(QAbstractScrollArea):
 
@@ -94,6 +97,9 @@ class TextViewer(QAbstractScrollArea):
         self._clickTimer = QElapsedTimer()
 
         self.viewport().setMouseTracking(True)
+        # the scroll range depends on the viewport size, which Qt may
+        # change without resizing the scroll area itself
+        self.viewport().installEventFilter(self)
 
         self._clickOnLink = False
         self._link = None
@@ -1105,22 +1111,39 @@ class TextViewer(QAbstractScrollArea):
         if self._inReading and self._convertIndex >= self.textLineCount():
             return
 
-        textLine = self.textLineAt(self._convertIndex)
-        self._convertIndex += 1
+        viewHeight = self.viewport().height()
+        needAdjust = self.verticalScrollBar().maximum() < \
+            max(0, self._blockModel.contentHeight() - viewHeight)
+
+        # Only one new TextLine is built per event so that a huge document
+        # cannot block the event loop, but lines that are built already
+        # (painted, or built before an insertion moved them down) are
+        # re-scanned in bulk: after a rewind they would otherwise cost one
+        # event-loop turn each.
+        scanned = 0
+        built = False
+        while not built and \
+                self._convertIndex < self.textLineCount() and \
+                scanned < _MAX_RESCAN_PER_EVENT:
+            lineNo = self._convertIndex
+            self._convertIndex += 1
+            textLine = self._textLines.get(lineNo)
+            if textLine is None:
+                textLine = self.textLineAt(lineNo)
+                built = True
+            else:
+                scanned += 1
+
+            if textLine is not None:
+                width = textLine.boundingRect().width()
+                if width > self._maxWidth:
+                    self._maxWidth = width
+                    needAdjust = True
 
         if not self._inReading and self._convertIndex >= self.textLineCount():
             self.killTimer(self._convertTimerId)
             self._convertTimerId = None
             self._convertIndex = 0
-
-        viewHeight = self.viewport().height()
-        needAdjust = self.verticalScrollBar().maximum() < \
-            max(0, self._blockModel.contentHeight() - viewHeight)
-        if textLine:
-            width = textLine.boundingRect().width()
-            if width > self._maxWidth:
-                self._maxWidth = width
-                needAdjust = True
 
         if needAdjust:
             self._adjustScrollbars()
@@ -1627,6 +1650,11 @@ class TextViewer(QAbstractScrollArea):
         if event.type() == QEvent.ActivationChange:
             if not self.isActiveWindow():
                 self._autoScrollTimer.stop()
+
+    def eventFilter(self, obj, event):
+        if obj is self.viewport() and event.type() == QEvent.Resize:
+            self._adjustScrollbars()
+        return super().eventFilter(obj, event)
 
     def executeFind(self):
         if not self._findWidget:

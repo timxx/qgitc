@@ -21,6 +21,9 @@ class TestTextViewerPixelScroll(TestBase):
         super().setUp()
         self.viewer = TextViewer()
         self.viewer.resize(300, 200)
+        # the scroll range follows the viewport size: show the viewer so
+        # the viewport geometry is settled before it is asserted on
+        self.viewer.show()
         self.viewer.appendLines(["line %d" % i for i in range(100)])
         self.processEvents()
 

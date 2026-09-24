@@ -118,3 +118,27 @@ class TestTextViewerInsert(TestBase):
 
         self.assertEqual(value, self.viewer.verticalScrollBar().value())
         self.assertEqual(2, self.viewer.firstVisibleLine())
+
+    def testLongLineInsertedBehindTheSweepWidensHScroll(self):
+        # drain the conversion sweep first, so the insertion lands behind it
+        self.wait(300)
+        self.assertEqual(0, self.viewer.horizontalScrollBar().maximum())
+
+        self.viewer.insertLines(1, ["x" * 400])
+        self.wait(300)
+
+        self.assertGreater(self.viewer.horizontalScrollBar().maximum(), 0)
+
+    def testRescanOfBuiltLinesIsBatched(self):
+        # a sweep that rewinds must not cost one event-loop turn per line
+        self.viewer.appendLines(["line %d" % i for i in range(5, 200)])
+        self.wait(400)
+
+        turns = []
+        original = self.viewer._onConvertEvent
+        self.viewer._onConvertEvent = lambda: (turns.append(1), original())
+
+        self.viewer.insertLines(1, ["x" * 400])
+        self.wait(400)
+
+        self.assertLess(len(turns), 50)
