@@ -177,3 +177,73 @@ class TestBlockModelClear(unittest.TestCase):
         model.setLineCount(4)
         self.assertEqual(model.contentHeight(), 40)
         self.assertTrue(all(model.isLineVisible(i) for i in range(4)))
+
+
+class TestBlockModelInsertion(unittest.TestCase):
+    """insertLines(at, count) splices `count` lines in before line `at`,
+    so everything from that point on moves down."""
+
+    def setUp(self):
+        self.model = BlockModel(defaultHeight=10)
+        self.model.setLineCount(6)
+
+    def testInsertAfterABlockKeepsItInPlace(self):
+        block = self.model.addBlock(0, 2)
+        self.model.insertLines(4, 2)
+
+        self.assertEqual((0, 2), (block.startLine, block.endLine))
+        self.assertEqual(8, self.model.lineCount())
+        self.assertEqual(80, self.model.contentHeight())
+
+    def testInsertBeforeABlockShiftsIt(self):
+        block = self.model.addBlock(2, 4)
+        self.model.insertLines(2, 3)
+
+        self.assertEqual((5, 7), (block.startLine, block.endLine))
+        self.assertEqual(9, self.model.lineCount())
+        self.assertEqual(90, self.model.contentHeight())
+
+    def testInsertInsideABlockExtendsIt(self):
+        block = self.model.addBlock(0, 5)
+        self.model.insertLines(3, 2)
+
+        self.assertEqual((0, 7), (block.startLine, block.endLine))
+        self.assertEqual(8, self.model.lineCount())
+
+    def testInsertBeforeAFoldedBlockShiftsAnchorAndGeometry(self):
+        block = self.model.addBlock(3, 5)
+        self.model.setFolded(block, True)
+        self.model.insertLines(1, 4)
+
+        self.assertEqual((7, 9), (block.startLine, block.endLine))
+        self.assertEqual(self.model.lineTop(7), 70)
+        self.assertEqual(self.model.lineHeight(8), 0)
+        # anchor plus the 7 lines before it
+        self.assertEqual(self.model.contentHeight(), 80)
+        self.assertEqual(self.model.lineAt(80), 7)
+
+    def testInsertShiftsHeightOverrides(self):
+        self.model.setLineHeight(4, 30)
+        self.model.insertLines(1, 2)
+
+        self.assertEqual(8, self.model.lineCount())
+        self.assertEqual(10, self.model.lineHeight(4))
+        self.assertEqual(30, self.model.lineHeight(6))
+        self.assertEqual(60, self.model.lineTop(6))
+        self.assertEqual(100, self.model.contentHeight())
+
+    def testInsertAtTheEndAppends(self):
+        block = self.model.addBlock(0, 2)
+        self.model.insertLines(6, 2)
+
+        self.assertEqual((0, 2), (block.startLine, block.endLine))
+        self.assertEqual(8, self.model.lineCount())
+        # out-of-range insertion points clamp to the end
+        self.model.insertLines(99, 1)
+        self.assertEqual(9, self.model.lineCount())
+        self.assertEqual(90, self.model.contentHeight())
+
+    def testNothingIsInsertedForAnEmptyRange(self):
+        self.model.insertLines(2, 0)
+        self.model.insertLines(2, -1)
+        self.assertEqual(6, self.model.lineCount())

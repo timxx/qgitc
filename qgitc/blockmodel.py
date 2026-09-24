@@ -87,6 +87,32 @@ class BlockModel:
     def lineCount(self):
         return self._lineCount
 
+    def insertLines(self, at, count):
+        """Splice `count` lines in before line `at`.
+
+        Block ranges and height overrides at or after the insertion point
+        move down; a block the lines land inside simply grows. An
+        out-of-range `at` clamps to the end.
+        """
+        if count <= 0:
+            return
+        at = max(0, min(at, self._lineCount))
+
+        for block in self._blocks:
+            if block.startLine >= at:
+                block.startLine += count
+                block.endLine += count
+            elif block.endLine >= at:
+                block.endLine += count
+
+        if self._lineHeights:
+            self._lineHeights = {
+                (lineNo + count if lineNo >= at else lineNo): height
+                for lineNo, height in self._lineHeights.items()}
+
+        self._lineCount += count
+        self._dirty = True
+
     def setLineHeight(self, lineNo, height):
         """Override the visible height of one line (word wrap)."""
         if height == self._defaultHeight:
