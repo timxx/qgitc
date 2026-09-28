@@ -41,7 +41,7 @@ These came out of a design Q&A before any code was written; keep them in mind be
 | Wrap | Per-line opt-in, decided by the caller or the `TextLine` subclass. Default `NoWrap`, so existing viewers see no change. |
 | Layout | Wrap to the viewport width. Wrapped rows ignore horizontal scrolling; `NoWrap` diff lines keep it. |
 | Folding | Generic block model: blocks are injected from outside with `beginBlock`/`endBlock`. Nesting exists in the model, but business code registers flat blocks only. |
-| Anchor | The block's first line stays visible when folded. A grey `…` chip is painted over that line plus a hover tooltip (line count + block summary). The chip is not part of the text: copying the anchor line yields the raw text. |
+| Anchor | The block's first line stays visible when folded. A painted triangle in the left gutter (`foldIndicatorSize()`, sized from the line height, not from a font glyph) shows the fold state — pointing down when expanded, the same triangle rotated to point right when folded, so both states keep the same tip angle — and it is the click target together with the whole strip. A grey `…` chip is painted over that line plus a hover tooltip (line count + block summary). Neither the triangle nor the chip is part of the text: copying the anchor line yields the raw text. |
 | Interaction | Clicking the anchor toggles. The context menu shows the fold entry only on foldable points. Fold all / expand all touch top-level blocks only. `textLineClicked` still fires. |
 | State | View memory only, no persistence. |
 | find / gotoLine | A target inside a folded block auto-expands it. |
@@ -118,7 +118,7 @@ View layer (`TextViewer`), the parts that matter to callers:
 | `beginBlock(meta=None)` / `endBlock()` | Block anchored at the next appended line; an unclosed block is closed by the next `beginBlock`, by `endBlock`, or dropped by `clear()`. Use this when a section's end is not known yet. |
 | `addBlock(startLine, endLine, meta=None)` | Register a block over lines that already exist. Use this when the boundaries are known up front. |
 | `canFoldAt(lineNo)`, `toggleFoldAt`, `foldAllBlocks`, `expandAllBlocks`, `expandBlocksCovering(lineNo)` | Fold interaction; `foldTipForLine(lineNo)` builds the tooltip and uses `meta["title"]` as a summary when present. |
-| `wrapWidth()` / `gutterWidth()` | Where wrapped lines lay out to; the gutter is reserved only once a block exists. |
+| `wrapWidth()` / `gutterWidth()` | Where wrapped lines lay out to; the gutter is reserved only once a block exists, and is just wide enough for the painted fold triangle (`foldIndicatorSize()`) plus its padding — narrower than one line height, so the text keeps the left edge. The patch view keeps no viewport margin in front of it, so the fold control starts at the frame edge. |
 | `firstVisibleLine()`, `textRowForPos(pos)`, `contentOffset()`, `gotoLine`, `ensureLineVisible` | Pixel-aware, logical-line based. |
 
 Business layer:
@@ -140,9 +140,11 @@ Business layer:
    are part of `selectedText`.
 2. `find`/`gotoLine`/file-list clicks unfold whatever hides the target.
 3. The anchor line of a folded block stays visible and keeps its own row; only lines after it collapse.
-4. The fold affordance does not leak painter state, and the chip is drawn, never inserted into text.
-5. The gutter is reserved only while at least one block exists, and the `…` chip is drawn only on the
-   anchor of a folded block.
+4. The fold affordance is painted, never a font glyph: a triangle sized from the line height, so it stays
+   legible across fonts and DPI scaling. It does not leak painter state, and the chip is drawn, never
+   inserted into text.
+5. The gutter is reserved only while at least one block exists, is no wider than the line height, and the
+   `…` chip is drawn only on the anchor of a folded block.
 6. In sorted mode the viewer order equals the file list order, and each file's viewer line is the
    anchor of its section block — `viewer.fileLineForPath(path)` — never a copy kept by the file list.
    The file list and the diff view locate each other through these blocks: no side scans the other.

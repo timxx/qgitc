@@ -214,6 +214,12 @@ class PatchViewer(SourceViewer):
         self._fileBlocks: Dict[str, Block] = {}
         self._openFilePath: str = None
 
+        # The fold strip is the content's left inset already. The viewport
+        # margin in front of it only pushed the fold control and every diff
+        # line to the right, so only the other three sides keep one.
+        margin = self.textMargins()
+        self.setViewportMargins(0, margin, margin, margin)
+
         self.verticalScrollBar().valueChanged.connect(
             self._onVScollBarValueChanged)
         self.linkActivated.connect(self._onLinkActivated)

@@ -322,6 +322,34 @@ class TestFileBlocks(TestBase):
         self.assertEqual(4, blocks[1].startLine)
         self.assertEqual(6, blocks[1].endLine)
 
+    def testFoldStripStartsAtTheLeftEdge(self):
+        """The fold strip is the patch view's left inset; the viewport margin
+        in front of it only pushed the fold control and the diff text right."""
+        self.appendTwoFiles()
+        self.viewer.endReading()
+        self.processEvents()
+
+        self.assertEqual(0, self.viewer.textMargins())
+
+        gutter = self.viewer.gutterWidth()
+        self.assertGreater(gutter, 0)
+        top = self.viewer._blockModel.lineTop(0)
+        withIndicator = self.viewer.viewport().grab().toImage()
+
+        # same strip, no indicator painted
+        self.viewer._blockModel.clearBlocks()
+        self.viewer._blockModel.addBlock(0, 0)
+        self.viewer._syncGutter()
+        self.processEvents()
+        withoutIndicator = self.viewer.viewport().grab().toImage()
+
+        ink = [(x, y) for y in range(top, top + self.lineH)
+               for x in range(gutter)
+               if withIndicator.pixel(x, y) != withoutIndicator.pixel(x, y)]
+        self.assertTrue(ink)
+        # the indicator owns the strip's own padding, nothing in front of it
+        self.assertLessEqual(min(x for x, _ in ink), 2)
+
     def testFoldHidesSectionBodyButKeepsMarker(self):
         self.appendTwoFiles()
         self.viewer.endReading()

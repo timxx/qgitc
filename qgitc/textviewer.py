@@ -26,6 +26,7 @@ from PySide6.QtGui import (
     QKeySequence,
     QMouseEvent,
     QPainter,
+    QPolygonF,
     QTextCharFormat,
     QTextOption,
 )
@@ -163,11 +164,20 @@ class TextViewer(QAbstractScrollArea):
         return max(1, self.viewport().width() - self._gutterWidth)
 
     def gutterWidth(self):
-        """Reserved left strip for fold indicators; 0 without blocks."""
+        """Reserved left strip for fold indicators; 0 without blocks.
+
+        Only as wide as the painted indicator needs, so wrapped and
+        unwrapped text keep as much of the left edge as it allows.
+        """
         return self._gutterWidth
 
     def _syncGutter(self):
-        desired = self.lineHeight if self._blockModel.blocks() else 0
+        desired = 0
+        if self._blockModel.blocks():
+            # only the fold indicator plus its padding: a whole line height
+            # left a strip the small control never filled, pushing the text
+            # further right than the fold affordance needs
+            desired = min(self._lineHeight, self._foldStripWidth())
         if desired == self._gutterWidth:
             return
         self._gutterWidth = desired
@@ -345,6 +355,49 @@ class TextViewer(QAbstractScrollArea):
             return False
         chipX = self._foldChipX(textLine)
         return chipX <= viewportPos.x() <= chipX + 14
+
+    def foldIndicatorSize(self):
+        """Pixel size of the painted fold triangle.
+
+        Taken from the line height instead of the font, so the control
+        scales with the text as fonts and DPI change, and never shrinks
+        to the speck a triangle glyph is at small point sizes.
+        """
+        width = max(6, round(self._lineHeight * 0.55))
+        height = max(4, round(self._lineHeight * 0.4))
+        return width, height
+
+    def _foldStripWidth(self):
+        """Left strip reserved for the fold indicator, in pixels."""
+        width, _ = self.foldIndicatorSize()
+        padding = max(2, round(self._lineHeight * 0.12))
+        return width + padding * 2
+
+    def _drawFoldIndicator(self, painter: QPainter, rect: QRectF,
+                           folded, color):
+        width, height = self.foldIndicatorSize()
+        cx = rect.left() + rect.width() / 2
+        cy = rect.top() + rect.height() / 2
+        hw = width / 2
+        hh = height / 2
+
+        if folded:
+            # the downward triangle rotated: same shape and the same tip
+            # angle, so pointing sideways does not sharpen it into a spike
+            points = (QPointF(cx - hh, cy - hw), QPointF(cx - hh, cy + hw),
+                      QPointF(cx + hh, cy))
+        else:
+            # pointing down
+            points = (QPointF(cx - hw, cy - hh), QPointF(cx + hw, cy - hh),
+                      QPointF(cx, cy + hh))
+
+        oldHints = painter.renderHints()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(color)
+        painter.drawPolygon(QPolygonF(list(points)))
+        painter.setBrush(Qt.NoBrush)
+        painter.setRenderHints(oldHints)
 
     def appendLine(self, line: str):
         self.appendLines([line])
@@ -1308,22 +1361,21 @@ class TextViewer(QAbstractScrollArea):
             textLine.draw(painter, QPointF(drawX, y), formats, clipRg)
 
             # fold affordances on block anchor lines; the painter state is
-            # restored because drawText's pen would otherwise leak into
-            # every following line that has no explicit text format
+            # restored because the indicator's pen and brush would otherwise
+            # leak into every following line that has no explicit text format
             if gutter:
                 block = model.blockAtAnchor(i)
                 if block is not None and block.endLine > block.startLine:
                     painter.save()
-                    glyph = "\u25b8" if block.folded else "\u25be"
-                    painter.setPen(foldColor)
-                    painter.drawText(
-                        QRectF(0, y, gutter, height),
-                        int(Qt.AlignHCenter | Qt.AlignVCenter), glyph)
+                    self._drawFoldIndicator(
+                        painter, QRectF(0, y, gutter, height), block.folded,
+                        foldColor)
                     if block.folded:
                         rows = textLine.visualLineCount()
                         chipX = drawX + textLine.rowWidth(rows - 1) + 6
                         chipY = y + (rows - 1) * self._lineHeight
                         if chipX + 12 <= viewportRect.width():
+                            painter.setPen(foldColor)
                             painter.drawText(
                                 QRectF(chipX, chipY, 12, self._lineHeight),
                                 int(Qt.AlignLeft | Qt.AlignVCenter),

@@ -32,6 +32,27 @@ class TestViewerFold(TestBase):
         self.viewer._syncGutter()
         return block
 
+    def stripInk(self, image, baseline, top, rows=1):
+        """Pixels of the fold strip that differ from the blank strip."""
+        gutter = self.viewer.gutterWidth()
+        return [(x, y)
+                for y in range(top, top + self.lineH * rows)
+                for x in range(gutter)
+                if image.pixel(x, y) != baseline.pixel(x, y)]
+
+    def inkSize(self, ink):
+        xs = [p[0] for p in ink]
+        ys = [p[1] for p in ink]
+        return max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+
+    def blankStrip(self):
+        """The strip reserved with no indicator painted."""
+        self.viewer._blockModel.clearBlocks()
+        self.viewer._blockModel.addBlock(0, 0)
+        self.viewer._syncGutter()
+        self.processEvents()
+        return self.viewer.viewport().grab().toImage()
+
     # -- block registration ------------------------------------------------
 
     def testBeginEndBlockRegisters(self):
@@ -44,10 +65,15 @@ class TestViewerFold(TestBase):
         self.assertEqual(blocks[0].startLine, 30)
         self.assertEqual(blocks[0].endLine, 31)
         self.assertEqual(blocks[0].meta["path"], "a.c")
-        # gutter reserved once a foldable block exists
-        self.assertEqual(self.viewer.gutterWidth(), self.lineH)
+        # gutter reserved once a foldable block exists; just wide enough
+        # for the fold triangle, so the text starts closer to the edge
+        gutter = self.viewer.gutterWidth()
+        width, _ = self.viewer.foldIndicatorSize()
+        self.assertGreater(gutter, width)
+        self.assertLessEqual(gutter, self.lineH)
+        self.assertLess(self.viewer._foldStripWidth(), self.lineH)
         self.assertEqual(self.viewer.wrapWidth(),
-                         self.viewer.viewport().width() - self.lineH)
+                         self.viewer.viewport().width() - gutter)
 
     def testUnclosedBlockAutoClosesOnNextBegin(self):
         self.viewer.beginBlock()
@@ -102,6 +128,70 @@ class TestViewerFold(TestBase):
         y = 12 * self.lineH + 3
         self.assertNotEqual(
             self.viewer.textRowForPos(QPointF(0, y)), 12)
+
+    def testFoldIndicatorFillsTheStrip(self):
+        """The affordance is a painted triangle sized from the line height;
+        the font glyph it replaced was a speck inside the reserved strip."""
+        self.addBlockAt(0, 5)
+        self.processEvents()
+        withIndicator = self.viewer.viewport().grab().toImage()
+        top = self.viewer._blockModel.lineTop(0)
+        ink = self.stripInk(withIndicator, self.blankStrip(), top)
+        self.assertTrue(ink)
+
+        width, height = self.viewer.foldIndicatorSize()
+        inkWidth, inkHeight = self.inkSize(ink)
+        self.assertLessEqual(inkWidth, width + 1)
+        self.assertLessEqual(inkHeight, height + 1)
+        # large enough to be a control, and centred in the strip
+        self.assertGreaterEqual(inkWidth, 6)
+        xs = [p[0] for p in ink]
+        gutter = self.viewer.gutterWidth()
+        self.assertAlmostEqual((min(xs) + max(xs)) / 2, (gutter - 1) / 2,
+                               delta=2)
+
+    def testCollapsedIndicatorIsTheExpandedOneRotated(self):
+        """A folded block points right with the same triangle, so its tip is
+        as blunt as the downward one; the old one kept the same bounding box
+        and came out long and narrow, looking like a spike."""
+        self.addBlockAt(0, 5)
+        self.processEvents()
+        expanded = self.viewer.viewport().grab().toImage()
+
+        self.viewer.toggleFoldAt(0)
+        self.processEvents()
+        folded = self.viewer.viewport().grab().toImage()
+
+        top = self.viewer._blockModel.lineTop(0)
+        baseline = self.blankStrip()
+        bodyWidth, bodyHeight = self.inkSize(self.stripInk(expanded, baseline, top))
+        tipWidth, tipHeight = self.inkSize(self.stripInk(folded, baseline, top))
+
+        # the downward triangle is the wider one ...
+        self.assertGreater(bodyWidth, bodyHeight)
+        # ... and the right-pointing one is that shape rotated, so it is the
+        # taller one: pointing sideways must not sharpen the tip
+        self.assertGreater(tipHeight, tipWidth)
+
+    def testFoldedAnchorStillPaintsTheChip(self):
+        """The indicator paints with its own pen and brush; the folded-content
+        chip drawn after the anchor text must survive that."""
+        self.addBlockAt(2, 8)
+        self.processEvents()
+        expanded = self.viewer.viewport().grab().toImage()
+
+        self.viewer.toggleFoldAt(2)
+        self.processEvents()
+        folded = self.viewer.viewport().grab().toImage()
+
+        textLine = self.viewer.textLineAt(2)
+        rows = textLine.visualLineCount()
+        chipX = int(self.viewer._foldChipX(textLine))
+        chipTop = self.viewer._blockModel.lineTop(2) + (rows - 1) * self.lineH
+        ink = [(x, y) for y in range(chipTop, chipTop + self.lineH)
+               for x in range(chipX, chipX + 12)
+               if expanded.pixel(x, y) != folded.pixel(x, y)]
+        self.assertTrue(ink, "the folded-content chip was not painted")
 
     # -- click interaction -------------------------------------------------
 
