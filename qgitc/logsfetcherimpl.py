@@ -102,22 +102,32 @@ class LogsFetcherImpl(DataFetcher):
         if branch:
             git_args.append(branch)
 
+        needPathSeparator = True
         if logArgs:
-            if repoDir and repoDir != ".":
-                paths = paths or extractFilePaths(logArgs)
-                if paths:
-                    for arg in logArgs:
-                        if arg not in paths and arg != "--":
-                            git_args.append(arg)
-                    git_args.append("--")
-                    for path in paths:
+            paths = paths or extractFilePaths(logArgs)
+            if paths:
+                for arg in logArgs:
+                    if arg not in paths and arg != "--":
+                        git_args.append(arg)
+                git_args.append("--")
+                isSubmodule = bool(repoDir) and repoDir != "."
+                for path in paths:
+                    if isSubmodule:
                         git_args.append(toSubmodulePath(repoDir, path))
-                else:
-                    git_args.extend(logArgs)
+                    else:
+                        git_args.append(path)
+                needPathSeparator = False
             else:
                 git_args.extend(logArgs)
         elif needBoundary:
             git_args.append("--boundary")
+
+        if needPathSeparator:
+            # Explicitly terminate the revision list. Without it git dies
+            # with "fatal: ambiguous argument '<branch>': both revision and
+            # filename" whenever the branch name also names a path in the
+            # repository (e.g. a project directory named like the branch).
+            git_args.append("--")
 
         return git_args, _branch
 
