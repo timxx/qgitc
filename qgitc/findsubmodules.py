@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtCore import QEventLoop, QProcess, QThread
+from PySide6.QtCore import QProcess, QThread
 from shiboken6 import Shiboken
 
 from qgitc.common import logger
@@ -17,7 +17,14 @@ class FindSubmoduleThread(QThread):
 
         self.setRepoDir(repoDir)
         self._submodules = []
-        self._eventLoop = None
+        # Qt objects created in run() are retained here instead of being
+        # dropped inside the worker thread: destroying a QObject there takes a
+        # Qt lock and then needs the Python GIL (Shiboken::GilState), while the
+        # GUI thread holds the GIL and waits for that very lock — the whole
+        # process freezes until the GIL is released, which never happens.
+        # releaseProcessors() drops them from the GUI thread once the thread
+        # has finished.
+        self._process = None
 
     def setRepoDir(self, repoDir):
         self._repoDir = os.path.normcase(os.path.normpath(repoDir))
@@ -70,26 +77,26 @@ class FindSubmoduleThread(QThread):
             return
 
         # try git submodule first
-        self._eventLoop = QEventLoop()
         process = QProcess()
+        # Retain the process on the instance: run() must not destroy any Qt
+        # object in this worker thread (see __init__).
+        self._process = process
         process.setWorkingDirectory(self._repoDir)
-        process.finished.connect(self._eventLoop.quit)
-        # A failed start emits errorOccurred and never finished; without
-        # quitting on it the wait below would block until interrupted and
-        # submodules would never be discovered (e.g. broken git binary).
-        process.errorOccurred.connect(self._eventLoop.quit)
         args = ["submodule", "foreach", "--quiet", "echo $name"]
         process.start(GitProcess.GIT_BIN, args)
-        if process.state() != QProcess.ProcessState.NotRunning:
-            # On Windows a failed start is reported synchronously from
-            # start() (errorOccurred above), so only wait when it actually
-            # started; a quit delivered before exec() may be lost.
-            self._eventLoop.exec()
-        # Drop the loop here so it is destroyed in this (worker) thread;
-        # keeping it as an instance attribute would destroy it later from
-        # the GUI thread or at interpreter teardown — cross-thread QObject
-        # destruction.
-        self._eventLoop = None
+        # Wait on the process state instead of a nested QEventLoop with
+        # finished/errorOccurred connections: both the loop and the
+        # connections live in this thread, and tearing them down deadlocks
+        # against the GUI thread. waitForFinished() needs no event loop, and a
+        # failed start simply never reaches Running, so the file walk below
+        # still discovers the submodules (e.g. broken git binary).
+        if process.state() == QProcess.ProcessState.Starting:
+            process.waitForStarted(1000)
+        while process.state() == QProcess.ProcessState.Running:
+            if process.waitForFinished(50):
+                break
+            if self.isInterruptionRequested():
+                break
 
         if not Shiboken.isValid(process):
             # The interpreter is tearing down and already destroyed the
@@ -138,6 +145,15 @@ class FindSubmoduleThread(QThread):
         self._submodules = submodules
 
     def requestInterruption(self):
+        # run()'s wait polls isInterruptionRequested() every 50ms, so no
+        # cross-thread Qt call is needed to wake it up.
         super().requestInterruption()
-        if self._eventLoop:
-            self._eventLoop.quit()
+
+    def releaseProcessors(self):
+        """Drop the Qt objects created by run().
+
+        Must run in the GUI thread and only after this thread has finished;
+        that keeps their destruction out of the worker thread, where it would
+        deadlock against the GUI thread (see __init__).
+        """
+        self._process = None

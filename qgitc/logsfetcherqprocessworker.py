@@ -150,6 +150,9 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         self._fetchers: List[LogsFetcherImpl] = []
         self._finishedFetchers: list = []  # keep fetchers alive until explicit cleanup
         self._eventLoop = None
+        # event loops run() is done with: kept referenced so that they are not
+        # destroyed in this worker thread (see _retireEventLoop)
+        self._finishedEventLoops: List[QEventLoop] = []
 
         self._lccCommit = Commit()
         self._lucCommit = Commit()
@@ -172,6 +175,20 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         else:
             self._fetchComposite()
 
+    def _retireEventLoop(self):
+        """Drop the event loop reference without destroying it here.
+
+        The loop was created in this worker thread, and destroying it in this
+        thread takes Qt object locks and then waits for the Python GIL — which
+        the GUI thread holds while waiting for those very locks, freezing the
+        whole process. The reference is kept until
+        releaseFinishedFetchers() drops it from the GUI thread, once this
+        thread has stopped.
+        """
+        if self._eventLoop is not None:
+            self._finishedEventLoops.append(self._eventLoop)
+            self._eventLoop = None
+
     def _onFetchNormalLogsFinished(self):
         fetcher = self.sender()
         self._fetchers.remove(fetcher)
@@ -191,7 +208,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         if self.isInterruptionRequested():
             self._quitEventLoop()
-            self._eventLoop = None
+            self._retireEventLoop()
             return
 
         # Start local-changes fetcher first (fast: git status) so local
@@ -213,7 +230,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         fetcher.fetch(*self._args)
 
         self._eventLoop.exec()
-        self._eventLoop = None
+        self._retireEventLoop()
 
         if self.isInterruptionRequested():
             logger.debug("Logs fetcher cancelled")
@@ -323,7 +340,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             for submodule in submodules:
                 if self.isInterruptionRequested():
                     self._clearFetcher()
-                    self._eventLoop = None
+                    self._retireEventLoop()
                     return
 
                 fetcher = LocalChangesFetcher(
@@ -340,7 +357,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         for submodule in submodules:
             if self.isInterruptionRequested():
                 self._clearFetcher()
-                self._eventLoop = None
+                self._retireEventLoop()
                 return
             fetcher = LogsFetcherImpl(submodule)
             if submodule != '.':
@@ -355,7 +372,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
 
         if self.isInterruptionRequested():
             self._clearFetcher()
-            self._eventLoop = None
+            self._retireEventLoop()
             span.setStatus(False, "cancelled")
             span.end()
             return
@@ -370,7 +387,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
             logger.debug("Logs fetcher cancelled")
             span.setStatus(False, "cancelled")
             span.end()
-            self._eventLoop = None
+            self._retireEventLoop()
             return
 
         self._flushCompositeEmit()
@@ -388,7 +405,7 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         span.setStatus(True)
         span.end()
 
-        self._eventLoop = None
+        self._retireEventLoop()
         self.fetchFinished.emit(self._exitCode)
         # All data-carrying signals have been queued and are owned by their
         # receivers now; drop our copy so a lingering worker wrapper does
@@ -448,3 +465,6 @@ class LogsFetcherQProcessWorker(LogsFetcherWorkerBase):
         signal to a Python slot).
         """
         self._finishedFetchers.clear()
+        # same reasoning for the event loops run() retired (see
+        # _retireEventLoop)
+        self._finishedEventLoops.clear()

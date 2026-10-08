@@ -69,7 +69,10 @@ class TestApp(TestBase):
     def testRefreshSubmodulesCacheWhenSubmoduleRemoved(self):
         """Regression: cache should refresh when latest submodules remove stale entries."""
         class FakeThread:
-            pass
+            def releaseProcessors(self):
+                # the real thread drops the Qt objects it created in its
+                # worker thread; called from the GUI thread on finish
+                pass
 
         cachedSubmodules = [".", "stale-submodule"]
         latestSubmodules = ["."]

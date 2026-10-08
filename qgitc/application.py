@@ -682,6 +682,10 @@ class Application(ApplicationBase):
             if newSubmodules:
                 self.submoduleAvailable.emit(newSubmodules, False)
 
+        # the thread has finished: destroy its Qt objects here, in the GUI
+        # thread, never in the worker thread (that deadlocks on the GIL)
+        thread.releaseProcessors()
+
         self.submoduleSearchCompleted.emit()
 
     def _onThreadFinished(self):

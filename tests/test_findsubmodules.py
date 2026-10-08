@@ -29,17 +29,23 @@ class TestFindSubmoduleThread(TestBase):
         self.assertFalse(thread.isRunning())
         self.assertIn("subRepo", thread.submodules)
 
-    def testEventLoopNotRetainedAfterRun(self):
-        """run() must not leave the QEventLoop referenced after it returns.
+    def testQtObjectsSurviveUntilReleasedFromGuiThread(self):
+        """run() must not drop the Qt objects it created.
 
-        The loop is created in the worker thread; keeping it as an instance
-        attribute would destroy it later from the GUI thread (or at
-        interpreter teardown) — cross-thread QObject destruction.
+        Destroying a QObject in the worker thread takes a Qt lock and then
+        needs the Python GIL (Shiboken::GilState), while the GUI thread holds
+        the GIL and waits for that same lock: the process freezes forever and
+        even the test watchdog cannot fire. The process is therefore retained
+        on the thread and only dropped by releaseProcessors(), which the GUI
+        thread calls after the thread has finished.
         """
         thread = FindSubmoduleThread(self.gitDir.name)
         thread.start()
         self.wait(5000, thread.isRunning)
 
         self.assertFalse(thread.isRunning())
-        self.assertIsNone(thread._eventLoop)
+        self.assertIsNotNone(thread._process)
         self.assertTrue(thread.submodules)
+
+        thread.releaseProcessors()
+        self.assertIsNone(thread._process)
