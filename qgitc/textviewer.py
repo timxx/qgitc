@@ -150,6 +150,8 @@ class TextViewer(QAbstractScrollArea):
         self._font = font
         fm = QFontMetrics(self._font)
         self._lineHeight = fm.height()
+        # heights measured with the old font must not survive it
+        self._blockModel.clearLineHeights()
         self._blockModel.setDefaultHeight(self._lineHeight)
         self.verticalScrollBar().setSingleStep(self._lineHeight)
         for lineNo in self._wrappedLineNos:
@@ -157,6 +159,7 @@ class TextViewer(QAbstractScrollArea):
             if textLine:
                 self._applyWrapHeight(textLine)
         self._syncGutter()
+        self._remeasureLineHeights()
 
     def wrapWidth(self):
         """Pixel width wrapped lines lay out to."""
@@ -185,9 +188,43 @@ class TextViewer(QAbstractScrollArea):
         self.viewport().update()
 
     def _applyWrapHeight(self, textLine):
+        # a wrapped row takes the metrics of the fallback font its characters
+        # resolve to, so the drawn rows can add up to more than lineHeight each
         self._blockModel.setLineHeight(
             textLine.lineNo(),
-            textLine.visualLineCount() * self._lineHeight)
+            max(textLine.visualLineCount() * self._lineHeight,
+                textLine.drawnHeight()))
+
+    def _reserveDrawnHeight(self, lineNo, textLine):
+        """Reserve the height the line's own layout draws, if that is more.
+
+        A row is as tall as the fallback font its characters resolve to, so a
+        line holding CJK draws a pixel taller than `QFontMetrics.height()`.
+        Reserving the font's line height for it would let the line below draw
+        over its bottom -- a selection background there wipes out its
+        descenders and link underline.
+
+        Returns True when the reserved height changed.
+        """
+        drawn = textLine.drawnHeight()
+        if drawn <= self._blockModel.lineHeight(lineNo):
+            return False
+
+        self._blockModel.setLineHeight(lineNo, drawn)
+        return True
+
+    def _remeasureLineHeights(self):
+        """Re-run the conversion pass so every line is measured again.
+
+        Used after a font change: the heights already reserved were measured
+        with the old metrics and no longer describe what the lines draw.
+        """
+        if not self._textLines:
+            return
+
+        self._convertIndex = 0
+        if self._convertTimerId is None:
+            self._convertTimerId = self.startTimer(0)
 
     def _reflowWrappedLines(self):
         width = self.wrapWidth()
@@ -1179,6 +1216,7 @@ class TextViewer(QAbstractScrollArea):
         viewHeight = self.viewport().height()
         needAdjust = self.verticalScrollBar().maximum() < \
             max(0, self._blockModel.contentHeight() - viewHeight)
+        heightReserved = False
 
         # Only one new TextLine is built per event so that a huge document
         # cannot block the event loop, but lines that are built already
@@ -1204,6 +1242,11 @@ class TextViewer(QAbstractScrollArea):
                 if width > self._maxWidth:
                     self._maxWidth = width
                     needAdjust = True
+                # measuring here keeps reserving heights off the paint path,
+                # and the layout this needs is the one boundingRect just built
+                if not textLine.wrap() and \
+                        self._reserveDrawnHeight(lineNo, textLine):
+                    heightReserved = True
 
         if not self._inReading and self._convertIndex >= self.textLineCount():
             self.killTimer(self._convertTimerId)
@@ -1213,6 +1256,9 @@ class TextViewer(QAbstractScrollArea):
         if needAdjust:
             self._adjustScrollbars()
             self.ensureCursorVisible(True)
+        elif heightReserved:
+            # a reserved height only moves the scroll range, not the caret
+            self._adjustScrollbars()
 
     def _onUpdateSettings(self):
         self.reloadSettings()

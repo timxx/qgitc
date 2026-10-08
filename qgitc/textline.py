@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import bisect
+import math
 import re
 from typing import List, Tuple
 
@@ -156,6 +157,19 @@ class TextLine():
         """Number of visual rows this logical line occupies (>= 1)."""
         self.ensureLayout()
         return max(1, self._layout.lineCount())
+
+    def drawnHeight(self):
+        """Pixel height of the rows this line lays out, all rows together.
+
+        Qt rounds the font's fractional ascent and descent up for a laid out
+        row and takes a row's height from the fallback font its characters
+        resolve to, so a line can draw taller than `QFontMetrics.height()`:
+        a CJK row is a pixel higher than the viewer's own font. A caller that
+        reserves less than this lets the next line draw over this one's
+        bottom.
+        """
+        self.ensureLayout()
+        return math.ceil(self._layout.boundingRect().height())
 
     def rowAtOffset(self, offset):
         """Visual row containing the character offset."""

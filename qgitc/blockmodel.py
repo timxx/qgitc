@@ -126,6 +126,18 @@ class BlockModel:
             self._lineHeights[lineNo] = height
         self._dirty = True
 
+    def clearLineHeights(self):
+        """Drop every height override; lines fall back to the default.
+
+        Overrides are measured against one font, so a font change has to drop
+        them rather than keep heights the new metrics no longer produce.
+        """
+        if not self._lineHeights:
+            return
+
+        self._lineHeights.clear()
+        self._dirty = True
+
     def lineHeight(self, lineNo):
         """Visible height of the line; 0 when hidden by a folded block."""
         if not self.isLineVisible(lineNo):

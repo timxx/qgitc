@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtCore import QPointF, Qt
+import math
+
+from PySide6.QtCore import QElapsedTimer, QPointF, Qt
+from PySide6.QtGui import QFont, QFontMetrics, QTextLayout
 from PySide6.QtTest import QSignalSpy, QTest
 
 from qgitc.textviewer import TextViewer
@@ -190,3 +193,184 @@ class TestTextViewerWrapGeometry(TestBase):
         self.viewer.appendLines(["x"])
         self.assertEqual(self.viewer._blockModel.contentHeight(),
                          self.viewer.lineHeight)
+
+
+class TestTextViewerLinePitch(TestBase):
+    """Each line reserves exactly the height its own layout draws.
+
+    `QFontMetrics.height()` is the font's hinted integer ascent plus descent,
+    while a laid out row is at least that tall and grows to the fallback font
+    its characters resolve to: a row holding CJK draws a pixel taller than the
+    space the viewer reserves for it, so the line below draws over its bottom
+    and a selection background hides that line's descenders. Reserving the
+    drawn height per line keeps neighbouring boxes contiguous -- no overlap,
+    and no gap either, which a taller pitch for every line would open between
+    two selected lines.
+    """
+
+    # rows taller than `QFontMetrics.height()`; present on every Windows box
+    TALL_ROW_FONT = ("Courier New", 10)
+
+    def doCreateRepo(self):
+        pass
+
+    def setUp(self):
+        super().setUp()
+        self.viewer = TextViewer()
+        self.viewer.resize(400, 200)
+        self.viewer.show()
+        self.processEvents()
+
+    def drawnRowHeight(self, font, text="X\u4e00"):
+        """Height of one row the layout draws for `text`: what must be
+        reserved. Probed with CJK because a fallback font is taller than the
+        viewer's own, which is where the reservation falls short."""
+        layout = QTextLayout(text, font)
+        layout.beginLayout()
+        line = layout.createLine()
+        layout.endLayout()
+        return math.ceil(line.height())
+
+    def useFontWithTallerRows(self):
+        """Install a font whose rows outgrow `QFontMetrics.height()`.
+
+        A Qt without a font database (the offscreen CI) has integral metrics
+        and no shortfall to expose, so there is nothing to assert there.
+        """
+        font = QFont(*self.TALL_ROW_FONT)
+        self.viewer.updateFont(font)
+        self.processEvents()
+        if self.drawnRowHeight(font) <= QFontMetrics(font).height():
+            self.skipTest("no font with rows taller than "
+                          "QFontMetrics.height()")
+        return font
+
+    def lineDrawnHeight(self, lineNo):
+        """What the line itself lays out, independent of the viewer."""
+        return math.ceil(self.viewer.textLineAt(lineNo)
+                         .boundingRect().height())
+
+    def reserveHeights(self):
+        """Run the viewer's conversion pass until every line is measured.
+
+        The pass reserves a line's drawn height as it builds the line; it is
+        the same deferred pass that tracks the widest line, and it never runs
+        from the paint path.
+        """
+        timer = QElapsedTimer()
+        timer.start()
+        while self.viewer._convertTimerId is not None \
+                and timer.elapsed() < 2000:
+            self.processEvents()
+
+    def testPaintingDoesNotChangeGeometry(self):
+        """Heights come from the conversion pass: the painter only reads."""
+        self.useFontWithTallerRows()
+        self.viewer.appendLines([
+            "changed 通知，显隐只能依赖 layout 慢路径 %d" % i
+            for i in range(3)])
+        self.processEvents()
+
+        model = self.viewer._blockModel
+        bar = self.viewer.verticalScrollBar()
+        # paint before the conversion pass has reserved anything
+        self.viewer.viewport().repaint()
+        heights = [model.lineHeight(i) for i in range(3)]
+        content = model.contentHeight()
+        scrollRange = (bar.minimum(), bar.maximum())
+
+        # no processEvents in between: only a paint could change the geometry
+        self.viewer.viewport().repaint()
+
+        self.assertEqual([model.lineHeight(i) for i in range(3)], heights)
+        self.assertEqual(model.contentHeight(), content)
+        self.assertEqual((bar.minimum(), bar.maximum()), scrollRange)
+
+    def firstChangedRow(self, before, after):
+        for y in range(min(before.height(), after.height())):
+            for x in range(before.width()):
+                if before.pixel(x, y) != after.pixel(x, y):
+                    return y
+        return None
+
+    def testLineHeightCoversWhatTheLineDraws(self):
+        self.useFontWithTallerRows()
+        self.viewer.appendLines([
+            "changed 通知，显隐只能依赖 layout 慢路径 sizeHint",
+            "【改动：在 KxCustomRibbonExDropdownCommand 中",
+        ])
+        self.processEvents()
+        self.reserveHeights()
+
+        for lineNo in range(2):
+            self.assertGreaterEqual(
+                self.viewer._blockModel.lineHeight(lineNo),
+                self.lineDrawnHeight(lineNo))
+
+    def testConsecutiveLinesTileExactly(self):
+        """No overlap and no gap: the pitch is what the line draws."""
+        self.useFontWithTallerRows()
+        self.viewer.appendLines([
+            "changed 通知 慢路径 %d" % i for i in range(3)])
+        self.processEvents()
+        self.reserveHeights()
+
+        for lineNo in range(3):
+            self.assertEqual(self.viewer._blockModel.lineHeight(lineNo),
+                             self.lineDrawnHeight(lineNo))
+
+    def testLatinOnlyViewKeepsTheFontLineHeight(self):
+        """A document without CJK reserves the font's line height, as before."""
+        font = self.useFontWithTallerRows()
+        if self.drawnRowHeight(font, "line 0") > QFontMetrics(font).height():
+            self.skipTest("this font draws latin rows taller than "
+                          "QFontMetrics.height()")
+
+        self.viewer.appendLines(["line %d" % i for i in range(3)])
+        self.processEvents()
+        self.reserveHeights()
+
+        for lineNo in range(3):
+            self.assertEqual(self.viewer._blockModel.lineHeight(lineNo),
+                             QFontMetrics(font).height())
+
+    def testWrappedLineReservesEveryDrawnRow(self):
+        self.useFontWithTallerRows()
+        textLine = self.viewer.toTextLine(
+            " ".join("comment%02d 注释" % i for i in range(40)))
+        textLine.setWrap(True)
+        self.viewer.appendTextLine(textLine)
+        self.processEvents()
+
+        self.assertGreater(textLine.visualLineCount(), 1)
+        self.assertGreaterEqual(
+            self.viewer._blockModel.lineHeight(0),
+            math.ceil(textLine.boundingRect().height()))
+
+    def testSelectionDoesNotReachIntoTheLineAbove(self):
+        self.useFontWithTallerRows()
+        self.viewer.appendLines([
+            "changed 通知，显隐只能依赖 layout 慢路径 sizeHint→updateVisible",
+            "【改动：在 KxCustomRibbonExDropdownCommand 中，为外层 pocket",
+        ])
+        self.processEvents()
+        self.reserveHeights()
+
+        model = self.viewer._blockModel
+        viewport = self.viewer.viewport()
+        # grabbed pixels are device pixels, the model works in logical ones
+        ratio = viewport.devicePixelRatioF()
+        drawnBottom = math.floor(
+            (model.lineTop(0)
+             + self.viewer.textLineAt(0).boundingRect().height()) * ratio)
+
+        plain = viewport.grab().toImage()
+        self.viewer._cursor.moveTo(1, 0)
+        self.viewer._cursor.selectTo(1, 6)
+        selected = viewport.grab().toImage()
+
+        # the selection background must start at the last row the line above
+        # draws, never inside it
+        firstChanged = self.firstChangedRow(plain, selected)
+        self.assertIsNotNone(firstChanged)
+        self.assertGreaterEqual(firstChanged, drawnBottom)
