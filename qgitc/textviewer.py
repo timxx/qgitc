@@ -175,7 +175,11 @@ class TextViewer(QAbstractScrollArea):
 
     def _syncGutter(self):
         desired = 0
-        if self._blockModel.blocks():
+        # a block that is still streaming already reserves the strip: the
+        # lines appended next have to be laid out, and painted, in the
+        # geometry they keep instead of being shifted right and re-wrapped
+        # once the section closes
+        if self._openBlockStart is not None or self._blockModel.blocks():
             # only the fold indicator plus its padding: a whole line height
             # left a strip the small control never filled, pushing the text
             # further right than the fold affordance needs
@@ -293,6 +297,9 @@ class TextViewer(QAbstractScrollArea):
         self.endBlock()
         self._openBlockStart = self.textLineCount()
         self._openBlockMeta = meta
+        # the anchor line is appended next: reserve its strip now so it is
+        # never laid out in front of it and shifted when the block closes
+        self._syncGutter()
 
     def endBlock(self):
         """Close the open block at the last appended line."""
@@ -305,7 +312,10 @@ class TextViewer(QAbstractScrollArea):
 
         end = self.textLineCount() - 1
         if end < start:
-            return  # nothing was appended: drop the empty block
+            # nothing was appended: drop the empty block and the strip it
+            # reserved while it was open
+            self._syncGutter()
+            return
         self.addBlock(start, end, meta=meta)
 
     def addBlock(self, startLine, endLine, meta=None):
@@ -318,6 +328,10 @@ class TextViewer(QAbstractScrollArea):
             return None
         block = self._blockModel.addBlock(startLine, endLine, meta=meta)
         self._syncGutter()
+        # the anchor line may already be painted -- a streamed section is
+        # registered after its lines -- and it now carries a fold control,
+        # so the view has to be rebuilt even when the strip is unchanged
+        self.viewport().update()
         return block
 
     def canFoldAt(self, lineNo):

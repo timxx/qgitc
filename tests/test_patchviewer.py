@@ -5,6 +5,7 @@ from qgitc.diffutils import DiffType
 from qgitc.patchviewer import PatchViewer
 from qgitc.textline import TextLine
 from tests.base import TestBase
+from tests.test_textviewer_fold import PaintRecorder
 
 
 class TestCopyPlainText(TestBase):
@@ -384,6 +385,38 @@ class TestFileBlocks(TestBase):
 
         self.viewer.toggleFoldAt(0)
         self.assertIn("a.txt", self.viewer.foldTipForLine(0))
+
+    def testLastStreamedSectionPaintsItsFoldControl(self):
+        """endReading registers the last section's block after its marker
+        line was already painted, so it has to repaint the view: otherwise
+        that section carries no fold control until something else redraws
+        it (clicking the view, scrolling, a selection)."""
+        self.appendTwoFiles()
+
+        recorder = PaintRecorder(self.viewer)
+        self.addCleanup(recorder.stop)
+
+        self.viewer.endReading()
+        self.processEvents()
+
+        self.assertTrue(recorder.paints,
+                        "the last section's block did not repaint the view")
+        self.assertEqual(2, recorder.paints[-1])
+
+    def testSectionsAreLaidOutWithTheFinalGutter(self):
+        """The gutter is reserved as soon as a section starts, so streaming
+        never lays a section out at the left edge and then shifts it right
+        and re-wraps it once its block is registered."""
+        self.viewer.beginReading()
+        self.viewer.appendLines([
+            (DiffType.File, b"a.txt"),
+            (DiffType.Diff, b"+a1"),
+        ])
+
+        gutter = self.viewer.gutterWidth()
+        self.assertGreater(gutter, 0)
+        self.assertEqual(self.viewer.viewport().width() - gutter,
+                         self.viewer.wrapWidth())
 
 
 class TestInsertFileSection(TestBase):

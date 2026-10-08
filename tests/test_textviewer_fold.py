@@ -1,10 +1,37 @@
 # -*- coding: utf-8 -*-
-from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import QApplication
 
 from qgitc.textviewer import TextViewer
 from tests.base import TestBase
+
+
+class PaintRecorder(QObject):
+    """Records how many fold blocks exist at every viewport paint.
+
+    A widget that is not invalidated keeps the pixels of an earlier pass,
+    so a fold control registered after its anchor line was painted shows
+    up only once something repaints the view again.
+    """
+
+    def __init__(self, viewer):
+        super().__init__()
+        self._viewer = viewer
+        self.paints = []
+        viewer.viewport().installEventFilter(self)
+
+    def stop(self):
+        # a cleanup runs after tearDown, which may have deleted the widget
+        try:
+            self._viewer.viewport().removeEventFilter(self)
+        except RuntimeError:
+            pass
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Paint:
+            self.paints.append(len(self._viewer._blockModel.blocks()))
+        return False
 
 
 class TestViewerFold(TestBase):
@@ -44,6 +71,11 @@ class TestViewerFold(TestBase):
         xs = [p[0] for p in ink]
         ys = [p[1] for p in ink]
         return max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+
+    def recordPaints(self):
+        recorder = PaintRecorder(self.viewer)
+        self.addCleanup(recorder.stop)
+        return recorder
 
     def blankStrip(self):
         """The strip reserved with no indicator painted."""
@@ -93,6 +125,55 @@ class TestViewerFold(TestBase):
         self.viewer.beginBlock()
         self.viewer.endBlock()
         self.assertEqual(self.viewer._blockModel.blocks(), [])
+
+    # -- invalidation ------------------------------------------------------
+
+    def testBlockRegisteredAfterItsAnchorWasPaintedRepaints(self):
+        """The fold control is painted on the anchor line, so registering a
+        block has to invalidate the view: the anchor was already drawn while
+        its section was still streaming, without a triangle in those pixels.
+        """
+        # an earlier section reserves the gutter, so the anchor below is
+        # already painted in its final geometry when its own block lands
+        self.viewer.beginBlock({"title": "first"})
+        self.viewer.appendLines(["first anchor"])
+        self.viewer.endBlock()
+        self.viewer.appendLines(["second anchor", "second body"])
+        self.processEvents()
+
+        recorder = self.recordPaints()
+        self.viewer.addBlock(1, 2)
+        self.processEvents()
+
+        self.assertTrue(recorder.paints,
+                        "registering a block did not repaint the view")
+        self.assertEqual(2, recorder.paints[-1])
+
+    def testOpeningABlockReservesTheGutterBeforeItsLines(self):
+        """beginBlock reserves the strip at once: the anchor line that
+        follows is laid out in the geometry it keeps instead of being
+        re-flowed, and so shifted, when the section closes.
+        """
+        self.assertEqual(0, self.viewer.gutterWidth())
+
+        self.viewer.beginBlock({"title": "streaming"})
+        gutter = self.viewer.gutterWidth()
+
+        self.assertGreater(gutter, 0)
+        self.assertEqual(self.viewer.viewport().width() - gutter,
+                         self.viewer.wrapWidth())
+
+    def testDroppedEmptyBlockReleasesTheGutter(self):
+        """A block that never got a line must not keep the strip the
+        pending block reserved."""
+        self.viewer.beginBlock()
+        self.assertGreater(self.viewer.gutterWidth(), 0)
+
+        self.viewer.endBlock()
+        self.assertEqual([], self.viewer._blockModel.blocks())
+        self.assertEqual(0, self.viewer.gutterWidth())
+        self.assertEqual(self.viewer.viewport().width(),
+                         self.viewer.wrapWidth())
 
     def testClearResetsBlocksAndGutter(self):
         self.viewer.beginBlock()

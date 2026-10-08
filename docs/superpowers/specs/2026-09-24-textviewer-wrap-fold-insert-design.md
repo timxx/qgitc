@@ -115,10 +115,10 @@ View layer (`TextViewer`), the parts that matter to callers:
 |---|---|
 | `appendLine/appendLines/appendTextLine` | Append at the end (unchanged semantics). |
 | `insertLines(index, lines)` | Insert raw lines before logical line `index`; renumbers and shifts everything after (see the checklist). |
-| `beginBlock(meta=None)` / `endBlock()` | Block anchored at the next appended line; an unclosed block is closed by the next `beginBlock`, by `endBlock`, or dropped by `clear()`. Use this when a section's end is not known yet. |
-| `addBlock(startLine, endLine, meta=None)` | Register a block over lines that already exist. Use this when the boundaries are known up front. |
+| `beginBlock(meta=None)` / `endBlock()` | Block anchored at the next appended line; an unclosed block is closed by the next `beginBlock`, by `endBlock`, or dropped by `clear()`. Use this when a section's end is not known yet. The strip is reserved at `beginBlock`, before the anchor line is appended, so a streamed section is never laid out at the left edge and re-wrapped when it closes. |
+| `addBlock(startLine, endLine, meta=None)` | Register a block over lines that already exist. Use this when the boundaries are known up front. Always invalidates the view: the anchor line may already be painted, and it now carries a fold control. |
 | `canFoldAt(lineNo)`, `toggleFoldAt`, `foldAllBlocks`, `expandAllBlocks`, `expandBlocksCovering(lineNo)` | Fold interaction; `foldTipForLine(lineNo)` builds the tooltip and uses `meta["title"]` as a summary when present. |
-| `wrapWidth()` / `gutterWidth()` | Where wrapped lines lay out to; the gutter is reserved only once a block exists, and is just wide enough for the painted fold triangle (`foldIndicatorSize()`) plus its padding — narrower than one line height, so the text keeps the left edge. The patch view keeps no viewport margin in front of it, so the fold control starts at the frame edge. |
+| `wrapWidth()` / `gutterWidth()` | Where wrapped lines lay out to; the gutter is reserved while a block exists or is still streaming (`beginBlock`..`endBlock`), and is just wide enough for the painted fold triangle (`foldIndicatorSize()`) plus its padding — narrower than one line height, so the text keeps the left edge. The patch view keeps no viewport margin in front of it, so the fold control starts at the frame edge. |
 | `firstVisibleLine()`, `textRowForPos(pos)`, `contentOffset()`, `gotoLine`, `ensureLineVisible` | Pixel-aware, logical-line based. |
 
 Business layer:
@@ -143,7 +143,7 @@ Business layer:
 4. The fold affordance is painted, never a font glyph: a triangle sized from the line height, so it stays
    legible across fonts and DPI scaling. It does not leak painter state, and the chip is drawn, never
    inserted into text.
-5. The gutter is reserved only while at least one block exists, is no wider than the line height, and the
+5. The gutter is reserved while at least one block exists **or is still streaming**, is no wider than the line height, and the
    `…` chip is drawn only on the anchor of a folded block.
 6. In sorted mode the viewer order equals the file list order, and each file's viewer line is the
    anchor of its section block — `viewer.fileLineForPath(path)` — never a copy kept by the file list.
@@ -273,6 +273,12 @@ Worth rereading before touching painting or the sweep.
    built, so insertion has to re-create the raw slots first.
 7. **The folded-content chip is painted, not stored.** Nothing about folding may leak into `text()` or
    the clipboard.
+8. **Registering a block is a repaint, not a state-only change.** A streamed section is registered
+   *after* its lines exist, so the anchor line is normally already painted; the fold control claims no
+   pixels until the view is invalidated. `addBlock` therefore always calls `viewport().update()`, and
+   the strip is reserved at `beginBlock` so the anchor is laid out once, in the geometry it keeps —
+   reserving it at `addBlock` (as it used to) re-wrapped the already appended lines and shifted the
+   section right, and, where a wrapped line grew a row, everything below it down.
 
 ## Test Map and Verification
 
