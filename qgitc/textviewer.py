@@ -73,6 +73,7 @@ class TextViewer(QAbstractScrollArea):
         # logical line <-> pixel geometry (wrap + fold aware); created
         # first because reloadSettings() below already feeds it fonts
         self._blockModel = BlockModel()
+        self._font = None
         # logical line numbers of opted-in wrapped lines
         self._wrappedLineNos = set()
         # fold interaction state
@@ -147,6 +148,11 @@ class TextViewer(QAbstractScrollArea):
         self.selectionChanged.emit()
 
     def updateFont(self, font):
+        if font == self._font:
+            # a settings change that leaves the font alone has nothing to
+            # rebuild: the reserved heights and the geometry still hold
+            return
+
         self._font = font
         fm = QFontMetrics(self._font)
         self._lineHeight = fm.height()
@@ -159,7 +165,6 @@ class TextViewer(QAbstractScrollArea):
             if textLine:
                 self._applyWrapHeight(textLine)
         self._syncGutter()
-        self._remeasureLineHeights()
 
     def wrapWidth(self):
         """Pixel width wrapped lines lay out to."""
@@ -217,18 +222,12 @@ class TextViewer(QAbstractScrollArea):
         self._blockModel.setLineHeight(lineNo, drawn)
         return True
 
-    def _remeasureLineHeights(self):
-        """Re-run the conversion pass so every line is measured again.
-
-        Used after a font change: the heights already reserved were measured
-        with the old metrics and no longer describe what the lines draw.
-        """
-        if not self._textLines:
-            return
-
-        self._convertIndex = 0
-        if self._convertTimerId is None:
-            self._convertTimerId = self.startTimer(0)
+    def _reserveLineHeight(self, lineNo, textLine):
+        """Reserve what one line draws after its font changed."""
+        if textLine.wrap():
+            self._applyWrapHeight(textLine)
+        else:
+            self._reserveDrawnHeight(lineNo, textLine)
 
     def _reflowWrappedLines(self):
         width = self.wrapWidth()
@@ -1275,15 +1274,21 @@ class TextViewer(QAbstractScrollArea):
             self._adjustScrollbars()
 
     def _onUpdateSettings(self):
+        oldFont = self._font
         self.reloadSettings()
+        fontChanged = self._font != oldFont
 
         if self._settingsTimer:
             self._settingsTimer.disconnect(self)
             self._settingsTimer = None
 
         # TODO: move to background
-        for _, line in self._textLines.items():
+        for lineNo, line in self._textLines.items():
             self._reloadTextLine(line)
+            # a new font draws rows of a different height: reserve it here,
+            # where the lines are re-fonted, instead of from the paint path
+            if fontChanged:
+                self._reserveLineHeight(lineNo, line)
 
         self._adjustScrollbars()
         self.viewport().update()

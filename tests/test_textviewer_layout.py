@@ -238,6 +238,9 @@ class TestTextViewerLinePitch(TestBase):
         and no shortfall to expose, so there is nothing to assert there.
         """
         font = QFont(*self.TALL_ROW_FONT)
+        # the widget font too: reloadSettings() re-derives the viewer font
+        # from it, so a settings change can leave the font alone
+        self.viewer.setFont(font)
         self.viewer.updateFont(font)
         self.processEvents()
         if self.drawnRowHeight(font) <= QFontMetrics(font).height():
@@ -262,6 +265,35 @@ class TestTextViewerLinePitch(TestBase):
         while self.viewer._convertTimerId is not None \
                 and timer.elapsed() < 2000:
             self.processEvents()
+
+    def testSettingsChangeWithoutFontKeepsGeometry(self):
+        """A settings change that leaves the font alone must not re-measure.
+
+        Restarting the deferred conversion pass from the settings path built
+        TextLines and layouts while the application was being torn down, which
+        is what a finalizing-time refcount crash needs; it must also not
+        disturb the geometry it already settled.
+        """
+        self.useFontWithTallerRows()
+        self.viewer.appendLines([
+            "changed 通知，显隐只能依赖 layout 慢路径 %d" % i
+            for i in range(3)])
+        self.processEvents()
+        self.reserveHeights()
+        self.assertIsNone(self.viewer._convertTimerId)
+
+        model = self.viewer._blockModel
+        heights = [model.lineHeight(i) for i in range(3)]
+        content = model.contentHeight()
+
+        self.viewer._onUpdateSettings()
+        # synchronously, before any event loop turn: the settings path must
+        # not have restarted the pass
+        self.assertIsNone(self.viewer._convertTimerId)
+
+        self.processEvents()
+        self.assertEqual([model.lineHeight(i) for i in range(3)], heights)
+        self.assertEqual(model.contentHeight(), content)
 
     def testPaintingDoesNotChangeGeometry(self):
         """Heights come from the conversion pass: the painter only reads."""
