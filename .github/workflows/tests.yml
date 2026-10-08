@@ -5,6 +5,10 @@ on: [push, pull_request]
 jobs:
  build:
     runs-on: ubuntu-latest
+    # the suite takes ~3 minutes; anything that freezes the test process
+    # (the per-test watchdog catches most of it) must fail the leg quickly
+    # instead of idling until the 6 hour default
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

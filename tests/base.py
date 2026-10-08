@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import faulthandler
 import logging
 import os
 import shutil
@@ -35,8 +36,28 @@ def _timeoutHandler(testId: str, timeoutSeconds: float):
     """Force exit when test timeout fires."""
     msg = f"\nTEST TIMEOUT: {testId} exceeded {timeoutSeconds}s\n"
     sys.stderr.write(msg)
+    # a frozen test is only debuggable with the stacks that froze it
+    faulthandler.dump_traceback()
     sys.stderr.flush()
     os._exit(1)
+
+
+def _armHangWatchdog(timeoutSeconds: float):
+    """Arm the watchdog that survives a GIL-bound freeze.
+
+    faulthandler's watchdog runs in a C thread, so unlike the
+    threading.Timer used alongside it, it fires even when no Python thread
+    can run. It dumps every thread's stack and exits non-zero, which turns a
+    silent hang (until the whole CI job times out) into a failed test run
+    with a diagnosis.
+    """
+    if not faulthandler.is_enabled():
+        faulthandler.enable()
+    faulthandler.dump_traceback_later(timeoutSeconds, exit=True)
+
+
+def _cancelHangWatchdog():
+    faulthandler.cancel_dump_traceback_later()
 
 
 def _qt_message_handler(type: QtMsgType, context: QMessageLogContext, msg: str):
@@ -167,9 +188,16 @@ class TestBase(unittest.TestCase):
         )
         watchdog.daemon = True
         watchdog.start()
+        # The Timer above is a Python thread and needs the GIL, which is
+        # exactly what a Qt/GIL deadlock takes away: a worker thread destroying
+        # a QObject holds a Qt lock while waiting for the GIL, and the GUI
+        # thread holds the GIL while waiting for that lock. The C-level
+        # watchdog below still reports in that case.
+        _armHangWatchdog(timeoutSeconds)
         try:
             return super().run(result)
         finally:
+            _cancelHangWatchdog()
             watchdog.cancel()
 
     def setUp(self):
