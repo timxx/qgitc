@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import os
+import subprocess
+import sys
 import tempfile
+import unittest
 from pathlib import Path
 
 import openpyxl
@@ -169,3 +173,36 @@ class TestConflictLogXlsx(TestBase):
 
         # File cell should be empty since no file was set
         self.assertIsNone(log_xlsx.sheet["A7"].value)
+
+
+class TestOptionalBackendImport(unittest.TestCase):
+    """Importing the module must not import the optional native backends.
+
+    pywpsrpc's sip module segfaults while the interpreter is finalized, so
+    importing it at module import time turned every run that merely touches
+    qgitc.conflictlog — the test run included — into a core dump on exit.
+    """
+
+    def testImportDoesNotLoadNativeBackend(self):
+        repoRoot = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        env = os.environ.copy()
+        env["PYTHONPATH"] = repoRoot + os.pathsep + env.get("PYTHONPATH", "")
+        result = subprocess.run(
+            [sys.executable, "-c",
+             "import sys, qgitc.conflictlog;"
+             "print('backends', 'pywpsrpc' in sys.modules,"
+             " 'win32com' in sys.modules)"],
+            cwd=tempfile.mkdtemp(),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        self.assertEqual(
+            result.returncode,
+            0,
+            f"child process crashed:\nstdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}",
+        )
+        self.assertIn("backends False False", result.stdout)

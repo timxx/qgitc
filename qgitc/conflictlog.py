@@ -1,26 +1,33 @@
 # -*- coding: utf-8 -*-
 
+import importlib.util
 import sys
 
 __all__ = ["ConflictLogBase", "ConflictLogXlsx",
            "ConflictLogExcel"]
 
 
+def _hasModule(name: str) -> bool:
+    """Check for an optional dependency without importing it.
+
+    Probing by import is not free here: pywpsrpc's sip module segfaults while
+    the interpreter is finalized, so importing it would crash every process
+    that merely touches this module — the test run included — on exit. The
+    Excel API is imported by ConflictLogExcel once it is really used.
+    """
+    try:
+        return importlib.util.find_spec(name) is not None
+    except (ImportError, ValueError):
+        return False
+
+
 HAVE_EXCEL_API = False
 HAVE_XLSX_WRITER = False
 
 if sys.platform == "win32":
-    try:
-        from win32com.client import DispatchWithEvents, gencache
-        HAVE_EXCEL_API = True
-    except ImportError:
-        pass
+    HAVE_EXCEL_API = _hasModule("win32com")
 elif sys.platform == "linux":
-    try:
-        from pywpsrpc.rpcetapi import createEtRpcInstance, etapi
-        HAVE_EXCEL_API = True
-    except ImportError:
-        pass
+    HAVE_EXCEL_API = _hasModule("pywpsrpc")
 
 
 try:
@@ -141,6 +148,7 @@ class ConflictLogExcel(ConflictLogBase):
 
         try:
             if self._isWin:
+                from win32com.client import DispatchWithEvents, gencache
                 if not self.app:
                     self.app = gencache.EnsureDispatch("Excel.Application")
                 self.app.Visible = True
@@ -148,6 +156,7 @@ class ConflictLogExcel(ConflictLogBase):
                     self.app.Workbooks.Open(self.logFile),
                     WorkbookEvents)
             else:
+                from pywpsrpc.rpcetapi import createEtRpcInstance, etapi
                 if not self._rpc:
                     _, self._rpc = createEtRpcInstance()
                 if not self.app:
