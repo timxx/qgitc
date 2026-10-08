@@ -8,7 +8,6 @@ from PySide6.QtCore import (
     QBasicTimer,
     QElapsedTimer,
     QEvent,
-    QMimeData,
     QPoint,
     QPointF,
     QRect,
@@ -906,9 +905,11 @@ class TextViewer(QAbstractScrollArea):
         app.trackFeatureUsage("viwer.copy")
 
         clipboard = QApplication.clipboard()
-        mimeData = QMimeData()
-        mimeData.setText(text)
-        clipboard.setMimeData(mimeData)
+        # setText() rather than a hand-built QMimeData: the clipboard takes
+        # ownership of a QMimeData set with setMimeData(), and shiboken then
+        # destroys its Python wrapper while Qt's exit-time cleanup runs — after
+        # the interpreter is gone, which segfaults the process on exit.
+        clipboard.setText(text)
 
     @property
     def textCursor(self):

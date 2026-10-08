@@ -1133,12 +1133,12 @@ class LogView(QAbstractScrollArea, CommitSource):
 
         progress.setValue(len(commits))
 
-        mimeData = QMimeData()
-        mimeData.setText('\n'.join(abbrevs))
-
         app = ApplicationBase.instance()
-        clipboard = app.clipboard()
-        clipboard.setMimeData(mimeData)
+        # setText() rather than a hand-built QMimeData: the clipboard owns a
+        # QMimeData set with setMimeData(), and shiboken then destroys its
+        # Python wrapper while Qt's exit-time cleanup runs — the interpreter is
+        # already gone, so the process segfaults on exit.
+        app.clipboard().setText('\n'.join(abbrevs))
 
         app.trackFeatureUsage("menu.copy_abbrev_commit", {
             "count": len(commits)
