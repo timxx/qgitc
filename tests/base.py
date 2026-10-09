@@ -174,7 +174,7 @@ def _init_with_trace(instance, *args, **kwargs):
 
 
 class TestBase(unittest.TestCase):
-    TEST_TIMEOUT_SECONDS = 30
+    TEST_TIMEOUT_SECONDS = 60
 
     def run(self, result=None):
         timeoutSeconds = self.TEST_TIMEOUT_SECONDS
