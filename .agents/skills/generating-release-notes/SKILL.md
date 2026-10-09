@@ -7,13 +7,13 @@ user-invocable: true
 # Generating Release Notes
 
 ## Overview
-Release notes must describe what shipped, not what commit titles claim. Infer themes from net diffs across the tag range, then group related commits under one subject with concrete details in the body.
+Release notes must describe what shipped, not what commit titles claim. Infer themes from net diffs across the tag range, then group related commits under one subject. Every bullet answers **what changed** and, for a new feature, **how to use it** — written for the QGitc user, not the implementer.
 
 ## When to Use
 - Commits include WIP, cleanup, typo, or duplicated messages
 - Multiple commits implement one feature across follow-ups
 - Some commits were reverted before the latest tag
-- You need user-facing notes with accurate engineering details
+- You need notes the user can act on, backed by accurate engineering detail
 
 Do not use this skill for single-commit changelogs or internal forensic debugging.
 
@@ -22,7 +22,7 @@ Do not use this skill for single-commit changelogs or internal forensic debuggin
 2. Collect commit metadata in that range.
 3. Read diffs for each commit and compute net effect.
 4. Cluster commits by actual outcome, not title.
-5. Write one subject per cluster, then detailed body bullets.
+5. Write one subject per cluster, then body bullets in the user's view.
 6. Drop no-op, reverted, and low-value noise unless it materially affects users.
 
 ## Quick Reference
@@ -55,14 +55,26 @@ git diff --name-only "$RANGE"
 ### Writing Language
 - Default when omitted: `Chinese`
 - Apply language to all user-facing release note text (headings, subjects, and bullets).
-- Keep technical tokens unchanged when needed for clarity (tag names, file paths, CLI flags, APIs).
+- Keep tokens that survive the bullet targets in their original form (tag names, CLI flags, file paths).
 
 ### Subject and Body Rules
 - Subject line: one durable outcome, user-facing where possible.
-- Body: 2-5 bullets that cite concrete behavior, components, tests, or edge cases.
+- Body: 2-5 bullets, each one or two sentences naming what changed for the user.
+- New feature: every bullet carrying one says how to use it — menu path, click target, setting name and default.
+- Bug fix: name the symptom the user saw, then that it is fixed.
 - Merge many commits for the same outcome into one subject.
 - If a commit message conflicts with diff evidence, trust the diff.
 - Default output is release notes only. Include analysis tables only when explicitly requested.
+
+### Bullet targets
+Read the diffs for accuracy; write the user's view of them.
+
+| Bad (implementer's view) | Good (user's view) |
+|---|---|
+| 手工构造的 `QMimeData` 在解释器 finalize 时被 shiboken 析构，进程以 SIGSEGV 退出 | 修复退出时进程崩溃（SIGSEGV） |
+| 每行按 `QTextLayout.boundingRect()` 高度预留，`_reserveDrawnHeight` 保证相邻行严丝合缝 | 修复含中文/日文的行与下一行重叠、选中背景盖住上一行下缘 |
+| 滚动事件的文件定位从 3.6ms 降到 0.01ms，单帧绘制从 2.7ms 降到 1.5ms | 800 个文件的大 diff 滚动不再卡顿 |
+| 文本查看器支持折叠（`beginBlock`/`addBlock` 注册块，`toggleFoldAt` 切换） | 每个文件的 diff 都可折叠：点击左侧三角图标折叠或展开 |
 
 ### Grouping Heuristics
 Group commits together when at least one is true:
@@ -90,7 +102,11 @@ Include these only when they change user behavior, reliability, or migration ris
 | Summarizing commit titles directly | Read patch and stat first, then write notes |
 | One bullet per commit | Cluster by outcome and write one subject per theme |
 | Reporting reverted work as shipped | Verify net diff across the full tag range |
-| Listing minor churn as key changes | Keep only durable impact and meaningful engineering changes |
+| Writing the mechanism or root cause | Name the symptom the user saw and that it is fixed |
+| Naming classes, methods, or internal identifiers | Name the surface the user touches: menu, click target, setting |
+| Quoting benchmark or test numbers | Keep the one number a user can feel, translate it into their experience |
+| Describing a new feature without how to use it | Add the menu path, click target, or setting name |
+| Listing minor churn as key changes | Keep only what the user can see or feel |
 | Returning investigation notes as final output | Return clean release notes unless asked for analysis |
 
 ## Red Flags - Stop and Re-check
@@ -98,8 +114,11 @@ Include these only when they change user behavior, reliability, or migration ris
 - "I do not need to inspect diffs for small commits"
 - "Duplicate commits should become duplicate bullets"
 - "Reverted work still counts because it happened"
+- "This root cause is interesting, so I will include it"
+- "The benchmark number proves the work, so I will quote it"
+- "The feature name already tells the user how to use it"
 
-All of these mean: recompute by net effect from the full range.
+All of these mean: recompute by net effect from the full range, then cut to the user's view.
 
 ## Output Template
 Generate and save to `docs/releases/<latest-tag>.md`:
@@ -131,7 +150,7 @@ For example:
 
 ### 修复Copilot模型列表可能刷新不出来问题
 
-网络差的时候比较容易超时导致刷新不出来，原来设置了1.5秒超时，现在去掉了
+网络差时容易超时导致列表刷新不出来，现在去掉了超时限制
 
 ```
 
@@ -142,3 +161,4 @@ For example:
 | "Too many commits to inspect" | Grouping requires evidence; scan stats then deep-read only relevant patches. |
 | "Cleanup and typo should still be highlighted" | Release notes are for impact, not repository noise. |
 | "Each commit deserves a bullet" | Users need outcomes; combine related commits into one subject with detailed body. |
+| "More detail shows rigor" | Detail about the mechanism buries the change; one user-facing sentence per fact is the target. |
