@@ -102,3 +102,4 @@ otelenv.py
 docs/releases/
 
 .codegraph
+.dsh*
