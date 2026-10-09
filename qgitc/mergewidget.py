@@ -60,7 +60,7 @@ from qgitc.resolver.enums import (
     ResolveOutcomeStatus,
     ResolvePromptKind,
 )
-from qgitc.resolver.helpers import buildResolveHandlers, selectMergetoolNameForPath
+from qgitc.resolver.helpers import buildResolveHandlers
 from qgitc.resolver.manager import ResolveManager
 from qgitc.resolver.models import (
     ResolveContext,
@@ -706,9 +706,6 @@ class MergeWidget(QWidget):
 
         context = "\n".join(p for p in contextParts if p).strip() or None
 
-        toolName = selectMergetoolNameForPath(file)
-        hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
-
         # AI needs chat widget.
         chatWidget = None
         if aiAutoResolveEnabled and self._chatDock is not None:
@@ -720,15 +717,13 @@ class MergeWidget(QWidget):
         # Build handler chain.
         services = ResolveServices(runner=self._resolveRunner, ai=chatWidget)
 
-        handlers, toolNameFromHelper, hasGitDefaultToolFromHelper = buildResolveHandlers(
+        handlers, toolName, _ = buildResolveHandlers(
             parent=self,
             path=file,
+            repoDir=repoDir,
             aiEnabled=aiAutoResolveEnabled,
             chatWidget=chatWidget,
         )
-        if toolNameFromHelper is not None:
-            toolName = toolNameFromHelper
-        hasGitDefaultTool = hasGitDefaultTool or hasGitDefaultToolFromHelper
 
         if not handlers and not aiAutoResolveEnabled:
             # If AI isn't enabled, we cannot proceed.

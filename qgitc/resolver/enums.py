@@ -38,3 +38,10 @@ class ResolveOperation(IntEnum):
     MERGE = 1
     CHERRY_PICK = 2
     AM = 3
+
+
+class ResolveFailureReason:
+    """Values stored in ``ResolveOutcome.details['reason']``."""
+
+    # No usable merge tool is configured for the repository.
+    NO_MERGETOOL = "noMergetool"

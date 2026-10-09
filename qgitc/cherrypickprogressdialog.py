@@ -296,6 +296,10 @@ class CherryPickProgressDialog(QDialog):
         elif status == CherryPickItemStatus.ABORTED:
             text = f"{baseText}  {self.tr('Aborted')}"
         item.setText(text)
+        # The reason a pick needs attention (for example a missing merge tool) is
+        # only in the message, so keep it reachable from the list item.
+        if message:
+            item.setToolTip(message)
 
     def _onConflictsDetected(self, operationObj: object, filesObj: object):
         op = operationObj if isinstance(

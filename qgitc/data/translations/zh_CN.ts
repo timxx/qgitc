@@ -717,27 +717,27 @@ What do you want to do?</source>
         <translation>打开报告</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="304"/>
+        <location filename="../../cherrypickprogressdialog.py" line="308"/>
         <source>Conflicts detected; resolving…</source>
         <translation>检测到冲突；正在解决…</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="307"/>
+        <location filename="../../cherrypickprogressdialog.py" line="311"/>
         <source>Patch conflicts detected; resolving…</source>
         <translation>检测到补丁冲突；正在解决…</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="322"/>
+        <location filename="../../cherrypickprogressdialog.py" line="326"/>
         <source>Aborted</source>
         <translation>已中止</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="324"/>
+        <location filename="../../cherrypickprogressdialog.py" line="328"/>
         <source>Completed</source>
         <translation>已完成</translation>
     </message>
     <message>
-        <location filename="../../cherrypickprogressdialog.py" line="326"/>
+        <location filename="../../cherrypickprogressdialog.py" line="330"/>
         <source>Failed</source>
         <translation>失败</translation>
     </message>
@@ -1665,32 +1665,42 @@ To avoid interrupting it, you can run the review in the standalone window instea
 <context>
     <name>GitMergetoolHandler</name>
     <message>
-        <location filename="../../resolver/handlers/mergetool.py" line="98"/>
-        <source>Launching merge tool</source>
-        <translation>启动合并工具</translation>
+        <location filename="../../resolver/handlers/mergetool.py" line="86"/>
+        <source>No merge tool is configured</source>
+        <translation>未配置合并工具</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/mergetool.py" line="124"/>
+        <location filename="../../resolver/handlers/mergetool.py" line="144"/>
+        <source>Launching merge tool: {0}</source>
+        <translation>启动合并工具：{0}</translation>
+    </message>
+    <message>
+        <location filename="../../resolver/handlers/mergetool.py" line="172"/>
         <source>Deleted merge conflict</source>
         <translation>已删除的合并冲突</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/mergetool.py" line="145"/>
+        <location filename="../../resolver/handlers/mergetool.py" line="193"/>
         <source>Symlink conflict</source>
         <translation>符号链接冲突</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/mergetool.py" line="171"/>
+        <location filename="../../resolver/handlers/mergetool.py" line="228"/>
+        <source>Failed to start the merge tool</source>
+        <translation>无法启动合并工具</translation>
+    </message>
+    <message>
+        <location filename="../../resolver/handlers/mergetool.py" line="251"/>
         <source>Merge tool failed</source>
         <translation>合并工具失败</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/mergetool.py" line="179"/>
+        <location filename="../../resolver/handlers/mergetool.py" line="258"/>
         <source>Resolved {path}</source>
         <translation>已解决 {path}</translation>
     </message>
     <message>
-        <location filename="../../resolver/handlers/mergetool.py" line="184"/>
+        <location filename="../../resolver/handlers/mergetool.py" line="263"/>
         <source>Resolved with merge tool</source>
         <translation>使用合并工具解决</translation>
     </message>
@@ -2808,7 +2818,7 @@ To avoid interrupting it, you can run the review in the standalone window instea
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="748"/>
+        <location filename="../../mergewidget.py" line="743"/>
         <source>No resolve handler available</source>
         <translation>没有可用的解决处理程序</translation>
     </message>
@@ -2858,12 +2868,12 @@ To avoid interrupting it, you can run the review in the standalone window instea
         <translation>无仓库目录</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="737"/>
+        <location filename="../../mergewidget.py" line="732"/>
         <source>Merge Tool Not Configured</source>
         <translation>合并工具未配置</translation>
     </message>
     <message>
-        <location filename="../../mergewidget.py" line="738"/>
+        <location filename="../../mergewidget.py" line="733"/>
         <source>No merge tool is configured.
 
 Please configure a merge tool in:
@@ -3815,54 +3825,54 @@ imgdiff &quot;$BASE&quot; &quot;$LOCAL&quot; &quot;$REMOTE&quot; -o &quot;$MERGE
 <context>
     <name>ResolvePanel</name>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="112"/>
-        <location filename="../../resolver/resolvepanel.py" line="197"/>
+        <location filename="../../resolver/resolvepanel.py" line="114"/>
+        <location filename="../../resolver/resolvepanel.py" line="200"/>
         <source>No conflicts</source>
         <translation>无冲突</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="122"/>
+        <location filename="../../resolver/resolvepanel.py" line="124"/>
         <source>Resolve selected</source>
         <translation>解决所选</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="123"/>
+        <location filename="../../resolver/resolvepanel.py" line="125"/>
         <source>Resolve all</source>
         <translation>解决全部</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="127"/>
+        <location filename="../../resolver/resolvepanel.py" line="129"/>
         <source>Auto-resolve</source>
         <translation>自动解决</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="130"/>
+        <location filename="../../resolver/resolvepanel.py" line="132"/>
         <source>Use assistant to auto-resolve conflicts if possible</source>
         <translation>如果可能，使用助手自动解决冲突</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="183"/>
+        <location filename="../../resolver/resolvepanel.py" line="185"/>
         <source>Abort requested; stopping after current step…</source>
         <translation>请求中止；当前步骤后停止…</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="213"/>
+        <location filename="../../resolver/resolvepanel.py" line="217"/>
         <source>Conflicts ({0})</source>
         <translation>冲突（{0}）</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="296"/>
-        <location filename="../../resolver/resolvepanel.py" line="341"/>
+        <location filename="../../resolver/resolvepanel.py" line="303"/>
+        <location filename="../../resolver/resolvepanel.py" line="369"/>
         <source>Resolve context not set</source>
         <translation>解决上下文未设置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="356"/>
+        <location filename="../../resolver/resolvepanel.py" line="334"/>
         <source>Merge Tool Not Configured</source>
         <translation>合并工具未配置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="358"/>
+        <location filename="../../resolver/resolvepanel.py" line="336"/>
         <source>No merge tool is configured.
 
 Please configure a merge tool in:
@@ -3875,57 +3885,57 @@ Please configure a merge tool in:
 - 或在 首选项 &gt; 工具 选项卡中配置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="367"/>
+        <location filename="../../resolver/resolvepanel.py" line="387"/>
         <source>No resolve handler available</source>
         <translation>没有可用的解决处理程序</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="376"/>
+        <location filename="../../resolver/resolvepanel.py" line="397"/>
         <source>Resolving {0}…</source>
         <translation>正在解决 {0}…</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="395"/>
+        <location filename="../../resolver/resolvepanel.py" line="417"/>
         <source>Resolve services not set</source>
         <translation>解决服务未设置</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="437"/>
+        <location filename="../../resolver/resolvepanel.py" line="462"/>
         <source>Failed to resolve {0}: {1}</source>
         <translation>解决 {0} 失败：{1}</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="439"/>
+        <location filename="../../resolver/resolvepanel.py" line="464"/>
         <source>Failed to resolve {0}</source>
         <translation>解决 {0} 失败</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="495"/>
+        <location filename="../../resolver/resolvepanel.py" line="521"/>
         <source>Use &amp;created</source>
         <translation>使用创建的(&amp;C)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="495"/>
+        <location filename="../../resolver/resolvepanel.py" line="521"/>
         <source>Use &amp;modified</source>
         <translation>使用修改的(&amp;M)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="497"/>
+        <location filename="../../resolver/resolvepanel.py" line="523"/>
         <source>&amp;Deleted file</source>
         <translation>删除文件(&amp;D)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="520"/>
+        <location filename="../../resolver/resolvepanel.py" line="546"/>
         <source>Use &amp;local</source>
         <translation>使用本地的(&amp;L)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="521"/>
+        <location filename="../../resolver/resolvepanel.py" line="547"/>
         <source>Use &amp;remote</source>
         <translation>使用远程的(&amp;R)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="539"/>
+        <location filename="../../resolver/resolvepanel.py" line="565"/>
         <source>Commit {0} results in an empty commit (possibly already applied).
 
 What do you want to do?</source>
@@ -3934,12 +3944,12 @@ What do you want to do?</source>
 你想要怎么做？</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="543"/>
+        <location filename="../../resolver/resolvepanel.py" line="569"/>
         <source>&amp;Skip</source>
         <translation>跳过(&amp;S)</translation>
     </message>
     <message>
-        <location filename="../../resolver/resolvepanel.py" line="545"/>
+        <location filename="../../resolver/resolvepanel.py" line="571"/>
         <source>&amp;Create empty commit</source>
         <translation>创建空提交(&amp;C)</translation>
     </message>

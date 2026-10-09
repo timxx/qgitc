@@ -868,7 +868,7 @@ class Git():
         return Git.setConfigValue(key, "true", isGlobal)
 
     @staticmethod
-    def getConfigValue(key, isGlobal=True):
+    def getConfigValue(key, isGlobal=True, repoDir=None):
         if not key:
             return ""
 
@@ -876,7 +876,7 @@ class Git():
         if isGlobal:
             args.insert(1, "--global")
 
-        process = Git.run(args, True)
+        process = Git.run(args, True, repoDir)
         data, _ = process.communicate()
         if process.returncode != 0 or not data:
             return ""

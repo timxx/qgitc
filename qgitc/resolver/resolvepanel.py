@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 from qgitc.applicationbase import ApplicationBase
 from qgitc.resolver.enums import (
     ResolveEventKind,
+    ResolveFailureReason,
     ResolveOperation,
     ResolveOutcomeStatus,
     ResolvePromptKind,
@@ -92,6 +93,7 @@ class ResolvePanel(QWidget):
         self._fileStates: Dict[str, int] = {}
         self._queue: List[str] = []
         self._currentPath: Optional[str] = None
+        self._mergeToolWarned = False
 
         self._setupUi()
 
@@ -192,6 +194,7 @@ class ResolvePanel(QWidget):
         self._queue.clear()
         self._currentPath = None
         self._fileStates.clear()
+        self._mergeToolWarned = False
         self._list.clear()
         self.setVisible(False)
         self._setStatus(self.tr("No conflicts"))
@@ -209,6 +212,7 @@ class ResolvePanel(QWidget):
         for p in removed:
             del self._fileStates[p]
 
+        self._mergeToolWarned = False
         self._renderFileList()
         self._label.setText(self.tr("Conflicts ({0})").format(len(files)))
         self.setVisible(bool(files))
@@ -221,6 +225,8 @@ class ResolvePanel(QWidget):
             return
         if self.isBusy():
             return
+
+        self._mergeToolWarned = False
 
         # "Resolve all" should retry files that previously failed.
         for p, st in list(self._fileStates.items()):
@@ -272,6 +278,7 @@ class ResolvePanel(QWidget):
 
         # Allow re-running after failure by putting the file back into pending.
         self._fileStates[path] = _FileState.PENDING
+        self._mergeToolWarned = False
         self._renderFileList()
         self.startResolveFile(path)
 
@@ -315,6 +322,24 @@ class ResolvePanel(QWidget):
 
         self._startManager([handler], rc, isFinalize=True)
 
+    def _warnMergeToolNotConfigured(self):
+        """Tell the user, once per resolve pass, that no merge tool is usable."""
+
+        if self._mergeToolWarned:
+            return
+
+        self._mergeToolWarned = True
+        QMessageBox.warning(
+            self,
+            self.tr("Merge Tool Not Configured"),
+            self.tr(
+                "No merge tool is configured.\n\n"
+                "Please configure a merge tool in:\n"
+                "- Git global config: git config --global merge.tool <tool-name>\n"
+                "- Or in Preferences > Tools tab"
+            ),
+        )
+
     def _startNextFile(self):
         if self._abortRequested:
             self.abortSafePointReached.emit()
@@ -327,40 +352,35 @@ class ResolvePanel(QWidget):
             path = self._queue.pop(0)
             if self._fileStates.get(path) != _FileState.PENDING:
                 continue
-            self._startResolveForFile(path)
-            return
+            if self._startResolveForFile(path):
+                return
+            # No handler could run for this file; keep draining the queue.
 
         # Nothing else to do.
         self.currentFileChanged.emit(None)
 
-    def _startResolveForFile(self, path: str):
+    def _startResolveForFile(self, path: str) -> bool:
+        """Start resolving @path; return whether a resolve attempt is running."""
+
         ctx = self._ctx
         services = self._services
         if ctx is None or services is None:
             out = ResolveOutcome(status=ResolveOutcomeStatus.FAILED,
                                  message=self.tr("Resolve context not set"))
             self.fileOutcome.emit(path, out)
-            return
+            return False
 
         handlers, mergeToolName, hasGitDefaultTool = buildResolveHandlers(
             parent=self,
             path=path,
+            repoDir=ctx.repoDir,
             aiEnabled=bool(ctx.chatWidget is not None),
             chatWidget=ctx.chatWidget,
         )
 
         if not handlers:
             if not hasGitDefaultTool and ctx.chatWidget is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("Merge Tool Not Configured"),
-                    self.tr(
-                        "No merge tool is configured.\n\n"
-                        "Please configure a merge tool in:\n"
-                        "- Git global config: git config --global merge.tool <tool-name>\n"
-                        "- Or in Preferences > Tools tab"
-                    ),
-                )
+                self._warnMergeToolNotConfigured()
 
             out = ResolveOutcome(
                 status=ResolveOutcomeStatus.FAILED,
@@ -369,7 +389,8 @@ class ResolvePanel(QWidget):
             self._fileStates[path] = _FileState.FAILED
             self._renderFileList()
             self.fileOutcome.emit(path, out)
-            return
+            self._updateActionState()
+            return False
 
         self._currentPath = path
         self.currentFileChanged.emit(path)
@@ -387,6 +408,7 @@ class ResolvePanel(QWidget):
         )
 
         self._startManager(handlers, rc, isFinalize=False)
+        return True
 
     def _startManager(self, handlers, ctx: ResolveContext, *, isFinalize: bool):
         services = self._services
@@ -431,6 +453,9 @@ class ResolvePanel(QWidget):
         self.fileOutcome.emit(path, outcome)
 
         if outcome.status != ResolveOutcomeStatus.RESOLVED:
+            if (outcome.details or {}).get("reason") == ResolveFailureReason.NO_MERGETOOL:
+                self._warnMergeToolNotConfigured()
+
             msg = (outcome.message or "").strip()
             if msg:
                 self._setStatus(
@@ -443,8 +468,9 @@ class ResolvePanel(QWidget):
             self.abortSafePointReached.emit()
             return
 
-        if outcome.status == ResolveOutcomeStatus.RESOLVED:
-            self._startNextFile()
+        # Continue in both cases: a failed file must not strand the caller, which
+        # only learns that the pass ended from currentFileChanged(None).
+        self._startNextFile()
 
     def _onFinalizeCompleted(self, outcome: ResolveOutcome):
         self._manager = None

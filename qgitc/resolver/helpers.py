@@ -36,10 +36,27 @@ def selectMergetoolNameForPath(path: str) -> Optional[str]:
     return settings.mergeToolName() or None
 
 
+def gitMergetoolName(repoDir: Optional[str] = None) -> str:
+    """Return the merge tool name git resolves for @repoDir ("" if none).
+
+    The probe runs inside the conflicted repository so the answer matches what
+    ``git mergetool`` itself sees there: a globally configured tool and a
+    repository-local one can differ.
+    """
+
+    try:
+        name = Git.getConfigValue("merge.tool", False, repoDir=repoDir)
+    except Exception:
+        return ""
+
+    return (name or "").strip()
+
+
 def buildResolveHandlers(
     *,
     parent,
     path: str,
+    repoDir: Optional[str] = None,
     aiEnabled: bool,
     chatWidget,
 ) -> Tuple[List[ResolveHandler], Optional[str], bool]:
@@ -49,14 +66,23 @@ def buildResolveHandlers(
     """
 
     mergeToolName = selectMergetoolNameForPath(path)
-    hasGitDefaultTool = bool(Git.getConfigValue("merge.tool", False))
+
+    gitToolName = gitMergetoolName(repoDir)
+    hasGitDefaultTool = bool(gitToolName)
+
+    if not mergeToolName:
+        # Hand git's configured tool to the handler so that the merge tool is
+        # always launched with an explicit --tool: without one, git mergetool
+        # guesses a tool and then waits on stdin for an answer, which shows up
+        # as a pick window that never finishes.
+        mergeToolName = gitToolName or None
 
     handlers: List[ResolveHandler] = []
 
     if aiEnabled and chatWidget is not None:
         handlers.append(AiResolveHandler(parent))
 
-    if mergeToolName or hasGitDefaultTool:
+    if mergeToolName:
         handlers.append(GitMergetoolHandler(parent))
 
     return handlers, mergeToolName, hasGitDefaultTool
