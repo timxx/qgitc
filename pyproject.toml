@@ -34,8 +34,13 @@ classifiers = [
 ]
 
 dependencies = [
-    "PySide6-Essentials>=6.3.0; sys_platform != 'linux'",
-    "PySide6>=6.2.0; sys_platform == 'linux'",
+    # PySide6 6.12.0 returns None without incrementing its reference count (its
+    # wheels are built with CPython 3.12 refcount semantics), which makes Python
+    # 3.10/3.11 abort with "none_dealloc: deallocating None" after a few
+    # thousand calls. Exclude that release, not the whole series: a later 6.12.x
+    # is expected to fix it.
+    "PySide6-Essentials>=6.3.0,!=6.12.0; sys_platform != 'linux'",
+    "PySide6>=6.2.0,!=6.12.0; sys_platform == 'linux'",
     "PyYAML>=6.0",
     "chardet",
     "psutil; sys_platform == 'win32'",
