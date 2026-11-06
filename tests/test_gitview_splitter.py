@@ -325,9 +325,28 @@ class TestGitViewSplitterSubmoduleScenarios(TestGitViewSplitterBase):
             gitView._GitView__onSubmoduleAvailable([], fromCache=True)
             self.processEvents()
 
-            # __onSubmoduleAvailable always collapses in composite mode,
-            # regardless of submodule list content
+            # Composite mode is a no-op without submodules, so the graph
+            # stays visible (it is only collapsed when repos are merged)
+            self.assertGraphExpanded(gitView)
+
+    def testEmptySubmoduleListRestoresCollapsedGraph(self):
+        """Leaving a repo with submodules for a single repo must show the graph"""
+        self.app.settings().setCompositeMode(True)
+        gitView = self.createGitView()
+
+        with patch.object(ApplicationBase, 'instance', return_value=self.app):
+            # Repo with submodules: graph collapsed
+            self.app._submodules = ["submodule1"]
+            gitView._GitView__onSubmoduleAvailable(
+                ["submodule1"], fromCache=True)
+            self.processEvents()
             self.assertGraphCollapsed(gitView)
+
+            # Back to a single repo: graph must be shown again
+            self.app._submodules = []
+            gitView._GitView__onSubmoduleAvailable([], fromCache=True)
+            self.processEvents()
+            self.assertGraphExpanded(gitView)
 
 
 class TestGitViewSplitterWithRealSubmodules(TestBase):

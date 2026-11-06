@@ -326,8 +326,14 @@ class MainWindow(StateWindow):
             self._repoTopDir = topLevelDir
             self._updateRecentRepos(topLevelDir)
 
-            compositeModeEnabled = isCompositeMode and (
-                changed or len(app.submodules) > 0)
+            # Composite mode is only really enabled when there are submodules
+            # to merge.  A repository change alone is not enough: restoring
+            # the previous repository after an invalid path makes
+            # updateRepoDir() report a change, but a single repository has
+            # nothing to merge and must keep its refs (and graph).
+            # When submodules are discovered later on, _onSubmoduleAvailable
+            # clears REF_MAP to fix up the state.
+            compositeModeEnabled = isCompositeMode and bool(app.submodules)
             if not compositeModeEnabled:
                 if changed or not Git.REF_MAP:
                     Git.REF_MAP = Git.refs()

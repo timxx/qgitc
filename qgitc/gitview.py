@@ -404,8 +404,16 @@ class GitView(QWidget):
             self.ui.logWidget.setSizes(self._logWidgetSizes)
 
     def __onSubmoduleAvailable(self, submodules: List[str], fromCache: bool):
-        self._logWidgetSizes = self.ui.logWidget.sizes()
-        if len(self._logWidgetSizes) != 2 or (self._logWidgetSizes[0] == 0 and self._logWidgetSizes[1] == 0):
+        # Only repos with submodules are actually merged in composite mode;
+        # for a single repository the graph must stay visible.
+        sizes = self.ui.logWidget.sizes()
+        if len(sizes) == 2 and sizes[0] > 0:
+            self._logWidgetSizes = sizes
+        elif len(self._logWidgetSizes) != 2 or self._logWidgetSizes[0] <= 0:
             self._logWidgetSizes = [25, 75]
+
         if ApplicationBase.instance().settings().isCompositeMode():
-            self.ui.logWidget.setSizes([0, 100])
+            if submodules:
+                self.ui.logWidget.setSizes([0, 100])
+            else:
+                self.ui.logWidget.setSizes(self._logWidgetSizes)

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
+import shutil
+import tempfile
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -588,6 +590,39 @@ class TestLogWindowCompositeMode(TestLogWindowBase):
         self.assertIsNotNone(Git.REF_MAP)
         self.assertGreaterEqual(len(Git.REF_MAP), 1)
         self.assertIsNotNone(Git.REV_HEAD)
+
+    def testRefMapAfterInvalidRepoPath(self):
+        """Regression: restoring the original repo after a bad path must keep
+        the refs and the commit graph.
+
+        Composite mode is a no-op for a repository without submodules, so the
+        refs must not be dropped when the repo directory is set again.
+        """
+        self.waitForLoaded()
+
+        gitView = self.window.ui.gitViewA
+        logView = gitView.ui.logView
+        origRepo = Git.REPO_DIR
+        self.assertTrue(origRepo)
+
+        badDir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, badDir, True)
+
+        self.window.ui.leRepo.setText(badDir)
+        self.wait(5000, lambda: Git.REPO_DIR is not None)
+        self.assertIsNone(Git.REPO_DIR)
+
+        self.window.ui.leRepo.setText(origRepo)
+        self.wait(5000, lambda: Git.REPO_DIR != origRepo)
+        self.wait(10000, logView.fetcher.isLoading)
+        self.wait(100)
+
+        self.assertGreater(logView.getCount(), 0)
+        self.assertIsNotNone(Git.REF_MAP)
+        self.assertGreaterEqual(len(Git.REF_MAP), 1)
+        self.assertIsNotNone(Git.REV_HEAD)
+        # the graph column must be visible again (not collapsed)
+        self.assertGreater(gitView.ui.logWidget.sizes()[0], 0)
 
 
 class TestLogWindowCompositeMode2(TestLogWindowBase):
