@@ -1,56 +1,127 @@
 ---
 name: generating-release-notes
-description: Use when generating release notes between the latest and previous git tags where commit messages are noisy, duplicated, or misleading and the summary must reflect real net code changes.
+description: Use when writing release notes between the latest and previous git tags, or when releasing — pick the next version from the commits since the last tag (发版 / 下个版本号 / 打个 tag), create the tag, then write notes that reflect the real net code changes.
 user-invocable: true
 ---
 
 # Generating Release Notes
 
 ## Overview
-Release notes must describe what shipped, not what commit titles claim. Infer themes from net diffs across the tag range, then group related commits under one subject. Every bullet answers **what changed** and, for a new feature, **how to use it** — written for the QGitc user, not the implementer.
+Release notes must describe what shipped, not what commit titles claim, and they are written for the QGitc user. When the release has no tag yet the notes also need a version, so the version is **derived from the commits in the range first**, confirmed, and only then written into the notes.
+
+The version lives in the tag: the build derives it from git tags (see the versioning config in `pyproject.toml`), so `git tag vX.Y.Z` is what changes the app's version. No tracked file is edited to bump it.
 
 ## When to Use
-- Commits include WIP, cleanup, typo, or duplicated messages
+- Commits in the range include WIP, cleanup, typo, or duplicated messages
 - Multiple commits implement one feature across follow-ups
 - Some commits were reverted before the latest tag
+- The user asks to release, cut a version, or tag (发版 / 打个 tag)
+- The recommended version must be confirmed before it becomes the notes' filename and a tag
 - You need notes the user can act on, backed by accurate engineering detail
 
 Do not use this skill for single-commit changelogs or internal forensic debugging.
 
 ## Core Pattern
-1. Find the latest and previous tags.
-2. Collect commit metadata in that range.
-3. Read diffs for each commit and compute net effect.
-4. Cluster commits by actual outcome, not title.
-5. Write one subject per cluster, then body bullets in the user's view.
+1. Pin the base: latest `v*` tag, committed tree.
+2. Settle the version: the user's if they named one, otherwise recommend from `BASE..HEAD` and **wait**.
+3. Tag it — the tag is the version, so it exists before the notes file is named.
+4. Read the commit bodies and the net diff in `BASE..TAG`.
+5. Cluster commits by actual outcome, not title.
 6. Drop no-op, reverted, and low-value noise unless it materially affects users.
+7. Write the notes to `docs/releases/<version>.md`.
 
 ## Quick Reference
-- Tag range:
+- Base tag and the range a new version would ship:
+```bash
+BASE=$(git describe --tags --abbrev=0)
+git log --reverse --oneline "${BASE}..HEAD"
+```
+- Version inputs — a `BREAKING CHANGE` footer lives in the body, not the subject, and a merge commit carries no type of its own:
+```bash
+git log --format='%s%n%b' "${BASE}..HEAD"
+```
+- Is the recommended name still free? Nonzero exit means free, exit `0` means taken:
+```bash
+git rev-parse -q --verify "refs/tags/vX.Y.Z"
+```
+- Range of a tag that already exists:
 ```bash
 LATEST=$(git describe --tags --abbrev=0)
 PREV=$(git describe --tags --abbrev=0 "${LATEST}^")
-RANGE="${PREV}..${LATEST}"
 ```
-- Commit list:
+- Create the tag — lightweight, no message, after the range's commits are in:
 ```bash
-git log --reverse --oneline "$RANGE"
+git tag vX.Y.Z
+git describe --tags --abbrev=0            # must print vX.Y.Z
 ```
 - Per-commit truth source:
 ```bash
 git show --stat --patch --no-color <sha>
 ```
-- Net validation for theme:
+- Net effect of the range (once the tag exists, prefer `"${BASE}..vX.Y.Z"`):
 ```bash
-git diff --stat "$RANGE"
-git diff --name-only "$RANGE"
+git diff --stat "${BASE}..HEAD"
+git diff --name-only "${BASE}..HEAD"
 ```
 
+Always quote the range. Under PowerShell the unquoted `$BASE..HEAD` is parsed as the range operator before git is invoked and can come back empty, which reads as "no commits since the last release"; `${BASE}..HEAD` inside quotes is safe.
+
 ## Implementation
+### Choosing the Version
+The user may name the version outright — use it as given and skip the rest of this section. Otherwise read every subject **and body** in the range: the subject carries the type, the body carries the reason the notes need, and the `BREAKING CHANGE` footer sits at the bottom of the body.
+
+| What the range contains | Recommend |
+|---|---|
+| a `BREAKING CHANGE` footer, or `!` after the type | major |
+| any `feat` | minor |
+| everything else (`fix`, `perf`, `refactor`, `docs`, `chore`, `test`) | patch |
+
+While the major is `0`, a breaking change earns a **minor**, not a major.
+
+A range made only of excluded material — tests, CI, docs, refactors with no user-visible effect — has nothing to ship: say that and recommend no release, rather than inventing a patch with an empty notes file.
+
+The recommendation is always `BASE` plus one bump, so it is above the latest tag by construction; the collision check is for a name already used on another branch. If it is taken, do not reuse it: either write that tag's notes from `PREV..LATEST`, or move to the next free number.
+
+Report the base tag, the commits, the recommendation, and the reason in one line, then **stop and wait**:
+
+```
+base v7.5.0 · 5 commits · recommend v7.5.1 (patch: fixes only)
+```
+
+Nothing has been written yet, so this is the cheap moment to be wrong. If the user only asked for the number, the report is the whole deliverable.
+
+### The Range
+The version decides which commits the notes cover:
+
+| Target version | Range |
+|---|---|
+| a new version, recommended or named | `"${BASE}..${VERSION}"`, the new tag |
+| a tag that already exists | `"${PREV}..${LATEST}"` |
+
+Uncommitted work is outside every range: commit it first, or the tag and the notes describe only what is already committed.
+
+Once the tag exists, `BASE..VERSION` and `PREV..LATEST` are the same range — reuse the tag as the anchor rather than trusting `HEAD` to have stayed put.
+
+### Tagging
+The notes are named after the tag, so the tag comes first — confirmed version, then tag, then notes. Whether the agent runs `git tag` or hands the command over, `<version>` is a tag by the time `docs/releases/<version>.md` is written, and the report says which happened. A notes file whose name has no matching tag is a draft for a release that has not happened.
+
+Creating it is local and cheap: a lightweight tag on `HEAD`, no push, no tag message. Re-running is idempotent — if `git describe --tags --abbrev=0` already prints the version, skip the `git tag` and go on to the notes.
+
+```bash
+git tag vX.Y.Z
+git describe --tags --abbrev=0     # must print vX.Y.Z
+```
+
+- Tag after the range's commits have landed, or the tag points at fewer commits than the notes describe.
+- A plain `git tag` — no `-a`, no message. The existing `v*` tags are lightweight, and the version name is the whole content.
+- A taken name makes `git tag` fail. That means the base was wrong or the version already shipped: go back rather than deleting a tag.
+- A notes file on disk proves nothing — `<version>.md` exists whether or not the tag does. Check the tag itself with `git describe --tags --abbrev=0`, not the file's date.
+- Push stays with the maintainer: print `git push origin <branch>` and `git push origin vX.Y.Z`, and stop there.
+
 ### Output File
-- Save generated release notes as a markdown file in `docs/releases/` directory.
-- File naming: `<latest-tag>.md` (e.g., `v2.4.0.md`)
+- Save generated release notes as a markdown file in `docs/releases/` directory, named after the tag: `<version>.md` (e.g., `v2.4.0.md`).
 - Create `docs/releases/` directory if it does not exist.
+- The directory is gitignored and the notes are not committed — they regenerate from git history on demand. Overwriting an existing file is expected.
 
 ### Writing Language
 - Default when omitted: `Chinese`
@@ -102,6 +173,13 @@ Include these only when they change user behavior, reliability, or migration ris
 | Summarizing commit titles directly | Read patch and stat first, then write notes |
 | One bullet per commit | Cluster by outcome and write one subject per theme |
 | Reporting reverted work as shipped | Verify net diff across the full tag range |
+| Picking the version from subjects only | A `BREAKING CHANGE` footer sits in the body; read bodies before recommending |
+| Bumping a patch onto a taken tag | `git rev-parse` first; a taken name means that release is already out |
+| Bumping the version by editing `qgitc/version.py` | It is generated from the tag; the tag is the source of truth |
+| Writing notes for a version that was never tagged | Tag first — `git tag vX.Y.Z` — then name the file after that tag |
+| Writing notes before the version is settled | The filename is the version — confirm it, then write |
+| Tagging a different number than the notes file | The file is named after the tag; rename or regenerate it |
+| Committing `docs/releases/` | It regenerates from git history and is gitignored |
 | Writing the mechanism or root cause | Name the symptom the user saw and that it is fixed |
 | Naming classes, methods, or internal identifiers | Name the surface the user touches: menu, click target, setting |
 | Quoting benchmark or test numbers | Keep the one number a user can feel, translate it into their experience |
@@ -111,6 +189,11 @@ Include these only when they change user behavior, reliability, or migration ris
 
 ## Red Flags - Stop and Re-check
 - "This title says feat, so I will ship it in notes"
+- "No `!` in the subject, so nothing here is breaking"
+- "The next patch is fine, nobody will notice"
+- "A `BREAKING CHANGE` under a chore commit does not count"
+- "I will write the file first and pick the number later"
+- "The notes file is written, so the version is released"
 - "I do not need to inspect diffs for small commits"
 - "Duplicate commits should become duplicate bullets"
 - "Reverted work still counts because it happened"
@@ -118,13 +201,13 @@ Include these only when they change user behavior, reliability, or migration ris
 - "The benchmark number proves the work, so I will quote it"
 - "The feature name already tells the user how to use it"
 
-All of these mean: recompute by net effect from the full range, then cut to the user's view.
+All of these mean: recompute the range's net effect and the bump from it, then cut to the user's view.
 
 ## Output Template
-Generate and save to `docs/releases/<latest-tag>.md`:
+Generate and save to `docs/releases/<version>.md`:
 
 ```markdown
-## <latest-tag>
+## <version>
 
 ### <Theme Subject 1>
 
@@ -158,7 +241,16 @@ For example:
 | Excuse | Reality |
 |---|---|
 | "Messages are good enough" | Messages are hints; shipped behavior lives in diffs. |
+| "SemVer says minor, so the release is safe" | A breaking change hides in a body footer; scan bodies before recommending. |
+| "The version is just a number, any free tag works" | The tag becomes the app's version and the notes' filename; derive it from the range. |
+| "Tagging is the maintainer's job, I only write text" | The tag is the version and the notes' filename; run `git tag` or hand over the exact command before writing. |
 | "Too many commits to inspect" | Grouping requires evidence; scan stats then deep-read only relevant patches. |
 | "Cleanup and typo should still be highlighted" | Release notes are for impact, not repository noise. |
 | "Each commit deserves a bullet" | Users need outcomes; combine related commits into one subject with detailed body. |
 | "More detail shows rigor" | Detail about the mechanism buries the change; one user-facing sentence per fact is the target. |
+
+## Done when
+- `git describe --tags --abbrev=0` prints the version the notes describe — the tag exists and points at the commits the notes summarise;
+- `docs/releases/<version>.md` covers every commit in `"${BASE}..${VERSION}"` except the excluded material, in Chinese;
+- nothing was pushed, and the tree holds no uncommitted work the tag leaves behind;
+- the push commands were printed for the maintainer.
